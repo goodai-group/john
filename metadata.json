@@ -1,0 +1,6 @@
+{
+  "name": "商业模型筛选评估平台",
+  "description": "面向海外小微商业经营者的无财务门槛、AI全自动商业模型筛选与自测评估平台，支持多币种折算、敏感地区隐私脱敏、多元资金证明、离线草稿及无障碍操作。",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
