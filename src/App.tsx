@@ -123,8 +123,19 @@ export default function App() {
         setReports(refreshedReports);
       }
     } catch (err: any) {
-      console.error('Google login error:', err);
-      setSyncStatusMsg(`登录提示：${err.message || '取消登录或窗口关闭'}`);
+      if (
+        err?.code === 'auth/popup-closed-by-user' ||
+        err?.code === 'auth/cancelled-popup-request' ||
+        err?.message?.includes('popup-closed-by-user') ||
+        err?.message?.includes('cancelled-popup-request')
+      ) {
+        // 用户主动关闭了登录窗口，显示温和的引导提示
+        setSyncStatusMsg('💡 您已关闭 Google 登录窗口。您仍可正常使用本地保存，或随时再次点击登录。');
+      } else if (err?.code === 'auth/popup-blocked' || err?.message?.includes('popup-blocked')) {
+        setSyncStatusMsg('⚠️ 浏览器阻止了登录弹出窗口，请在地址栏允许弹窗后重试。');
+      } else {
+        setSyncStatusMsg(`登录提示：${err?.message || '无法连接 Google 登录服务，已自动使用本地保存模式'}`);
+      }
     } finally {
       setIsSigningIn(false);
       setTimeout(() => setSyncStatusMsg(null), 4000);
