@@ -1,7 +1,8 @@
 import {
   AssessmentReport,
   BusinessFormData,
-  EscalatedQuestion
+  EscalatedQuestion,
+  AppUser
 } from '../types';
 import { runBusinessAssessment } from './scoringEngine';
 import {
@@ -383,61 +384,63 @@ export function updateEscalatedQuestionFeedback(
 }
 
 // Initial Sync & Cloud Seeder
-export async function syncWithCloudDatabase(): Promise<void> {
+export async function syncWithCloudDatabase(currentUser?: AppUser | null): Promise<void> {
   if (!isCloudDatabaseAvailable()) return;
 
   try {
     const [cloudProjects, cloudReports, cloudQuestions] = await Promise.all([
-      fetchAssessmentsFromCloud(),
-      fetchReportsFromCloud(),
+      fetchAssessmentsFromCloud(currentUser),
+      fetchReportsFromCloud(currentUser),
       fetchQuestionsFromCloud()
     ]);
 
-    // If cloud is empty, seed initial records
-    if (cloudProjects.length === 0) {
-      const localProjects = getStoredProjects();
-      for (const p of localProjects) {
-        await saveAssessmentToCloud(p);
-      }
-    } else {
-      // Merge cloud assessments into local
+    // If cloud has projects, merge them with local
+    if (cloudProjects.length > 0) {
       const localProjects = getStoredProjects();
       const mergedProjectsMap = new Map<string, BusinessFormData>();
+      // First put local projects
       localProjects.forEach((p) => mergedProjectsMap.set(`${p.id}-v${p.version}`, p));
+      // Cloud projects take precedence
       cloudProjects.forEach((p) => mergedProjectsMap.set(`${p.id}-v${p.version}`, p));
       const mergedList = Array.from(mergedProjectsMap.values());
       localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(mergedList));
+    } else {
+      // If cloud is completely empty, seed initial local projects
+      const localProjects = getStoredProjects();
+      for (const p of localProjects) {
+        await saveAssessmentToCloud(p, currentUser);
+      }
     }
 
-    if (cloudReports.length === 0) {
-      const localReports = getAllReports();
-      for (const r of localReports) {
-        await saveReportToCloud(r);
-      }
-    } else {
+    if (cloudReports.length > 0) {
       const localReports = getAllReports();
       const mergedReportsMap = new Map<string, AssessmentReport>();
       localReports.forEach((r) => mergedReportsMap.set(r.id, r));
       cloudReports.forEach((r) => mergedReportsMap.set(r.id, r));
       const mergedList = Array.from(mergedReportsMap.values());
       localStorage.setItem(STORAGE_KEY_REPORTS, JSON.stringify(mergedList));
+    } else {
+      const localReports = getAllReports();
+      for (const r of localReports) {
+        await saveReportToCloud(r, currentUser);
+      }
     }
 
-    if (cloudQuestions.length === 0) {
-      const localQuestions = getEscalatedQuestions();
-      for (const q of localQuestions) {
-        await saveQuestionToCloud(q);
-      }
-    } else {
+    if (cloudQuestions.length > 0) {
       const localQuestions = getEscalatedQuestions();
       const mergedQMap = new Map<string, EscalatedQuestion>();
       localQuestions.forEach((q) => mergedQMap.set(q.id, q));
       cloudQuestions.forEach((q) => mergedQMap.set(q.id, q));
       const mergedList = Array.from(mergedQMap.values());
       localStorage.setItem(STORAGE_KEY_RULES_REPO, JSON.stringify(mergedList));
+    } else {
+      const localQuestions = getEscalatedQuestions();
+      for (const q of localQuestions) {
+        await saveQuestionToCloud(q);
+      }
     }
 
-    console.log('✅ Cloud Firestore tables synced with local state.');
+    console.log('✅ Cloud Firestore tables synced with user state.');
   } catch (err) {
     console.warn('Cloud sync encountered non-fatal issue:', err);
   }

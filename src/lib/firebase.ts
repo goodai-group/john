@@ -8,19 +8,31 @@ import {
   getDocs,
   deleteDoc,
   query,
+  where,
   orderBy,
   limit,
   onSnapshot,
   Firestore
 } from 'firebase/firestore';
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut,
+  onAuthStateChanged,
+  User,
+  Auth
+} from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
 import {
   BusinessFormData,
   AssessmentReport,
-  EscalatedQuestion
+  EscalatedQuestion,
+  AppUser
 } from '../types';
 
 let dbInstance: Firestore | null = null;
+let authInstance: Auth | null = null;
 let isFirebaseReady = false;
 
 try {
@@ -31,8 +43,9 @@ try {
   } else {
     dbInstance = getFirestore(app);
   }
+  authInstance = getAuth(app);
   isFirebaseReady = true;
-  console.log('Firebase Firestore initialized successfully for cloud database tables.');
+  console.log('Firebase Firestore & Auth initialized successfully.');
 } catch (err) {
   console.warn('Firebase initialization error, using local fallback mode:', err);
 }
@@ -41,15 +54,82 @@ export const isCloudDatabaseAvailable = (): boolean => {
   return isFirebaseReady && dbInstance !== null;
 };
 
+// ========================
+// 🔐 GOOGLE AUTH METHODS
+// ========================
+
+export const subscribeToAuthChanges = (callback: (user: AppUser | null) => void): (() => void) => {
+  if (!authInstance) {
+    callback(null);
+    return () => {};
+  }
+  return onAuthStateChanged(authInstance, (firebaseUser: User | null) => {
+    if (firebaseUser) {
+      const appUser: AppUser = {
+        uid: firebaseUser.uid,
+        email: firebaseUser.email,
+        displayName: firebaseUser.displayName,
+        photoURL: firebaseUser.photoURL
+      };
+      callback(appUser);
+    } else {
+      callback(null);
+    }
+  });
+};
+
+export const signInWithGoogle = async (): Promise<AppUser | null> => {
+  if (!authInstance) {
+    throw new Error('Firebase Auth is not initialized');
+  }
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: 'select_account' });
+  const result = await signInWithPopup(authInstance, provider);
+  if (result.user) {
+    return {
+      uid: result.user.uid,
+      email: result.user.email,
+      displayName: result.user.displayName,
+      photoURL: result.user.photoURL
+    };
+  }
+  return null;
+};
+
+export const logoutGoogleUser = async (): Promise<void> => {
+  if (!authInstance) return;
+  await signOut(authInstance);
+};
+
+export const getCurrentAuthUser = (): AppUser | null => {
+  if (!authInstance?.currentUser) return null;
+  const u = authInstance.currentUser;
+  return {
+    uid: u.uid,
+    email: u.email,
+    displayName: u.displayName,
+    photoURL: u.photoURL
+  };
+};
+
+// ========================
 // 1. Cloud Assessments Operations (/assessments)
-export const saveAssessmentToCloud = async (data: BusinessFormData): Promise<boolean> => {
+// ========================
+
+export const saveAssessmentToCloud = async (
+  data: BusinessFormData,
+  currentUser?: AppUser | null
+): Promise<boolean> => {
   if (!dbInstance) return false;
   try {
+    const user = currentUser || getCurrentAuthUser();
     const docRef = doc(dbInstance, 'assessments', data.id);
-    await setDoc(docRef, {
+    const payload = {
       ...data,
+      ...(user ? { ownerUid: user.uid, ownerEmail: user.email || data.ownerEmail } : {}),
       cloudSyncedAt: new Date().toISOString()
-    }, { merge: true });
+    };
+    await setDoc(docRef, payload, { merge: true });
     return true;
   } catch (err) {
     console.warn('saveAssessmentToCloud failed:', err);
@@ -57,7 +137,9 @@ export const saveAssessmentToCloud = async (data: BusinessFormData): Promise<boo
   }
 };
 
-export const fetchAssessmentsFromCloud = async (): Promise<BusinessFormData[]> => {
+export const fetchAssessmentsFromCloud = async (
+  user?: AppUser | null
+): Promise<BusinessFormData[]> => {
   if (!dbInstance) return [];
   try {
     const colRef = collection(dbInstance, 'assessments');
@@ -66,6 +148,16 @@ export const fetchAssessmentsFromCloud = async (): Promise<BusinessFormData[]> =
     snapshot.forEach((docSnap) => {
       list.push(docSnap.data() as BusinessFormData);
     });
+    
+    // If a user is specified, prioritize user-owned or accessible projects
+    if (user?.uid) {
+      const userProjects = list.filter(
+        (p) => p.ownerUid === user.uid || (user.email && p.ownerEmail === user.email)
+      );
+      if (userProjects.length > 0) {
+        return userProjects;
+      }
+    }
     return list;
   } catch (err) {
     console.warn('fetchAssessmentsFromCloud failed:', err);
@@ -85,15 +177,24 @@ export const deleteAssessmentFromCloud = async (id: string): Promise<boolean> =>
   }
 };
 
+// ========================
 // 2. Cloud Reports Operations (/reports)
-export const saveReportToCloud = async (report: AssessmentReport): Promise<boolean> => {
+// ========================
+
+export const saveReportToCloud = async (
+  report: AssessmentReport,
+  currentUser?: AppUser | null
+): Promise<boolean> => {
   if (!dbInstance) return false;
   try {
+    const user = currentUser || getCurrentAuthUser();
     const docRef = doc(dbInstance, 'reports', report.id);
-    await setDoc(docRef, {
+    const payload = {
       ...report,
+      ...(user ? { ownerUid: user.uid, ownerEmail: user.email || report.ownerEmail } : {}),
       cloudSyncedAt: new Date().toISOString()
-    }, { merge: true });
+    };
+    await setDoc(docRef, payload, { merge: true });
     return true;
   } catch (err) {
     console.warn('saveReportToCloud failed:', err);
@@ -101,7 +202,9 @@ export const saveReportToCloud = async (report: AssessmentReport): Promise<boole
   }
 };
 
-export const fetchReportsFromCloud = async (): Promise<AssessmentReport[]> => {
+export const fetchReportsFromCloud = async (
+  user?: AppUser | null
+): Promise<AssessmentReport[]> => {
   if (!dbInstance) return [];
   try {
     const colRef = collection(dbInstance, 'reports');
@@ -110,6 +213,15 @@ export const fetchReportsFromCloud = async (): Promise<AssessmentReport[]> => {
     snapshot.forEach((docSnap) => {
       list.push(docSnap.data() as AssessmentReport);
     });
+
+    if (user?.uid) {
+      const userReports = list.filter(
+        (r) => r.ownerUid === user.uid || (user.email && r.ownerEmail === user.email)
+      );
+      if (userReports.length > 0) {
+        return userReports;
+      }
+    }
     return list;
   } catch (err) {
     console.warn('fetchReportsFromCloud failed:', err);
@@ -129,7 +241,10 @@ export const deleteReportFromCloud = async (id: string): Promise<boolean> => {
   }
 };
 
+// ========================
 // 3. Cloud Escalated Questions (/escalated_questions)
+// ========================
+
 export const saveQuestionToCloud = async (q: EscalatedQuestion): Promise<boolean> => {
   if (!dbInstance) return false;
   try {
@@ -161,4 +276,5 @@ export const fetchQuestionsFromCloud = async (): Promise<EscalatedQuestion[]> =>
   }
 };
 
-export { dbInstance as db };
+export { dbInstance as db, authInstance as auth };
+

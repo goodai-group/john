@@ -106,6 +106,7 @@ export interface BusinessFormData {
   fullTimeEmployeesCount: number; // 全职/兼职雇员人数
 
   // 协作与操作留痕
+  ownerUid?: string;
   ownerEmail: string;
   collaborators: {
     email: string;
@@ -158,6 +159,8 @@ export interface AssessmentReport {
   customRateNotice?: string;
   estimatedMonthsCount: number;
   proofTypeUsed: ProofType;
+  ownerUid?: string;
+  ownerEmail?: string;
 
   // 综合得分与等级
   totalScore: number; // 0 - 100
@@ -220,3 +223,11 @@ export interface EscalatedQuestion {
   relatedCaseId?: string;
   relatedCaseResult?: string;
 }
+
+export interface AppUser {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL: string | null;
+}
+

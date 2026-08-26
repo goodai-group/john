@@ -3,7 +3,8 @@ import {
   BusinessFormData,
   AssessmentReport,
   Language,
-  ActiveTab
+  ActiveTab,
+  AppUser
 } from './types';
 import { Navbar } from './components/Navbar';
 import { FeeTransparencyModal } from './components/FeeTransparencyModal';
@@ -21,15 +22,26 @@ import {
   loadStoredReports,
   saveStoredReports,
   saveActiveDraft,
-  syncWithCloudDatabase
+  syncWithCloudDatabase,
+  saveProject,
+  saveReport
 } from './lib/storage';
-import { isCloudDatabaseAvailable } from './lib/firebase';
+import {
+  isCloudDatabaseAvailable,
+  signInWithGoogle,
+  logoutGoogleUser,
+  subscribeToAuthChanges
+} from './lib/firebase';
 import { calculateAssessmentReport } from './lib/scoringEngine';
 import { SAMPLE_PROJECT, INITIAL_SAMPLE_REPORT } from './lib/seedData';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('form');
   const [language, setLanguage] = useState<Language>('zh');
+
+  // User Authentication State
+  const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
+  const [isSigningIn, setIsSigningIn] = useState(false);
 
   // Modals & Drawers state
   const [isFeeModalOpen, setIsFeeModalOpen] = useState(false);
@@ -62,6 +74,28 @@ export default function App() {
   const [activeReportId, setActiveReportId] = useState<string>(INITIAL_SAMPLE_REPORT.id);
   const [syncStatusMsg, setSyncStatusMsg] = useState<string | null>(null);
 
+  // Subscribe to Firebase Google Auth state
+  useEffect(() => {
+    const unsubscribe = subscribeToAuthChanges(async (user) => {
+      setCurrentUser(user);
+      if (user) {
+        setSyncStatusMsg(`👋 欢迎回来，${user.displayName || user.email}！正在载入您的专属云端档案...`);
+        try {
+          await syncWithCloudDatabase(user);
+          const refreshedProjects = loadStoredProjects();
+          const refreshedReports = loadStoredReports();
+          setProjects(refreshedProjects);
+          setReports(refreshedReports);
+          setSyncStatusMsg(`✅ 已同步 ${user.displayName || user.email} 的专属云端自测档案`);
+        } catch (e) {
+          console.warn('User cloud sync error:', e);
+        }
+        setTimeout(() => setSyncStatusMsg(null), 4000);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
   // Find active project & active report
   const activeProject = projects.find((p) => p.id === activeProjectId) || projects[0];
   const activeReport =
@@ -74,14 +108,57 @@ export default function App() {
     .filter((r) => r.projectId === activeReport?.projectId)
     .sort((a, b) => b.version - a.version);
 
+  // Google Login Action
+  const handleLoginWithGoogle = async () => {
+    try {
+      setIsSigningIn(true);
+      const user = await signInWithGoogle();
+      if (user) {
+        setCurrentUser(user);
+        setSyncStatusMsg(`🎉 Google 登录成功！已与 ${user.email} 绑定`);
+        await syncWithCloudDatabase(user);
+        const refreshedProjects = loadStoredProjects();
+        const refreshedReports = loadStoredReports();
+        setProjects(refreshedProjects);
+        setReports(refreshedReports);
+      }
+    } catch (err: any) {
+      console.error('Google login error:', err);
+      setSyncStatusMsg(`登录提示：${err.message || '取消登录或窗口关闭'}`);
+    } finally {
+      setIsSigningIn(false);
+      setTimeout(() => setSyncStatusMsg(null), 4000);
+    }
+  };
+
+  // Logout Action
+  const handleLogout = async () => {
+    try {
+      await logoutGoogleUser();
+      setCurrentUser(null);
+      setSyncStatusMsg('已安全退出 Google 登录。');
+      setTimeout(() => setSyncStatusMsg(null), 3000);
+    } catch (err) {
+      console.warn('Logout error:', err);
+    }
+  };
+
   // Submit form handler
   const handleFormSubmit = (submittedData: BusinessFormData) => {
     // 1. Calculate latest version report
     const existingReportsForProj = reports.filter((r) => r.projectId === submittedData.id);
     const nextVersion = existingReportsForProj.length + 1;
-    const projectWithVersion = { ...submittedData, version: nextVersion };
+    const projectWithVersion = {
+      ...submittedData,
+      version: nextVersion,
+      ...(currentUser ? { ownerUid: currentUser.uid, ownerEmail: currentUser.email || submittedData.ownerEmail } : {})
+    };
 
     const newReport = calculateAssessmentReport(projectWithVersion);
+    if (currentUser) {
+      newReport.ownerUid = currentUser.uid;
+      newReport.ownerEmail = currentUser.email || undefined;
+    }
 
     // 2. Update projects list
     const updatedProjects = [
@@ -90,11 +167,13 @@ export default function App() {
     ];
     setProjects(updatedProjects);
     saveStoredProjects(updatedProjects);
+    saveProject(projectWithVersion);
 
     // 3. Update reports list
     const updatedReports = [newReport, ...reports];
     setReports(updatedReports);
     saveStoredReports(updatedReports);
+    saveReport(newReport);
 
     // 4. Navigate to report view
     setActiveProjectId(submittedData.id);
@@ -172,7 +251,8 @@ export default function App() {
       inventoryValue: { amount: 0, currency: 'USD' },
       operatingMonthsCount: 12,
       fullTimeEmployeesCount: 1,
-      ownerEmail: '',
+      ownerUid: currentUser?.uid,
+      ownerEmail: currentUser?.email || '',
       collaborators: [],
       isSubmitted: false,
       isDraft: true
@@ -204,7 +284,7 @@ export default function App() {
     const initSync = async () => {
       if (isCloudDatabaseAvailable()) {
         try {
-          await syncWithCloudDatabase();
+          await syncWithCloudDatabase(currentUser);
           const refreshedProjects = loadStoredProjects();
           const refreshedReports = loadStoredReports();
           setProjects(refreshedProjects);
@@ -221,7 +301,7 @@ export default function App() {
     setSyncStatusMsg('正在与 Firebase 云端数据库集合同步 (/assessments, /reports, /escalated_questions)...');
     try {
       if (isCloudDatabaseAvailable()) {
-        await syncWithCloudDatabase();
+        await syncWithCloudDatabase(currentUser);
         const refreshedProjects = loadStoredProjects();
         const refreshedReports = loadStoredReports();
         setProjects(refreshedProjects);
@@ -256,6 +336,10 @@ export default function App() {
           setIsAiDrawerOpen(true);
         }}
         largeFont={largeFont}
+        currentUser={currentUser}
+        onLoginWithGoogle={handleLoginWithGoogle}
+        onLogout={handleLogout}
+        isSigningIn={isSigningIn}
       />
 
       {/* Sync Status Banner */}
@@ -325,6 +409,8 @@ export default function App() {
             onDeleteProject={handleDeleteProject}
             isCloudDatabaseReady={isCloudDatabaseAvailable()}
             onTriggerSync={handleTriggerSync}
+            currentUser={currentUser}
+            onLoginWithGoogle={handleLoginWithGoogle}
           />
         )}
       </main>
