@@ -20,11 +20,12 @@ import {
   saveStoredProjects,
   loadStoredReports,
   saveStoredReports,
-  saveActiveDraft
+  saveActiveDraft,
+  syncWithCloudDatabase
 } from './lib/storage';
+import { isCloudDatabaseAvailable } from './lib/firebase';
 import { calculateAssessmentReport } from './lib/scoringEngine';
 import { SAMPLE_PROJECT, INITIAL_SAMPLE_REPORT } from './lib/seedData';
-import { isSupabaseConfigured, syncLocalWithSupabase } from './lib/supabaseClient';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('form');
@@ -198,11 +199,41 @@ export default function App() {
     setActiveTab('form');
   };
 
+  // Auto-sync with Firestore Cloud Database on mount
+  useEffect(() => {
+    const initSync = async () => {
+      if (isCloudDatabaseAvailable()) {
+        try {
+          await syncWithCloudDatabase();
+          const refreshedProjects = loadStoredProjects();
+          const refreshedReports = loadStoredReports();
+          setProjects(refreshedProjects);
+          setReports(refreshedReports);
+        } catch (e) {
+          console.warn('Initial cloud sync warning:', e);
+        }
+      }
+    };
+    initSync();
+  }, []);
+
   const handleTriggerSync = async () => {
-    setSyncStatusMsg('正在与存储后端同步...');
-    const res = await syncLocalWithSupabase();
-    setSyncStatusMsg(res.message);
-    setTimeout(() => setSyncStatusMsg(null), 4000);
+    setSyncStatusMsg('正在与 Firebase 云端数据库集合同步 (/assessments, /reports, /escalated_questions)...');
+    try {
+      if (isCloudDatabaseAvailable()) {
+        await syncWithCloudDatabase();
+        const refreshedProjects = loadStoredProjects();
+        const refreshedReports = loadStoredReports();
+        setProjects(refreshedProjects);
+        setReports(refreshedReports);
+        setSyncStatusMsg('✅ 云端数据库双向同步已完成！数据已安全持久化');
+      } else {
+        setSyncStatusMsg('💡 本地持久化模式正常运行中');
+      }
+    } catch (e: any) {
+      setSyncStatusMsg(`同步提示：${e.message || '本地数据已保存'}`);
+    }
+    setTimeout(() => setSyncStatusMsg(null), 5000);
   };
 
   return (
@@ -292,7 +323,7 @@ export default function App() {
               setActiveTab('report');
             }}
             onDeleteProject={handleDeleteProject}
-            isSupabaseConfigured={isSupabaseConfigured()}
+            isCloudDatabaseReady={isCloudDatabaseAvailable()}
             onTriggerSync={handleTriggerSync}
           />
         )}

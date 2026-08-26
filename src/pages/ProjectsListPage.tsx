@@ -29,7 +29,7 @@ interface ProjectsListProps {
   onSelectProject: (id: string) => void;
   onSelectReport: (reportId: string) => void;
   onDeleteProject: (id: string) => void;
-  isSupabaseConfigured: boolean;
+  isCloudDatabaseReady: boolean;
   onTriggerSync: () => void;
 }
 
@@ -41,7 +41,7 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
   onSelectProject,
   onSelectReport,
   onDeleteProject,
-  isSupabaseConfigured,
+  isCloudDatabaseReady,
   onTriggerSync
 }) => {
   return (
@@ -72,21 +72,23 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
       </div>
 
       {/* Cloud Sync Status Bento Pill */}
-      <div className="p-4 rounded-3xl bg-neutral-100 border-2 border-neutral-200 flex flex-wrap items-center justify-between gap-3 text-xs">
-        <div className="flex items-center space-x-2.5 text-neutral-700 font-medium">
+      <div className="p-4 rounded-3xl bg-indigo-50/50 border-2 border-indigo-200 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div className="flex items-center space-x-2.5 text-indigo-900 font-medium">
           <Database className="w-4 h-4 text-indigo-600 shrink-0" />
           <span>
-            存储模式：<strong className="text-neutral-900 font-bold">本地离线优先 (Offline-First)</strong>
-            {isSupabaseConfigured ? ' + 云端双向同步已就绪' : '（尚未配置 Supabase 密钥，数据安全保存在本浏览器缓存中）'}
+            数据库架构：<strong className="text-indigo-950 font-bold">云端数据库表集合 (Firestore Tables) + 本地离线优先</strong>
+            <span className="ml-1.5 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px]">
+              表 /assessments, /reports, /escalated_questions 已连接
+            </span>
           </span>
         </div>
 
         <button
           onClick={onTriggerSync}
-          className="flex items-center space-x-1 px-3.5 py-1.5 rounded-xl bg-white border-2 border-neutral-200 hover:bg-neutral-50 text-neutral-800 font-bold shadow-xs transition-colors cursor-pointer"
+          className="flex items-center space-x-1 px-3.5 py-1.5 rounded-xl bg-white border-2 border-indigo-200 hover:bg-indigo-50 text-indigo-900 font-bold shadow-xs transition-colors cursor-pointer"
         >
-          <RotateCcw className="w-3.5 h-3.5" />
-          <span>检查并同步数据</span>
+          <RotateCcw className="w-3.5 h-3.5 text-indigo-600" />
+          <span>云端双向同步</span>
         </button>
       </div>
 

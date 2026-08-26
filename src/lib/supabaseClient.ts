@@ -1,28 +1,43 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { BusinessFormData, AssessmentReport } from '../types';
 
-// Read env variables safely
-const supabaseUrl =
-  (typeof process !== 'undefined' && process.env?.SUPABASE_URL) ||
+// Clean and normalize Supabase URL (e.g., strip trailing /rest/v1 or trailing slashes)
+function cleanSupabaseUrl(url?: string): string {
+  if (!url) return '';
+  return url.trim().replace(/\/rest\/v1\/?$/i, '').replace(/\/+$/, '');
+}
+
+const rawSupabaseUrl =
+  (import.meta as any).env?.NEXT_PUBLIC_SUPABASE_URL ||
   (import.meta as any).env?.VITE_SUPABASE_URL ||
+  (typeof process !== 'undefined' && (process.env?.NEXT_PUBLIC_SUPABASE_URL || process.env?.SUPABASE_URL)) ||
   '';
 
-const supabaseAnonKey =
-  (typeof process !== 'undefined' && process.env?.SUPABASE_ANON_KEY) ||
+const supabaseUrl = cleanSupabaseUrl(rawSupabaseUrl);
+
+const supabaseAnonKey = (
+  (import.meta as any).env?.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
   (import.meta as any).env?.VITE_SUPABASE_ANON_KEY ||
-  '';
+  (typeof process !== 'undefined' && (process.env?.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env?.SUPABASE_ANON_KEY)) ||
+  ''
+).trim();
 
 export let supabase: SupabaseClient | null = null;
 
 if (supabaseUrl && supabaseAnonKey && supabaseUrl.startsWith('http')) {
   try {
-    supabase = createClient(supabaseUrl, supabaseAnonKey);
-    console.log('✅ Supabase client initialized with provided credentials.');
+    supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true
+      }
+    });
+    console.log('✅ Supabase client initialized successfully with URL:', supabaseUrl);
   } catch (err) {
     console.warn('⚠️ Could not initialize Supabase client:', err);
   }
 } else {
-  console.log('ℹ️ Supabase credentials not yet configured. Operating in Offline-First Local Storage mode.');
+  console.log('ℹ️ Supabase credentials not configured. Operating in Offline-First Local Storage mode.');
 }
 
 export const isSupabaseConfigured = (): boolean => {

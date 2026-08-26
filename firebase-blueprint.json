@@ -1,0 +1,136 @@
+{
+  "entities": {
+    "BusinessAssessment": {
+      "title": "BusinessAssessment",
+      "description": "Small and micro business self-assessment submission and 14 financial metrics",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier of the assessment" },
+        "version": { "type": "number", "description": "Assessment schema version" },
+        "createdAt": { "type": "string", "description": "Creation timestamp in ISO format" },
+        "updatedAt": { "type": "string", "description": "Last update timestamp in ISO format" },
+        "projectName": { "type": "string", "description": "Business or project name" },
+        "industry": { "type": "string", "description": "Industry category key" },
+        "businessType": { "type": "string", "description": "Detailed business model description" },
+        "isSensitiveRegion": { "type": "boolean", "description": "Whether privacy-minimized mode is enabled" },
+        "regionCountry": { "type": "string", "description": "Country or macro-region name" },
+        "regionDetail": { "type": "string", "description": "Optional city/district" },
+        "contactChannel": { "type": "string", "description": "Optional contact channel" },
+        "anonymousOwnerName": { "type": "string", "description": "Pseudonym or contact name" },
+        "baseCurrency": { "type": "string", "description": "Base currency code (e.g., USD, CNY, NGN, KES)" },
+        "hasMultipleRates": { "type": "boolean", "description": "Whether custom market exchange rates are applied" },
+        "customExchangeRateType": { "type": "string", "description": "Description of custom exchange rate source" },
+        "customExchangeRateValue": { "type": "number", "description": "Custom rate to USD" },
+        "proofType": { "type": "string", "description": "Proof verification type: none, bank_statement, handwritten_book, mobile_payment, institution_record" },
+        "proofFiles": { "type": "array", "description": "List of attached proof metadata" },
+        "monthlyBreakdowns": { "type": "array", "description": "12-month revenue timeline and break estimation flags" },
+        "monthlyRevenue": { "type": "object", "description": "Monthly gross total revenue (F8)" },
+        "monthlyRealOperatingRevenue": { "type": "object", "description": "Monthly pure operating revenue" },
+        "monthlyExternalGrants": { "type": "object", "description": "Monthly external grants or donations" },
+        "cogsCost": { "type": "object", "description": "Direct cost of goods sold / raw materials (F10)" },
+        "rentCost": { "type": "object", "description": "Rent and premises cost (F11)" },
+        "laborCost": { "type": "object", "description": "Staff wages and labor expense (F12)" },
+        "utilityCost": { "type": "object", "description": "Utilities and telecom expenses (F13)" },
+        "taxCost": { "type": "object", "description": "Tax and local fee expenses (F16)" },
+        "otherOpex": { "type": "object", "description": "Other regular operating expenditures" },
+        "existingDebtMonthlyPayment": { "type": "object", "description": "Monthly debt repayment" },
+        "cashAndLiquidAssets": { "type": "object", "description": "Available cash reserve and liquid assets" },
+        "inventoryValue": { "type": "object", "description": "Inventory and fixed asset valuation" },
+        "operatingMonthsCount": { "type": "number", "description": "Number of consecutive months in operation" },
+        "fullTimeEmployeesCount": { "type": "number", "description": "Number of active workers" },
+        "ownerEmail": { "type": "string", "description": "Email or identifier of creator" },
+        "collaborators": { "type": "array", "description": "List of collaborators" },
+        "isSubmitted": { "type": "boolean", "description": "Submission status" },
+        "submittedAt": { "type": "string", "description": "Submission timestamp" },
+        "isDraft": { "type": "boolean", "description": "Draft status flag" }
+      },
+      "required": ["id", "projectName", "industry", "baseCurrency", "proofType", "monthlyRevenue", "cogsCost", "createdAt", "updatedAt"]
+    },
+    "AssessmentReport": {
+      "title": "AssessmentReport",
+      "description": "Computed diagnostic report with 5-dimension radar scoring, gate checks, and Gemini AI advice",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier of the report" },
+        "projectId": { "type": "string", "description": "Associated assessment project ID" },
+        "version": { "type": "number", "description": "Report schema version" },
+        "createdAt": { "type": "string", "description": "Generation timestamp in ISO format" },
+        "projectName": { "type": "string", "description": "Business name at time of calculation" },
+        "industry": { "type": "string", "description": "Industry category" },
+        "baseCurrency": { "type": "string", "description": "Base currency used in normalized financials" },
+        "isSensitiveRegion": { "type": "boolean", "description": "Privacy-minimized mode flag" },
+        "dataMinimizationNotice": { "type": "string", "description": "Privacy disclosure text" },
+        "customRateNotice": { "type": "string", "description": "Notice for custom exchange rate" },
+        "estimatedMonthsCount": { "type": "number", "description": "Count of interpolated missing months" },
+        "proofTypeUsed": { "type": "string", "description": "Proof method indicator" },
+        "totalScore": { "type": "number", "description": "Overall score between 0 and 100" },
+        "tier": { "type": "string", "description": "Rating tier: AAA, AA, A, BBB, BB, B, REJECT" },
+        "overallStatus": { "type": "string", "description": "Status: PASS, REVIEW, FAIL" },
+        "summaryPlainLanguage": { "type": "string", "description": "Executive summary in plain language" },
+        "radarScores": { "type": "array", "description": "5 radar dimension scores" },
+        "gates": { "type": "array", "description": "Gate checks status (Gate 1 to 4)" },
+        "gatePassed": { "type": "boolean", "description": "Whether all core gates passed" },
+        "metrics": { "type": "array", "description": "Detailed metric breakdown" },
+        "normalizedFinancials": { "type": "object", "description": "Financial ratios, profit and runway metrics" },
+        "aiActionableAdvice": { "type": "array", "description": "Gemini AI business optimization recommendations" }
+      },
+      "required": ["id", "projectId", "createdAt", "totalScore", "tier", "overallStatus", "radarScores", "gates", "gatePassed", "normalizedFinancials"]
+    },
+    "EscalatedQuestion": {
+      "title": "EscalatedQuestion",
+      "description": "AI rule consultation queries, big-data benchmarks and conservative path resolutions",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier of the question" },
+        "question": { "type": "string", "description": "User question query text" },
+        "category": { "type": "string", "description": "Question classification category" },
+        "confidence": { "type": "string", "description": "Confidence level: HIGH, MEDIUM, LOW_EDGE_CASE" },
+        "conservativePaths": { "type": "array", "description": "Optional paths for edge cases" },
+        "aiResponse": { "type": "string", "description": "Plain language answer" },
+        "isEdgeCase": { "type": "boolean", "description": "Edge case indicator" },
+        "suggestedAction": { "type": "string", "description": "Immediate suggested filing action" },
+        "userFeedback": { "type": "string", "description": "User helpfulness feedback" },
+        "archivedAt": { "type": "string", "description": "Archive timestamp" },
+        "relatedCaseId": { "type": "string", "description": "Related precedent ID" },
+        "relatedCaseResult": { "type": "string", "description": "Related precedent outcome summary" }
+      },
+      "required": ["id", "question", "category", "aiResponse", "archivedAt"]
+    },
+    "IndustryBenchmark": {
+      "title": "IndustryBenchmark",
+      "description": "Global small business statistical benchmarks for comparative analysis",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Industry identifier" },
+        "name": { "type": "string", "description": "Industry display name" },
+        "icon": { "type": "string", "description": "Visual icon" },
+        "avgRevenue": { "type": "string", "description": "Monthly revenue benchmark range" },
+        "grossMargin": { "type": "string", "description": "Typical gross margin percentage range" },
+        "grossMarginLabel": { "type": "string", "description": "Gross margin cost nature" },
+        "opexRatio": { "type": "string", "description": "Fixed opex percentage range" },
+        "runwaySafety": { "type": "string", "description": "Cash runway safe threshold" },
+        "netProfitMargin": { "type": "string", "description": "Net profit margin percentage range" },
+        "keySurvivalRule": { "type": "string", "description": "Key business survival advice" }
+      },
+      "required": ["id", "name", "avgRevenue", "grossMargin", "opexRatio", "runwaySafety", "netProfitMargin"]
+    }
+  },
+  "firestore": {
+    "/assessments/{assessmentId}": {
+      "schema": "BusinessAssessment",
+      "description": "Stores user self-assessment project files and 14 financial indicators"
+    },
+    "/reports/{reportId}": {
+      "schema": "AssessmentReport",
+      "description": "Stores generated radar reports, gate evaluations and AI diagnostic advice"
+    },
+    "/escalated_questions/{questionId}": {
+      "schema": "EscalatedQuestion",
+      "description": "Stores consultation queries, big data rule answers and edge cases"
+    },
+    "/industry_benchmarks/{benchmarkId}": {
+      "schema": "IndustryBenchmark",
+      "description": "Stores global small and micro business benchmark datasets"
+    }
+  }
+}

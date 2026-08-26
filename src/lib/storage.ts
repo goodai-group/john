@@ -4,11 +4,23 @@ import {
   EscalatedQuestion
 } from '../types';
 import { runBusinessAssessment } from './scoringEngine';
+import {
+  saveAssessmentToCloud,
+  saveReportToCloud,
+  deleteAssessmentFromCloud,
+  deleteReportFromCloud,
+  saveQuestionToCloud,
+  fetchAssessmentsFromCloud,
+  fetchReportsFromCloud,
+  fetchQuestionsFromCloud,
+  isCloudDatabaseAvailable
+} from './firebase';
 
 const STORAGE_KEY_PROJECTS = 'bam_projects_v14';
 const STORAGE_KEY_REPORTS = 'bam_reports_v14';
 const STORAGE_KEY_DRAFT = 'bam_active_draft_v14';
 const STORAGE_KEY_RULES_REPO = 'bam_escalated_rules_v14';
+const STORAGE_KEY_INITIAL_SEEDED = 'bam_cloud_seeded_v14';
 
 export const INITIAL_PRESET_PROJECTS: BusinessFormData[] = [
   {
@@ -240,6 +252,13 @@ export function saveProject(project: BusinessFormData): void {
     current.unshift(project);
   }
   localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(current));
+
+  // Sync to Cloud Firestore Table /assessments
+  if (isCloudDatabaseAvailable()) {
+    saveAssessmentToCloud(project).catch((err) =>
+      console.warn('Background cloud save assessment failed:', err)
+    );
+  }
 }
 
 export function deleteProjectAndReports(projectId: string): void {
@@ -247,8 +266,21 @@ export function deleteProjectAndReports(projectId: string): void {
   const projects = getStoredProjects().filter((p) => p.id !== projectId);
   localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(projects));
 
-  const allReports = getAllReports().filter((r) => r.projectId !== projectId);
-  localStorage.setItem(STORAGE_KEY_REPORTS, JSON.stringify(allReports));
+  const targetReports = getAllReports().filter((r) => r.projectId === projectId);
+  const remainingReports = getAllReports().filter((r) => r.projectId !== projectId);
+  localStorage.setItem(STORAGE_KEY_REPORTS, JSON.stringify(remainingReports));
+
+  // Remove from Cloud Firestore Tables
+  if (isCloudDatabaseAvailable()) {
+    deleteAssessmentFromCloud(projectId).catch((err) =>
+      console.warn('Cloud delete assessment failed:', err)
+    );
+    targetReports.forEach((r) => {
+      deleteReportFromCloud(r.id).catch((err) =>
+        console.warn('Cloud delete report failed:', err)
+      );
+    });
+  }
 }
 
 export function getAllReports(): AssessmentReport[] {
@@ -276,6 +308,13 @@ export function saveReport(report: AssessmentReport): void {
     current.unshift(report);
   }
   localStorage.setItem(STORAGE_KEY_REPORTS, JSON.stringify(current));
+
+  // Sync to Cloud Firestore Table /reports
+  if (isCloudDatabaseAvailable()) {
+    saveReportToCloud(report).catch((err) =>
+      console.warn('Background cloud save report failed:', err)
+    );
+  }
 }
 
 export function getProjectReports(projectId: string): AssessmentReport[] {
@@ -317,6 +356,13 @@ export function addEscalatedQuestion(q: EscalatedQuestion): void {
   const list = getEscalatedQuestions();
   list.unshift(q);
   localStorage.setItem(STORAGE_KEY_RULES_REPO, JSON.stringify(list));
+
+  // Sync to Cloud Firestore Table /escalated_questions
+  if (isCloudDatabaseAvailable()) {
+    saveQuestionToCloud(q).catch((err) =>
+      console.warn('Background cloud save question failed:', err)
+    );
+  }
 }
 
 export function updateEscalatedQuestionFeedback(
@@ -328,6 +374,72 @@ export function updateEscalatedQuestionFeedback(
   if (item) {
     item.userFeedback = feedback;
     localStorage.setItem(STORAGE_KEY_RULES_REPO, JSON.stringify(list));
+    if (isCloudDatabaseAvailable()) {
+      saveQuestionToCloud(item).catch((err) =>
+        console.warn('Background cloud update question feedback failed:', err)
+      );
+    }
+  }
+}
+
+// Initial Sync & Cloud Seeder
+export async function syncWithCloudDatabase(): Promise<void> {
+  if (!isCloudDatabaseAvailable()) return;
+
+  try {
+    const [cloudProjects, cloudReports, cloudQuestions] = await Promise.all([
+      fetchAssessmentsFromCloud(),
+      fetchReportsFromCloud(),
+      fetchQuestionsFromCloud()
+    ]);
+
+    // If cloud is empty, seed initial records
+    if (cloudProjects.length === 0) {
+      const localProjects = getStoredProjects();
+      for (const p of localProjects) {
+        await saveAssessmentToCloud(p);
+      }
+    } else {
+      // Merge cloud assessments into local
+      const localProjects = getStoredProjects();
+      const mergedProjectsMap = new Map<string, BusinessFormData>();
+      localProjects.forEach((p) => mergedProjectsMap.set(`${p.id}-v${p.version}`, p));
+      cloudProjects.forEach((p) => mergedProjectsMap.set(`${p.id}-v${p.version}`, p));
+      const mergedList = Array.from(mergedProjectsMap.values());
+      localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(mergedList));
+    }
+
+    if (cloudReports.length === 0) {
+      const localReports = getAllReports();
+      for (const r of localReports) {
+        await saveReportToCloud(r);
+      }
+    } else {
+      const localReports = getAllReports();
+      const mergedReportsMap = new Map<string, AssessmentReport>();
+      localReports.forEach((r) => mergedReportsMap.set(r.id, r));
+      cloudReports.forEach((r) => mergedReportsMap.set(r.id, r));
+      const mergedList = Array.from(mergedReportsMap.values());
+      localStorage.setItem(STORAGE_KEY_REPORTS, JSON.stringify(mergedList));
+    }
+
+    if (cloudQuestions.length === 0) {
+      const localQuestions = getEscalatedQuestions();
+      for (const q of localQuestions) {
+        await saveQuestionToCloud(q);
+      }
+    } else {
+      const localQuestions = getEscalatedQuestions();
+      const mergedQMap = new Map<string, EscalatedQuestion>();
+      localQuestions.forEach((q) => mergedQMap.set(q.id, q));
+      cloudQuestions.forEach((q) => mergedQMap.set(q.id, q));
+      const mergedList = Array.from(mergedQMap.values());
+      localStorage.setItem(STORAGE_KEY_RULES_REPO, JSON.stringify(mergedList));
+    }
+
+    console.log('✅ Cloud Firestore tables synced with local state.');
+  } catch (err) {
+    console.warn('Cloud sync encountered non-fatal issue:', err);
   }
 }
 

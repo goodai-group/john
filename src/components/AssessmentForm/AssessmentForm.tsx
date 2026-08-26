@@ -18,7 +18,8 @@ import {
   Camera,
   Trash2,
   RefreshCw,
-  Info
+  Info,
+  BarChart3
 } from 'lucide-react';
 import {
   BusinessFormData,
@@ -781,12 +782,36 @@ export const AssessmentForm: React.FC<FormProps> = ({
 
             <div className="space-y-4 text-xs">
               {/* Field 1: Monthly Gross Total */}
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="font-bold text-slate-900">
-                    F8. 经营月均总流水 (Monthly Inflow Total)
-                  </label>
-                  <div className="flex items-center gap-1">
+              <div className="p-4 rounded-2xl bg-indigo-50/40 border-2 border-indigo-200 space-y-2.5">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div>
+                    <label className="font-black text-slate-900 text-sm flex items-center gap-1.5">
+                      <span>F8. 经营月均总流水 (Monthly Inflow Total)</span>
+                      <span className="text-[10px] bg-indigo-600 text-white font-bold px-2 py-0.5 rounded-full">
+                        总营业额
+                      </span>
+                    </label>
+                    <p className="text-xs text-indigo-900 font-medium mt-0.5">
+                      💡 <b>大白话：</b>这是客人买单进你口袋/收银机/微信/银行卡的<b>全部毛钱（总营业额）</b>，<b>尚未扣除</b>进货成本、房租与人工！
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onOpenAiHelper?.('经营月均总流水是收入还是什么？')}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-100 hover:bg-indigo-200 text-indigo-800 text-[11px] font-bold transition-colors cursor-pointer"
+                    >
+                      <Sparkles className="w-3 h-3 text-indigo-600" />
+                      <span>AI解答：是收入还是什么？</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onOpenAiHelper?.('各行业大数据平均流水与利润基准是多少？')}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-[11px] font-bold transition-colors cursor-pointer"
+                    >
+                      <BarChart3 className="w-3 h-3 text-emerald-700" />
+                      <span>查大数据基准</span>
+                    </button>
                     <select
                       value={formData.monthlyRevenue.currency}
                       onChange={(e) =>
@@ -796,7 +821,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                           e.target.value as CurrencyCode
                         )
                       }
-                      className="px-2 py-1 rounded border border-slate-300 font-bold bg-white text-slate-700"
+                      className="px-2 py-1.5 rounded-lg border border-slate-300 font-bold bg-white text-slate-700 text-xs shadow-2xs"
                     >
                       {SUPPORTED_CURRENCIES.map((c) => (
                         <option key={c.code} value={c.code}>
@@ -808,10 +833,10 @@ export const AssessmentForm: React.FC<FormProps> = ({
                 </div>
                 <input
                   type="number"
-                  placeholder="例如：3850"
+                  placeholder="例如：50000（填近3-12个月平均每月总营业额）"
                   value={formData.monthlyRevenue.amount || ''}
                   onChange={(e) => updateMoney('monthlyRevenue', Number(e.target.value))}
-                  className="w-full p-2.5 border border-slate-300 rounded-xl font-black text-slate-900 text-sm bg-white"
+                  className="w-full p-3 border-2 border-indigo-200 focus:border-indigo-600 rounded-xl font-black text-slate-900 text-base bg-white shadow-2xs"
                 />
               </div>
 
@@ -929,31 +954,47 @@ export const AssessmentForm: React.FC<FormProps> = ({
 
             {/* Direct Cost (COGS) */}
             <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
-                  <label className="font-bold text-slate-900">
-                    F10. 原材料与直接采购成本 (COGS)
-                  </label>
+                  <div className="flex items-center gap-2">
+                    <label className="font-bold text-slate-900">
+                      F10. 原材料与直接采购成本 (COGS)
+                    </label>
+                    <span className="text-[10px] bg-slate-200 text-slate-700 font-bold px-1.5 py-0.5 rounded">
+                      进货本钱
+                    </span>
+                  </div>
                   <p className="text-[11px] text-slate-500">
-                    进货货款、生鲜食材原料等直接成本。
+                    💡 进货货款、生鲜食材原料等直接买货成本（包含长途运费，但不含房租和员工工资）。
                   </p>
                 </div>
-                <select
-                  value={formData.cogsCost.currency}
-                  onChange={(e) =>
-                    updateMoney('cogsCost', formData.cogsCost.amount, e.target.value as CurrencyCode)
-                  }
-                  className="px-2 py-1 rounded border border-slate-300 font-bold bg-white text-slate-700"
-                >
-                  {SUPPORTED_CURRENCIES.map((c) => (
-                    <option key={c.code} value={c.code}>
-                      {c.code}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onOpenAiHelper?.('进货成本（COGS）怎么算？包含运费吗？')}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-bold transition-colors cursor-pointer"
+                  >
+                    <Sparkles className="w-3 h-3 text-indigo-600" />
+                    <span>AI咨询进货成本与毛利</span>
+                  </button>
+                  <select
+                    value={formData.cogsCost.currency}
+                    onChange={(e) =>
+                      updateMoney('cogsCost', formData.cogsCost.amount, e.target.value as CurrencyCode)
+                    }
+                    className="px-2 py-1 rounded border border-slate-300 font-bold bg-white text-slate-700"
+                  >
+                    {SUPPORTED_CURRENCIES.map((c) => (
+                      <option key={c.code} value={c.code}>
+                        {c.code}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <input
                 type="number"
+                placeholder="例如：15000（每月进货与原材料总支出）"
                 value={formData.cogsCost.amount || ''}
                 onChange={(e) => updateMoney('cogsCost', Number(e.target.value))}
                 className="w-full p-2.5 border border-slate-300 rounded-xl font-bold text-slate-900 bg-white"
