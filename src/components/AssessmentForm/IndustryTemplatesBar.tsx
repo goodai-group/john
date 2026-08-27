@@ -199,16 +199,16 @@ export const IndustryTemplatesBar: React.FC<IndustryTemplatesBarProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono font-bold uppercase tracking-wider text-amber-900 bg-amber-100 px-2.5 py-0.5 rounded-full border border-amber-200">
-                1秒一键套用工场服事范本
+                ⚡ 三分钟小白看懂 · 1秒一键套用
               </span>
-              <span className="text-xs text-neutral-600 font-bold">医疗与教育服事 · 帮助当地人</span>
+              <span className="text-xs text-neutral-600 font-bold">医疗与教育培训 · 真实范本</span>
             </div>
             <h3 className="text-base sm:text-lg font-black text-neutral-900 mt-0.5">
               选用常见医疗诊所与教育培训服事真实范本
             </h3>
           </div>
         </div>
-        <span className="text-xs sm:text-sm text-neutral-500 font-medium">点击任意服事项目，自动填好成套真实运转收支数据</span>
+        <span className="text-xs sm:text-sm text-neutral-500 font-medium">点击任意范本，1秒填好成套真实数据，一眼看懂收支模式！</span>
       </div>
 
       {/* Grid of Templates */}

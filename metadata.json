@@ -1,6 +1,6 @@
 {
-  "name": "宣教工场社区服事体检评估",
-  "description": "专为宣教士、医疗援助诊所、社区教育中心与跨文化服事机构打造的零财务门槛健康体检平台。帮助跨文化工人评估医疗教育服事项目的持续运转能力，做忠心好管家，摆脱资金断崖风险，更好地服务与祝福当地社区。",
+  "name": "商宣商业模式检验",
+  "description": "专为营商宣教(BAM)、医疗援助诊所与教育辅导机构打造的零门槛商业模式健康检验平台。三分钟小白看懂，选用常见医疗诊所与教育培训服事真实范本，一眼看清收支健康与应急储备。",
   "requestFramePermissions": ["microphone"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

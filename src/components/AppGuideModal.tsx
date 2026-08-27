@@ -149,11 +149,11 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
 
                 <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200">
                   <div className="w-8 h-8 rounded-xl bg-amber-600 text-white flex items-center justify-center font-bold text-xs mb-2">
-                    📝
+                    ⚡
                   </div>
-                  <h4 className="font-bold text-amber-950 mb-1">凭证零歧视</h4>
+                  <h4 className="font-bold text-amber-950 mb-1">三分钟小白看懂</h4>
                   <p className="text-amber-800 text-[11px] leading-relaxed">
-                    微信收款截图、手写账本、移动钱包或纯手动输入均可，凭证类型绝不扣减一分。
+                    选用常见医疗诊所与教育培训服事真实范本，零门槛一眼看懂收支运转健康。
                   </p>
                 </div>
 

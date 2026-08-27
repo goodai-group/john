@@ -214,12 +214,12 @@ export const AiSmartFormFiller: React.FC<AiSmartFormFillerProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono font-bold uppercase tracking-wider text-amber-300 bg-amber-400/20 px-2.5 py-0.5 rounded-full border border-amber-300/40">
-                AI 大白话随手填
+                ⚡ 三分钟小白看懂 · AI 口语随手填
               </span>
-              <span className="text-xs text-indigo-200 font-bold">不用懂财务，打字/语音随便发一句话即可</span>
+              <span className="text-xs text-indigo-200 font-bold">不用懂财务，打字/语音发一段大白话即可</span>
             </div>
             <h3 className="text-base sm:text-lg font-black text-white mt-0.5">
-              告诉我您的买卖收支，AI 帮您自动识别并填好
+              告诉我您的诊所或培训收支，AI 帮您自动识别并填好
             </h3>
           </div>
         </div>
@@ -229,7 +229,7 @@ export const AiSmartFormFiller: React.FC<AiSmartFormFillerProps> = ({
       <div className="space-y-2">
         <p className="text-xs sm:text-sm text-indigo-200 flex items-center gap-1.5 font-bold">
           <Lightbulb className="w-4 h-4 text-amber-400" />
-          <span>点击快速体验小白真实日常说话方式：</span>
+          <span>点击快速体验医疗与教育服事实测样例（一眼看懂）：</span>
         </p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
           {PRESET_CASES.map((c, i) => (
@@ -255,7 +255,7 @@ export const AiSmartFormFiller: React.FC<AiSmartFormFillerProps> = ({
           <textarea
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            placeholder="例如：我在老家开了一家炸鸡店，一个月卖 3 万多块，进食材花 1 万 2，房租 2500，雇了一个兼职阿姨 2000，平时卡里留着 2 万备用金，干了快 2 年了..."
+            placeholder="例如：我们在工场开便民义诊所，一个月门诊和药费收入 3 万 8，进药和耗材花 1 万 5，场地租金 3500，雇 2 位本地助理护士发 4800，手头常备 4 万急用钱，干了快 2 年了..."
             rows={3}
             className="w-full p-4 rounded-2xl bg-black/40 border border-white/25 text-white placeholder-white/50 text-sm sm:text-base focus:outline-hidden focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400 transition-all resize-none leading-relaxed"
           />
@@ -263,7 +263,7 @@ export const AiSmartFormFiller: React.FC<AiSmartFormFillerProps> = ({
 
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <span className="text-xs text-white/70 font-medium">
-            💡 支持输入“万”、“块”、“元”等口语表达，AI 会自动按小微经营常识精准拆解。
+            💡 支持输入“万”、“块”、“元”等口语表达，AI 会自动按工场服事常识精准拆解。
           </span>
 
           <button

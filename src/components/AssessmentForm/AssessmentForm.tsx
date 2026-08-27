@@ -272,17 +272,17 @@ export const AssessmentForm: React.FC<FormProps> = ({
           <div>
             <div className="flex items-center space-x-2 mb-1">
               <span className="text-xs font-mono font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 px-3 py-0.5 rounded-full border border-indigo-100">
-                宣教工场服事申报
+                商宣商业模式检验
               </span>
               <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                做忠心好管家 · 零门槛
+                三分钟小白看懂 · 零财务门槛
               </span>
             </div>
             <h2 className="text-xl sm:text-2xl font-black text-neutral-900 tracking-tight">
-              工场医疗诊所与教育辅导服事健康自测
+              商宣商业模式检验（三分钟小白看懂）
             </h2>
             <p className="text-xs sm:text-sm text-neutral-500 font-medium mt-1">
-              专为零财务基础的宣教士打造 · 评估持续服务当地人的运转能力与应急储备 · 永久免费
+              选用常见医疗诊所与教育培训服事真实范本 · 零门槛一眼看懂收支运转健康与应急储备 · 永久免费
             </p>
           </div>
 
@@ -305,7 +305,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     : 'text-neutral-600 hover:text-neutral-900'
                 }`}
               >
-                ⚡ 1分钟极简自测 (工场首选)
+                ⚡ 1分钟极简自测 (三分钟小白看懂)
               </button>
               <button
                 type="button"
@@ -332,7 +332,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
               📖 智慧管家原则：<span className="italic font-normal">「你们哪一个要盖一座楼，不先坐下算计花费，能盖成不能呢？」（路加福音 14:28）</span>
             </p>
             <p className="text-amber-900/90 font-medium">
-              宣教士在工场开办医疗诊所、爱心卫生所、语言学校或职业培训班，核心在于长期稳定地帮助当地百姓。不用怕算账，只需照实填写日常收支与药品教学耗材，即可测出持续运转的健康度！
+              在工场开办医疗诊所、便民药房、语言辅导学校或职业培训中心，核心在于建立良性循环、长期持续服务与帮助当地人。只需按大白话填写日常收支与采购耗材，三分钟小白一眼看懂！
             </p>
           </div>
         </div>
@@ -376,7 +376,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
               </h3>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-bold text-neutral-800 mb-1.5">
                   诊所/教育培训项目名称 <span className="text-rose-500">*</span>
@@ -388,6 +388,23 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   onChange={(e) => updateField('projectName', e.target.value)}
                   className="w-full p-3.5 border-2 border-neutral-200 rounded-2xl font-bold text-neutral-800 text-base focus:border-indigo-500 focus:outline-hidden"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-neutral-800 mb-1.5">
+                  服事行业领域 <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={formData.industry}
+                  onChange={(e) => updateField('industry', e.target.value)}
+                  className="w-full p-3.5 border-2 border-neutral-200 rounded-2xl font-bold text-neutral-800 text-base bg-white focus:border-indigo-500 focus:outline-hidden"
+                >
+                  <option value="medical_health">🩺 医疗健康 / 爱心诊所</option>
+                  <option value="education_training">📚 语言培训 / 文化辅导</option>
+                  <option value="vocational_training">🛠️ 职业技能 / IT实训</option>
+                  <option value="child_care">🧒 贫困儿童 / 日托启蒙</option>
+                  <option value="community_service">🤝 社区综合 / 助贫扶弱</option>
+                </select>
               </div>
 
               <div>
@@ -405,36 +422,6 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     </option>
                   ))}
                 </select>
-              </div>
-            </div>
-
-            {/* Quick Industry Select Cards */}
-            <div>
-              <label className="block text-sm font-bold text-neutral-800 mb-2">
-                选择最贴近的工场服事类型：
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
-                {[
-                  { id: 'medical_health', name: '🩺 医疗健康 / 爱心诊所', desc: '门诊、平价药房、巡回医疗、急救' },
-                  { id: 'education_training', name: '📚 语言培训 / 文化辅导', desc: '英语中心、课后辅导、文化交流' },
-                  { id: 'vocational_training', name: '🛠️ 职业技能 / IT实训', desc: '电脑IT、电工维修、缝纫手艺' },
-                  { id: 'child_care', name: '🧒 贫困儿童 / 日托启蒙', desc: '学前启蒙、营养辅餐、孤儿关怀' },
-                  { id: 'community_service', name: '🤝 社区综合 / 助贫扶弱', desc: '助残照料、心理辅导、帮扶中心' }
-                ].map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => updateField('industry', item.id)}
-                    className={`p-3 rounded-2xl border-2 text-left transition-all cursor-pointer ${
-                      formData.industry === item.id
-                        ? 'bg-indigo-50 border-indigo-600 text-indigo-950 font-black shadow-xs ring-2 ring-indigo-400'
-                        : 'bg-neutral-50 border-neutral-200 text-neutral-700 hover:border-indigo-300'
-                    }`}
-                  >
-                    <div className="text-xs sm:text-sm font-bold mb-1">{item.name}</div>
-                    <div className="text-[11px] text-neutral-500 leading-tight">{item.desc}</div>
-                  </button>
-                ))}
               </div>
             </div>
           </div>
@@ -627,7 +614,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
               className="w-full sm:w-auto px-8 py-4 bg-linear-to-r from-indigo-600 via-indigo-700 to-emerald-600 hover:from-indigo-500 hover:to-emerald-500 text-white rounded-2xl text-base sm:text-lg font-black shadow-xl shadow-indigo-600/25 transition-all cursor-pointer hover:scale-102 flex items-center justify-center gap-2.5"
             >
               <Sparkles className="w-5 h-5 text-amber-300 animate-pulse" />
-              <span>🚀 立即生成我的商业健康体检报告</span>
+              <span>🚀 立即生成商宣商业模式检验报告 (一眼看懂)</span>
               <ArrowRight className="w-5 h-5" />
             </button>
           </div>

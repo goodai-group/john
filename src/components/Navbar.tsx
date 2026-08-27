@@ -10,7 +10,6 @@ import {
   Globe,
   SlidersHorizontal,
   Eye,
-  Info,
   LogOut,
   User as UserIcon,
   Cloud,
@@ -25,7 +24,6 @@ interface NavbarProps {
   language: Language;
   onLanguageChange: (lang: Language) => void;
   onOpenFeeModal: () => void;
-  onOpenOnboarding: () => void;
   onOpenAppGuide?: () => void;
   onOpenAccessibility: () => void;
   onOpenAiHelper: (topic?: string) => void;
@@ -42,7 +40,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   language,
   onLanguageChange,
   onOpenFeeModal,
-  onOpenOnboarding,
   onOpenAppGuide,
   onOpenAccessibility,
   onOpenAiHelper,
@@ -116,15 +113,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           )}
 
-          {/* Guide Tour */}
-          <button
-            onClick={onOpenOnboarding}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-bold border border-neutral-200 transition-colors cursor-pointer"
-          >
-            <Info className="w-4 h-4 text-indigo-600" />
-            <span>{language === 'zh' ? '新手引导' : 'Guide'}</span>
-          </button>
-
           {/* Accessibility */}
           <button
             onClick={onOpenAccessibility}
@@ -160,14 +148,14 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div>
               <div className="flex items-center space-x-2">
                 <h1 className="text-lg sm:text-xl font-black text-neutral-900 tracking-tight">
-                  {language === 'zh' ? '宣教工场社区服事体检' : 'Mission Service Health'}
+                  {language === 'zh' ? '商宣商业模式检验' : 'BAM Model Health Check'}
                 </h1>
                 <span className="text-xs font-mono font-bold bg-indigo-900 text-white px-2.5 py-0.5 rounded-lg">
-                  工场服事版
+                  三分钟小白看懂
                 </span>
               </div>
               <p className="text-xs text-neutral-500 font-medium hidden sm:block">
-                宣教士零财务门槛 · 医疗关怀与教育培训 · 做忠心好管家 · 持续帮助当地人
+                选用常见医疗诊所与教育培训服事真实范本 · 零门槛一眼看懂收支运转
               </p>
             </div>
           </div>

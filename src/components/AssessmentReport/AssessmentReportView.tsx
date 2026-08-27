@@ -123,21 +123,21 @@ export const AssessmentReportView: React.FC<ReportViewProps> = ({
 
   // Copy plain language executive summary
   const handleCopySummary = () => {
-    const summaryText = `【${report.projectName} · 商业自测体检报告 v${report.version}】
+    const summaryText = `【${report.projectName} · 商宣商业模式检验报告 v${report.version}】
 综合健康得分：${report.totalScore}分 (${report.letterGrade})
 红线合规：${report.gatePassed ? '全部通过 (4/4)' : `未通过 (${report.failedGates.length} 项触发警示)`}
 
-📊 核心经营数据概览：
-- 月营业额：${formatMoney(monthlyRealRevenue, baseCurr)}
-- 每月净利润：${formatMoney(netProfit, baseCurr)} (净利润率 ${netProfitMarginPercent}%)
-- 直接进货成本：${formatMoney(monthlyCogs, baseCurr)} (毛利率 ${grossMarginPercent}%)
-- 每月房租人工开销：${formatMoney(monthlyOpex, baseCurr)} (占营业额 ${opexRatioPercent}%)
-- 现金应急备用金：能支撑 ${cashRunwayMonths} 个月固定开销
+📊 核心经营与服事数据概览：
+- 每月门诊/学费进账：${formatMoney(monthlyRealRevenue, baseCurr)}
+- 每月结余净产出：${formatMoney(netProfit, baseCurr)} (净利润率 ${netProfitMarginPercent}%)
+- 药品耗材采购花销：${formatMoney(monthlyCogs, baseCurr)} (毛利率 ${grossMarginPercent}%)
+- 每月租金与同工支出：${formatMoney(monthlyOpex, baseCurr)} (占进账 ${opexRatioPercent}%)
+- 应急储备金水库：能支撑 ${cashRunwayMonths} 个月固定开销
 
 💡 关键建议：
 ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, i) => `${i + 1}. ${adv}`).join('\n')}
 
-*由 BAM-PRD-2026-V1.4 商业模型自测系统与 Gemini AI 生成*`;
+*由商宣商业模式检验系统与 Gemini AI 生成*`;
 
     navigator.clipboard.writeText(summaryText);
     setCopiedSummary(true);
@@ -250,7 +250,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
               }`}
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-              <span>极简大白话速览 (推荐)</span>
+              <span>⚡ 三分钟小白看懂速览 (一眼看懂)</span>
             </button>
             <button
               onClick={() => setViewMode('detailed')}
@@ -838,14 +838,14 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-mono font-bold uppercase tracking-wider text-amber-900 bg-amber-200/80 px-2.5 py-0.5 rounded-full border border-amber-300">
-                      工场服事评估
+                      商宣商业模式检验
                     </span>
                     <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
                       持续运转与社区关怀指数
                     </span>
                   </div>
                   <h3 className="text-base sm:text-lg font-black text-neutral-900 mt-0.5">
-                    宣教士工场医疗教育服事与忠心管家体检
+                    商宣商业模式检验与忠心管家体检 (三分钟小白看懂)
                   </h3>
                 </div>
               </div>

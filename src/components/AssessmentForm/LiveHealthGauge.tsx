@@ -73,7 +73,7 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
               </span>
               <span className="text-xs text-neutral-500 font-bold">100% 自动计算</span>
             </div>
-            <h3 className="text-base sm:text-lg font-black text-neutral-900 mt-0.5">当前开店健康实时测算</h3>
+            <h3 className="text-base sm:text-lg font-black text-neutral-900 mt-0.5">商宣模式运转健康实时测算</h3>
           </div>
         </div>
 
