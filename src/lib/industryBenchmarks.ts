@@ -14,6 +14,19 @@ export interface IndustryBenchmark {
 
 export const INDUSTRY_BENCHMARKS: IndustryBenchmark[] = [
   {
+    id: 'food_beverage',
+    nameZh: '☕ 餐饮烘焙 / 社区咖啡 (Bakery & Cafe)',
+    nameEn: 'Bakery, Coffee Shop & Catering',
+    typicalGrossMargin: '55% - 70%',
+    typicalOpexRatio: '30% - 48%',
+    typicalNetMargin: '12% - 25%',
+    typicalCashRunway: '≥ 3.0 个月',
+    naturalLanguageSummaryZh: '餐饮烘焙与社区咖啡馆，直接食材（咖啡豆、面粉、乳制品）与打包耗材通常占总进账的 30% 到 45%。注意控制临街铺租与咖啡师人工，保持 15% 净结余可长期良性运转。',
+    naturalLanguageSummaryEn: 'Food & cafe material costs take 30%-45% of revenue. Keeping rent & labor balanced ensures a solid 15%+ profit margin.',
+    keyAdviceZh: '严控高损耗生鲜原辅料库存，推出特色高毛利单品组合与外带套餐。',
+    keyAdviceEn: 'Minimize perishable ingredient wastage and promote high-margin signature sets.'
+  },
+  {
     id: 'medical_health',
     nameZh: '🩺 医疗健康 / 爱心义诊所 (Healthcare Clinic)',
     nameEn: 'Community Clinic & Healthcare',
@@ -27,8 +40,21 @@ export const INDUSTRY_BENCHMARKS: IndustryBenchmark[] = [
     keyAdviceEn: 'Maintain essential emergency medicine buffer and negotiate direct distributor supply.'
   },
   {
+    id: 'retail_store',
+    nameZh: '🛒 社区零售 / 平价商超 (Retail & Grocery)',
+    nameEn: 'Community Retail & Grocery',
+    typicalGrossMargin: '20% - 35%',
+    typicalOpexRatio: '12% - 22%',
+    typicalNetMargin: '6% - 15%',
+    typicalCashRunway: '≥ 2.5 个月',
+    naturalLanguageSummaryZh: '社区便利店与平价百货主要靠高频走量，大宗进货采购本钱占 65% 到 80%。虽然毛利率偏低，但租金和理货人工相对可控，周转迅速即可稳定盈利。',
+    naturalLanguageSummaryEn: 'Retail grocery relies on fast inventory turnover with 65%-80% wholesale cost. Strict inventory control ensures consistent margins.',
+    keyAdviceZh: '加快畅销生活必需品周转速度，定期清理滞销货品以防积压流动资金。',
+    keyAdviceEn: 'Accelerate stock turnover for fast-moving staples and clear slow-moving inventory.'
+  },
+  {
     id: 'education_training',
-    nameZh: '📚 语言学习与文化辅导 (Language & Education)',
+    nameZh: '📚 语言教育 / 辅导中心 (Language & Education)',
     nameEn: 'Language Learning & Youth Tutoring',
     typicalGrossMargin: '75% - 90%',
     typicalOpexRatio: '45% - 65%',
@@ -41,7 +67,7 @@ export const INDUSTRY_BENCHMARKS: IndustryBenchmark[] = [
   },
   {
     id: 'vocational_training',
-    nameZh: '🛠️ 青年职业技能与IT实训 (Vocational & IT Training)',
+    nameZh: '🛠️ 职业实训 / 手工工坊 (Vocational & IT Training)',
     nameEn: 'Vocational IT & Skills School',
     typicalGrossMargin: '60% - 80%',
     typicalOpexRatio: '35% - 50%',
@@ -53,8 +79,21 @@ export const INDUSTRY_BENCHMARKS: IndustryBenchmark[] = [
     keyAdviceEn: 'Partner with local enterprises for youth internships and placements.'
   },
   {
+    id: 'agriculture',
+    nameZh: '🌱 现代农业 / 生态种植 (Agriculture & Farming)',
+    nameEn: 'Eco-Agriculture & Community Farm',
+    typicalGrossMargin: '45% - 65%',
+    typicalOpexRatio: '25% - 40%',
+    typicalNetMargin: '15% - 30%',
+    typicalCashRunway: '≥ 4.0 个月',
+    naturalLanguageSummaryZh: '农业种植与养殖受季节气候影响大，种子种苗与有机肥料等直接投入约占三成半，需常备 4 个月以上开支储备以平稳度过播种期与休耕期。',
+    naturalLanguageSummaryEn: 'Farming involves seasonal cycles. Material inputs take ~35%. Keeping 4+ months of liquidity supports off-season preparation.',
+    keyAdviceZh: '发展耐储存深加工农产品，拓展社区预定与直采直销渠道。',
+    keyAdviceEn: 'Develop value-added processed goods and community subscription distribution.'
+  },
+  {
     id: 'child_care',
-    nameZh: '🧒 贫困儿童日托与学前启蒙 (Childcare & Early Learning)',
+    nameZh: '🧒 儿童日托 / 社区启蒙 (Childcare & Early Learning)',
     nameEn: 'Community Childcare & Early Learning',
     typicalGrossMargin: '65% - 85%',
     typicalOpexRatio: '40% - 60%',
@@ -77,10 +116,40 @@ export const INDUSTRY_BENCHMARKS: IndustryBenchmark[] = [
     naturalLanguageSummaryEn: 'Community social care supports the marginalized. Having 4+ months of liquidity enables timely emergency assistance during local crises.',
     keyAdviceZh: '善用志愿者网络与本地爱心伙伴资源，建立透明的救助善款与物资流转档案。',
     keyAdviceEn: 'Leverage local volunteer networks and maintain transparent aid distribution records.'
+  },
+  {
+    id: 'custom',
+    nameZh: '💡 自定义实体 / 创新微创项目 (Custom Business)',
+    nameEn: 'Custom Micro-Enterprise',
+    typicalGrossMargin: '50% - 70%',
+    typicalOpexRatio: '30% - 45%',
+    typicalNetMargin: '15% - 28%',
+    typicalCashRunway: '≥ 3.0 个月',
+    naturalLanguageSummaryZh: '根据您自定义输入的实体经营特征，直接采购成本通常控制在 30% 到 45% 之间，固定房租与人工保持在四成以内，即可维持健康的持续自养能力。',
+    naturalLanguageSummaryEn: 'For custom enterprises, maintaining direct costs around 30%-45% and OPEX under 40% ensures viable financial self-sustainability.',
+    keyAdviceZh: '密切跟踪每笔业务的直接毛利空间，确保账面常备至少 3 个月的固定运营支出。',
+    keyAdviceEn: 'Monitor gross margins per deal and maintain at least 3 months of OPEX cash buffer.'
   }
 ];
 
 export function getIndustryBenchmark(industryId: string): IndustryBenchmark {
-  const found = INDUSTRY_BENCHMARKS.find((b) => b.id === industryId || b.nameZh.includes(industryId));
-  return found || INDUSTRY_BENCHMARKS[0];
+  if (!industryId) return INDUSTRY_BENCHMARKS[0];
+  const found = INDUSTRY_BENCHMARKS.find(
+    (b) => b.id === industryId || b.nameZh.toLowerCase().includes(industryId.toLowerCase())
+  );
+  if (found) return found;
+
+  return {
+    id: 'custom',
+    nameZh: `💡 ${industryId}`,
+    nameEn: industryId,
+    typicalGrossMargin: '50% - 70%',
+    typicalOpexRatio: '30% - 45%',
+    typicalNetMargin: '15% - 28%',
+    typicalCashRunway: '≥ 3.0 个月',
+    naturalLanguageSummaryZh: `针对「${industryId}」，直接采购成本通常控制在 35% 左右，房租人工控制在 40% 以内，即可维持良性自养运转。`,
+    naturalLanguageSummaryEn: `For ${industryId}, keeping materials around 35% and OPEX below 40% ensures healthy sustainability.`,
+    keyAdviceZh: '跟踪核心成本变动，确保常备 3 个月以上固定开支现金储备。',
+    keyAdviceEn: 'Track core unit economics and keep 3+ months of operating runway.'
+  };
 }

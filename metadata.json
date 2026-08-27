@@ -1,6 +1,6 @@
 {
-  "name": "商宣商业模式检验",
-  "description": "专为营商宣教(BAM)、医疗援助诊所与教育辅导机构打造的零门槛商业模式健康检验平台。三分钟小白看懂，选用常见医疗诊所与教育培训服事真实范本，一眼看清收支健康与应急储备。",
+  "name": "商业宣教商业模型财务测算",
+  "description": "专为商业宣教(BAM)与爱心服事打造的财务健康与商业模型测算系统。通过评估核心收支、直接物料成本、固定开销与应急资金储备，测算项目健康度、现金跑道与抗风险能力。",
   "requestFramePermissions": ["microphone"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

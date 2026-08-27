@@ -125,14 +125,14 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
               <div className="p-4 rounded-2xl bg-indigo-50/70 border-2 border-indigo-100 text-indigo-950 space-y-2">
                 <h3 className="text-sm font-bold flex items-center gap-1.5 text-indigo-900">
                   <Sparkles className="w-4 h-4 text-indigo-600" />
-                  <span>给小店主、个体户、摆摊创业者的「全自动生意体检仪」</span>
+                  <span>给宣教同工与工场爱心服事的「全自动财务健康体检仪」</span>
                 </h3>
                 <p className="text-neutral-700 leading-relaxed">
-                  平时开餐饮小吃、便利杂货、跨境电商或做手艺维修，经常会遇到三个最核心的困惑：
-                  <strong>「我到底赚不赚钱？」、「如果不进账我能撑几个月？」、「我的房租和人工成本有没有过高？」</strong>
+                  在工场开办爱心便民门诊、语言学习班、计算机实训学校或社区扶贫服事，同工常面临三个现实考验：
+                  <strong>「每月的看诊或学费能否抵消药品与场地成本？」、「如果遭遇突发情况，账上现金能抗几个月？」、「是否过度依赖外部奉献或面临资金链断裂风险？」</strong>
                 </p>
                 <p className="text-neutral-700 leading-relaxed">
-                  本工具无需您懂复杂的财务报表，只要输入您日常收支的几笔关键数字，<strong>AI 计算引擎将在 1 秒内为您出具 5 维度健康雷达图、存活现金跑道预警与定制改善建议</strong>。
+                  本系统无需懂任何复杂财务报表，只需选一个最接近的真实范本或随手打几笔收支，<strong>计算引擎即刻为您出具 5 维度健康雷达图、存活现金跑道预警与针对性良性运营建议</strong>。
                 </p>
               </div>
 
@@ -141,9 +141,9 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
                   <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-xs mb-2">
                     💯
                   </div>
-                  <h4 className="font-bold text-emerald-950 mb-1">100% 公开透明</h4>
+                  <h4 className="font-bold text-emerald-950 mb-1">公开透明 · 零门槛</h4>
                   <p className="text-emerald-800 text-[11px] leading-relaxed">
-                    没有复杂的财务门槛，所有评分规则、通过线与 5 道否决红线完全公开，人人平等。
+                    没有复杂的财务术语，所有评分规则、安全水位与 5 道否决红线完全公开清晰。
                   </p>
                 </div>
 
@@ -151,9 +151,9 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
                   <div className="w-8 h-8 rounded-xl bg-amber-600 text-white flex items-center justify-center font-bold text-xs mb-2">
                     ⚡
                   </div>
-                  <h4 className="font-bold text-amber-950 mb-1">三分钟小白看懂</h4>
+                  <h4 className="font-bold text-amber-950 mb-1">1秒套用工场真实范本</h4>
                   <p className="text-amber-800 text-[11px] leading-relaxed">
-                    选用常见医疗诊所与教育培训服事真实范本，零门槛一眼看懂收支运转健康。
+                    内置医疗门诊、语言辅导、技能培训等真实工场模型，无需手动算数字即可直接自测。
                   </p>
                 </div>
 
@@ -161,9 +161,9 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
                   <div className="w-8 h-8 rounded-xl bg-sky-600 text-white flex items-center justify-center font-bold text-xs mb-2">
                     🛡️
                   </div>
-                  <h4 className="font-bold text-sky-950 mb-1">隐私与云端随心选</h4>
+                  <h4 className="font-bold text-sky-950 mb-1">工场安全与隐私保护</h4>
                   <p className="text-sky-800 text-[11px] leading-relaxed">
-                    支持脱敏安全模式；随时可在「我的项目」中一键彻底粉碎删除，或者登录 Google 跨设备找回。
+                    支持脱敏安全模式；随时可在「我的项目」中一键彻底粉碎删除，或安全保存。
                   </p>
                 </div>
               </div>
@@ -178,11 +178,11 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
                   1
                 </div>
                 <div className="flex-1">
-                  <h4 className="font-bold text-neutral-900 text-xs">第 1 步：报数字（三种超简单方式任选）</h4>
+                  <h4 className="font-bold text-neutral-900 text-xs">第 1 步：选范本或随手说（3 种轻松方式任选）</h4>
                   <p className="text-neutral-600 text-[11px] mt-1 leading-relaxed">
-                    • <strong>方式 A（最推荐）</strong>：点击表单顶部的【👶 一键行业范本】，直接载入餐饮、零售、电商的真实数字改动；<br />
-                    • <strong>方式 B（动口不动手）</strong>：在【✨ AI 帮我填】里随手打一句话（如“我开小吃店月流水3万进货1万”），AI 自动提取填入；<br />
-                    • <strong>方式 C</strong>：按步骤直接填写。
+                    • <strong>方式 A（最推荐）</strong>：点击【🎯 常用服事范本】，直接载入医疗诊所、语言学校、技能培训的真实数字；<br />
+                    • <strong>方式 B（口语随手写）</strong>：在【💬 AI 随手写】里输入大白话（如“我们在工场办门诊月进账3万8，进药1万5，房租3500”），AI 自动识别；<br />
+                    • <strong>方式 C</strong>：手动填几笔核心收支。
                   </p>
                 </div>
               </div>
@@ -192,11 +192,11 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
                   2
                 </div>
                 <div className="flex-1">
-                  <h4 className="font-bold text-neutral-900 text-xs">第 2 步：看体检（1 秒生成 5 维雷达体检报告）</h4>
+                  <h4 className="font-bold text-neutral-900 text-xs">第 2 步：看实时晴雨表（1 秒测算出存活跑道）</h4>
                   <p className="text-neutral-600 text-[11px] mt-1 leading-relaxed">
-                    • <strong>综合得分与评级</strong>：AAA（极优）、AA/A（稳健）、BBB/BB（有短板需改善）、B/REJECT（高危）；<br />
-                    • <strong>救命现金电池</strong>：显示如果一分钱不进账，你账上的备用金能抗几个月；<br />
-                    • <strong>5 道红线筛查</strong>：是否毛利倒挂、是否被房租压死、是否过度依赖补贴。
+                    • <strong>救命现金电池</strong>：显示如果一分钱不进账，手头的应急备用金能维持几个月房租同工；<br />
+                    • <strong>每 100 元进账去向</strong>：进药教材耗材占几成、房租同工占几成、结余留存几成；<br />
+                    • <strong>综合评级预估</strong>：AA 级（稳健良性）、BB 级（有风险需改善）。
                   </p>
                 </div>
               </div>
@@ -206,10 +206,10 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
                   3
                 </div>
                 <div className="flex-1">
-                  <h4 className="font-bold text-neutral-900 text-xs">第 3 步：调方案（沙盒试算器与 AI 锦囊）</h4>
+                  <h4 className="font-bold text-neutral-900 text-xs">第 3 步：生成体检报告与沙盒试算</h4>
                   <p className="text-neutral-600 text-[11px] mt-1 leading-relaxed">
-                    • 进入【沙盒试算器】，滑动拉杆模拟“如果提价 10%”、“如果房租谈下 500 块”、“如果多存 1 万备用金”后分数会如何提升；<br />
-                    • 获取 AI 根据您的具体行业生成的 3 条立即可落地的改善行动方案。
+                    • 查看 5 维度健康雷达图与 5 道否决安全红线筛查结果；<br />
+                    • 在沙盒试算器中模拟“如果药品降低采购价”、“如果多存备用金”对安全跑道的影响。
                   </p>
                 </div>
               </div>
@@ -220,47 +220,47 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
           {activeTab === 'glossary' && (
             <div className="space-y-2.5">
               <p className="text-[11px] text-neutral-500 font-medium">
-                财务专业名词太绕？这里全换成菜市场做买卖的人话：
+                财务专业名词太绕？这里全换成工场大白话：
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <div className="p-3 rounded-2xl bg-neutral-50 border border-neutral-200">
                   <div className="flex items-center gap-1.5 font-bold text-neutral-900 mb-1">
-                    <span className="px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 text-[10px]">营业收入</span>
-                    <span>= 顾客付的总钱数</span>
+                    <span className="px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 text-[10px]">门诊/学费进账</span>
+                    <span>= 当月看诊费与服务收入</span>
                   </div>
                   <p className="text-neutral-600 text-[11px]">
-                    本月收到的全部营业进账流水，包含现金、扫码与转账。
+                    门诊挂号、平价药品售出、学生辅导学费等来自服务对象的实际流水进账。
                   </p>
                 </div>
 
                 <div className="p-3 rounded-2xl bg-neutral-50 border border-neutral-200">
                   <div className="flex items-center gap-1.5 font-bold text-neutral-900 mb-1">
-                    <span className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 text-[10px]">COGS 营业成本</span>
-                    <span>= 买原材料 / 进货进价</span>
+                    <span className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 text-[10px]">采购直接耗材</span>
+                    <span>= 药品 / 教材 / 耗材进货价</span>
                   </div>
                   <p className="text-neutral-600 text-[11px]">
-                    卖出一杯奶茶用的茶叶、奶、杯子；卖一件衣服的拿货批发价。不卖这件东西就不会花这笔钱。
+                    采购常用药品、针剂注射耗材、急救包、教材教具与实训耗材的直接进价花费。
                   </p>
                 </div>
 
                 <div className="p-3 rounded-2xl bg-neutral-50 border border-neutral-200">
                   <div className="flex items-center gap-1.5 font-bold text-neutral-900 mb-1">
-                    <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-[10px]">OPEX 运营开销</span>
-                    <span>= 雷打不动的固定支出</span>
+                    <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-[10px]">固定运转开销</span>
+                    <span>= 房租 + 同工补贴 + 水电</span>
                   </div>
                   <p className="text-neutral-600 text-[11px]">
-                    不管今天有没有客人进门，都必须交的房东房租、员工底薪、水电费和网费。
+                    不管今天有没有病人或学生，每个月都必须支出的诊所房租、本地助理护士/老师薪资与水电网费。
                   </p>
                 </div>
 
                 <div className="p-3 rounded-2xl bg-neutral-50 border border-neutral-200">
                   <div className="flex items-center gap-1.5 font-bold text-neutral-900 mb-1">
-                    <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 text-[10px]">备用金与现金跑道</span>
-                    <span>= 救命钱与能撑几个月</span>
+                    <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 text-[10px]">应急水库与跑道</span>
+                    <span>= 手头活钱与能撑几个月</span>
                   </div>
                   <p className="text-neutral-600 text-[11px]">
-                    银行卡里随时能动的活钱。如果明天起停业一分钱不进，这笔钱能扛几个月的房租和工资。
+                    卡里或手头随时能动的急用备用金。如果遇到动荡或停业，这笔钱能保障服事维持运转几个月。
                   </p>
                 </div>
               </div>

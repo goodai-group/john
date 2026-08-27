@@ -19,7 +19,9 @@ import {
   Trash2,
   RefreshCw,
   Info,
-  BarChart3
+  BarChart3,
+  Bot,
+  Zap
 } from 'lucide-react';
 import {
   BusinessFormData,
@@ -32,8 +34,6 @@ import {
 import { SUPPORTED_CURRENCIES, formatMoney } from '../../lib/currencies';
 import { INDUSTRY_BENCHMARKS } from '../../lib/industryBenchmarks';
 import { saveActiveDraft, clearActiveDraft } from '../../lib/storage';
-import { AiSmartFormFiller } from './AiSmartFormFiller';
-import { IndustryTemplatesBar } from './IndustryTemplatesBar';
 import { LiveHealthGauge } from './LiveHealthGauge';
 
 interface FormProps {
@@ -231,16 +231,6 @@ export const AssessmentForm: React.FC<FormProps> = ({
     onSubmit(finalized);
   };
 
-  const handleApplyTemplateOrAi = (parsed: Partial<BusinessFormData>) => {
-    setFormData((prev) => {
-      const next = { ...prev, ...parsed };
-      saveActiveDraft(next);
-      return next;
-    });
-    setSaveStatus('✅ 已成功同步载入成套经营数据！');
-    setTimeout(() => setSaveStatus(null), 3500);
-  };
-
   const stepsList = [
     { num: 1, title: '基本信息与安全模式' },
     { num: 2, title: '资金证明与断点流水' },
@@ -251,50 +241,27 @@ export const AssessmentForm: React.FC<FormProps> = ({
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
-      {/* 1. Quick Onboarding Industry Templates (Zero Business Background Quickstart) */}
-      <IndustryTemplatesBar
-        onSelectTemplate={handleApplyTemplateOrAi}
-        baseCurrency={formData.baseCurrency}
-      />
-
-      {/* 2. Natural Language AI Assistant Filler */}
-      <AiSmartFormFiller
-        onApplyParsedData={handleApplyTemplateOrAi}
-        baseCurrency={formData.baseCurrency}
-      />
-
-      {/* 3. Real-time Live Health Gauge (Battery & 100-Yuan Flow) */}
-      <LiveHealthGauge formData={formData} onOpenAiHelper={onOpenAiHelper} />
-
-      {/* Steps Navigation Bar Bento Box & Mode Switcher */}
-      <div className="bg-white rounded-3xl p-6 sm:p-7 border-2 border-neutral-200 shadow-xs space-y-5">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div>
-            <div className="flex items-center space-x-2 mb-1">
-              <span className="text-xs font-mono font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 px-3 py-0.5 rounded-full border border-indigo-100">
-                商宣商业模式检验
-              </span>
-              <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                三分钟小白看懂 · 零财务门槛
-              </span>
-            </div>
-            <h2 className="text-xl sm:text-2xl font-black text-neutral-900 tracking-tight">
-              商宣商业模式检验（三分钟小白看懂）
-            </h2>
-            <p className="text-xs sm:text-sm text-neutral-500 font-medium mt-1">
-              选用常见医疗诊所与教育培训服事真实范本 · 零门槛一眼看懂收支运转健康与应急储备 · 永久免费
+      {/* 1. Header & Title (Clean, Professional, Focused) */}
+      <div className="bg-white rounded-3xl p-6 sm:p-7 border border-neutral-200 shadow-xs space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="space-y-1 max-w-2xl">
+            <h1 className="text-xl sm:text-2xl font-black text-neutral-900 tracking-tight">
+              商业宣教商业模型财务测算
+            </h1>
+            <p className="text-xs sm:text-sm text-neutral-600 font-medium leading-relaxed">
+              输入核心财务收支与储备数据，系统实时测算商业模型的健康度、现金跑道与抗风险能力。
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             {saveStatus && (
-              <span className="text-xs text-emerald-800 font-bold bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200 flex items-center space-x-1.5 animate-pulse">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <span className="text-xs text-emerald-800 font-bold bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200 flex items-center space-x-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                 <span>{saveStatus}</span>
               </span>
             )}
 
-            {/* Mode Switcher Toggle */}
+            {/* Mode Switcher Toggle: 极简单页 / 完整分步 */}
             <div className="flex p-1 bg-neutral-100 rounded-2xl border border-neutral-200">
               <button
                 type="button"
@@ -305,7 +272,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     : 'text-neutral-600 hover:text-neutral-900'
                 }`}
               >
-                ⚡ 1分钟极简自测 (三分钟小白看懂)
+                ⚡ 极简单页测算
               </button>
               <button
                 type="button"
@@ -316,51 +283,39 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     : 'text-neutral-600 hover:text-neutral-900'
                 }`}
               >
-                📑 完整专业模式
+                📑 完整分步明细
               </button>
             </div>
           </div>
         </div>
 
-        {/* Biblical Stewardship Warm Banner */}
-        <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-200 flex items-start gap-3 text-amber-950">
-          <div className="p-2 rounded-xl bg-amber-100 text-amber-800 shrink-0 mt-0.5">
-            <Sparkles className="w-4 h-4" />
-          </div>
-          <div className="text-xs sm:text-sm leading-relaxed">
-            <p className="font-bold mb-0.5">
-              📖 智慧管家原则：<span className="italic font-normal">「你们哪一个要盖一座楼，不先坐下算计花费，能盖成不能呢？」（路加福音 14:28）</span>
-            </p>
-            <p className="text-amber-900/90 font-medium">
-              在工场开办医疗诊所、便民药房、语言辅导学校或职业培训中心，核心在于建立良性循环、长期持续服务与帮助当地人。只需按大白话填写日常收支与采购耗材，三分钟小白一眼看懂！
-            </p>
-          </div>
-        </div>
-
-        {/* Step Indicator Bento Tiles (Only shown in Detailed mode) */}
+        {/* Step Indicator (Only shown in Detailed mode) */}
         {formMode === 'detailed' && (
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-2 border-t border-neutral-100">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-3 border-t border-neutral-100">
             {stepsList.map((s) => (
               <button
                 key={s.num}
                 onClick={() => setCurrentStep(s.num)}
-                className={`p-3.5 rounded-2xl text-left border-2 transition-all cursor-pointer ${
+                className={`p-3 rounded-2xl text-left border transition-all cursor-pointer ${
                   currentStep === s.num
                     ? 'bg-neutral-900 border-neutral-800 text-white shadow-md'
                     : currentStep > s.num
                     ? 'bg-indigo-50/80 border-indigo-100 text-indigo-900 hover:bg-indigo-100'
-                    : 'bg-neutral-50 border-neutral-100 text-neutral-500 hover:bg-neutral-100'
+                    : 'bg-neutral-50 border-neutral-200/80 text-neutral-500 hover:bg-neutral-100'
                 }`}
               >
                 <div className="text-[10px] font-mono font-bold uppercase tracking-wider opacity-80 mb-0.5">
                   STEP 0{s.num}
                 </div>
-                <div className="text-xs sm:text-sm font-bold truncate">{s.title}</div>
+                <div className="text-xs font-bold truncate">{s.title}</div>
               </button>
             ))}
           </div>
         )}
       </div>
+
+      {/* Real-time Live Health Gauge (Battery & 100-Yuan Flow) */}
+      <LiveHealthGauge formData={formData} onOpenAiHelper={onOpenAiHelper} />
 
       {/* ZERO-BARRIER SIMPLE MODE FORM (SINGLE SCREEN) */}
       {formMode === 'simple' && (
@@ -372,18 +327,18 @@ export const AssessmentForm: React.FC<FormProps> = ({
                 1
               </span>
               <h3 className="text-base sm:text-lg font-black text-neutral-900">
-                服事项目基本信息（诊所/教育中心名称与服事方向）
+                项目基本信息
               </h3>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-bold text-neutral-800 mb-1.5">
-                  诊所/教育培训项目名称 <span className="text-rose-500">*</span>
+                  项目/店铺名称 <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
-                  placeholder="例如：恩典社区义诊所 / 麦种青年教育中心"
+                  placeholder="例如：恩典社区义诊所 / 阳光社区烘焙坊"
                   value={formData.projectName}
                   onChange={(e) => updateField('projectName', e.target.value)}
                   className="w-full p-3.5 border-2 border-neutral-200 rounded-2xl font-bold text-neutral-800 text-base focus:border-indigo-500 focus:outline-hidden"
@@ -392,7 +347,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
 
               <div>
                 <label className="block text-sm font-bold text-neutral-800 mb-1.5">
-                  服事行业领域 <span className="text-rose-500">*</span>
+                  所属行业领域 <span className="text-rose-500">*</span>
                 </label>
                 <select
                   value={formData.industry}
@@ -400,16 +355,17 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   className="w-full p-3.5 border-2 border-neutral-200 rounded-2xl font-bold text-neutral-800 text-base bg-white focus:border-indigo-500 focus:outline-hidden"
                 >
                   <option value="medical_health">🩺 医疗健康 / 爱心诊所</option>
-                  <option value="education_training">📚 语言培训 / 文化辅导</option>
-                  <option value="vocational_training">🛠️ 职业技能 / IT实训</option>
-                  <option value="child_care">🧒 贫困儿童 / 日托启蒙</option>
-                  <option value="community_service">🤝 社区综合 / 助贫扶弱</option>
+                  <option value="education_training">📚 语言教育 / 辅导中心</option>
+                  <option value="vocational_training">🛠️ 职业实训 / 手工工坊</option>
+                  <option value="food_beverage">☕ 餐饮烘焙 / 社区咖啡</option>
+                  <option value="child_care">🧒 儿童日托 / 社区启蒙</option>
+                  <option value="community_service">🤝 综合助贫 / 社会企业</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-sm font-bold text-neutral-800 mb-1.5">
-                  使用的货币 (币种) <span className="text-rose-500">*</span>
+                  测算主币种 <span className="text-rose-500">*</span>
                 </label>
                 <select
                   value={formData.baseCurrency}
@@ -433,14 +389,14 @@ export const AssessmentForm: React.FC<FormProps> = ({
                 2
               </span>
               <h3 className="text-base sm:text-lg font-black text-neutral-900">
-                每月主要收支（门诊学费进账与药品教材采购）
+                营业收入与直接物料成本
               </h3>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <div className="p-5 rounded-2xl bg-emerald-50/70 border-2 border-emerald-200 space-y-2">
                 <label className="block text-sm sm:text-base font-black text-emerald-950">
-                  💰 每月门诊/学费/服务进账总额 <span className="text-rose-500">*</span>
+                  月度营业总流水 / 服务进账 <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
                   <input
@@ -455,13 +411,13 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   </span>
                 </div>
                 <p className="text-xs text-emerald-800 font-medium">
-                  包含当地看诊费、平价药品、辅导学费或培训服务等所有进账总额。
+                  包含诊金/药费、学费、餐饮销售或服务收费等全部月度营业进账。
                 </p>
               </div>
 
               <div className="p-5 rounded-2xl bg-rose-50/70 border-2 border-rose-200 space-y-2">
                 <label className="block text-sm sm:text-base font-black text-rose-950">
-                  💊 每月进药 / 耗材 / 教材文具采购花销 <span className="text-rose-500">*</span>
+                  直接物料 / 耗材 / 进货采购成本 <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
                   <input
@@ -476,7 +432,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   </span>
                 </div>
                 <p className="text-xs text-rose-800 font-medium">
-                  如采购常规药品、注射器材、急救包、教材教具、实验耗材等（直接服事耗材）。
+                  如采购药品器材、食材原料、教材耗材等随业务量波动的直接进货成本。
                 </p>
               </div>
             </div>
@@ -489,14 +445,14 @@ export const AssessmentForm: React.FC<FormProps> = ({
                 3
               </span>
               <h3 className="text-base sm:text-lg font-black text-neutral-900">
-                每月固定运转开销（场地租金、本地同工、水电）
+                每月固定运营开支
               </h3>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="p-4 rounded-2xl bg-neutral-50 border-2 border-neutral-200 space-y-1.5">
                 <label className="block text-xs sm:text-sm font-bold text-neutral-800">
-                  🏢 诊所/教室场地租金
+                  场地租金
                 </label>
                 <div className="relative">
                   <input
@@ -507,12 +463,12 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     placeholder="3500"
                   />
                 </div>
-                <span className="text-[11px] text-neutral-500 block">交房东的场地租金</span>
+                <span className="text-[11px] text-neutral-500 block">每月固定支付给房东的租金</span>
               </div>
 
               <div className="p-4 rounded-2xl bg-neutral-50 border-2 border-neutral-200 space-y-1.5">
                 <label className="block text-xs sm:text-sm font-bold text-neutral-800">
-                  👥 本地护士/助教薪资或补贴
+                  人员薪酬与同工补贴
                 </label>
                 <div className="relative">
                   <input
@@ -523,12 +479,12 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     placeholder="4800"
                   />
                 </div>
-                <span className="text-[11px] text-neutral-500 block">不雇本地同工填 0</span>
+                <span className="text-[11px] text-neutral-500 block">本地员工或全职同工补贴 (无则填0)</span>
               </div>
 
               <div className="p-4 rounded-2xl bg-neutral-50 border-2 border-neutral-200 space-y-1.5">
                 <label className="block text-xs sm:text-sm font-bold text-neutral-800">
-                  💡 水电燃气与网络消毒费
+                  水电、网络及日常杂支
                 </label>
                 <div className="relative">
                   <input
@@ -539,7 +495,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     placeholder="950"
                   />
                 </div>
-                <span className="text-[11px] text-neutral-500 block">水费、电费、网络与消毒</span>
+                <span className="text-[11px] text-neutral-500 block">水费、电费、通讯网络及其他杂费</span>
               </div>
             </div>
           </div>
@@ -551,14 +507,14 @@ export const AssessmentForm: React.FC<FormProps> = ({
                 4
               </span>
               <h3 className="text-base sm:text-lg font-black text-neutral-900">
-                工场应急备用金与服事时长（抗风险能力）
+                资金储备与运营概况
               </h3>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="p-4.5 rounded-2xl bg-sky-50/80 border-2 border-sky-200 space-y-1.5">
                 <label className="block text-xs sm:text-sm font-black text-sky-950">
-                  🛡️ 工场随时能动的活钱 (应急备用金)
+                  活期应急备用金储备
                 </label>
                 <input
                   type="number"
@@ -568,13 +524,13 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   placeholder="40000"
                 />
                 <span className="text-[11px] text-sky-800 font-medium block">
-                  银行卡或现金随时可支取的资金储备
+                  银行账户或现金中随时可动用的储备资金
                 </span>
               </div>
 
               <div className="p-4.5 rounded-2xl bg-neutral-50 border-2 border-neutral-200 space-y-1.5">
                 <label className="block text-xs sm:text-sm font-bold text-neutral-800">
-                  📅 已经在工场实际服事了几个月？
+                  实际运营时长 (月)
                 </label>
                 <input
                   type="number"
@@ -583,12 +539,12 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   className="w-full p-3 border-2 border-neutral-300 rounded-xl font-mono text-lg font-bold text-neutral-900 bg-white"
                   placeholder="24"
                 />
-                <span className="text-[11px] text-neutral-500 block">新启动项目填实际月数</span>
+                <span className="text-[11px] text-neutral-500 block">新启动项目按实际筹备/运营月数填写</span>
               </div>
 
               <div className="p-4.5 rounded-2xl bg-neutral-50 border-2 border-neutral-200 space-y-1.5">
                 <label className="block text-xs sm:text-sm font-bold text-neutral-800">
-                  👥 雇佣全职员工人数 (不含自己)
+                  全职团队人数 (不含自己)
                 </label>
                 <input
                   type="number"
@@ -597,24 +553,24 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   className="w-full p-3 border-2 border-neutral-300 rounded-xl font-mono text-lg font-bold text-neutral-900 bg-white"
                   placeholder="2"
                 />
-                <span className="text-[11px] text-neutral-500 block">自己一人单干填 0</span>
+                <span className="text-[11px] text-neutral-500 block">单人负责或独立运营填 0</span>
               </div>
             </div>
           </div>
 
-          {/* Big Action Submit Button */}
+          {/* Action Submit Button */}
           <div className="pt-4 border-t border-neutral-100 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="text-xs sm:text-sm text-neutral-500 font-medium">
-              💡 无需任何财务凭证，数据 100% 仅用于本地体检评估计算。
+              数据仅用于本地财务测算与模型健康度评估。
             </div>
 
             <button
               type="button"
               onClick={handleFinalSubmit}
-              className="w-full sm:w-auto px-8 py-4 bg-linear-to-r from-indigo-600 via-indigo-700 to-emerald-600 hover:from-indigo-500 hover:to-emerald-500 text-white rounded-2xl text-base sm:text-lg font-black shadow-xl shadow-indigo-600/25 transition-all cursor-pointer hover:scale-102 flex items-center justify-center gap-2.5"
+              className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-indigo-600 via-indigo-700 to-emerald-600 hover:from-indigo-500 hover:to-emerald-500 text-white rounded-2xl text-base sm:text-lg font-black shadow-xl shadow-indigo-600/25 transition-all cursor-pointer hover:scale-102 flex items-center justify-center gap-2.5"
             >
-              <Sparkles className="w-5 h-5 text-amber-300 animate-pulse" />
-              <span>🚀 立即生成商宣商业模式检验报告 (一眼看懂)</span>
+              <Sparkles className="w-5 h-5 text-amber-300" />
+              <span>生成商业宣教商业模型财务测算报告</span>
               <ArrowRight className="w-5 h-5" />
             </button>
           </div>
@@ -1597,7 +1553,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
               className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-indigo-600 via-sky-600 to-emerald-600 hover:from-indigo-500 hover:to-emerald-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-indigo-600/30 transition-all cursor-pointer"
             >
               <Sparkles className="w-4 h-4" />
-              <span>确认提交 · AI 立即生成评估报告</span>
+              <span>确认提交 · 生成财务测算与评估报告</span>
             </button>
           </div>
         </div>

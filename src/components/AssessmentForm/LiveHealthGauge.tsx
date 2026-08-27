@@ -2,8 +2,7 @@ import React from 'react';
 import {
   BatteryCharging,
   BatteryWarning,
-  PieChart,
-  ShieldCheck
+  PieChart
 } from 'lucide-react';
 import { BusinessFormData } from '../../types';
 import { calculateAssessmentReport } from '../../lib/scoringEngine';
@@ -54,9 +53,6 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
     batteryBarColor = 'bg-amber-500';
     batteryLabel = '较为吃紧 (1.5~3个月)';
   }
-
-  // Gates status from report.gates
-  const failedGatesCount = (report.gates || []).filter((g) => g.status === 'FAIL').length;
 
   return (
     <div className="bg-white rounded-3xl p-6 sm:p-7 border-2 border-indigo-200 shadow-sm space-y-6">
@@ -196,57 +192,6 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
               ? '👍 属于微利稳健运行，注意控制房租和原料损耗。'
               : '⚠️ 净利润偏薄或处于亏损边缘，需排查是否进价过高或租金过重。'}
           </p>
-        </div>
-      </div>
-
-      {/* Traffic Light Gates Status */}
-      <div className="p-4 sm:p-5 rounded-2xl bg-indigo-50/60 border border-indigo-100 space-y-3">
-        <div className="flex items-center justify-between">
-          <span className="font-bold text-indigo-950 text-sm sm:text-base flex items-center gap-2">
-            <ShieldCheck className="w-5 h-5 text-indigo-600" />
-            <span>5 道核心安全红线实时自检</span>
-          </span>
-          <span
-            className={`text-xs font-bold px-3 py-1 rounded-full ${
-              failedGatesCount === 0
-                ? 'bg-emerald-100 text-emerald-800'
-                : 'bg-rose-100 text-rose-800'
-            }`}
-          >
-            {failedGatesCount === 0 ? '✅ 5道全部安全绿灯' : `⚠️ 存在 ${failedGatesCount} 项预警`}
-          </span>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-          {(report.gates || []).map((g) => (
-            <div
-              key={g.code}
-              className={`p-3 rounded-xl border text-center transition-all ${
-                g.status === 'PASS'
-                  ? 'bg-white border-emerald-200 text-emerald-950'
-                  : g.status === 'WARNING'
-                  ? 'bg-amber-50 border-amber-200 text-amber-950 font-bold'
-                  : 'bg-rose-50 border-rose-200 text-rose-950 font-bold'
-              }`}
-              title={g.plainDescription || g.threshold}
-            >
-              <div className="text-xs font-bold flex items-center justify-center gap-1.5 mb-1">
-                <span
-                  className={`w-2.5 h-2.5 rounded-full ${
-                    g.status === 'PASS'
-                      ? 'bg-emerald-500'
-                      : g.status === 'WARNING'
-                      ? 'bg-amber-500'
-                      : 'bg-rose-500 animate-pulse'
-                  }`}
-                />
-                <span className="truncate">{g.plainName || g.name}</span>
-              </div>
-              <span className="text-[11px] opacity-80 block truncate">
-                {g.status === 'PASS' ? '安全达标' : g.status === 'WARNING' ? '适度关注' : '触发红线'}
-              </span>
-            </div>
-          ))}
         </div>
       </div>
     </div>

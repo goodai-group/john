@@ -2,25 +2,7 @@ export type Language = 'zh' | 'en';
 
 export type ActiveTab = 'form' | 'report' | 'simulator' | 'standards' | 'projects';
 
-export type CurrencyCode =
-  | 'USD'
-  | 'CNY'
-  | 'EUR'
-  | 'GBP'
-  | 'NGN' // Nigerian Naira
-  | 'KES' // Kenyan Shilling
-  | 'EGP' // Egyptian Pound
-  | 'BRL' // Brazilian Real
-  | 'INR' // Indian Rupee
-  | 'JPY' // Japanese Yen
-  | 'CAD' // Canadian Dollar
-  | 'MXN' // Mexican Peso
-  | 'PHP' // Philippine Peso
-  | 'VND' // Vietnamese Dong
-  | 'IDR' // Indonesian Rupiah
-  | 'ETB' // Ethiopian Birr
-  | 'PKR' // Pakistani Rupee
-  | 'THB'; // Thai Baht
+export type CurrencyCode = string;
 
 export interface CurrencyRate {
   code: CurrencyCode;
@@ -28,6 +10,7 @@ export interface CurrencyRate {
   nameEn: string;
   symbol: string;
   rateToUsd: number; // 1 USD = X Local
+  region?: string; // 洲际大区分类
 }
 
 export type ProofType =
@@ -36,6 +19,22 @@ export type ProofType =
   | 'handwritten_book' // 手写 / 电子记账本照片
   | 'mobile_payment' // 移动支付截图 (微信/WhatsApp/M-Pesa/OPay/Wave)
   | 'institution_record'; // 教会 / 合作社 / 机构内部财务记录
+
+export interface DynamicCostItem {
+  id: string;
+  name: string;
+  description?: string;
+  amount: number;
+  currency?: CurrencyCode;
+}
+
+export interface DynamicOpexItem {
+  id: string;
+  name: string;
+  description?: string;
+  amount: number;
+  currency?: CurrencyCode;
+}
 
 export interface MoneyField {
   amount: number;
@@ -60,7 +59,12 @@ export interface BusinessFormData {
   updatedAt: string;
   projectName: string;
   industry: string;
+  customIndustryName?: string;
   businessType: string;
+
+  // 动态收支明细项（支持 AI 智能推算生成与自由编辑增删）
+  dynamicCogsItems?: DynamicCostItem[];
+  dynamicOpexItems?: DynamicOpexItem[];
 
   // 敏感地区数据安全模式
   isSensitiveRegion: boolean;
