@@ -26,6 +26,7 @@ interface NavbarProps {
   onLanguageChange: (lang: Language) => void;
   onOpenFeeModal: () => void;
   onOpenOnboarding: () => void;
+  onOpenAppGuide?: () => void;
   onOpenAccessibility: () => void;
   onOpenAiHelper: (topic?: string) => void;
   largeFont?: boolean;
@@ -42,6 +43,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onLanguageChange,
   onOpenFeeModal,
   onOpenOnboarding,
+  onOpenAppGuide,
   onOpenAccessibility,
   onOpenAiHelper,
   largeFont,
@@ -103,6 +105,17 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* App Guide & Overview */}
+          {onOpenAppGuide && (
+            <button
+              onClick={onOpenAppGuide}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-800 text-[11px] font-bold border border-indigo-200 transition-colors cursor-pointer"
+            >
+              <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
+              <span>{language === 'zh' ? '📖 3分钟使用说明' : 'User Guide'}</span>
+            </button>
+          )}
+
           {/* Guide Tour */}
           <button
             onClick={onOpenOnboarding}

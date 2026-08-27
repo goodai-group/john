@@ -9,6 +9,7 @@ import {
 import { Navbar } from './components/Navbar';
 import { FeeTransparencyModal } from './components/FeeTransparencyModal';
 import { OnboardingGuide } from './components/OnboardingGuide';
+import { AppGuideModal } from './components/AppGuideModal';
 import { AccessibilityToolbar } from './components/AccessibilityToolbar';
 import { AiRuleConsultationDrawer } from './components/AiRuleConsultationDrawer';
 import { ScoringSimulator } from './components/ScoringSimulator';
@@ -46,6 +47,7 @@ export default function App() {
   // Modals & Drawers state
   const [isFeeModalOpen, setIsFeeModalOpen] = useState(false);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+  const [isAppGuideOpen, setIsAppGuideOpen] = useState(false);
   const [isAccessibilityOpen, setIsAccessibilityOpen] = useState(false);
   const [isAiDrawerOpen, setIsAiDrawerOpen] = useState(false);
   const [aiInitialTopic, setAiInitialTopic] = useState<string | undefined>(undefined);
@@ -341,6 +343,7 @@ export default function App() {
         onLanguageChange={setLanguage}
         onOpenFeeModal={() => setIsFeeModalOpen(true)}
         onOpenOnboarding={() => setIsOnboardingOpen(true)}
+        onOpenAppGuide={() => setIsAppGuideOpen(true)}
         onOpenAccessibility={() => setIsAccessibilityOpen(true)}
         onOpenAiHelper={(topic) => {
           setAiInitialTopic(topic);
@@ -440,6 +443,16 @@ export default function App() {
         onStartAssessment={() => {
           setIsOnboardingOpen(false);
           setActiveTab('form');
+        }}
+      />
+
+      <AppGuideModal
+        isOpen={isAppGuideOpen}
+        onClose={() => setIsAppGuideOpen(false)}
+        language={language}
+        onOpenAiHelper={(topic) => {
+          setAiInitialTopic(topic);
+          setIsAiDrawerOpen(true);
         }}
       />
 

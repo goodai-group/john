@@ -32,6 +32,9 @@ import {
 import { SUPPORTED_CURRENCIES, formatMoney } from '../../lib/currencies';
 import { INDUSTRY_BENCHMARKS } from '../../lib/industryBenchmarks';
 import { saveActiveDraft, clearActiveDraft } from '../../lib/storage';
+import { AiSmartFormFiller } from './AiSmartFormFiller';
+import { IndustryTemplatesBar } from './IndustryTemplatesBar';
+import { LiveHealthGauge } from './LiveHealthGauge';
 
 interface FormProps {
   initialData?: Partial<BusinessFormData>;
@@ -227,6 +230,16 @@ export const AssessmentForm: React.FC<FormProps> = ({
     onSubmit(finalized);
   };
 
+  const handleApplyTemplateOrAi = (parsed: Partial<BusinessFormData>) => {
+    setFormData((prev) => {
+      const next = { ...prev, ...parsed };
+      saveActiveDraft(next);
+      return next;
+    });
+    setSaveStatus('✅ 已成功同步载入成套经营数据！');
+    setTimeout(() => setSaveStatus(null), 3500);
+  };
+
   const stepsList = [
     { num: 1, title: '基本信息与安全模式' },
     { num: 2, title: '资金证明与断点流水' },
@@ -237,6 +250,21 @@ export const AssessmentForm: React.FC<FormProps> = ({
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+      {/* 1. Quick Onboarding Industry Templates (Zero Business Background Quickstart) */}
+      <IndustryTemplatesBar
+        onSelectTemplate={handleApplyTemplateOrAi}
+        baseCurrency={formData.baseCurrency}
+      />
+
+      {/* 2. Natural Language AI Assistant Filler */}
+      <AiSmartFormFiller
+        onApplyParsedData={handleApplyTemplateOrAi}
+        baseCurrency={formData.baseCurrency}
+      />
+
+      {/* 3. Real-time Live Health Gauge (Battery & 100-Yuan Flow) */}
+      <LiveHealthGauge formData={formData} onOpenAiHelper={onOpenAiHelper} />
+
       {/* Steps Navigation Bar Bento Box */}
       <div className="bg-white rounded-3xl p-6 sm:p-7 border-2 border-neutral-200 shadow-xs space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-2">
