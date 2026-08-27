@@ -105,6 +105,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
     id: initialData?.id || `proj-${Date.now()}`
   }));
 
+  const [formMode, setFormMode] = useState<'simple' | 'detailed'>('simple');
   const [currentStep, setCurrentStep] = useState(1);
   const [isSimulatingOcr, setIsSimulatingOcr] = useState(false);
   const [newCollaboratorEmail, setNewCollaboratorEmail] = useState('');
@@ -265,53 +266,376 @@ export const AssessmentForm: React.FC<FormProps> = ({
       {/* 3. Real-time Live Health Gauge (Battery & 100-Yuan Flow) */}
       <LiveHealthGauge formData={formData} onOpenAiHelper={onOpenAiHelper} />
 
-      {/* Steps Navigation Bar Bento Box */}
-      <div className="bg-white rounded-3xl p-6 sm:p-7 border-2 border-neutral-200 shadow-xs space-y-4">
-        <div className="flex items-center justify-between flex-wrap gap-2">
+      {/* Steps Navigation Bar Bento Box & Mode Switcher */}
+      <div className="bg-white rounded-3xl p-6 sm:p-7 border-2 border-neutral-200 shadow-xs space-y-5">
+        <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <div className="flex items-center space-x-2 mb-1">
-              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-100">
-                APPLICATION FORM
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 px-3 py-0.5 rounded-full border border-indigo-100">
+                宣教工场服事申报
+              </span>
+              <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                做忠心好管家 · 零门槛
               </span>
             </div>
-            <h2 className="text-xl font-black text-neutral-900 tracking-tight">商业模型自测申报填报</h2>
-            <p className="text-xs text-neutral-500 font-medium mt-0.5">
-              全程由 AI 自动化计算 · 填写过程实时自动暂存本地
+            <h2 className="text-xl sm:text-2xl font-black text-neutral-900 tracking-tight">
+              工场医疗诊所与教育辅导服事健康自测
+            </h2>
+            <p className="text-xs sm:text-sm text-neutral-500 font-medium mt-1">
+              专为零财务基础的宣教士打造 · 评估持续服务当地人的运转能力与应急储备 · 永久免费
             </p>
           </div>
-          {saveStatus && (
-            <span className="text-xs text-emerald-800 font-bold bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 flex items-center space-x-1.5 animate-pulse">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-              <span>{saveStatus}</span>
-            </span>
-          )}
+
+          <div className="flex items-center gap-2">
+            {saveStatus && (
+              <span className="text-xs text-emerald-800 font-bold bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200 flex items-center space-x-1.5 animate-pulse">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <span>{saveStatus}</span>
+              </span>
+            )}
+
+            {/* Mode Switcher Toggle */}
+            <div className="flex p-1 bg-neutral-100 rounded-2xl border border-neutral-200">
+              <button
+                type="button"
+                onClick={() => setFormMode('simple')}
+                className={`px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer ${
+                  formMode === 'simple'
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'text-neutral-600 hover:text-neutral-900'
+                }`}
+              >
+                ⚡ 1分钟极简自测 (工场首选)
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormMode('detailed')}
+                className={`px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer ${
+                  formMode === 'detailed'
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'text-neutral-600 hover:text-neutral-900'
+                }`}
+              >
+                📑 完整专业模式
+              </button>
+            </div>
+          </div>
         </div>
 
-        {/* Step Indicator Bento Tiles */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-          {stepsList.map((s) => (
-            <button
-              key={s.num}
-              onClick={() => setCurrentStep(s.num)}
-              className={`p-3 rounded-2xl text-left border-2 transition-all cursor-pointer ${
-                currentStep === s.num
-                  ? 'bg-neutral-900 border-neutral-800 text-white shadow-md'
-                  : currentStep > s.num
-                  ? 'bg-indigo-50/80 border-indigo-100 text-indigo-900 hover:bg-indigo-100'
-                  : 'bg-neutral-50 border-neutral-100 text-neutral-500 hover:bg-neutral-100'
-              }`}
-            >
-              <div className="text-[9px] font-mono font-bold uppercase tracking-wider opacity-80 mb-0.5">
-                STEP 0{s.num}
-              </div>
-              <div className="text-xs font-bold truncate">{s.title}</div>
-            </button>
-          ))}
+        {/* Biblical Stewardship Warm Banner */}
+        <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-200 flex items-start gap-3 text-amber-950">
+          <div className="p-2 rounded-xl bg-amber-100 text-amber-800 shrink-0 mt-0.5">
+            <Sparkles className="w-4 h-4" />
+          </div>
+          <div className="text-xs sm:text-sm leading-relaxed">
+            <p className="font-bold mb-0.5">
+              📖 智慧管家原则：<span className="italic font-normal">「你们哪一个要盖一座楼，不先坐下算计花费，能盖成不能呢？」（路加福音 14:28）</span>
+            </p>
+            <p className="text-amber-900/90 font-medium">
+              宣教士在工场开办医疗诊所、爱心卫生所、语言学校或职业培训班，核心在于长期稳定地帮助当地百姓。不用怕算账，只需照实填写日常收支与药品教学耗材，即可测出持续运转的健康度！
+            </p>
+          </div>
         </div>
+
+        {/* Step Indicator Bento Tiles (Only shown in Detailed mode) */}
+        {formMode === 'detailed' && (
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-2 border-t border-neutral-100">
+            {stepsList.map((s) => (
+              <button
+                key={s.num}
+                onClick={() => setCurrentStep(s.num)}
+                className={`p-3.5 rounded-2xl text-left border-2 transition-all cursor-pointer ${
+                  currentStep === s.num
+                    ? 'bg-neutral-900 border-neutral-800 text-white shadow-md'
+                    : currentStep > s.num
+                    ? 'bg-indigo-50/80 border-indigo-100 text-indigo-900 hover:bg-indigo-100'
+                    : 'bg-neutral-50 border-neutral-100 text-neutral-500 hover:bg-neutral-100'
+                }`}
+              >
+                <div className="text-[10px] font-mono font-bold uppercase tracking-wider opacity-80 mb-0.5">
+                  STEP 0{s.num}
+                </div>
+                <div className="text-xs sm:text-sm font-bold truncate">{s.title}</div>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
+      {/* ZERO-BARRIER SIMPLE MODE FORM (SINGLE SCREEN) */}
+      {formMode === 'simple' && (
+        <div className="bg-white rounded-3xl p-6 sm:p-8 border-2 border-neutral-200 shadow-sm space-y-8 animate-in fade-in">
+          {/* Section 1: Store & Industry */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 pb-2 border-b border-neutral-100">
+              <span className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-sm">
+                1
+              </span>
+              <h3 className="text-base sm:text-lg font-black text-neutral-900">
+                服事项目基本信息（诊所/教育中心名称与服事方向）
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-bold text-neutral-800 mb-1.5">
+                  诊所/教育培训项目名称 <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="例如：恩典社区义诊所 / 麦种青年教育中心"
+                  value={formData.projectName}
+                  onChange={(e) => updateField('projectName', e.target.value)}
+                  className="w-full p-3.5 border-2 border-neutral-200 rounded-2xl font-bold text-neutral-800 text-base focus:border-indigo-500 focus:outline-hidden"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-neutral-800 mb-1.5">
+                  使用的货币 (币种) <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={formData.baseCurrency}
+                  onChange={(e) => updateField('baseCurrency', e.target.value as CurrencyCode)}
+                  className="w-full p-3.5 border-2 border-neutral-200 rounded-2xl font-bold text-neutral-800 text-base bg-white focus:border-indigo-500 focus:outline-hidden"
+                >
+                  {SUPPORTED_CURRENCIES.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.nameZh} ({c.code} - {c.symbol})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Quick Industry Select Cards */}
+            <div>
+              <label className="block text-sm font-bold text-neutral-800 mb-2">
+                选择最贴近的工场服事类型：
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                {[
+                  { id: 'medical_health', name: '🩺 医疗健康 / 爱心诊所', desc: '门诊、平价药房、巡回医疗、急救' },
+                  { id: 'education_training', name: '📚 语言培训 / 文化辅导', desc: '英语中心、课后辅导、文化交流' },
+                  { id: 'vocational_training', name: '🛠️ 职业技能 / IT实训', desc: '电脑IT、电工维修、缝纫手艺' },
+                  { id: 'child_care', name: '🧒 贫困儿童 / 日托启蒙', desc: '学前启蒙、营养辅餐、孤儿关怀' },
+                  { id: 'community_service', name: '🤝 社区综合 / 助贫扶弱', desc: '助残照料、心理辅导、帮扶中心' }
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => updateField('industry', item.id)}
+                    className={`p-3 rounded-2xl border-2 text-left transition-all cursor-pointer ${
+                      formData.industry === item.id
+                        ? 'bg-indigo-50 border-indigo-600 text-indigo-950 font-black shadow-xs ring-2 ring-indigo-400'
+                        : 'bg-neutral-50 border-neutral-200 text-neutral-700 hover:border-indigo-300'
+                    }`}
+                  >
+                    <div className="text-xs sm:text-sm font-bold mb-1">{item.name}</div>
+                    <div className="text-[11px] text-neutral-500 leading-tight">{item.desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2: Revenue & Direct Cost */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 pb-2 border-b border-neutral-100">
+              <span className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-sm">
+                2
+              </span>
+              <h3 className="text-base sm:text-lg font-black text-neutral-900">
+                每月主要收支（门诊学费进账与药品教材采购）
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div className="p-5 rounded-2xl bg-emerald-50/70 border-2 border-emerald-200 space-y-2">
+                <label className="block text-sm sm:text-base font-black text-emerald-950">
+                  💰 每月门诊/学费/服务进账总额 <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={formData.monthlyRevenue.amount || ''}
+                    onChange={(e) => updateMoney('monthlyRevenue', Number(e.target.value))}
+                    className="w-full p-4 border-2 border-emerald-300 rounded-2xl font-mono text-xl sm:text-2xl font-black text-emerald-950 bg-white focus:border-emerald-500 focus:outline-hidden"
+                    placeholder="38000"
+                  />
+                  <span className="absolute right-4 top-4 font-bold text-emerald-700">
+                    {formData.baseCurrency} / 月
+                  </span>
+                </div>
+                <p className="text-xs text-emerald-800 font-medium">
+                  包含当地看诊费、平价药品、辅导学费或培训服务等所有进账总额。
+                </p>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-rose-50/70 border-2 border-rose-200 space-y-2">
+                <label className="block text-sm sm:text-base font-black text-rose-950">
+                  💊 每月进药 / 耗材 / 教材文具采购花销 <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={formData.cogsCost.amount || ''}
+                    onChange={(e) => updateMoney('cogsCost', Number(e.target.value))}
+                    className="w-full p-4 border-2 border-rose-300 rounded-2xl font-mono text-xl sm:text-2xl font-black text-rose-950 bg-white focus:border-rose-500 focus:outline-hidden"
+                    placeholder="15000"
+                  />
+                  <span className="absolute right-4 top-4 font-bold text-rose-700">
+                    {formData.baseCurrency} / 月
+                  </span>
+                </div>
+                <p className="text-xs text-rose-800 font-medium">
+                  如采购常规药品、注射器材、急救包、教材教具、实验耗材等（直接服事耗材）。
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 3: Fixed OPEX Expenses */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 pb-2 border-b border-neutral-100">
+              <span className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-sm">
+                3
+              </span>
+              <h3 className="text-base sm:text-lg font-black text-neutral-900">
+                每月固定运转开销（场地租金、本地同工、水电）
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="p-4 rounded-2xl bg-neutral-50 border-2 border-neutral-200 space-y-1.5">
+                <label className="block text-xs sm:text-sm font-bold text-neutral-800">
+                  🏢 诊所/教室场地租金
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={formData.rentCost.amount || ''}
+                    onChange={(e) => updateMoney('rentCost', Number(e.target.value))}
+                    className="w-full p-3 border-2 border-neutral-300 rounded-xl font-mono text-lg font-bold text-neutral-900 bg-white"
+                    placeholder="3500"
+                  />
+                </div>
+                <span className="text-[11px] text-neutral-500 block">交房东的场地租金</span>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-neutral-50 border-2 border-neutral-200 space-y-1.5">
+                <label className="block text-xs sm:text-sm font-bold text-neutral-800">
+                  👥 本地护士/助教薪资或补贴
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={formData.laborCost.amount || ''}
+                    onChange={(e) => updateMoney('laborCost', Number(e.target.value))}
+                    className="w-full p-3 border-2 border-neutral-300 rounded-xl font-mono text-lg font-bold text-neutral-900 bg-white"
+                    placeholder="4800"
+                  />
+                </div>
+                <span className="text-[11px] text-neutral-500 block">不雇本地同工填 0</span>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-neutral-50 border-2 border-neutral-200 space-y-1.5">
+                <label className="block text-xs sm:text-sm font-bold text-neutral-800">
+                  💡 水电燃气与网络消毒费
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={formData.utilityCost.amount || ''}
+                    onChange={(e) => updateMoney('utilityCost', Number(e.target.value))}
+                    className="w-full p-3 border-2 border-neutral-300 rounded-xl font-mono text-lg font-bold text-neutral-900 bg-white"
+                    placeholder="950"
+                  />
+                </div>
+                <span className="text-[11px] text-neutral-500 block">水费、电费、网络与消毒</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 4: Cash Buffer & Track Record */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 pb-2 border-b border-neutral-100">
+              <span className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-sm">
+                4
+              </span>
+              <h3 className="text-base sm:text-lg font-black text-neutral-900">
+                工场应急备用金与服事时长（抗风险能力）
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="p-4.5 rounded-2xl bg-sky-50/80 border-2 border-sky-200 space-y-1.5">
+                <label className="block text-xs sm:text-sm font-black text-sky-950">
+                  🛡️ 工场随时能动的活钱 (应急备用金)
+                </label>
+                <input
+                  type="number"
+                  value={formData.cashAndLiquidAssets.amount || ''}
+                  onChange={(e) => updateMoney('cashAndLiquidAssets', Number(e.target.value))}
+                  className="w-full p-3 border-2 border-sky-300 rounded-xl font-mono text-lg font-black text-sky-950 bg-white"
+                  placeholder="40000"
+                />
+                <span className="text-[11px] text-sky-800 font-medium block">
+                  银行卡或现金随时可支取的资金储备
+                </span>
+              </div>
+
+              <div className="p-4.5 rounded-2xl bg-neutral-50 border-2 border-neutral-200 space-y-1.5">
+                <label className="block text-xs sm:text-sm font-bold text-neutral-800">
+                  📅 已经在工场实际服事了几个月？
+                </label>
+                <input
+                  type="number"
+                  value={formData.operatingMonthsCount || ''}
+                  onChange={(e) => updateField('operatingMonthsCount', Number(e.target.value))}
+                  className="w-full p-3 border-2 border-neutral-300 rounded-xl font-mono text-lg font-bold text-neutral-900 bg-white"
+                  placeholder="24"
+                />
+                <span className="text-[11px] text-neutral-500 block">新启动项目填实际月数</span>
+              </div>
+
+              <div className="p-4.5 rounded-2xl bg-neutral-50 border-2 border-neutral-200 space-y-1.5">
+                <label className="block text-xs sm:text-sm font-bold text-neutral-800">
+                  👥 雇佣全职员工人数 (不含自己)
+                </label>
+                <input
+                  type="number"
+                  value={formData.fullTimeEmployeesCount || ''}
+                  onChange={(e) => updateField('fullTimeEmployeesCount', Number(e.target.value))}
+                  className="w-full p-3 border-2 border-neutral-300 rounded-xl font-mono text-lg font-bold text-neutral-900 bg-white"
+                  placeholder="2"
+                />
+                <span className="text-[11px] text-neutral-500 block">自己一人单干填 0</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Big Action Submit Button */}
+          <div className="pt-4 border-t border-neutral-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-xs sm:text-sm text-neutral-500 font-medium">
+              💡 无需任何财务凭证，数据 100% 仅用于本地体检评估计算。
+            </div>
+
+            <button
+              type="button"
+              onClick={handleFinalSubmit}
+              className="w-full sm:w-auto px-8 py-4 bg-linear-to-r from-indigo-600 via-indigo-700 to-emerald-600 hover:from-indigo-500 hover:to-emerald-500 text-white rounded-2xl text-base sm:text-lg font-black shadow-xl shadow-indigo-600/25 transition-all cursor-pointer hover:scale-102 flex items-center justify-center gap-2.5"
+            >
+              <Sparkles className="w-5 h-5 text-amber-300 animate-pulse" />
+              <span>🚀 立即生成我的商业健康体检报告</span>
+              <ArrowRight className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* STEP 1: Basic Information & Sensitive Region Safe Mode */}
-      {currentStep === 1 && (
+      {formMode === 'detailed' && currentStep === 1 && (
         <div className="space-y-6">
           <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-6">
             <h3 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-3 flex items-center gap-2">
@@ -512,7 +836,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
       )}
 
       {/* STEP 2: Proof Type & Broken Stream GAP Handling */}
-      {currentStep === 2 && (
+      {formMode === 'detailed' && currentStep === 2 && (
         <div className="space-y-6">
           <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-6">
             <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
@@ -795,7 +1119,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
       )}
 
       {/* STEP 3: Revenues & Mixed Funds Source (P1) */}
-      {currentStep === 3 && (
+      {formMode === 'detailed' && currentStep === 3 && (
         <div className="space-y-6">
           <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-6">
             <div className="border-b border-slate-100 pb-3">
@@ -967,7 +1291,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
       )}
 
       {/* STEP 4: COGS, OPEX, Assets, Debt & Team Scale */}
-      {currentStep === 4 && (
+      {formMode === 'detailed' && currentStep === 4 && (
         <div className="space-y-6">
           <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-6">
             <div className="border-b border-slate-100 pb-3">
@@ -1162,7 +1486,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
       )}
 
       {/* STEP 5: Collaboration, Audit Trace & Final Submission */}
-      {currentStep === 5 && (
+      {formMode === 'detailed' && currentStep === 5 && (
         <div className="space-y-6">
           <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-6">
             <div className="border-b border-slate-100 pb-3">

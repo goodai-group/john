@@ -59,34 +59,34 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
   const failedGatesCount = (report.gates || []).filter((g) => g.status === 'FAIL').length;
 
   return (
-    <div className="bg-white rounded-3xl p-5 sm:p-6 border-2 border-indigo-200 shadow-sm space-y-5">
+    <div className="bg-white rounded-3xl p-6 sm:p-7 border-2 border-indigo-200 shadow-sm space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-2 pb-3 border-b border-neutral-100">
-        <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-xs">
+      <div className="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-neutral-100">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-bold text-base shadow-sm">
             📊
           </div>
           <div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">
-                LIVE GAUGE
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-100">
+                实时晴雨表
               </span>
-              <span className="text-[10px] text-neutral-500 font-bold">实时图形化晴雨表</span>
+              <span className="text-xs text-neutral-500 font-bold">100% 自动计算</span>
             </div>
-            <h3 className="text-sm font-black text-neutral-900 mt-0.5">当前填报数据实时健康度</h3>
+            <h3 className="text-base sm:text-lg font-black text-neutral-900 mt-0.5">当前开店健康实时测算</h3>
           </div>
         </div>
 
         {/* Live Score Badge */}
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-3">
           <div className="text-right">
-            <span className="text-[10px] text-neutral-400 font-medium block">预估健康分</span>
-            <span className="text-lg font-black text-indigo-900 font-mono">
-              {report.totalScore} <span className="text-xs text-neutral-400">/ 100</span>
+            <span className="text-xs text-neutral-400 font-medium block">预估健康分</span>
+            <span className="text-2xl font-black text-indigo-900 font-mono">
+              {report.totalScore} <span className="text-sm text-neutral-400">/ 100</span>
             </span>
           </div>
           <span
-            className={`px-3 py-1.5 rounded-2xl font-black text-xs border ${
+            className={`px-3.5 py-2 rounded-2xl font-black text-sm border shadow-xs ${
               report.tier === 'AAA' || report.tier === 'AA'
                 ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
                 : report.tier === 'A' || report.tier === 'BBB'
@@ -102,61 +102,61 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
       </div>
 
       {/* Grid of Gauges */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {/* Gauge 1: Cash Battery */}
-        <div className={`p-4 rounded-2xl border-2 ${batteryColor} space-y-2.5`}>
+        <div className={`p-5 rounded-2xl border-2 ${batteryColor} space-y-3`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               {runwayNum < 1.5 ? (
-                <BatteryWarning className="w-5 h-5" />
+                <BatteryWarning className="w-6 h-6" />
               ) : (
-                <BatteryCharging className="w-5 h-5" />
+                <BatteryCharging className="w-6 h-6" />
               )}
-              <span className="font-bold text-xs">救命现金电池 (能撑多久)</span>
+              <span className="font-bold text-sm sm:text-base">救命现金电池 (能撑多久)</span>
             </div>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/80 border border-current">
+            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-white/90 border border-current">
               {batteryLabel}
             </span>
           </div>
 
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-black font-mono tracking-tight">
-              {runwayMonths} <span className="text-xs font-normal">个月</span>
+            <span className="text-3xl sm:text-4xl font-black font-mono tracking-tight">
+              {runwayMonths} <span className="text-base font-bold">个月</span>
             </span>
-            <span className="text-[11px] opacity-80">
+            <span className="text-xs sm:text-sm font-semibold opacity-90">
               备用金 {cash.toLocaleString()} {formData.baseCurrency}
             </span>
           </div>
 
           {/* Battery Meter Visual Bar */}
-          <div className="w-full bg-black/10 h-2.5 rounded-full overflow-hidden p-0.5">
+          <div className="w-full bg-black/10 h-3.5 rounded-full overflow-hidden p-0.5">
             <div
               className={`h-full rounded-full transition-all duration-500 ${batteryBarColor}`}
               style={{ width: `${Math.min(100, Math.max(8, (runwayNum / 6) * 100))}%` }}
             />
           </div>
 
-          <p className="text-[11px] opacity-85 leading-snug">
+          <p className="text-xs sm:text-sm opacity-90 leading-relaxed font-medium">
             {runwayNum >= 3.0
               ? '✅ 备用金储备充裕，即使突发淡季或短期停业也能从容应对。'
               : runwayNum >= 1.5
-              ? '⚠️ 现金储备中等，建议适度控制进货与非必要开支，留足 3 个月以上开销。'
+              ? '⚠️ 现金储备中等，建议适度控制进货与非必要开销，留足 3 个月以上。'
               : '🚨 现金极其危险！一旦顾客减少或发生意外支出可能立即面临断流。'}
           </p>
         </div>
 
         {/* Gauge 2: 100 Yuan Flow Breakdown Bar */}
-        <div className="p-4 rounded-2xl bg-neutral-50 border-2 border-neutral-200 space-y-2.5 text-xs">
+        <div className="p-5 rounded-2xl bg-neutral-50 border-2 border-neutral-200 space-y-3 text-sm">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-1.5 font-bold text-neutral-800">
-              <PieChart className="w-4 h-4 text-indigo-600" />
-              <span>每进账 100 块钱怎么分的？</span>
+            <div className="flex items-center space-x-2 font-bold text-neutral-900">
+              <PieChart className="w-5 h-5 text-indigo-600" />
+              <span className="text-sm sm:text-base">每进账 100 块钱怎么分的？</span>
             </div>
-            <span className="text-[10px] text-neutral-500 font-medium">大白话收支构成</span>
+            <span className="text-xs text-neutral-500 font-bold">大白话收支构成</span>
           </div>
 
           {/* Multi-segment Bar */}
-          <div className="w-full h-3.5 rounded-full overflow-hidden flex bg-neutral-200">
+          <div className="w-full h-4 rounded-full overflow-hidden flex bg-neutral-200">
             <div
               className="bg-rose-400 h-full transition-all duration-300"
               style={{ width: `${Math.max(0, Math.min(100, (cogs / totalRev) * 100))}%` }}
@@ -174,22 +174,22 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-1 text-[11px] font-medium pt-0.5">
-            <div className="flex items-center gap-1 text-rose-800">
-              <span className="w-2 h-2 rounded-full bg-rose-400 shrink-0" />
+          <div className="grid grid-cols-3 gap-1 text-xs sm:text-sm font-semibold pt-1">
+            <div className="flex items-center gap-1.5 text-rose-800">
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-400 shrink-0" />
               <span>进货 <strong>{Math.round((cogs / totalRev) * 100)}%</strong></span>
             </div>
-            <div className="flex items-center gap-1 text-amber-800">
-              <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
+            <div className="flex items-center gap-1.5 text-amber-800">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" />
               <span>租金人工 <strong>{opexRatioPct}%</strong></span>
             </div>
-            <div className="flex items-center gap-1 text-emerald-800">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-              <span>落袋净利 <strong>{netMarginPct}%</strong></span>
+            <div className="flex items-center gap-1.5 text-emerald-800">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
+              <span>净赚落袋 <strong>{netMarginPct}%</strong></span>
             </div>
           </div>
 
-          <p className="text-[11px] text-neutral-500 leading-snug">
+          <p className="text-xs sm:text-sm text-neutral-600 leading-relaxed font-medium">
             {netMarginPct >= 20
               ? '🎉 净利润率非常健康，自我造血与抗风险能力优秀。'
               : netMarginPct >= 8
@@ -200,14 +200,14 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
       </div>
 
       {/* Traffic Light Gates Status */}
-      <div className="p-3.5 rounded-2xl bg-indigo-50/50 border border-indigo-100 space-y-2 text-xs">
+      <div className="p-4 sm:p-5 rounded-2xl bg-indigo-50/60 border border-indigo-100 space-y-3">
         <div className="flex items-center justify-between">
-          <span className="font-bold text-indigo-950 flex items-center gap-1.5">
-            <ShieldCheck className="w-4 h-4 text-indigo-600" />
+          <span className="font-bold text-indigo-950 text-sm sm:text-base flex items-center gap-2">
+            <ShieldCheck className="w-5 h-5 text-indigo-600" />
             <span>5 道核心安全红线实时自检</span>
           </span>
           <span
-            className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+            className={`text-xs font-bold px-3 py-1 rounded-full ${
               failedGatesCount === 0
                 ? 'bg-emerald-100 text-emerald-800'
                 : 'bg-rose-100 text-rose-800'
@@ -217,11 +217,11 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
           </span>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
           {(report.gates || []).map((g) => (
             <div
               key={g.code}
-              className={`p-2 rounded-xl border text-center transition-all ${
+              className={`p-3 rounded-xl border text-center transition-all ${
                 g.status === 'PASS'
                   ? 'bg-white border-emerald-200 text-emerald-950'
                   : g.status === 'WARNING'
@@ -230,9 +230,9 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
               }`}
               title={g.plainDescription || g.threshold}
             >
-              <div className="text-[10px] font-bold flex items-center justify-center gap-1 mb-0.5">
+              <div className="text-xs font-bold flex items-center justify-center gap-1.5 mb-1">
                 <span
-                  className={`w-2 h-2 rounded-full ${
+                  className={`w-2.5 h-2.5 rounded-full ${
                     g.status === 'PASS'
                       ? 'bg-emerald-500'
                       : g.status === 'WARNING'
@@ -240,9 +240,9 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
                       : 'bg-rose-500 animate-pulse'
                   }`}
                 />
-                <span>{g.plainName || g.name}</span>
+                <span className="truncate">{g.plainName || g.name}</span>
               </div>
-              <span className="text-[9px] opacity-75 block truncate">
+              <span className="text-[11px] opacity-80 block truncate">
                 {g.status === 'PASS' ? '安全达标' : g.status === 'WARNING' ? '适度关注' : '触发红线'}
               </span>
             </div>

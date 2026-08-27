@@ -77,30 +77,30 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b-2 border-neutral-200 shadow-xs">
       {/* Bento Top Status Bar */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-2 pb-1.5 flex flex-wrap items-center justify-between gap-2 text-xs border-b border-neutral-100">
-        <div className="flex items-center flex-wrap gap-2">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-2.5 pb-2 flex flex-wrap items-center justify-between gap-2 text-sm border-b border-neutral-100">
+        <div className="flex items-center flex-wrap gap-2.5">
           {/* Status Badge 1: AI Scoring */}
-          <div className="flex items-center space-x-2 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200/80">
-            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-            <span className="text-[11px] font-bold text-emerald-800 tracking-wider">
-              {language === 'zh' ? '100% AI 自动化打分' : '100% AI Automated'}
+          <div className="flex items-center space-x-2 bg-emerald-50 px-3.5 py-1.5 rounded-full border border-emerald-200">
+            <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse"></div>
+            <span className="text-xs font-bold text-emerald-800 tracking-wide">
+              {language === 'zh' ? '100% 宣教型 AI 自动化打分' : '100% AI Automated'}
             </span>
           </div>
 
           {/* Status Badge 2: Cloud Sync Status */}
-          <div className="flex items-center space-x-1.5 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">
-            <Cloud className="w-3.5 h-3.5 text-indigo-600" />
-            <span className="text-[11px] font-bold text-indigo-700">
-              {currentUser ? '云端数据库已连通' : '支持 Google 账号跨设备同步'}
+          <div className="flex items-center space-x-2 bg-indigo-50 px-3.5 py-1.5 rounded-full border border-indigo-100">
+            <Cloud className="w-4 h-4 text-indigo-600" />
+            <span className="text-xs font-bold text-indigo-700">
+              {currentUser ? '云端档案已连通' : '支持 Google 账号跨设备同步'}
             </span>
           </div>
 
           {/* Fee Free Pill */}
           <button
             onClick={onOpenFeeModal}
-            className="flex items-center space-x-1.5 bg-neutral-100 hover:bg-neutral-200/80 px-3 py-1 rounded-full border border-neutral-200 text-neutral-700 text-[11px] font-semibold transition-colors cursor-pointer"
+            className="flex items-center space-x-1.5 bg-neutral-100 hover:bg-neutral-200 px-3.5 py-1.5 rounded-full border border-neutral-200 text-neutral-700 text-xs font-bold transition-colors cursor-pointer"
           >
-            <span>💎 费用透明声明：永久免费</span>
+            <span>💎 费用说明：永久免费 · 零门槛</span>
           </button>
         </div>
 
@@ -109,71 +109,71 @@ export const Navbar: React.FC<NavbarProps> = ({
           {onOpenAppGuide && (
             <button
               onClick={onOpenAppGuide}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-800 text-[11px] font-bold border border-indigo-200 transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-900 text-xs font-black border border-indigo-200 transition-colors cursor-pointer"
             >
-              <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
-              <span>{language === 'zh' ? '📖 3分钟使用说明' : 'User Guide'}</span>
+              <BookOpen className="w-4 h-4 text-indigo-600" />
+              <span>{language === 'zh' ? '📖 3分钟小白看懂' : 'User Guide'}</span>
             </button>
           )}
 
           {/* Guide Tour */}
           <button
             onClick={onOpenOnboarding}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-neutral-100 hover:bg-neutral-200/70 text-neutral-700 text-[11px] font-bold border border-neutral-200 transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-bold border border-neutral-200 transition-colors cursor-pointer"
           >
-            <Info className="w-3.5 h-3.5 text-indigo-600" />
-            <span>{language === 'zh' ? '新手指南' : 'Guide'}</span>
+            <Info className="w-4 h-4 text-indigo-600" />
+            <span>{language === 'zh' ? '新手引导' : 'Guide'}</span>
           </button>
 
           {/* Accessibility */}
           <button
             onClick={onOpenAccessibility}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-neutral-100 hover:bg-neutral-200/70 text-neutral-700 text-[11px] font-bold border border-neutral-200 transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-bold border border-neutral-200 transition-colors cursor-pointer"
             title="无障碍工具箱：大字号 / 高对比度 / 弱网省流"
           >
-            <Eye className="w-3.5 h-3.5 text-sky-600" />
-            <span>{largeFont ? '大字号' : '无障碍'}</span>
+            <Eye className="w-4 h-4 text-sky-600" />
+            <span>{largeFont ? '特大字号' : '无障碍'}</span>
           </button>
 
           {/* Language Switch */}
           <button
             onClick={() => onLanguageChange(language === 'zh' ? 'en' : 'zh')}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-neutral-100 hover:bg-neutral-200/70 text-neutral-700 text-[11px] font-bold border border-neutral-200 transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-bold border border-neutral-200 transition-colors cursor-pointer"
           >
-            <Globe className="w-3.5 h-3.5 text-indigo-600" />
+            <Globe className="w-4 h-4 text-indigo-600" />
             <span>{language === 'zh' ? 'EN' : '中文'}</span>
           </button>
         </div>
       </div>
 
       {/* Main Bento Navigation Row */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5">
         <div className="flex items-center justify-between gap-3">
           {/* Brand Box */}
           <div
             className="flex items-center space-x-3 cursor-pointer group shrink-0"
             onClick={() => onTabChange('form')}
           >
-            <div className="w-10 h-10 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-100 group-hover:scale-105 transition-transform">
-              <SlidersHorizontal className="w-5 h-5 text-white" />
+            <div className="w-11 h-11 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-100 group-hover:scale-105 transition-transform">
+              <SlidersHorizontal className="w-6 h-6 text-white" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <h1 className="text-base sm:text-lg font-black text-neutral-900 tracking-tight">
-                  {language === 'zh' ? '小微商业自测评估' : 'MicroBiz Assessment'}
+                <h1 className="text-lg sm:text-xl font-black text-neutral-900 tracking-tight">
+                  {language === 'zh' ? '宣教工场社区服事体检' : 'Mission Service Health'}
                 </h1>
-                <span className="text-[10px] font-mono font-bold bg-neutral-900 text-white px-2 py-0.5 rounded-lg">
-                  v1.4.1
+                <span className="text-xs font-mono font-bold bg-indigo-900 text-white px-2.5 py-0.5 rounded-lg">
+                  工场服事版
                 </span>
               </div>
-              <p className="text-[11px] text-neutral-400 font-medium hidden sm:block">
-                BAM-PRD-2026-V1.4 标准 · 零财务门槛 · 云端持久化
+              <p className="text-xs text-neutral-500 font-medium hidden sm:block">
+                宣教士零财务门槛 · 医疗关怀与教育培训 · 做忠心好管家 · 持续帮助当地人
               </p>
             </div>
           </div>
 
           {/* Center Bento Nav Pill Tabs */}
-          <nav className="hidden md:flex items-center p-1 bg-neutral-100 border border-neutral-200 rounded-2xl space-x-1">
+          <nav className="hidden md:flex items-center p-1.5 bg-neutral-100 border border-neutral-200 rounded-2xl space-x-1.5">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
@@ -181,7 +181,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <button
                   key={item.id}
                   onClick={() => onTabChange(item.id)}
-                  className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer ${
                     isActive
                       ? 'bg-white text-indigo-700 shadow-sm border border-neutral-200/80'
                       : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-200/50'
@@ -190,7 +190,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <Icon className={`w-4 h-4 ${isActive ? 'text-indigo-600' : 'text-neutral-500'}`} />
                   <span>{item.label}</span>
                   {item.tag && (
-                    <span className="text-[9px] font-mono bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded-md font-bold">
+                    <span className="text-[10px] font-mono bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded-md font-bold">
                       {item.tag}
                     </span>
                   )}
@@ -200,13 +200,13 @@ export const Navbar: React.FC<NavbarProps> = ({
           </nav>
 
           {/* Right Action Area: Google Login + AI Q&A */}
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-3">
             {/* Google Login / Account Component */}
             {currentUser ? (
               <div className="relative" ref={userMenuRef}>
                 <button
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                  className="flex items-center gap-2 p-1.5 sm:px-3 sm:py-1.5 rounded-2xl bg-indigo-50/80 hover:bg-indigo-100/80 border border-indigo-200 transition-all cursor-pointer"
+                  className="flex items-center gap-2 p-2 sm:px-3.5 sm:py-2 rounded-2xl bg-indigo-50/80 hover:bg-indigo-100/80 border border-indigo-200 transition-all cursor-pointer"
                   title="账号管理与云端同步状态"
                 >
                   {currentUser.photoURL ? (
@@ -221,12 +221,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                       {(currentUser.displayName || currentUser.email || 'U').charAt(0).toUpperCase()}
                     </div>
                   )}
-                  <div className="text-left hidden lg:block max-w-[120px] truncate">
+                  <div className="text-left hidden lg:block max-w-[130px] truncate">
                     <p className="text-xs font-bold text-indigo-950 truncate">
                       {currentUser.displayName || currentUser.email?.split('@')[0]}
                     </p>
-                    <p className="text-[10px] text-emerald-700 font-semibold flex items-center gap-1">
-                      <CheckCircle2 className="w-2.5 h-2.5" />
+                    <p className="text-[11px] text-emerald-700 font-semibold flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" />
                       <span>云端已同步</span>
                     </p>
                   </div>
@@ -234,16 +234,16 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                 {/* Account Dropdown Menu */}
                 {isUserMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-white border-2 border-neutral-200 shadow-xl p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                  <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-white border-2 border-neutral-200 shadow-xl p-3.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                     <div className="pb-3 border-b border-neutral-100">
-                      <p className="text-xs font-bold text-neutral-900 truncate">
+                      <p className="text-sm font-bold text-neutral-900 truncate">
                         {currentUser.displayName || 'Google 用户'}
                       </p>
-                      <p className="text-[11px] text-neutral-500 truncate mt-0.5">
+                      <p className="text-xs text-neutral-500 truncate mt-0.5">
                         {currentUser.email}
                       </p>
-                      <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[10px] font-bold border border-emerald-200">
-                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                      <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                         <span>数据已与该 Google 账号绑定</span>
                       </div>
                     </div>
@@ -254,7 +254,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                           setIsUserMenuOpen(false);
                           onTabChange('projects');
                         }}
-                        className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-neutral-100 text-neutral-700 text-xs font-bold transition-colors cursor-pointer"
+                        className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-neutral-100 text-neutral-700 text-xs font-bold transition-colors cursor-pointer"
                       >
                         <FolderKanban className="w-4 h-4 text-indigo-600" />
                         <span>查看我的自测项目与报告</span>
@@ -267,7 +267,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                           setIsUserMenuOpen(false);
                           onLogout();
                         }}
-                        className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-rose-50 text-rose-700 text-xs font-bold transition-colors cursor-pointer"
+                        className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-rose-50 text-rose-700 text-xs font-bold transition-colors cursor-pointer"
                       >
                         <LogOut className="w-4 h-4" />
                         <span>退出 Google 登录</span>
@@ -280,7 +280,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 onClick={onLoginWithGoogle}
                 disabled={isSigningIn}
-                className="flex items-center gap-2 px-3 sm:px-3.5 py-2 rounded-2xl bg-white hover:bg-neutral-50 text-neutral-800 text-xs font-bold border-2 border-neutral-300 hover:border-indigo-400 shadow-xs transition-all cursor-pointer hover:scale-102 disabled:opacity-50"
+                className="flex items-center gap-2 px-3.5 sm:px-4 py-2.5 rounded-2xl bg-white hover:bg-neutral-50 text-neutral-800 text-xs font-bold border-2 border-neutral-300 hover:border-indigo-400 shadow-xs transition-all cursor-pointer hover:scale-102 disabled:opacity-50"
                 title="使用 Google 账号登录，随时在其他设备查看您的自测数据"
               >
                 {isSigningIn ? (
@@ -313,9 +313,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Right Action Bento Button: AI Rule Assistant */}
             <button
               onClick={() => onOpenAiHelper()}
-              className="flex items-center space-x-1.5 sm:space-x-2 px-3 sm:px-4 py-2 rounded-2xl bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-bold shadow-md shadow-neutral-900/10 border-2 border-neutral-800 transition-all cursor-pointer hover:scale-102 shrink-0"
+              className="flex items-center space-x-2 px-3.5 sm:px-4.5 py-2.5 rounded-2xl bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-bold shadow-md shadow-neutral-900/10 border-2 border-neutral-800 transition-all cursor-pointer hover:scale-102 shrink-0"
             >
-              <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 animate-pulse" />
+              <Sparkles className="w-4 h-4 text-amber-400 animate-pulse" />
               <span className="hidden sm:inline">AI 大白话答疑</span>
               <span className="sm:hidden">AI 答疑</span>
             </button>

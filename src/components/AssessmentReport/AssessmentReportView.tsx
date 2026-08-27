@@ -828,13 +828,98 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
             </div>
           </div>
 
+          {/* Card 4.5: Missionary Community Service & Biblical Stewardship Insights (宣教工场医疗与教育服事管家评估) */}
+          <div className="bg-gradient-to-br from-amber-50/90 via-orange-50/50 to-indigo-50/80 border-2 border-amber-300 rounded-3xl p-6 sm:p-8 shadow-xs space-y-5">
+            <div className="flex flex-wrap items-start justify-between gap-3 pb-3 border-b border-amber-200/80">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-600 text-white flex items-center justify-center font-bold text-lg shadow-sm">
+                  ✝️
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-mono font-bold uppercase tracking-wider text-amber-900 bg-amber-200/80 px-2.5 py-0.5 rounded-full border border-amber-300">
+                      工场服事评估
+                    </span>
+                    <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
+                      持续运转与社区关怀指数
+                    </span>
+                  </div>
+                  <h3 className="text-base sm:text-lg font-black text-neutral-900 mt-0.5">
+                    宣教士工场医疗教育服事与忠心管家体检
+                  </h3>
+                </div>
+              </div>
+
+              <div className="text-xs text-amber-900 font-medium italic bg-white/80 px-3 py-1.5 rounded-xl border border-amber-200">
+                📖「你要详细知道你羊群的景况，留心料理你的牛群」（箴言 27:23）
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {/* BAM Metric 1: Financial Balance & Sustainability */}
+              <div className="p-4.5 rounded-2xl bg-white/90 border border-amber-200 space-y-2">
+                <div className="text-xs font-bold text-amber-900 flex items-center justify-between">
+                  <span>🕊️ 医疗/教育项目收支平衡率</span>
+                  <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                    {netProfit >= 0 ? '收支平衡 / 良性运转' : '需外部爱心支持'}
+                  </span>
+                </div>
+                <div className="text-xl sm:text-2xl font-black font-mono text-neutral-900">
+                  {netProfit >= 0 ? formatMoney(netProfit, baseCurr) : formatMoney(netProfit, baseCurr)}
+                  <span className="text-xs text-neutral-500 font-normal ml-1">/月结余</span>
+                </div>
+                <p className="text-[11px] text-neutral-600 leading-relaxed font-medium">
+                  {netProfit >= 0
+                    ? '✅ 门诊或学费基本覆盖进药及教学日常花销，能够长期持续为当地人提供关怀。'
+                    : '⚠️ 目前处于贴补服务阶段，需合理预算外部奉献，确保药物与教学供应不断档。'}
+                </p>
+              </div>
+
+              {/* BAM Metric 2: Field Cash Buffer */}
+              <div className="p-4.5 rounded-2xl bg-white/90 border border-amber-200 space-y-2">
+                <div className="text-xs font-bold text-amber-900 flex items-center justify-between">
+                  <span>🛡️ 工场应急储备金</span>
+                  <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-sky-100 text-sky-800">
+                    可撑 {cashRunwayMonths} 个月
+                  </span>
+                </div>
+                <div className="text-xl sm:text-2xl font-black font-mono text-neutral-900">
+                  {cashRunwayMonths} 个月
+                  <span className="text-xs text-neutral-500 font-normal ml-1">安全缓冲</span>
+                </div>
+                <p className="text-[11px] text-neutral-600 leading-relaxed font-medium">
+                  {cashRunwayMonths >= 3
+                    ? '✅ 储备金非常扎实，面对药品通关延误、突发公共卫生需求或政策变动能安心应对。'
+                    : '⚠️ 储备不足 3 个月，建议优先储备紧急备用金以保障关键救命物资采购。'}
+                </p>
+              </div>
+
+              {/* BAM Metric 3: Community Blessing */}
+              <div className="p-4.5 rounded-2xl bg-white/90 border border-amber-200 space-y-2">
+                <div className="text-xs font-bold text-amber-900 flex items-center justify-between">
+                  <span>🤝 社区帮助与关怀</span>
+                  <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                    爱心服事当地人
+                  </span>
+                </div>
+                <div className="text-xl sm:text-2xl font-black font-mono text-neutral-900">
+                  {report.normalizedFinancials.fullTimeEmployeesCount || 0} 位
+                  <span className="text-xs text-neutral-500 font-normal ml-1">本地同工培养与帮扶</span>
+                </div>
+                <p className="text-[11px] text-neutral-600 leading-relaxed font-medium">
+                  以专业医疗救治与知识技能赋能当地百姓，在社区建立美好见证并切切实实帮助需要的人。
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Card 5: Actionable Checklist & Live Gemini Deep Diagnosis */}
           <div className="bg-neutral-900 border-2 border-neutral-800 rounded-3xl p-6 sm:p-8 shadow-xl text-white space-y-5">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center space-x-2 text-amber-400">
                 <Sparkles className="w-5 h-5" />
                 <h3 className="text-base font-black tracking-tight text-white">
-                  老板行动清单：打勾追踪优化进度
+                  宣教同工行动清单：打勾追踪优化进度
                 </h3>
               </div>
 
@@ -897,7 +982,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                         />
                       </div>
                       <h4 className={`font-bold text-sm ${isDone ? 'text-emerald-300 line-through' : 'text-white'}`}>
-                        {i === 0 ? '进货端：优化采购' : i === 1 ? '开销端：精简弹性工时' : '存钱端：建应急账户'}
+                        {i === 0 ? '药品/教材端：优化采购损耗' : i === 1 ? '开销端：精简运转与固定支出' : '备用金端：建立工场应急专户'}
                       </h4>
                       <p className="text-neutral-300 leading-relaxed text-xs">
                         {advice}
@@ -937,7 +1022,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
               <div>
                 <div className="flex items-center space-x-2 mb-3">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">
-                    BAM-PRD-2026-V1.4 标准体检报告
+                    工场服事标准体检评估报告
                   </span>
                   <span className="text-[10px] text-neutral-400 font-medium">
                     生成时间: {new Date(report.createdAt).toLocaleDateString()}
@@ -945,7 +1030,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                 </div>
 
                 <h2 className="text-2xl sm:text-3xl font-black text-neutral-900 tracking-tight leading-tight">
-                  {report.projectName || '海外小微商业自测项目'}
+                  {report.projectName || '工场医疗教育服事自测项目'}
                 </h2>
                 <p className="text-xs text-neutral-500 font-medium mt-1">
                   行业领域：{report.industry} ｜ 申报版本：v{report.version} ｜ 基准币种：{report.baseCurrency}

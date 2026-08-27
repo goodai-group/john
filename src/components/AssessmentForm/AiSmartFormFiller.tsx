@@ -22,20 +22,20 @@ interface AiSmartFormFillerProps {
 
 const PRESET_CASES = [
   {
-    title: '🥤 街边奶茶 / 咖啡店',
-    text: '我开了一家奶茶店，一个月大概卖 4 万 2，买茶叶牛奶珍珠杯子花 1 万 6，门面租金 4500，雇了 1 个小妹工资 4000，水电 800，手头存着 3 万块备用金，干了 18 个月。'
+    title: '🩺 东南亚社区爱心义诊所',
+    text: '我们在工场开办便民爱心卫生所，帮助当地贫困村民看病，每月门诊加平价药品收入约 3 万 8，采购急救药品和注射耗材花 1 万 5，诊所租金 3500，雇 2 位本地助理护士发 4800 工资，平时备着 4 万应急备用金，运营了 24 个月。'
   },
   {
-    title: '🛒 社区便利店 / 杂货铺',
-    text: '我和老婆开便利店，一个月流水 7 万 5，批发进零食饮料日用品花 5 万 2，门面租金 5500，电费冰箱 900，雇 1 个理货员 3500，流动资金 4 万，开了 3 年。'
+    title: '📚 中亚语言文化与青年辅导中心',
+    text: '我们在中亚办语言学习与青年辅导中心，教授英语和实用技能，每月学费收入 3 万 5，教材复印茶水耗材 3200，教室租金 4500，雇当地老师发 5000，水电 800，手头备用金 4 万，运营了 18 个月。'
   },
   {
-    title: '📦 跨境电商 / 独立网店',
-    text: '做外贸独立站，月销售额 11 万，采购货品加运费 5 万 8，海外广告费和软件月租 1 万 2，雇 1 个客服兼职 3000，卡里周转金 7 万，做了 14 个月。'
+    title: '🚐 非洲乡村流动医疗车巡诊',
+    text: '我们在偏远乡村开展流动医疗巡诊，每月接收就诊及爱心补贴 2 万 9，采购常规药和化验试剂 1 万 1，油费与驻点租金 3000，发 2 位同工津贴 4200，留有 3 万 5 应急金，干了 20 个月。'
   },
   {
-    title: '✂️ 社区理发店 / 美业',
-    text: '开了一家社区理发店，月营业额 3 万 2，洗发水染膏等耗材 3500，房租 4800 水电 600，两个发型师分成工资共 1 万 1，备用金 2 万 5，经营 2 年。'
+    title: '🛠️ 贫困社区青年计算机与技能学校',
+    text: '我们为贫困社区青年提供电脑IT和电工缝纫职业培训，每月学费 4 万 6，实训电脑配件与耗材 1 万 2，教学场地租金 5500，雇 3 位培训老师发 6000 工资，账上留存 5 万备用金，办了 30 个月。'
   }
 ];
 
@@ -204,34 +204,34 @@ export const AiSmartFormFiller: React.FC<AiSmartFormFillerProps> = ({
   };
 
   return (
-    <div className="rounded-3xl bg-linear-to-br from-indigo-900 via-neutral-900 to-indigo-950 text-white p-5 sm:p-6 border-2 border-indigo-700/50 shadow-xl space-y-4">
+    <div className="rounded-3xl bg-linear-to-br from-indigo-900 via-neutral-900 to-indigo-950 text-white p-6 sm:p-7 border-2 border-indigo-700/60 shadow-xl space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <div className="flex items-center space-x-2.5">
-          <div className="w-8 h-8 rounded-xl bg-indigo-500/30 text-amber-300 flex items-center justify-center border border-indigo-400/40">
-            <Sparkles className="w-4 h-4 animate-pulse" />
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 rounded-2xl bg-indigo-500/30 text-amber-300 flex items-center justify-center border border-indigo-400/40 shrink-0">
+            <Sparkles className="w-5 h-5 animate-pulse" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-amber-300 bg-amber-400/20 px-2 py-0.5 rounded-full border border-amber-300/30">
-                AI 智能大白话填报助理
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-amber-300 bg-amber-400/20 px-2.5 py-0.5 rounded-full border border-amber-300/40">
+                AI 大白话随手填
               </span>
-              <span className="text-[10px] text-indigo-200">无需懂财报，随手发一句话自动识别</span>
+              <span className="text-xs text-indigo-200 font-bold">不用懂财务，打字/语音随便发一句话即可</span>
             </div>
-            <h3 className="text-sm sm:text-base font-black text-white mt-0.5">
-              告诉我你的买卖收支，AI 帮您 1 秒填好 14 项数据
+            <h3 className="text-base sm:text-lg font-black text-white mt-0.5">
+              告诉我您的买卖收支，AI 帮您自动识别并填好
             </h3>
           </div>
         </div>
       </div>
 
       {/* Preset Quick Chips */}
-      <div className="space-y-1.5">
-        <p className="text-[11px] text-indigo-200 flex items-center gap-1 font-semibold">
-          <Lightbulb className="w-3.5 h-3.5 text-amber-400" />
-          <span>点击快速体验真实店铺范例：</span>
+      <div className="space-y-2">
+        <p className="text-xs sm:text-sm text-indigo-200 flex items-center gap-1.5 font-bold">
+          <Lightbulb className="w-4 h-4 text-amber-400" />
+          <span>点击快速体验小白真实日常说话方式：</span>
         </p>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
           {PRESET_CASES.map((c, i) => (
             <button
               key={i}
@@ -240,7 +240,7 @@ export const AiSmartFormFiller: React.FC<AiSmartFormFillerProps> = ({
                 setInputText(c.text);
                 handleParseText(c.text);
               }}
-              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 hover:border-indigo-300 text-left text-xs font-bold text-white transition-all cursor-pointer truncate"
+              className="p-3 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/15 hover:border-indigo-300 text-left text-xs sm:text-sm font-bold text-white transition-all cursor-pointer truncate"
               title={c.text}
             >
               {c.title}
@@ -250,37 +250,37 @@ export const AiSmartFormFiller: React.FC<AiSmartFormFillerProps> = ({
       </div>
 
       {/* Input Area */}
-      <div className="space-y-2">
+      <div className="space-y-2.5">
         <div className="relative">
           <textarea
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             placeholder="例如：我在老家开了一家炸鸡店，一个月卖 3 万多块，进食材花 1 万 2，房租 2500，雇了一个兼职阿姨 2000，平时卡里留着 2 万备用金，干了快 2 年了..."
             rows={3}
-            className="w-full p-3.5 rounded-2xl bg-black/40 border border-white/20 text-white placeholder-white/40 text-xs focus:outline-hidden focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 transition-all resize-none"
+            className="w-full p-4 rounded-2xl bg-black/40 border border-white/25 text-white placeholder-white/50 text-sm sm:text-base focus:outline-hidden focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400 transition-all resize-none leading-relaxed"
           />
         </div>
 
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-[11px] text-white/50 hidden sm:inline">
-            支持输入“万”、“块”、“元”等口语表达，AI 会自动按经营逻辑进行归类。
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <span className="text-xs text-white/70 font-medium">
+            💡 支持输入“万”、“块”、“元”等口语表达，AI 会自动按小微经营常识精准拆解。
           </span>
 
           <button
             type="button"
             onClick={() => handleParseText(inputText)}
             disabled={!inputText.trim() || isProcessing}
-            className="px-4 py-2 rounded-xl bg-indigo-500 hover:bg-indigo-400 disabled:opacity-40 text-white text-xs font-bold shadow-md transition-all cursor-pointer flex items-center gap-1.5 ml-auto"
+            className="px-5 py-2.5 rounded-2xl bg-indigo-500 hover:bg-indigo-400 disabled:opacity-40 text-white text-xs sm:text-sm font-bold shadow-md transition-all cursor-pointer flex items-center gap-2 ml-auto"
           >
             {isProcessing ? (
               <>
-                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                <RefreshCw className="w-4 h-4 animate-spin" />
                 <span>AI 正在识别解析...</span>
               </>
             ) : (
               <>
-                <Zap className="w-3.5 h-3.5 text-amber-300" />
-                <span>AI 智能识别</span>
+                <Zap className="w-4 h-4 text-amber-300" />
+                <span>AI 智能大白话识别</span>
               </>
             )}
           </button>
@@ -289,33 +289,33 @@ export const AiSmartFormFiller: React.FC<AiSmartFormFillerProps> = ({
 
       {/* Parsed Preview Card */}
       {parsedResult && (
-        <div className="p-4 rounded-2xl bg-white/10 border border-indigo-400/40 space-y-3 animate-in fade-in">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-amber-300">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              <span>AI 已成功提取出关键经营指标：</span>
+        <div className="p-5 rounded-2xl bg-white/10 border border-indigo-400/50 space-y-3.5 animate-in fade-in">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-amber-300">
+              <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+              <span>AI 已成功提取出关键开店指标：</span>
             </div>
-            <span className="text-[10px] text-indigo-200">
+            <span className="text-xs text-indigo-200 font-bold">
               {parsedResult.projectName} ({parsedResult.operatingMonthsCount} 个月)
             </span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-            <div className="p-2.5 rounded-xl bg-black/30 border border-white/10">
-              <span className="text-[10px] text-white/60 block">月均流水 (收入)</span>
-              <span className="text-sm font-black text-emerald-300 font-mono">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            <div className="p-3 rounded-xl bg-black/35 border border-white/15">
+              <span className="text-xs text-white/70 block mb-1">月均流水 (总进账)</span>
+              <span className="text-base sm:text-lg font-black text-emerald-300 font-mono">
                 {parsedResult.monthlyRevenue?.amount.toLocaleString()} {baseCurrency}
               </span>
             </div>
-            <div className="p-2.5 rounded-xl bg-black/30 border border-white/10">
-              <span className="text-[10px] text-white/60 block">进货进价 (COGS)</span>
-              <span className="text-sm font-black text-rose-300 font-mono">
+            <div className="p-3 rounded-xl bg-black/35 border border-white/15">
+              <span className="text-xs text-white/70 block mb-1">进货进价 (买原料)</span>
+              <span className="text-base sm:text-lg font-black text-rose-300 font-mono">
                 {parsedResult.cogsCost?.amount.toLocaleString()} {baseCurrency}
               </span>
             </div>
-            <div className="p-2.5 rounded-xl bg-black/30 border border-white/10">
-              <span className="text-[10px] text-white/60 block">房租 + 人工 + 水电</span>
-              <span className="text-sm font-black text-amber-300 font-mono">
+            <div className="p-3 rounded-xl bg-black/35 border border-white/15">
+              <span className="text-xs text-white/70 block mb-1">房租 + 人工 + 水电</span>
+              <span className="text-base sm:text-lg font-black text-amber-300 font-mono">
                 {(
                   (parsedResult.rentCost?.amount || 0) +
                   (parsedResult.laborCost?.amount || 0) +
@@ -324,23 +324,23 @@ export const AiSmartFormFiller: React.FC<AiSmartFormFillerProps> = ({
                 {baseCurrency}
               </span>
             </div>
-            <div className="p-2.5 rounded-xl bg-black/30 border border-white/10">
-              <span className="text-[10px] text-white/60 block">救命备用金 (现金)</span>
-              <span className="text-sm font-black text-sky-300 font-mono">
+            <div className="p-3 rounded-xl bg-black/35 border border-white/15">
+              <span className="text-xs text-white/70 block mb-1">救命备用金 (现金)</span>
+              <span className="text-base sm:text-lg font-black text-sky-300 font-mono">
                 {parsedResult.cashAndLiquidAssets?.amount.toLocaleString()} {baseCurrency}
               </span>
             </div>
           </div>
 
-          <div className="flex items-center justify-between pt-1">
-            <span className="text-[11px] text-emerald-300 font-medium">
+          <div className="flex items-center justify-between pt-1 flex-wrap gap-2">
+            <span className="text-xs sm:text-sm text-emerald-300 font-bold">
               {showAppliedSuccess ? '✅ 数据已成功同步填入下方所有表单！' : '确认提取结果无误后，点击右侧一键应用：'}
             </span>
 
             <button
               type="button"
               onClick={handleApply}
-              className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-bold shadow-md shadow-emerald-500/20 transition-all cursor-pointer flex items-center gap-1.5 hover:scale-102"
+              className="px-5 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-white text-xs sm:text-sm font-black shadow-md shadow-emerald-500/30 transition-all cursor-pointer flex items-center gap-2 hover:scale-102"
             >
               <Check className="w-4 h-4" />
               <span>✨ 一键填入表单</span>
