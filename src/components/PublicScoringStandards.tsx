@@ -81,7 +81,7 @@ export const PublicScoringStandards: React.FC<StandardsProps> = ({ language }) =
               大白话：排除借款和外部赠款后，客户买单付给你的钱要占总进账的 60% 以上。
             </p>
             <p className="text-indigo-900 bg-indigo-50/80 p-2.5 rounded-xl border border-indigo-100 font-medium">
-              💡 改善方向提示：专注提升核心主营商品或服务的销售复购，逐步降低对一次性救济款的依赖。
+              改善方向提示：专注提升核心主营商品或服务的销售复购，逐步降低对一次性救济款的依赖。
             </p>
           </div>
 
@@ -96,7 +96,7 @@ export const PublicScoringStandards: React.FC<StandardsProps> = ({ language }) =
               大白话：每卖出 100 块钱东西，扣除直接进货和原材料成本后，至少要剩下 20 块钱毛利。
             </p>
             <p className="text-indigo-900 bg-indigo-50/80 p-2.5 rounded-xl border border-indigo-100 font-medium">
-              💡 改善方向提示：与上游批发商谈判争取批量折扣，或精简损耗严重的低毛利进货品种。
+              改善方向提示：与上游批发商谈判争取批量折扣，或精简损耗严重的低毛利进货品种。
             </p>
           </div>
 
@@ -111,7 +111,7 @@ export const PublicScoringStandards: React.FC<StandardsProps> = ({ language }) =
               大白话：每月赚出来的毛利润，必须能够全额包住房租、工人工资与水电网络等固定支出。
             </p>
             <p className="text-indigo-900 bg-indigo-50/80 p-2.5 rounded-xl border border-indigo-100 font-medium">
-              💡 改善方向提示：OPEX 超标时，通常可以从工时弹性排班、转租分摊部分场地或削减杂费入手。
+              改善方向提示：OPEX 超标时，通常可以从工时弹性排班、转租分摊部分场地或削减杂费入手。
             </p>
           </div>
 
@@ -126,7 +126,7 @@ export const PublicScoringStandards: React.FC<StandardsProps> = ({ language }) =
               大白话：扣掉所有成本、开销和税金后，每月到手必须是正数，不能处于持续倒贴亏损状态。
             </p>
             <p className="text-indigo-900 bg-indigo-50/80 p-2.5 rounded-xl border border-indigo-100 font-medium">
-              💡 改善方向提示：梳理非生产性杂费支出，提升单客消费客单价以拉正月度利润。
+              改善方向提示：梳理非生产性杂费支出，提升单客消费客单价以拉正月度利润。
             </p>
           </div>
         </div>

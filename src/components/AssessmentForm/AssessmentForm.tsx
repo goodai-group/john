@@ -72,7 +72,6 @@ async function callInferBusinessStructure(projectName: string): Promise<Inferred
   }
 }
 import { saveActiveDraft, clearActiveDraft } from '../../lib/storage';
-import { LiveHealthGauge } from './LiveHealthGauge';
 
 interface FormProps {
   initialData?: Partial<BusinessFormData>;
@@ -545,19 +544,14 @@ export const AssessmentForm: React.FC<FormProps> = ({
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
-      {/* 1. Header & Title (Clean, Professional, Focused) */}
-      <div className="bg-white rounded-3xl p-6 sm:p-7 border border-neutral-200 shadow-xs space-y-4">
+      {/* 1. Slim Header (no duplicated hero title) */}
+      <div className="bg-white rounded-3xl p-4 sm:p-5 border border-neutral-200 shadow-xs space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="space-y-1 max-w-2xl">
-            <h1 className="text-xl sm:text-2xl font-black text-neutral-900 tracking-tight">
-              {language === 'en' ? 'BAM Financial Health Assessment' : '商业宣教商业模型财务测算'}
-            </h1>
-            <p className="text-xs sm:text-sm text-neutral-600 font-medium leading-relaxed">
-              {language === 'en'
-                ? 'Enter your core financials to instantly measure business-model health, cash runway and resilience.'
-                : '输入核心财务收支与储备数据，系统实时测算商业模型的健康度、现金跑道与抗风险能力。'}
-            </p>
-          </div>
+          <p className="text-xs sm:text-sm text-neutral-500 font-medium max-w-2xl">
+            {language === 'en'
+              ? 'Enter core financials to instantly measure business-model health, cash runway and resilience.'
+              : '输入核心财务收支与储备数据，系统实时测算商业模型的健康度、现金跑道与抗风险能力。'}
+          </p>
 
           <div className="flex items-center gap-3">
             {saveStatus && (
@@ -574,7 +568,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                 onClick={() => setFormMode('simple')}
                 className="text-xs px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-700 font-bold border border-indigo-200 hover:bg-indigo-100 transition-colors cursor-pointer"
               >
-                ⚡ 回到极简单页
+                回到极简单页
               </button>
             ) : (
               <button
@@ -582,7 +576,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                 onClick={() => setFormMode('detailed')}
                 className="text-xs px-3 py-1.5 rounded-full text-neutral-500 font-semibold border border-neutral-200 hover:bg-neutral-50 hover:text-neutral-700 transition-colors cursor-pointer"
               >
-                📑 想填更细？完整分步明细
+                想填更细？完整分步明细
               </button>
             )}
           </div>
@@ -613,9 +607,6 @@ export const AssessmentForm: React.FC<FormProps> = ({
         )}
       </div>
 
-      {/* Real-time Live Health Gauge (Battery & 100-Yuan Flow) */}
-      <LiveHealthGauge formData={formData} onOpenAiHelper={onOpenAiHelper} />
-
       {/* ZERO-BARRIER SIMPLE MODE FORM (SINGLE SCREEN) */}
       {formMode === 'simple' && (
         <div className="bg-white rounded-3xl p-6 sm:p-8 border-2 border-neutral-200 shadow-sm space-y-8 animate-in fade-in">
@@ -626,7 +617,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                 你准备开个什么店？
               </h3>
               <p className="text-xs sm:text-sm text-neutral-500 font-medium">
-                🙏 别担心看不懂财务。打完这一句，行业和成本 AI 会帮你猜好，你只改改数字就行。
+                别担心看不懂财务。打完这一句，行业和成本 AI 会帮你猜好，你只改改数字就行。
               </p>
             </div>
 
@@ -641,14 +632,14 @@ export const AssessmentForm: React.FC<FormProps> = ({
               />
               <div className="mt-2 text-center text-sm min-h-[1.25rem]">
                 {inferState === 'loading' && (
-                  <span className="text-indigo-500 font-semibold animate-pulse">🤖 AI 正在根据你的店名，推算行业、币种和每一项成本…</span>
+                  <span className="text-indigo-500 font-semibold animate-pulse">AI 正在根据你的店名，推算行业、币种和每一项成本…</span>
                 )}
                 {inferState === 'done' && (
-                  <span className="text-emerald-600 font-semibold">✓ 已自动猜好并预填，下方可改，或点“恢复 AI 建议”</span>
+                  <span className="text-emerald-600 font-semibold">已自动猜好并预填，下方可改，或点“恢复 AI 建议”</span>
                 )}
                 {inferState === 'error' && (
                   <span className="text-amber-600 font-semibold">
-                    ⚠ 暂时连不上 AI，你仍可手动选择。
+                    暂时连不上 AI，你仍可手动选择。
                     <button
                       type="button"
                       onClick={() => formData.projectName.trim().length >= 2 && handleProjectNameChange(formData.projectName)}
@@ -659,7 +650,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   </span>
                 )}
                 {inferState === 'idle' && formData.projectName.trim().length < 2 && (
-                  <span className="text-neutral-400">填完店名后稍等一下，AI 就开始帮你填表 ✨</span>
+                  <span className="text-neutral-400">填完店名后稍等一下，AI 就开始帮你填表</span>
                 )}
               </div>
             </div>
@@ -676,7 +667,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   {INDUSTRY_BENCHMARKS.map((b) => (
                     <option key={b.id} value={b.id}>{b.nameZh}</option>
                   ))}
-                  <option value={CUSTOM_INDUSTRY_VALUE}>➕ 其他行业（自定义输入）</option>
+                  <option value={CUSTOM_INDUSTRY_VALUE}>其他行业（自定义输入）</option>
                 </select>
                 {formData.industry === CUSTOM_INDUSTRY_VALUE && (
                   <input
@@ -724,7 +715,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
               </h3>
             </div>
             <p className="text-[11px] text-neutral-500 font-medium -mt-1">
-              💡 以下金额都请填「最近半年的月平均」，不要填某一个月或全年总额。
+              以下金额都请填「最近半年的月平均」，不要填某一个月或全年总额。
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -739,7 +730,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     value={formData.monthlyRevenue.amount || ''}
                     onChange={(e) => updateMoney('monthlyRevenue', Number(e.target.value))}
                     className="w-full p-4 border-2 border-emerald-300 rounded-2xl font-mono text-xl sm:text-2xl font-black text-emerald-950 bg-white focus:border-emerald-500 focus:outline-hidden"
-                    placeholder="38000"
+                    placeholder=""
                   />
                   <span className="absolute right-4 top-4 font-bold text-emerald-700">
                     {formData.baseCurrency} / 月
@@ -758,7 +749,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       直接物料 / 耗材 / 进货采购成本（已由下方细分项自动合计）
                     </label>
                     <div className="text-sm text-slate-500 bg-white rounded-2xl p-4 border-2 border-slate-200">
-                      🤖 已根据你填写的店名，由 AI 按行业生成了细分成本项（如咖啡豆、面粉、包装），
+                      已根据你填写的店名，由 AI 按行业生成了细分成本项（如咖啡豆、面粉、包装），
                       <span className="font-bold text-rose-600"> 物料总成本 = 下方各项之和 </span>
                       ，无需在此重复填写。
                     </div>
@@ -775,7 +766,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                         value={formData.cogsCost.amount || ''}
                         onChange={(e) => updateMoney('cogsCost', Number(e.target.value))}
                         className="w-full p-4 border-2 border-rose-300 rounded-2xl font-mono text-xl sm:text-2xl font-black text-rose-950 bg-white focus:border-rose-500 focus:outline-hidden"
-                        placeholder="15000"
+                        placeholder=""
                       />
                       <span className="absolute right-4 top-4 font-bold text-rose-700">
                         {formData.baseCurrency} / 月
@@ -794,9 +785,9 @@ export const AssessmentForm: React.FC<FormProps> = ({
               <div className="p-5 rounded-2xl bg-rose-50/40 border-2 border-dashed border-rose-300 space-y-3">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <span className="text-sm font-black text-rose-900">
-                    🤖 按行业细分的物料成本明细（可增删改）
+                    按行业细分的物料成本明细（可增删改）
                     {cogsTouched && (
-                      <span className="ml-2 inline-block text-[11px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-bold align-middle">⚙ 已手动调整</span>
+                      <span className="ml-2 inline-block text-[11px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-bold align-middle">已手动调整</span>
                     )}
                   </span>
                   <button
@@ -858,7 +849,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
               </h3>
             </div>
             <p className="text-[11px] text-neutral-500 font-medium -mt-1">
-              💡 这一节和上面所有金额，都请填「最近半年的月平均」，不要填某一个月或全年总额。
+              这一节和上面所有金额，都请填「最近半年的月平均」，不要填某一个月或全年总额。
             </p>
 
             {(() => {
@@ -869,7 +860,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     房租 / 薪酬 / 水电等固定运营开销（已由下方细分项自动合计）
                   </label>
                   <div className="text-sm text-slate-500 bg-white rounded-2xl p-4 border-2 border-slate-200">
-                    🤖 已根据你填写的店名，由 AI 按行业生成了细分运营开支项（如房租、薪资、水电），
+                    已根据你填写的店名，由 AI 按行业生成了细分运营开支项（如房租、薪资、水电），
                     <span className="font-bold text-indigo-600"> 运营开销总成本 = 下方各项之和 </span>
                     ，无需在此重复填写。
                   </div>
@@ -887,7 +878,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                         value={formData.rentCost.amount || ''}
                         onChange={(e) => updateMoney('rentCost', Number(e.target.value))}
                         className="w-full p-3 border-2 border-neutral-300 rounded-xl font-mono text-lg font-bold text-neutral-900 bg-white"
-                        placeholder="3500"
+                        placeholder=""
                       />
                     </div>
                     <span className="text-[11px] text-neutral-500 block">每月固定支付给房东的租金</span>
@@ -904,7 +895,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                         value={formData.laborCost.amount || ''}
                         onChange={(e) => updateMoney('laborCost', Number(e.target.value))}
                         className="w-full p-3 border-2 border-neutral-300 rounded-xl font-mono text-lg font-bold text-neutral-900 bg-white"
-                        placeholder="4800"
+                        placeholder=""
                       />
                     </div>
                     <span className="text-[11px] text-neutral-500 block">本地员工或全职同工补贴 (无则填0)</span>
@@ -921,7 +912,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                         value={formData.utilityCost.amount || ''}
                         onChange={(e) => updateMoney('utilityCost', Number(e.target.value))}
                         className="w-full p-3 border-2 border-neutral-300 rounded-xl font-mono text-lg font-bold text-neutral-900 bg-white"
-                        placeholder="950"
+                        placeholder=""
                       />
                     </div>
                     <span className="text-[11px] text-neutral-500 block">水费、电费、通讯网络及其他杂费</span>
@@ -935,9 +926,9 @@ export const AssessmentForm: React.FC<FormProps> = ({
               <div className="p-5 rounded-2xl bg-indigo-50/40 border-2 border-dashed border-indigo-300 space-y-3">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <span className="text-sm font-black text-indigo-900">
-                    🤖 按行业细分的运营开支明细（可增删改）
+                    按行业细分的运营开支明细（可增删改）
                     {opexTouched && (
-                      <span className="ml-2 inline-block text-[11px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-bold align-middle">⚙ 已手动调整</span>
+                      <span className="ml-2 inline-block text-[11px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-bold align-middle">已手动调整</span>
                     )}
                   </span>
                   <button
@@ -1009,7 +1000,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   value={formData.cashAndLiquidAssets.amount || ''}
                   onChange={(e) => updateMoney('cashAndLiquidAssets', Number(e.target.value))}
                   className="w-full p-3 border-2 border-sky-300 rounded-xl font-mono text-lg font-black text-sky-950 bg-white"
-                  placeholder="40000"
+                  placeholder=""
                 />
                 <span className="text-[11px] text-sky-800 font-medium block">
                   银行账户或现金中随时可动用的储备资金
@@ -1026,7 +1017,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   value={formData.operatingMonthsCount || ''}
                   onChange={(e) => updateField('operatingMonthsCount', Math.max(0, isNaN(Number(e.target.value)) ? 0 : Number(e.target.value)))}
                   className="w-full p-3 border-2 border-neutral-300 rounded-xl font-mono text-lg font-bold text-neutral-900 bg-white"
-                  placeholder="24"
+                  placeholder=""
                 />
                 <span className="text-[11px] text-neutral-500 block">新启动项目按实际筹备/运营月数填写</span>
               </div>
@@ -1041,7 +1032,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   value={formData.fullTimeEmployeesCount || ''}
                   onChange={(e) => updateField('fullTimeEmployeesCount', Math.max(0, isNaN(Number(e.target.value)) ? 0 : Number(e.target.value)))}
                   className="w-full p-3 border-2 border-neutral-300 rounded-xl font-mono text-lg font-bold text-neutral-900 bg-white"
-                  placeholder="2"
+                  placeholder=""
                 />
                 <span className="text-[11px] text-neutral-500 block">单人负责或独立运营填 0</span>
               </div>
@@ -1057,10 +1048,10 @@ export const AssessmentForm: React.FC<FormProps> = ({
             <button
               type="button"
               onClick={handleFinalSubmit}
-              className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-indigo-600 via-indigo-700 to-emerald-600 hover:from-indigo-500 hover:to-emerald-500 text-white rounded-2xl text-base sm:text-lg font-black shadow-xl shadow-indigo-600/25 transition-all cursor-pointer hover:scale-102 flex items-center justify-center gap-2.5"
+              className="w-full sm:w-auto px-8 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-base sm:text-lg font-bold shadow-lg shadow-indigo-600/20 transition-all cursor-pointer flex items-center justify-center gap-2.5"
             >
               <Sparkles className="w-5 h-5 text-amber-300" />
-              <span>生成商业宣教商业模型财务测算报告</span>
+              <span>生成体检报告</span>
               <ArrowRight className="w-5 h-5" />
             </button>
           </div>
@@ -1089,11 +1080,11 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   className="w-full p-2.5 border border-slate-300 rounded-xl font-medium text-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
                 />
                 <div className="mt-1 text-[11px]">
-                  {inferState === 'loading' && <span className="text-indigo-500 font-semibold animate-pulse">🤖 AI 正在推算行业、币种与成本结构…</span>}
+                  {inferState === 'loading' && <span className="text-indigo-500 font-semibold animate-pulse">AI 正在推算行业、币种与成本结构…</span>}
                   {inferState === 'done' && <span className="text-emerald-600 font-semibold">✓ AI 已自动预填，可修改或点“恢复 AI 建议”</span>}
                   {inferState === 'error' && (
                     <span className="text-amber-600 font-semibold">
-                      ⚠ 无法自动推算，请手动选择。
+                      无法自动推算，请手动选择。
                       <button
                         type="button"
                         onClick={() => formData.projectName.trim().length >= 2 && handleProjectNameChange(formData.projectName)}
@@ -1120,7 +1111,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       {b.nameZh}
                     </option>
                   ))}
-                  <option value={CUSTOM_INDUSTRY_VALUE}>➕ 其他行业（自定义输入）</option>
+                  <option value={CUSTOM_INDUSTRY_VALUE}>其他行业（自定义输入）</option>
                 </select>
                 {formData.industry === CUSTOM_INDUSTRY_VALUE && (
                   <input
@@ -1162,16 +1153,6 @@ export const AssessmentForm: React.FC<FormProps> = ({
                 </p>
               </div>
 
-              <div>
-                <label className="block text-slate-700 font-bold mb-1">经营者联络邮箱</label>
-                <input
-                  type="email"
-                  placeholder="owner@example.com"
-                  value={formData.ownerEmail}
-                  onChange={(e) => updateField('ownerEmail', e.target.value)}
-                  className="w-full p-2.5 border border-slate-300 rounded-xl font-medium text-slate-800"
-                />
-              </div>
             </div>
 
             {/* 多重汇率标注 */}
@@ -1194,7 +1175,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     </label>
                     <input
                       type="number"
-                      placeholder="例如：52.5 或 1580"
+                      placeholder=""
                       value={formData.customExchangeRateValue || ''}
                       onChange={(e) =>
                         updateField('customExchangeRateValue', Number(e.target.value))
@@ -1612,7 +1593,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       </span>
                     </label>
                     <p className="text-xs text-indigo-900 font-medium mt-0.5">
-                      💡 <b>大白话：</b>这是客人买单进你口袋/收银机/微信/银行卡的<b>全部毛钱（总营业额）</b>，<b>尚未扣除</b>进货成本、房租与人工！
+                      <b>大白话：</b>这是客人买单进你口袋/收银机/微信/银行卡的<b>全部毛钱（总营业额）</b>，<b>尚未扣除</b>进货成本、房租与人工！
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -1653,7 +1634,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                 </div>
                 <input
                   type="number"
-                  placeholder="例如：50000（填近3-12个月平均每月总营业额）"
+                  placeholder=""
                   value={formData.monthlyRevenue.amount || ''}
                   onChange={(e) => updateMoney('monthlyRevenue', Number(e.target.value))}
                   className="w-full p-3 border-2 border-indigo-200 focus:border-indigo-600 rounded-xl font-black text-slate-900 text-base bg-white shadow-2xs"
@@ -1785,7 +1766,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-500">
-                    💡 进货货款、生鲜食材原料等直接买货成本（包含长途运费，但不含房租和员工工资）。
+                    进货货款、生鲜食材原料等直接买货成本（包含长途运费，但不含房租和员工工资）。
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1814,7 +1795,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
               </div>
               <input
                 type="number"
-                placeholder="例如：15000（每月进货与原材料总支出）"
+                placeholder=""
                 value={formData.cogsCost.amount || ''}
                 onChange={(e) => updateMoney('cogsCost', Number(e.target.value))}
                 className="w-full p-2.5 border border-slate-300 rounded-xl font-bold text-slate-900 bg-white"
@@ -1825,9 +1806,9 @@ export const AssessmentForm: React.FC<FormProps> = ({
                 <div className="mt-3 p-3 rounded-xl bg-rose-50/50 border border-dashed border-rose-300 space-y-2">
                   <div className="flex items-center justify-between gap-2 flex-wrap">
                     <span className="text-[11px] font-black text-rose-900">
-                      🤖 按行业细分的物料成本明细（可增删改）
+                      按行业细分的物料成本明细（可增删改）
                       {cogsTouched && (
-                        <span className="ml-1.5 inline-block text-[9px] px-1 py-0.5 rounded bg-amber-100 text-amber-700 font-bold align-middle">⚙ 已手动调整</span>
+                        <span className="ml-1.5 inline-block text-[9px] px-1 py-0.5 rounded bg-amber-100 text-amber-700 font-bold align-middle">已手动调整</span>
                       )}
                     </span>
                     <button
@@ -1959,9 +1940,9 @@ export const AssessmentForm: React.FC<FormProps> = ({
               <div className="p-3 rounded-xl bg-indigo-50/50 border border-dashed border-indigo-300 space-y-2">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <span className="text-[11px] font-black text-indigo-900">
-                    🤖 按行业细分的运营开支明细（可增删改）
+                    按行业细分的运营开支明细（可增删改）
                     {opexTouched && (
-                      <span className="ml-1.5 inline-block text-[9px] px-1 py-0.5 rounded bg-amber-100 text-amber-700 font-bold align-middle">⚙ 已手动调整</span>
+                      <span className="ml-1.5 inline-block text-[9px] px-1 py-0.5 rounded bg-amber-100 text-amber-700 font-bold align-middle">已手动调整</span>
                     )}
                   </span>
                   <button

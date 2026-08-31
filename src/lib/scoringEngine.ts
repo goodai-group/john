@@ -318,22 +318,22 @@ export function runBusinessAssessment(formData: BusinessFormData): AssessmentRep
   // AI 建议与总结
   const aiActionableAdvice: string[] = [];
   if (gatePassed) {
-    aiActionableAdvice.push('✅ 恭喜！各项核心红线（Gate）全部达标，商业模型具备健康的自我造血与盈利能力。');
+    aiActionableAdvice.push('恭喜！各项核心红线（Gate）全部达标，商业模型具备健康的自我造血与盈利能力。');
   } else {
-    aiActionableAdvice.push('⚠️ 存在未通过的关键红线项，建议优先解决上述红线指标（如削减固定开销或提升真实主营收入）。');
+    aiActionableAdvice.push('存在未通过的关键红线项，建议优先解决上述红线指标（如削减固定开销或提升真实主营收入）。');
   }
 
   if (grossMarginPercent < 30) {
-    aiActionableAdvice.push('💡 毛利率偏紧：建议评估采购批发批量或适度推出高附加值套餐，提高单笔订单利润。');
+    aiActionableAdvice.push('毛利率偏紧：建议评估采购批发批量或适度推出高附加值套餐，提高单笔订单利润。');
   }
   if (opexRatioPercent > 50) {
-    aiActionableAdvice.push('💡 每月固定支出占比超50%：重点核对租金与人工利用率，避免淡季资金链承压。');
+    aiActionableAdvice.push('每月固定支出占比超50%：重点核对租金与人工利用率，避免淡季资金链承压。');
   }
   if (cashRunwayMonths < 2) {
-    aiActionableAdvice.push('💡 应急现金储备少于2个月：建议暂停非必要设备购置，优先积攒至少3个月的流动现金缓冲垫。');
+    aiActionableAdvice.push('应急现金储备少于2个月：建议暂停非必要设备购置，优先积攒至少3个月的流动现金缓冲垫。');
   }
   if (formData.proofType === 'none') {
-    aiActionableAdvice.push('📌 本项目采用无凭证纯手动填报模式：评分规则与逻辑完全透明公正，与上传凭证项目一致。');
+    aiActionableAdvice.push('本项目采用无凭证纯手动填报模式：评分规则与逻辑完全透明公正，与上传凭证项目一致。');
   }
 
   const summaryPlainLanguage = gatePassed

@@ -82,14 +82,14 @@ export default function App() {
     const unsubscribe = subscribeToAuthChanges(async (user) => {
       setCurrentUser(user);
       if (user) {
-        setSyncStatusMsg(`👋 欢迎回来，${user.displayName || user.email}！正在载入您的专属云端档案...`);
+        setSyncStatusMsg(`欢迎回来，${user.displayName || user.email}！正在载入您的专属云端档案...`);
         try {
           await syncWithCloudDatabase(user);
           const refreshedProjects = loadStoredProjects();
           const refreshedReports = loadStoredReports();
           setProjects(refreshedProjects);
           setReports(refreshedReports);
-          setSyncStatusMsg(`✅ 已同步 ${user.displayName || user.email} 的专属云端自测档案`);
+          setSyncStatusMsg(`已同步 ${user.displayName || user.email} 的专属云端自测档案`);
         } catch (e) {
           console.warn('User cloud sync error:', e);
         }
@@ -118,7 +118,7 @@ export default function App() {
       const user = await signInWithGoogle();
       if (user) {
         setCurrentUser(user);
-        setSyncStatusMsg(`🎉 Google 登录成功！已与 ${user.email} 绑定`);
+        setSyncStatusMsg(`Google 登录成功！已与 ${user.email} 绑定`);
         await syncWithCloudDatabase(user);
         const refreshedProjects = loadStoredProjects();
         const refreshedReports = loadStoredReports();
@@ -133,9 +133,9 @@ export default function App() {
         err?.message?.includes('cancelled-popup-request')
       ) {
         // 用户主动关闭了登录窗口，显示温和的引导提示
-        setSyncStatusMsg('💡 您已关闭 Google 登录窗口。您仍可正常使用本地保存，或随时再次点击登录。');
+        setSyncStatusMsg('您已关闭 Google 登录窗口。仍可正常使用本地保存，或随时再次点击登录。');
       } else if (err?.code === 'auth/popup-blocked' || err?.message?.includes('popup-blocked')) {
-        setSyncStatusMsg('⚠️ 浏览器阻止了登录弹出窗口，请在地址栏允许弹窗后重试。');
+        setSyncStatusMsg('浏览器阻止了登录弹出窗口，请在地址栏允许弹窗后重试。');
       } else {
         setSyncStatusMsg(`登录提示：${err?.message || '无法连接 Google 登录服务，已自动使用本地保存模式'}`);
       }
@@ -332,12 +332,12 @@ export default function App() {
         const refreshedReports = loadStoredReports();
         setProjects(refreshedProjects);
         setReports(refreshedReports);
-        setSyncStatusMsg('✅ 云端数据库双向同步已完成！数据已安全持久化');
+        setSyncStatusMsg('云端数据库双向同步已完成！数据已安全持久化');
       } else {
-        setSyncStatusMsg('💡 本地持久化模式正常运行中');
+        setSyncStatusMsg('本地持久化模式正常运行中');
       }
     } catch (e: any) {
-      setSyncStatusMsg(`⚠️ 同步失败：${e.message || '本地数据已保存'}`);
+      setSyncStatusMsg(`同步失败：${e.message || '本地数据已保存'}`);
     }
     setTimeout(() => setSyncStatusMsg(null), 5000);
   };
@@ -371,7 +371,7 @@ export default function App() {
       {/* Sync Status Banner */}
       {syncStatusMsg && (
         <div className="max-w-7xl mx-auto px-4 mt-3">
-          <div className="bg-neutral-900 border-2 border-neutral-800 text-white text-xs font-semibold px-4 py-2.5 rounded-2xl shadow-sm flex items-center justify-between animate-in fade-in">
+          <div className="bg-white border border-neutral-200 text-neutral-700 text-xs font-semibold px-4 py-2.5 rounded-xl shadow-sm flex items-center justify-between animate-in fade-in">
             <span>{syncStatusMsg}</span>
           </div>
         </div>

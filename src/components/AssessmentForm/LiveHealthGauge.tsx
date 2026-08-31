@@ -2,7 +2,8 @@ import React from 'react';
 import {
   BatteryCharging,
   BatteryWarning,
-  PieChart
+  PieChart,
+  Activity
 } from 'lucide-react';
 import { BusinessFormData } from '../../types';
 import { calculateAssessmentReport } from '../../lib/scoringEngine';
@@ -10,11 +11,13 @@ import { calculateAssessmentReport } from '../../lib/scoringEngine';
 interface LiveHealthGaugeProps {
   formData: BusinessFormData;
   onOpenAiHelper?: (topic?: string) => void;
+  revenueTouched?: boolean;
 }
 
 export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
   formData,
-  onOpenAiHelper
+  onOpenAiHelper,
+  revenueTouched = false
 }) => {
   // Real-time calculated metrics
   const report = calculateAssessmentReport(formData);
@@ -34,6 +37,10 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
 
   const opexRatioPct = hasRevenue ? Math.round((opex / totalRev) * 100) : 0;
   const netMarginPct = hasRevenue ? Math.round((netProfit / totalRev) * 100) : 0;
+
+  // 晴雨表只应在用户真正输入过月总流水后显示；
+  // 避免 AI 自动预填的行业估值被误当成真实经营结果，吓到未填表的用户。
+  const isReady = hasRevenue && revenueTouched;
 
   // 现金跑道直接复用评分引擎的统一口径（COGS + OPEX + 还贷，不含税），
   // 保证"快速体检晴雨表"与"体检报告"显示完全一致
@@ -64,13 +71,56 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
     batteryLabel = '较为吃紧 (1.5~3个月)';
   }
 
+
+  if (!isReady) {
+    return (
+      <div className="bg-white rounded-3xl p-6 sm:p-7 border-2 border-dashed border-neutral-200 shadow-sm space-y-6">
+        {/* Header (muted) */}
+        <div className="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-neutral-100">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-2xl bg-neutral-100 text-neutral-400 flex items-center justify-center shadow-sm">
+              <Activity className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-mono font-bold uppercase tracking-wider text-neutral-500 bg-neutral-50 px-2.5 py-0.5 rounded-full border border-neutral-100">
+                  实时晴雨表
+                </span>
+                <span className="text-xs text-neutral-500 font-bold">100% 自动计算</span>
+              </div>
+              <h3 className="text-base sm:text-lg font-black text-neutral-900 mt-0.5">商宣模式运转健康实时测算</h3>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-3">
+            <div className="text-right">
+              <span className="text-xs text-neutral-400 font-medium block">预估健康分</span>
+              <span className="text-2xl font-black text-neutral-300 font-mono">
+                -- <span className="text-sm text-neutral-300">/ 100</span>
+              </span>
+            </div>
+            <span className="px-3.5 py-2 rounded-2xl font-black text-sm border bg-neutral-100 text-neutral-500 border-neutral-200">
+              待填写
+            </span>
+          </div>
+        </div>
+
+        <div className="py-10 text-center">
+          <p className="text-sm font-medium text-neutral-500">
+            输入真实月总流水后，这里会实时显示健康测算
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white rounded-3xl p-6 sm:p-7 border-2 border-indigo-200 shadow-sm space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-neutral-100">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-bold text-base shadow-sm">
-            📊
+          <div className="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-sm">
+            <Activity className="w-5 h-5" />
           </div>
           <div>
             <div className="flex items-center gap-2">
@@ -144,10 +194,10 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
 
           <p className="text-xs sm:text-sm opacity-90 leading-relaxed font-medium">
             {runwayNum >= 3.0
-              ? '✅ 备用金储备充裕，即使突发淡季或短期停业也能从容应对。'
+              ? '备用金储备充裕，即使突发淡季或短期停业也能从容应对。'
               : runwayNum >= 1.5
-              ? '⚠️ 现金储备中等，建议适度控制进货与非必要开销，留足 3 个月以上。'
-              : '🚨 现金极其危险！一旦顾客减少或发生意外支出可能立即面临断流。'}
+              ? '现金储备中等，建议适度控制进货与非必要开销，留足 3 个月以上。'
+              : '现金极其危险！一旦顾客减少或发生意外支出可能立即面临断流。'}
           </p>
         </div>
 
@@ -197,12 +247,12 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
 
           <p className="text-xs sm:text-sm text-neutral-600 leading-relaxed font-medium">
             {netProfit < 0
-              ? '🚨 当前处于亏损状态：每进账 100 块，进货与开销已占满甚至超过 100%，需优先压缩成本或提升售价。'
+              ? '当前处于亏损状态：每进账 100 块，进货与开销已占满甚至超过 100%，需优先压缩成本或提升售价。'
               : netMarginPct >= 20
-              ? '🎉 净利润率非常健康，自我造血与抗风险能力优秀。'
+              ? '净利润率非常健康，自我造血与抗风险能力优秀。'
               : netMarginPct >= 8
-              ? '👍 属于微利稳健运行，注意控制房租和原料损耗。'
-              : '⚠️ 净利润偏薄或处于亏损边缘，需排查是否进价过高或租金过重。'}
+              ? '属于微利稳健运行，注意控制房租和原料损耗。'
+              : '净利润偏薄或处于亏损边缘，需排查是否进价过高或租金过重。'}
           </p>
         </div>
       </div>

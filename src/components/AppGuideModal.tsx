@@ -83,7 +83,7 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
                 : 'text-neutral-500 hover:text-neutral-900'
             }`}
           >
-            🌟 1. 这是什么工具？
+            1. 这是什么工具？
           </button>
           <button
             onClick={() => setActiveTab('steps')}
@@ -93,7 +93,7 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
                 : 'text-neutral-500 hover:text-neutral-900'
             }`}
           >
-            🚀 2. 三步极简使用流程
+            2. 三步极简使用流程
           </button>
           <button
             onClick={() => setActiveTab('glossary')}
@@ -103,7 +103,7 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
                 : 'text-neutral-500 hover:text-neutral-900'
             }`}
           >
-            📖 3. 大白话名词对照
+            3. 大白话名词对照
           </button>
           <button
             onClick={() => setActiveTab('faq')}
@@ -113,7 +113,7 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
                 : 'text-neutral-500 hover:text-neutral-900'
             }`}
           >
-            💡 4. 常见顾虑答疑
+            4. 常见顾虑答疑
           </button>
         </div>
 
@@ -138,8 +138,8 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-200">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-xs mb-2">
-                    💯
+                  <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center mb-2">
+                    <CheckCircle2 className="w-4 h-4" />
                   </div>
                   <h4 className="font-bold text-emerald-950 mb-1">公开透明 · 零门槛</h4>
                   <p className="text-emerald-800 text-[11px] leading-relaxed">
@@ -148,8 +148,8 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
                 </div>
 
                 <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200">
-                  <div className="w-8 h-8 rounded-xl bg-amber-600 text-white flex items-center justify-center font-bold text-xs mb-2">
-                    ⚡
+                  <div className="w-8 h-8 rounded-xl bg-amber-600 text-white flex items-center justify-center mb-2">
+                    <Zap className="w-4 h-4" />
                   </div>
                   <h4 className="font-bold text-amber-950 mb-1">1秒套用工场真实范本</h4>
                   <p className="text-amber-800 text-[11px] leading-relaxed">
@@ -158,8 +158,8 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
                 </div>
 
                 <div className="p-4 rounded-2xl bg-sky-50/60 border border-sky-200">
-                  <div className="w-8 h-8 rounded-xl bg-sky-600 text-white flex items-center justify-center font-bold text-xs mb-2">
-                    🛡️
+                  <div className="w-8 h-8 rounded-xl bg-sky-600 text-white flex items-center justify-center mb-2">
+                    <ShieldCheck className="w-4 h-4" />
                   </div>
                   <h4 className="font-bold text-sky-950 mb-1">工场安全与隐私保护</h4>
                   <p className="text-sky-800 text-[11px] leading-relaxed">
@@ -180,8 +180,8 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
                 <div className="flex-1">
                   <h4 className="font-bold text-neutral-900 text-xs">第 1 步：选范本或随手说（3 种轻松方式任选）</h4>
                   <p className="text-neutral-600 text-[11px] mt-1 leading-relaxed">
-                    • <strong>方式 A（最推荐）</strong>：点击【🎯 常用服事范本】，直接载入医疗诊所、语言学校、技能培训的真实数字；<br />
-                    • <strong>方式 B（口语随手写）</strong>：在【💬 AI 随手写】里输入大白话（如“我们在工场办门诊月进账3万8，进药1万5，房租3500”），AI 自动识别；<br />
+                    • <strong>方式 A（最推荐）</strong>：点击【常用服事范本】，直接载入医疗诊所、语言学校、技能培训的真实数字；<br />
+                    • <strong>方式 B（口语随手写）</strong>：在【AI 随手写】里输入大白话（如“我们在工场办门诊月进账3万8，进药1万5，房租3500”），AI 自动识别；<br />
                     • <strong>方式 C</strong>：手动填几笔核心收支。
                   </p>
                 </div>

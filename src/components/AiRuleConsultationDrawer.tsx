@@ -39,7 +39,6 @@ export const INDUSTRY_BIG_DATA = [
   {
     id: 'fnb',
     name: '餐饮小吃 / 烘焙茶饮',
-    icon: '🍜',
     avgRevenue: '¥35,000 ~ ¥150,000 / 月',
     grossMargin: '55% ~ 70%',
     grossMarginLabel: '偏高 (原料占30%-45%)',
@@ -51,7 +50,6 @@ export const INDUSTRY_BIG_DATA = [
   {
     id: 'retail',
     name: '社区超市 / 便利杂货',
-    icon: '🛒',
     avgRevenue: '¥50,000 ~ ¥300,000 / 月',
     grossMargin: '20% ~ 35%',
     grossMarginLabel: '走量微利 (进货占65%-80%)',
@@ -63,7 +61,6 @@ export const INDUSTRY_BIG_DATA = [
   {
     id: 'ecommerce',
     name: '跨境电商 / 独立外贸',
-    icon: '📦',
     avgRevenue: '¥80,000 ~ ¥500,000+ / 月',
     grossMargin: '30% ~ 50%',
     grossMarginLabel: '中等 (含采购+头程运费)',
@@ -75,7 +72,6 @@ export const INDUSTRY_BIG_DATA = [
   {
     id: 'service',
     name: '生活美业 / 汽修维修',
-    icon: '✂️',
     avgRevenue: '¥20,000 ~ ¥85,000 / 月',
     grossMargin: '70% ~ 88%',
     grossMarginLabel: '极高 (耗材低，主要为手艺)',
@@ -87,7 +83,6 @@ export const INDUSTRY_BIG_DATA = [
   {
     id: 'workshop',
     name: '微型工坊 / 小型加工',
-    icon: '⚙️',
     avgRevenue: '¥60,000 ~ ¥260,000 / 月',
     grossMargin: '35% ~ 52%',
     grossMarginLabel: '中等 (原料+耗损耗电)',
@@ -99,7 +94,6 @@ export const INDUSTRY_BIG_DATA = [
   {
     id: 'agri',
     name: '农林水产 / 季节生鲜',
-    icon: '🐟',
     avgRevenue: '¥40,000 ~ ¥200,000 / 旺季月',
     grossMargin: '40% ~ 65%',
     grossMarginLabel: '季节波动大',
@@ -160,7 +154,7 @@ export const AiRuleConsultationDrawer: React.FC<AiDrawerProps> = ({
     if (/流水|营业额|总进账|是收入还是|营业收入|做买卖收的钱|总销售/i.test(text)) {
       category = '核心概念通俗解析';
       suggestedAction = '填报第1项时：填写近3-12个月平均每月客人买单的总进账金额（未扣除进货与房租等开支）';
-      answer = `【💡 大白话核心解答：经营月均总流水是“总营业额”，不是到手净利润】
+      answer = `【大白话核心解答：经营月均总流水是“总营业额”，不是到手净利润】
 
 1. 一句话本质：
 「经营月均总流水」＝ 客人买单进你口袋、收银机、微信/支付宝或银行卡里的【全部毛钱】（总营业额 Gross Revenue）。
@@ -183,7 +177,7 @@ export const AiRuleConsultationDrawer: React.FC<AiDrawerProps> = ({
     } else if (/毛利|进货|成本|cogs|原材料|采购/i.test(text)) {
       category = '进货成本与毛利空间解析';
       suggestedAction = '进货成本只填购买原料与商品的直接款项，勿重复计入房租与工资';
-      answer = `【💡 大白话：进货采购成本（COGS）与毛利润】
+      answer = `【大白话：进货采购成本（COGS）与毛利润】
 
 1. 什么是进货成本（COGS）？
 直接用于进货进料的花费（如饭店买米面油肉、超市进烟酒副食、服装店批衣服）。包含采购直接相关的长途运费。
@@ -200,7 +194,7 @@ export const AiRuleConsultationDrawer: React.FC<AiDrawerProps> = ({
     } else if (/房租|工资|人工|opex|固定开销|水电|租金/i.test(text)) {
       category = '固定经营开销解析';
       suggestedAction = '将每月雷打不动必须付出的租金、员工底薪与物业水电合计填入 OPEX';
-      answer = `【💡 大白话：房租与工人工资（固定开销 OPEX）】
+      answer = `【大白话：房租与工人工资（固定开销 OPEX）】
 
 1. 一句话本质：
 每月不管开不开门、有没有生意，雷打不动一定要付出去的硬性开支。
@@ -215,7 +209,7 @@ export const AiRuleConsultationDrawer: React.FC<AiDrawerProps> = ({
     } else if (/备用金|跑道|runway|现金储备|存款|应急资金|撑几个月/i.test(text)) {
       category = '现金流与抗风险能力解析';
       suggestedAction = '可用流动资产应保持能够支付 3 个月以上纯固定开销（房租+工资）的现钱';
-      answer = `【💡 大白话：应急现金备用金（现金跑道 Runway）】
+      answer = `【大白话：应急现金备用金（现金跑道 Runway）】
 
 1. 什么是现金跑道？
 账上现有的可用现金与存款 ÷ 每月固定必须支出的开销（房租+人工）。
@@ -228,7 +222,7 @@ export const AiRuleConsultationDrawer: React.FC<AiDrawerProps> = ({
     } else if (/凭证|银行流水|记账本|手写|发票|无执照|截图|会不会扣分|歧视/i.test(text)) {
       category = '填报凭证完全同权规则';
       suggestedAction = '手写账本、收银截图或纯手动填写享受 100% 相同评分标准，放心填报';
-      answer = `【💡 官方权威规则答复：凭证 100% 零歧视原则】
+      answer = `【官方权威规则答复：凭证 100% 零歧视原则】
 
 1. 核心规则（BAM-PRD-2026-V1.4 规范）：
 在本平台上，【凭证类型绝不影响得分】！
@@ -243,7 +237,7 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
     } else if (/汇率|黑市|民间|非官方|折算|美金|换汇|货币/i.test(text)) {
       category = '多币种与自报汇率规则';
       suggestedAction = '勾选“本国存在多重汇率”，按您做生意实际兑换的民间比例折算填报';
-      answer = `【💡 多币种与多重汇率自报机制】
+      answer = `【多币种与多重汇率自报机制】
 
 1. 尊重民间实际交易价：
 在许多海外国家（如非官方平行市场存在溢价），官方汇率严重失真。本平台允许您：
@@ -283,7 +277,7 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
     } else {
       category = '小微商业模型自测咨询';
       suggestedAction = '您可以直接询问具体财务指标（流水/毛利/OPEX）或行业大数据';
-      answer = `【💡 小微商业模型自测专家解答】
+      answer = `【小微商业模型自测专家解答】
 
 您好！关于您咨询的：“${text}”：
 
@@ -320,21 +314,31 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
     setActiveTab('chat');
 
     try {
+      // 6 秒熔断：云端 AI 不可用时快速回落本地规则库，避免用户无限等待
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 6000);
       const res = await fetch('/api/ai-consultation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: text, language })
+        body: JSON.stringify({ question: text, language }),
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
 
       if (res.ok) {
         const data = await res.json();
+        const rawAnswer = data.aiResponse || data.answer || data.reply;
+        // 云端 AI 返回空内容时同样回退本地规则引擎，避免页面出现空白回答
+        if (!rawAnswer || !String(rawAnswer).trim()) {
+          throw new Error('AI returned empty answer');
+        }
         const newRecord: EscalatedQuestion = {
           id: `esc-${Date.now()}`,
           question: text,
           category: data.category || '小微经营大白话解析',
           confidence: data.confidence || 'HIGH',
           conservativePaths: data.conservativePaths,
-          aiResponse: data.aiResponse || data.answer || data.reply,
+          aiResponse: rawAnswer,
           isEdgeCase: data.isEdgeCase || false,
           suggestedAction: data.suggestedAction || '规则清晰，可正常填报',
           archivedAt: new Date().toISOString()
@@ -386,7 +390,7 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
                   AI 大白话答疑 · 全球小微大数据
                 </h2>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                  已连接大数据基准
+                  内置规则知识库
                 </span>
               </div>
               <p className="text-xs text-slate-500">
@@ -624,7 +628,6 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
                   >
                     <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-xl">{ind.icon}</span>
                         <span className="font-bold text-slate-900 text-sm">{ind.name}</span>
                       </div>
                       <span className="text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md">

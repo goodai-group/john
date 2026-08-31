@@ -24,12 +24,8 @@ import {
   DollarSign,
   Wallet,
   Store,
-  Users,
-  ThumbsUp,
   Sliders,
   HelpCircle,
-  Activity,
-  BookOpen,
   ArrowUpRight,
   Check,
   X,
@@ -128,7 +124,7 @@ export const AssessmentReportView: React.FC<ReportViewProps> = ({
 综合健康得分：${report.totalScore}分 (${report.letterGrade})
 红线合规：${report.gatePassed ? '全部通过 (4/4)' : `未通过 (${(report.failedGates || report.gates.filter((g) => g.status !== 'PASS')).length} 项触发警示)`}
 
-📊 核心经营与服事数据概览：
+核心经营与服事数据概览：
 - 每月门诊/学费进账：${formatMoney(monthlyRealRevenue, baseCurr)}
 - 每月结余净产出：${formatMoney(netProfit, baseCurr)} (净利润率 ${netProfitMarginPercent}%)
 - 药品耗材采购花销：${formatMoney(monthlyCogs, baseCurr)} (毛利率 ${grossMarginPercent}%)
@@ -136,20 +132,20 @@ export const AssessmentReportView: React.FC<ReportViewProps> = ({
 - 应急储备金水库：能支撑 ${cashRunwayMonths} 个月固定开销
 ${
   report.dynamicCogsItems?.length
-    ? `\n📦 按行业细分的物料成本：\n${report.dynamicCogsItems
+    ? `\n按行业细分的物料成本：\n${report.dynamicCogsItems
         .map((it) => `  · ${it.label}：${formatMoney(it.value, baseCurr)}/月`)
         .join('\n')}`
     : ''
 }
 ${
   report.dynamicOpexItems?.length
-    ? `\n🏪 按行业细分的运营开支：\n${report.dynamicOpexItems
+    ? `\n按行业细分的运营开支：\n${report.dynamicOpexItems
         .map((it) => `  · ${it.label}：${formatMoney(it.value, baseCurr)}/月`)
         .join('\n')}`
     : ''
 }
 
-💡 关键建议：
+关键建议：
 ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, i) => `${i + 1}. ${adv}`).join('\n')}
 
 *由商宣商业模式检验系统与 Gemini AI 生成*`;
@@ -281,7 +277,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
               }`}
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-              <span>⚡ 三分钟小白看懂速览 (一眼看懂)</span>
+              <span>三分钟小白看懂速览</span>
             </button>
             <button
               onClick={() => setViewMode('detailed')}
@@ -361,7 +357,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-indigo-600 hover:bg-indigo-500 border border-indigo-600 text-white text-xs font-bold transition-colors cursor-pointer"
           >
             <Printer className="w-3.5 h-3.5" />
-            <span>📸 保存体检卡（打印/另存 PDF）</span>
+            <span>保存体检卡（打印/另存 PDF）</span>
           </button>
 
           <button
@@ -426,7 +422,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
       )}
 
       {/* ========================================================================= */}
-      {/* 🌟 1. SIMPLE PLAIN LANGUAGE VIEW (DEFAULT & INTUITIVE) */}
+      {/* 1. SIMPLE PLAIN LANGUAGE VIEW (DEFAULT & INTUITIVE) */}
       {/* ========================================================================= */}
       {viewMode === 'simple' && (
         <div className="space-y-6 animate-in fade-in duration-200">
@@ -468,7 +464,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                   </div>
                 ) : null}
                 <p className="text-[11px] sm:text-xs text-neutral-500 font-medium mt-1.5 leading-relaxed max-w-3xl">
-                  💡 大白话：{getPlainVerdict()}
+                  大白话：{getPlainVerdict()}
                 </p>
               </div>
 
@@ -493,86 +489,6 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                 </div>
               </div>
             </div>
-          </div>
-
-          {/* 📖 小店生存故事（乔布斯式：把数字变成他能记住的话） */}
-          <div className="bg-gradient-to-br from-white to-amber-50/60 border-2 border-amber-200 rounded-3xl p-6 sm:p-8 shadow-xs space-y-3">
-            <div className="flex items-center space-x-2">
-              <BookOpen className="w-4 h-4 text-amber-600" />
-              <h3 className="text-base font-black text-neutral-900">这个小店的故事</h3>
-            </div>
-            {(() => {
-              const runwayMonths = report.normalizedFinancials.cashRunwayMonths || 0;
-              // UI 层封顶：scoringEngine 已把月数 cap 到 60，但再次把"天数"也明确封顶到 1800 天（5年），
-              // 防止早期版本未升级导致下游出现"还能撑 5 亿天"这类与现实脱节的数字。
-              const days = Math.min(Math.round(runwayMonths * 30), 1800);
-              // 每日开销与"能撑天数"使用同一口径（COGS + OPEX + 还贷），避免两数字自相矛盾
-              const monthlyBurn = report.normalizedFinancials.monthlyBurn || 0;
-              const daily = monthlyBurn / 30;
-              if (!report.gatePassed) {
-                return (
-                  <p className="text-sm sm:text-base text-rose-700 font-semibold leading-relaxed">
-                    现在的情况是：你的小店<b>每个月花的钱比赚的多</b>，或者背着还不起的债。
-                    手里的备用金大约还能撑 <b>{days}</b> 天。这就像水池在漏水却没补水——必须赶紧按下面的建议堵住缺口，否则店开不下去，你的服事也会受影响。
-                  </p>
-                );
-              }
-              if (runwayMonths >= 3) {
-                return (
-                  <p className="text-sm sm:text-base text-neutral-700 font-medium leading-relaxed">
-                    想象你开张后，每天开门要花掉大约 <b>{formatMoney(daily, baseCurr)}</b>。
-                    而现在你手里的备用金，足够你 <b>什么都不赚也能撑 {days} 天（约 {runwayMonths.toFixed(1)} 个月）</b>。
-                    这是个让人安心的状态——就算遇上半个月没人来，你也能稳稳地继续服事。
-                  </p>
-                );
-              }
-              return (
-                <p className="text-sm sm:text-base text-neutral-700 font-medium leading-relaxed">
-                  你这小店每天开门大约要花 <b>{formatMoney(daily, baseCurr)}</b>。
-                  手里的备用金目前够撑 <b>{days} 天（约 {runwayMonths.toFixed(1)} 个月）</b>——不算厚。
-                  别急着借钱扩张，先想办法多攒点"救命钱"，让这条线拉到 3 个月以上更稳妥。
-                </p>
-              );
-            })()}
-          </div>
-
-          {/* 🩺 现金存活线（可视化生死线） */}
-          <div className="bg-white border-2 border-neutral-200 rounded-3xl p-6 sm:p-8 shadow-xs space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Activity className="w-4 h-4 text-indigo-600" />
-                <h3 className="text-base font-black text-neutral-900">你的现金存活线</h3>
-              </div>
-              <span className={`text-sm font-black px-3 py-1 rounded-full border ${health.badgeColor}`}>
-                {health.trafficIcon} 还能撑 {Math.min(Math.round((report.normalizedFinancials.cashRunwayMonths || 0) * 30), 1800)} 天
-              </span>
-            </div>
-            {(() => {
-              const months = report.normalizedFinancials.cashRunwayMonths || 0;
-              const pct = Math.min(100, (months / 6) * 100); // 6 个月为满刻度
-              const color = months >= 3 ? 'bg-emerald-500' : months >= 1.5 ? 'bg-amber-500' : 'bg-rose-500';
-              const dangerPct = (1.5 / 6) * 100;
-              return (
-                <div className="space-y-2">
-                  <div className="relative h-4 rounded-full bg-neutral-100 overflow-hidden">
-                    {/* 危险区标识（1.5 个月以内） */}
-                    <div
-                      className="absolute top-0 left-0 h-full bg-rose-100/70 border-r border-dashed border-rose-300"
-                      style={{ width: `${dangerPct}%` }}
-                    ></div>
-                    <div className={`h-full rounded-full ${color} transition-all`} style={{ width: `${pct}%` }}></div>
-                  </div>
-                  <div className="flex justify-between text-[10px] text-neutral-400 font-mono">
-                    <span>0 天</span>
-                    <span className="text-rose-400">⚠ 危险线 45 天</span>
-                    <span>180 天（安心）</span>
-                  </div>
-                </div>
-              );
-            })()}
-            <p className="text-[11px] text-neutral-500 font-medium">
-              红色虚线左侧是「危险区」：备用金撑不到一个半月，一点点淡季就会断粮。把这条绿线拉过危险线，小店才算站稳。
-            </p>
           </div>
 
           {/* Card 2: "Where does 100 Yuan go?" (钱流向图) */}
@@ -637,67 +553,6 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                   </div>
                 )}
               </div>
-
-              {/* 按行业细分的动态成本明细（AI 推断 + 用户编辑） */}
-              {(report.dynamicCogsItems?.length || report.dynamicOpexItems?.length) && (
-                <div className="mt-4 p-4 rounded-2xl bg-white border-2 border-dashed border-neutral-300 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {report.dynamicCogsItems?.length ? (
-                    <div>
-                      <div className="text-xs font-black text-amber-800 mb-2 flex items-center gap-1.5">
-                        <span className="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
-                        按行业细分的物料成本明细
-                      </div>
-                      <ul className="space-y-1">
-                        {report.dynamicCogsItems.map((it) => (
-                          <li key={it.id} className="flex justify-between items-center text-xs">
-                            <span className="text-neutral-600 font-medium truncate pr-2">{it.label}</span>
-                            <span className="font-mono font-bold text-neutral-800 shrink-0">
-                              {formatMoney(it.value, baseCurr)}
-                            </span>
-                          </li>
-                        ))}
-                        <li className="flex justify-between items-center text-xs border-t border-neutral-100 pt-1 mt-1">
-                          <span className="text-amber-700 font-bold">小计</span>
-                          <span className="font-mono font-black text-amber-700">
-                            {formatMoney(
-                              report.dynamicCogsItems.reduce((s, it) => s + (it.value || 0), 0),
-                              baseCurr
-                            )}
-                          </span>
-                        </li>
-                      </ul>
-                    </div>
-                  ) : null}
-
-                  {report.dynamicOpexItems?.length ? (
-                    <div>
-                      <div className="text-xs font-black text-indigo-800 mb-2 flex items-center gap-1.5">
-                        <span className="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
-                        按行业细分的运营开支明细
-                      </div>
-                      <ul className="space-y-1">
-                        {report.dynamicOpexItems.map((it) => (
-                          <li key={it.id} className="flex justify-between items-center text-xs">
-                            <span className="text-neutral-600 font-medium truncate pr-2">{it.label}</span>
-                            <span className="font-mono font-bold text-neutral-800 shrink-0">
-                              {formatMoney(it.value, baseCurr)}
-                            </span>
-                          </li>
-                        ))}
-                        <li className="flex justify-between items-center text-xs border-t border-neutral-100 pt-1 mt-1">
-                          <span className="text-indigo-700 font-bold">小计</span>
-                          <span className="font-mono font-black text-indigo-700">
-                            {formatMoney(
-                              report.dynamicOpexItems.reduce((s, it) => s + (it.value || 0), 0),
-                              baseCurr
-                            )}
-                          </span>
-                        </li>
-                      </ul>
-                    </div>
-                  ) : null}
-                </div>
-              )}
 
               {/* Legend Bento Cards */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2">
@@ -805,7 +660,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                 </div>
 
                 <p className="text-xs text-neutral-600 font-medium">
-                  💡 大白话：扣除所有进货和开销后，真正能装进自己腰包的纯收益。
+                  大白话：扣除所有进货和开销后，真正能装进自己腰包的纯收益。
                 </p>
               </div>
 
@@ -840,7 +695,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                 </div>
 
                 <p className="text-xs text-neutral-600 font-medium">
-                  💡 大白话：毛利是包住所有房租和发工资的源泉，毛利率越高，抵御供货商涨价的能力越强。
+                  大白话：毛利是包住所有房租和发工资的源泉，毛利率越高，抵御供货商涨价的能力越强。
                 </p>
               </div>
 
@@ -875,7 +730,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                 </div>
 
                 <p className="text-xs text-neutral-600 font-medium">
-                  💡 大白话：每月雷打不动要付出去的店租和员工薪资，只要毛利润能轻松包住，小店就不会慌。
+                  大白话：每月雷打不动要付出去的店租和员工薪资，只要毛利润能轻松包住，小店就不会慌。
                 </p>
               </div>
 
@@ -907,215 +762,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                 </div>
 
                 <p className="text-xs text-neutral-600 font-medium">
-                  💡 大白话：即使遇到极端突发情况一个月没有新进账，现有可用现金还能坚持发工资和交租金几个月。
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Card 4: Peer Comparison Table (你的店 vs 同行老手平均水平) */}
-          <div className="bg-white border-2 border-neutral-200 rounded-3xl p-6 sm:p-8 shadow-xs space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="flex items-center space-x-2">
-                  <Users className="w-4 h-4 text-indigo-600" />
-                  <h3 className="text-base font-black text-neutral-900">
-                    同行老手横向对比表（{report.industry}）
-                  </h3>
-                </div>
-                <p className="text-xs text-neutral-500 font-medium mt-0.5">
-                  一眼看清你的各项财务表现是跑赢同行还是需要追赶。
-                </p>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="bg-neutral-100 text-neutral-800 border-b-2 border-neutral-200">
-                    <th className="p-3.5 font-bold rounded-l-2xl">经营指标 (大白话)</th>
-                    <th className="p-3.5 font-bold">你的店当前表现</th>
-                    <th className="p-3.5 font-bold">同行老手基准线</th>
-                    <th className="p-3.5 font-bold rounded-r-2xl">综合评价</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-neutral-100 text-neutral-700">
-                  <tr className="hover:bg-neutral-50">
-                    <td className="p-3.5 font-bold text-neutral-900">
-                      💰 每月到手纯利润率
-                      <span className="block text-[11px] text-neutral-400 font-normal">赚到手里的净利润比例</span>
-                    </td>
-                    <td className="p-3.5 font-mono font-bold text-indigo-700 text-sm">
-                      {netProfitMarginPercent}%
-                    </td>
-                    <td className="p-3.5 font-mono text-neutral-500">≥ 15%</td>
-                    <td className="p-3.5">
-                      {netProfitMarginPercent >= 15 ? (
-                        <span className="inline-flex items-center space-x-1 text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full font-bold border border-emerald-200">
-                          <ThumbsUp className="w-3 h-3" />
-                          <span>优于同行平均</span>
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center space-x-1 text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full font-bold border border-amber-200">
-                          <span>🟡 略低于同行，有提升空间</span>
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-
-                  <tr className="hover:bg-neutral-50">
-                    <td className="p-3.5 font-bold text-neutral-900">
-                      📦 进货采购成本占比
-                      <span className="block text-[11px] text-neutral-400 font-normal">买原材料和商品花了多少</span>
-                    </td>
-                    <td className="p-3.5 font-mono font-bold text-indigo-700 text-sm">
-                      {cogsPct}%
-                    </td>
-                    <td className="p-3.5 font-mono text-neutral-500">35% - 55%</td>
-                    <td className="p-3.5">
-                      {cogsPct <= 55 ? (
-                        <span className="inline-flex items-center space-x-1 text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full font-bold border border-emerald-200">
-                          <Check className="w-3 h-3" />
-                          <span>进货成本控制得当</span>
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center space-x-1 text-rose-700 bg-rose-50 px-2.5 py-1 rounded-full font-bold border border-rose-200">
-                          <span>🔴 进货偏贵，需争取批发价</span>
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-
-                  <tr className="hover:bg-neutral-50">
-                    <td className="p-3.5 font-bold text-neutral-900">
-                      🏠 房租人工固定开销占比
-                      <span className="block text-[11px] text-neutral-400 font-normal">每月雷打不动的固定花费</span>
-                    </td>
-                    <td className="p-3.5 font-mono font-bold text-indigo-700 text-sm">
-                      {opexRatioPercent}%
-                    </td>
-                    <td className="p-3.5 font-mono text-neutral-500">≤ 45%</td>
-                    <td className="p-3.5">
-                      {opexRatioPercent <= 45 ? (
-                        <span className="inline-flex items-center space-x-1 text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full font-bold border border-emerald-200">
-                          <Check className="w-3 h-3" />
-                          <span>开销处于安全健康线内</span>
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center space-x-1 text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full font-bold border border-amber-200">
-                          <span>🟡 固定负担偏重，注意弹性排班</span>
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-
-                  <tr className="hover:bg-neutral-50">
-                    <td className="p-3.5 font-bold text-neutral-900">
-                      🛡️ 应急备用金缓冲期
-                      <span className="block text-[11px] text-neutral-400 font-normal">账上备用金可支撑的月数</span>
-                    </td>
-                    <td className="p-3.5 font-mono font-bold text-indigo-700 text-sm">
-                      {cashRunwayMonths} 个月
-                    </td>
-                    <td className="p-3.5 font-mono text-neutral-500">≥ 3.0 个月</td>
-                    <td className="p-3.5">
-                      {cashRunwayMonths >= 3 ? (
-                        <span className="inline-flex items-center space-x-1 text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full font-bold border border-emerald-200">
-                          <ThumbsUp className="w-3 h-3" />
-                          <span>防风险水库充足</span>
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center space-x-1 text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full font-bold border border-amber-200">
-                          <span>🟡 建议再补充备用金至 3 个月以上</span>
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Card 4.5: Missionary Community Service & Biblical Stewardship Insights (宣教工场医疗与教育服事管家评估) */}
-          <div className="bg-gradient-to-br from-amber-50/90 via-orange-50/50 to-indigo-50/80 border-2 border-amber-300 rounded-3xl p-6 sm:p-8 shadow-xs space-y-5">
-            <div className="flex flex-wrap items-start justify-between gap-3 pb-3 border-b border-amber-200/80">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-2xl bg-amber-600 text-white flex items-center justify-center font-bold text-lg shadow-sm">
-                  ✝️
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-mono font-bold uppercase tracking-wider text-amber-900 bg-amber-200/80 px-2.5 py-0.5 rounded-full border border-amber-300">
-                      商宣商业模式检验
-                    </span>
-                    <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
-                      持续运转与社区关怀指数
-                    </span>
-                  </div>
-                  <h3 className="text-base sm:text-lg font-black text-neutral-900 mt-0.5">
-                    商宣商业模式检验与忠心管家体检 (三分钟小白看懂)
-                  </h3>
-                </div>
-              </div>
-
-              <div className="text-xs text-amber-900 font-medium italic bg-white/80 px-3 py-1.5 rounded-xl border border-amber-200">
-                📖「你要详细知道你羊群的景况，留心料理你的牛群」（箴言 27:23）
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {/* BAM Metric 1: Financial Balance & Sustainability */}
-              <div className="p-4.5 rounded-2xl bg-white/90 border border-amber-200 space-y-2">
-                <div className="text-xs font-bold text-amber-900 flex items-center justify-between">
-                  <span>🕊️ 医疗/教育项目收支平衡率</span>
-                  <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
-                    {netProfit >= 0 ? '收支平衡 / 良性运转' : '需外部爱心支持'}
-                  </span>
-                </div>
-                <div className="text-xl sm:text-2xl font-black font-mono text-neutral-900">
-                  {netProfit >= 0 ? formatMoney(netProfit, baseCurr) : formatMoney(netProfit, baseCurr)}
-                  <span className="text-xs text-neutral-500 font-normal ml-1">/月结余</span>
-                </div>
-                <p className="text-[11px] text-neutral-600 leading-relaxed font-medium">
-                  {netProfit >= 0
-                    ? '✅ 门诊或学费基本覆盖进药及教学日常花销，能够长期持续为当地人提供关怀。'
-                    : '⚠️ 目前处于贴补服务阶段，需合理预算外部奉献，确保药物与教学供应不断档。'}
-                </p>
-              </div>
-
-              {/* BAM Metric 2: Field Cash Buffer */}
-              <div className="p-4.5 rounded-2xl bg-white/90 border border-amber-200 space-y-2">
-                <div className="text-xs font-bold text-amber-900 flex items-center justify-between">
-                  <span>🛡️ 工场应急储备金</span>
-                  <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-sky-100 text-sky-800">
-                    可撑 {cashRunwayMonths} 个月
-                  </span>
-                </div>
-                <div className="text-xl sm:text-2xl font-black font-mono text-neutral-900">
-                  {cashRunwayMonths} 个月
-                  <span className="text-xs text-neutral-500 font-normal ml-1">安全缓冲</span>
-                </div>
-                <p className="text-[11px] text-neutral-600 leading-relaxed font-medium">
-                  {cashRunwayMonths >= 3
-                    ? '✅ 储备金非常扎实，面对药品通关延误、突发公共卫生需求或政策变动能安心应对。'
-                    : '⚠️ 储备不足 3 个月，建议优先储备紧急备用金以保障关键救命物资采购。'}
-                </p>
-              </div>
-
-              {/* BAM Metric 3: Community Blessing */}
-              <div className="p-4.5 rounded-2xl bg-white/90 border border-amber-200 space-y-2">
-                <div className="text-xs font-bold text-amber-900 flex items-center justify-between">
-                  <span>🤝 社区帮助与关怀</span>
-                  <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                    爱心服事当地人
-                  </span>
-                </div>
-                <div className="text-xl sm:text-2xl font-black font-mono text-neutral-900">
-                  {report.normalizedFinancials.fullTimeEmployeesCount || 0} 位
-                  <span className="text-xs text-neutral-500 font-normal ml-1">本地同工培养与帮扶</span>
-                </div>
-                <p className="text-[11px] text-neutral-600 leading-relaxed font-medium">
-                  以专业医疗救治与知识技能赋能当地百姓，在社区建立美好见证并切切实实帮助需要的人。
+                  大白话：即使遇到极端突发情况一个月没有新进账，现有可用现金还能坚持发工资和交租金几个月。
                 </p>
               </div>
             </div>
@@ -1198,7 +845,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                     </div>
 
                     <div className="pt-2 text-[11px] font-bold flex items-center gap-1 text-neutral-400">
-                      {isDone ? '✅ 已完成落地' : '👉 点击标记为已完成'}
+                      {isDone ? '✅ 已完成落地' : '点击标记为已完成'}
                     </div>
                   </div>
                 );
@@ -1219,7 +866,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
       )}
 
       {/* ========================================================================= */}
-      {/* 📊 2. DETAILED BREAKDOWN VIEW (FOR ACCOUNTANTS & DEEP AUDITS) */}
+      {/* 2. DETAILED BREAKDOWN VIEW (FOR ACCOUNTANTS & DEEP AUDITS) */}
       {/* ========================================================================= */}
       {viewMode === 'detailed' && (
         <div className="space-y-6 animate-in fade-in duration-200">
@@ -1450,7 +1097,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                         dominantBaseline="central"
                         className="text-[9px] font-bold fill-neutral-700"
                       >
-                        {dim.dimension}
+                        {dim.dimensionPlain || dim.dimension}
                       </text>
                     );
                   })}
@@ -1478,9 +1125,9 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
 
               <div className="space-y-3">
                 {report.radarScores.map((dim, i) => (
-                  <div key={`dim-${dim.dimension}-${i}`} className="p-3 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-1.5">
+                  <div key={`dim-${dim.dimensionPlain || dim.dimension}-${i}`} className="p-3 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-1.5">
                     <div className="flex items-center justify-between text-xs font-bold text-neutral-900">
-                      <span>{dim.dimension}</span>
+                      <span>{dim.dimensionPlain || dim.dimension}</span>
                       <span className="font-mono text-indigo-700 text-sm">
                         {dim.score} <span className="text-neutral-400 font-normal text-xs">/ 100</span>
                       </span>

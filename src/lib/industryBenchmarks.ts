@@ -15,7 +15,7 @@ export interface IndustryBenchmark {
 export const INDUSTRY_BENCHMARKS: IndustryBenchmark[] = [
   {
     id: 'food_beverage',
-    nameZh: '☕ 餐饮烘焙 / 社区咖啡 (Bakery & Cafe)',
+    nameZh: '餐饮烘焙 / 社区咖啡 (Bakery & Cafe)',
     nameEn: 'Bakery, Coffee Shop & Catering',
     typicalGrossMargin: '55% - 70%',
     typicalOpexRatio: '30% - 48%',
@@ -28,7 +28,7 @@ export const INDUSTRY_BENCHMARKS: IndustryBenchmark[] = [
   },
   {
     id: 'medical_health',
-    nameZh: '🩺 医疗健康 / 爱心义诊所 (Healthcare Clinic)',
+    nameZh: '医疗健康 / 爱心义诊所 (Healthcare Clinic)',
     nameEn: 'Community Clinic & Healthcare',
     typicalGrossMargin: '50% - 70%',
     typicalOpexRatio: '25% - 40%',
@@ -41,7 +41,7 @@ export const INDUSTRY_BENCHMARKS: IndustryBenchmark[] = [
   },
   {
     id: 'retail_store',
-    nameZh: '🛒 社区零售 / 平价商超 (Retail & Grocery)',
+    nameZh: '社区零售 / 平价商超 (Retail & Grocery)',
     nameEn: 'Community Retail & Grocery',
     typicalGrossMargin: '20% - 35%',
     typicalOpexRatio: '12% - 22%',
@@ -54,7 +54,7 @@ export const INDUSTRY_BENCHMARKS: IndustryBenchmark[] = [
   },
   {
     id: 'education_training',
-    nameZh: '📚 语言教育 / 辅导中心 (Language & Education)',
+    nameZh: '语言教育 / 辅导中心 (Language & Education)',
     nameEn: 'Language Learning & Youth Tutoring',
     typicalGrossMargin: '75% - 90%',
     typicalOpexRatio: '45% - 65%',
@@ -67,7 +67,7 @@ export const INDUSTRY_BENCHMARKS: IndustryBenchmark[] = [
   },
   {
     id: 'vocational_training',
-    nameZh: '🛠️ 职业实训 / 手工工坊 (Vocational & IT Training)',
+    nameZh: '职业实训 / 手工工坊 (Vocational & IT Training)',
     nameEn: 'Vocational IT & Skills School',
     typicalGrossMargin: '60% - 80%',
     typicalOpexRatio: '35% - 50%',
@@ -80,7 +80,7 @@ export const INDUSTRY_BENCHMARKS: IndustryBenchmark[] = [
   },
   {
     id: 'agriculture',
-    nameZh: '🌱 现代农业 / 生态种植 (Agriculture & Farming)',
+    nameZh: '现代农业 / 生态种植 (Agriculture & Farming)',
     nameEn: 'Eco-Agriculture & Community Farm',
     typicalGrossMargin: '45% - 65%',
     typicalOpexRatio: '25% - 40%',
@@ -93,7 +93,7 @@ export const INDUSTRY_BENCHMARKS: IndustryBenchmark[] = [
   },
   {
     id: 'child_care',
-    nameZh: '🧒 儿童日托 / 社区启蒙 (Childcare & Early Learning)',
+    nameZh: '儿童日托 / 社区启蒙 (Childcare & Early Learning)',
     nameEn: 'Community Childcare & Early Learning',
     typicalGrossMargin: '65% - 85%',
     typicalOpexRatio: '40% - 60%',
@@ -106,7 +106,7 @@ export const INDUSTRY_BENCHMARKS: IndustryBenchmark[] = [
   },
   {
     id: 'community_service',
-    nameZh: '🤝 社区综合便民与助残帮扶 (Community Care Service)',
+    nameZh: '社区综合便民与助残帮扶 (Community Care Service)',
     nameEn: 'Community Help & Social Care',
     typicalGrossMargin: '70% - 85%',
     typicalOpexRatio: '40% - 60%',
@@ -119,7 +119,7 @@ export const INDUSTRY_BENCHMARKS: IndustryBenchmark[] = [
   },
   {
     id: 'custom',
-    nameZh: '💡 自定义实体 / 创新微创项目 (Custom Business)',
+    nameZh: '自定义实体 / 创新微创项目 (Custom Business)',
     nameEn: 'Custom Micro-Enterprise',
     typicalGrossMargin: '50% - 70%',
     typicalOpexRatio: '30% - 45%',
@@ -141,7 +141,7 @@ export function getIndustryBenchmark(industryId: string): IndustryBenchmark {
 
   return {
     id: 'custom',
-    nameZh: `💡 ${industryId}`,
+    nameZh: `${industryId}`,
     nameEn: industryId,
     typicalGrossMargin: '50% - 70%',
     typicalOpexRatio: '30% - 45%',

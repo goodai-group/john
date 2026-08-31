@@ -1,7 +1,7 @@
 import { CurrencyCode, CurrencyRate, MoneyField } from '../types';
 
 export const SUPPORTED_CURRENCIES: CurrencyRate[] = [
-  // 🌟 常用重点币种 (Major Global & BAM Key Currencies)
+  // 常用重点币种 (Major Global & BAM Key Currencies)
   { code: 'USD', nameZh: '美元 (USD)', nameEn: 'US Dollar', symbol: '$', rateToUsd: 1.0, region: '全球主要' },
   { code: 'CNY', nameZh: '人民币 (CNY)', nameEn: 'Chinese Yuan', symbol: '¥', rateToUsd: 7.23, region: '亚洲' },
   { code: 'EUR', nameZh: '欧元 (EUR)', nameEn: 'Euro', symbol: '€', rateToUsd: 0.92, region: '欧洲' },
@@ -67,7 +67,7 @@ export const SUPPORTED_CURRENCIES: CurrencyRate[] = [
   { code: 'CRC', nameZh: '哥斯达黎加科朗 (CRC)', nameEn: 'Costa Rican Colón', symbol: '₡', rateToUsd: 525.0, region: '拉美' },
   { code: 'DOP', nameZh: '多米尼加比索 (DOP)', nameEn: 'Dominican Peso', symbol: 'RD$', rateToUsd: 59.5, region: '拉美' },
 
-  // 🏛️ 欧洲与大洋洲 (Europe & Oceania)
+  // 欧洲与大洋洲 (Europe & Oceania)
   { code: 'CHF', nameZh: '瑞士法郎 (CHF)', nameEn: 'Swiss Franc', symbol: 'CHF', rateToUsd: 0.89, region: '欧洲' },
   { code: 'SEK', nameZh: '瑞典克朗 (SEK)', nameEn: 'Swedish Krona', symbol: 'kr', rateToUsd: 10.6, region: '欧洲' },
   { code: 'NOK', nameZh: '挪威克朗 (NOK)', nameEn: 'Norwegian Krone', symbol: 'kr', rateToUsd: 10.7, region: '欧洲' },

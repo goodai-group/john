@@ -96,22 +96,36 @@ app.post(['/api/ai/chat', '/api/ai-consultation'], async (req, res) => {
 }
 `;
 
-        const response = await ai.models.generateContent({
-          model: 'gemini-3.7-flash',
-          contents: `用户提问: "${question}"\n当前上下文: ${JSON.stringify(context || {})}`,
-          config: {
-            systemInstruction,
-            responseMimeType: 'application/json'
-          }
-        });
+        // 8 秒硬超时：网络不佳或 Gemini 无响应时快速回落本地规则引擎，避免用户无限等待
+        const response = await Promise.race([
+          ai.models.generateContent({
+            model: 'gemini-3.7-flash',
+            contents: `用户提问: "${question}"\n当前上下文: ${JSON.stringify(context || {})}`,
+            config: {
+              systemInstruction,
+              responseMimeType: 'application/json'
+            }
+          }),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('Gemini request timed out after 8s')), 8000)
+          )
+        ]);
 
         const replyText = response.text || '';
+        // 空响应或非 JSON 时直接回退本地规则引擎，绝不向前端返回空字符串
+        if (!replyText.trim()) {
+          throw new Error('Gemini returned an empty response');
+        }
         try {
           const parsed = JSON.parse(replyText);
+          const answerText = parsed.answer || replyText;
+          if (!answerText.trim()) {
+            throw new Error('Gemini returned empty answer');
+          }
           return res.json({
-            reply: parsed.answer || replyText,
-            aiResponse: parsed.answer || replyText,
-            answer: parsed.answer || replyText,
+            reply: answerText,
+            aiResponse: answerText,
+            answer: answerText,
             confidence: parsed.confidence || (isEdgeKeyword ? 'LOW_EDGE_CASE' : 'HIGH'),
             isEdgeCase: parsed.isEdgeCase ?? isEdgeKeyword,
             category: parsed.category || '小微经营大白话解析',
@@ -366,7 +380,7 @@ app.post('/api/ai/infer-business-structure', async (req, res) => {
 返回合法的 JSON 格式：
 {
   "inferredIndustryKey": "medical_health" | "food_beverage" | "education_training" | "vocational_training" | "retail_store" | "agriculture" | "child_care" | "community_service" | "handicraft" | "other",
-  "industryDisplayName": "🩺 医疗健康 / 爱心义诊所",
+  "industryDisplayName": "医疗健康 / 爱心义诊所",
   "customIndustryName": "社区平价门诊与慢病照护",
   "suggestedCurrency": "KES" | "THB" | "USD" | "CNY" | "VND" | "EUR" 等,
   "revenueTip": "门诊看诊费、配药进账与检查费等全部月流水",
@@ -415,14 +429,19 @@ app.post('/api/ai/infer-business-structure', async (req, res) => {
 }
 `;
 
-        const response = await ai.models.generateContent({
-          model: 'gemini-3.7-flash',
-          contents: `项目/店铺名称: "${projectName}"\n用户当前选择的行业: "${currentIndustry}"\n当前币种: "${baseCurrency}"`,
-          config: {
-            systemInstruction,
-            responseMimeType: 'application/json'
-          }
-        });
+        const response = await Promise.race([
+          ai.models.generateContent({
+            model: 'gemini-3.7-flash',
+            contents: `项目/店铺名称: "${projectName}"\n用户当前选择的行业: "${currentIndustry}"\n当前币种: "${baseCurrency}"`,
+            config: {
+              systemInstruction,
+              responseMimeType: 'application/json'
+            }
+          }),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('Gemini infer timed out after 8s')), 8000)
+          )
+        ]);
 
         const parsed = JSON.parse(response.text || '{}');
         if (parsed.inferredIndustryKey) {
@@ -439,7 +458,7 @@ app.post('/api/ai/infer-business-structure', async (req, res) => {
     // Deterministic fallback rule engine
     const pLower = projectName.toLowerCase();
     let key = 'community_service';
-    let displayName = '🤝 综合助贫 / 社会企业';
+    let displayName = '综合助贫 / 社会企业';
     let customName = '社区服务与综合社会企业';
     let curr = baseCurrency || 'USD';
     let revTip = '日常营业与服务总流水进账';
@@ -467,7 +486,7 @@ app.post('/api/ai/infer-business-structure', async (req, res) => {
     // Industry detection
     if (/医|诊所|药|门诊|卫生|康复|牙科|clinic|health|hospital|care|medical/i.test(pLower)) {
       key = 'medical_health';
-      displayName = '🩺 医疗健康 / 爱心义诊所';
+      displayName = '医疗健康 / 爱心义诊所';
       customName = '社区爱心诊所与便民药房';
       revTip = '门诊挂号看诊费、平价药品与检查费等全部进账';
       rev = 2200;
@@ -484,7 +503,7 @@ app.post('/api/ai/infer-business-structure', async (req, res) => {
       advice = '爱心门诊药品采购成本约占总进账 30%-40%，建议常备 3.5 个月固定开支备用金。';
     } else if (/咖啡|烘焙|面包|餐厅|小吃|甜品|茶|cafe|bakery|coffee|food|restaurant/i.test(pLower)) {
       key = 'food_beverage';
-      displayName = '☕ 餐饮烘焙 / 社区咖啡';
+      displayName = '餐饮烘焙 / 社区咖啡';
       customName = '社区烘焙工坊与精品咖啡';
       revTip = '堂食点单、现烤面包甜点、外卖及咖啡豆零售总进账';
       rev = 3000;
@@ -502,7 +521,7 @@ app.post('/api/ai/infer-business-structure', async (req, res) => {
       advice = '餐饮烘焙行业直接食材成本通常占 35%-45%，毛利率宜保持在 55% 以上，注意控制旺铺租金比重。';
     } else if (/教育|学校|培训|辅导|语言|英语|文化|课后|school|education|language|tutoring/i.test(pLower)) {
       key = 'education_training';
-      displayName = '📚 语言教育 / 辅导中心';
+      displayName = '语言教育 / 辅导中心';
       customName = '社区青少年语言学习与课后辅导中心';
       revTip = '学员月度/季度学费、教材费与课后辅导收费';
       rev = 2200;
@@ -519,7 +538,7 @@ app.post('/api/ai/infer-business-structure', async (req, res) => {
       advice = '教育培训属于轻资产服务，直接教材成本低（<15%），核心支出在老师薪资与场地，保持 25% 结余即可稳健运营。';
     } else if (/技能|维修|it|汽修|木工|手工|实训|工坊|workshop|tech|repair|vocational/i.test(pLower)) {
       key = 'vocational_training';
-      displayName = '🛠️ 职业实训 / 手工工坊';
+      displayName = '职业实训 / 手工工坊';
       customName = '青年职业技能实训与手艺工坊';
       revTip = '手作产品销售、维修服务收费与实训学员学费';
       rev = 2200;
@@ -536,7 +555,7 @@ app.post('/api/ai/infer-business-structure', async (req, res) => {
       advice = '职业实训与工坊需兼顾产品质量与技能传授，建议储备 3 个月以上资金支持设备升级换代。';
     } else if (/超市|商超|便利|杂货|零售|批发|档口|百货|服装|服饰|衣帽|鞋店|箱包|手机|数码|电脑|电器|家电|五金|建材|文具|store|shop|market|retail|clothing|garment|tailor|shoe|phone|electronics|hardware/i.test(pLower)) {
       key = 'retail_store';
-      displayName = '🛒 社区零售 / 平价商超';
+      displayName = '社区零售 / 平价商超';
       customName = '便民社区生活平价超市';
       revTip = '日用百货、食品调料与平价生鲜全部收银流水';
       rev = 5000;
@@ -553,7 +572,7 @@ app.post('/api/ai/infer-business-structure', async (req, res) => {
       advice = '社区零售走量为主，毛利率通常在 20%-30%，需严格把控进货周转率与损耗。';
     } else if (/农场|农业|种植|养殖|果园|蔬菜|farm|agriculture/i.test(pLower)) {
       key = 'agriculture';
-      displayName = '🌱 现代农业 / 生态种植';
+      displayName = '现代农业 / 生态种植';
       customName = '生态农业种植与扶贫合作社';
       revTip = '果蔬收成批发、生态农产品直销与订单进账';
       rev = 1800;
@@ -570,7 +589,7 @@ app.post('/api/ai/infer-business-structure', async (req, res) => {
       advice = '农业受季节与天气影响较大，建议预留 4-6 个月固定开销作为越冬或休耕期周转资金。';
     } else if (/儿童|日托|学前|启蒙|幼托|childcare|daycare|kindergarten/i.test(pLower)) {
       key = 'child_care';
-      displayName = '🧒 儿童日托 / 社区启蒙';
+      displayName = '儿童日托 / 社区启蒙';
       customName = '社区贫困儿童日托与学前启蒙中心';
       revTip = '家长托育服务费、营养膳食费与爱心助学款';
       rev = 1900;
@@ -587,7 +606,7 @@ app.post('/api/ai/infer-business-structure', async (req, res) => {
       advice = '儿童日托重在安全与营养，保持 3.5 个月以上流动储备以应对公共卫生或突发紧急情况。';
     } else if (/美容|美发|理发|美甲|纹绣|洗护|洗衣|干洗|salon|beauty|hair|barber|nail|laundry/i.test(pLower)) {
       key = 'community_service';
-      displayName = '🤝 美容美发 / 社区生活服务';
+      displayName = '美容美发 / 社区生活服务';
       customName = '社区美容美发与便民生活服务';
       revTip = '理发美容服务、护理套餐与会员卡储值全部进账';
       rev = 1800;
@@ -605,7 +624,7 @@ app.post('/api/ai/infer-business-structure', async (req, res) => {
     } else {
       // General custom business
       key = 'custom';
-      displayName = '💡 定制实体 / 小微商业';
+      displayName = '定制实体 / 小微商业';
       customName = projectName || '定制小微商业实体';
       revTip = '每月提供商品或服务产生的全部营业进账流水';
       rev = 2200;
@@ -681,26 +700,35 @@ app.post('/api/ai/deep-diagnosis', async (req, res) => {
 }
 `;
 
-        const response = await ai.models.generateContent({
-          model: 'gemini-3.7-flash',
-          contents: `商业项目数据：${JSON.stringify({
-            projectName: report.projectName,
-            industry: report.industry,
-            baseCurrency: report.baseCurrency,
-            financials: report.normalizedFinancials,
-            radarScores: report.radarScores,
-            totalScore: report.totalScore,
-            tier: report.tier,
-            gatePassed: report.gatePassed,
-            failedGates: report.failedGates
-          })}`,
-          config: {
-            systemInstruction,
-            responseMimeType: 'application/json'
-          }
-        });
+        const response = await Promise.race([
+          ai.models.generateContent({
+            model: 'gemini-3.7-flash',
+            contents: `商业项目数据：${JSON.stringify({
+              projectName: report.projectName,
+              industry: report.industry,
+              baseCurrency: report.baseCurrency,
+              financials: report.normalizedFinancials,
+              radarScores: report.radarScores,
+              totalScore: report.totalScore,
+              tier: report.tier,
+              gatePassed: report.gatePassed,
+              failedGates: report.failedGates
+            })}`,
+            config: {
+              systemInstruction,
+              responseMimeType: 'application/json'
+            }
+          }),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('Gemini deep diagnosis timed out after 8s')), 8000)
+          )
+        ]);
 
         const parsed = JSON.parse(response.text || '{}');
+        // 空诊断结果同样回退本地引擎，避免报告页出现空白的 AI 诊断区
+        if (!parsed || (!parsed.summaryHeadline && !parsed.plainExplanation)) {
+          throw new Error('Gemini deep diagnosis returned empty result');
+        }
         return res.json({
           success: true,
           ...parsed
