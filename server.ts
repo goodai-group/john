@@ -3,6 +3,7 @@ import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
+import { SUPPORTED_CURRENCIES } from './src/lib/currencies';
 
 const app = express();
 const PORT = 3000;
@@ -456,6 +457,11 @@ app.post('/api/ai/infer-business-structure', async (req, res) => {
     else if (/尼日利亚|拉各斯|nigeria|ngn/i.test(pLower)) curr = 'NGN';
     else if (/埃及|开罗|egypt|egp/i.test(pLower)) curr = 'EGP';
     else if (/埃塞俄比亚|ethiopia|etb/i.test(pLower)) curr = 'ETB';
+    else if (/缅甸|仰光|曼德勒|内比都|myanmar|yangon|mmk/i.test(pLower)) curr = 'MMK';
+    else if (/柬埔寨|金边|cambodia|phnom penh|khr/i.test(pLower)) curr = 'KHR';
+    else if (/老挝|万象|laos|vientiane|lak/i.test(pLower)) curr = 'LAK';
+    else if (/孟加拉|达卡|bangladesh|dhaka|bdt/i.test(pLower)) curr = 'BDT';
+    else if (/斯里兰卡|科伦坡|sri lanka|colombo|lkr/i.test(pLower)) curr = 'LKR';
     else if (/中国|恩典|麦种|光明|爱心|cny|rmb/i.test(pLower)) curr = 'CNY';
 
     // Industry detection
@@ -464,16 +470,16 @@ app.post('/api/ai/infer-business-structure', async (req, res) => {
       displayName = '🩺 医疗健康 / 爱心义诊所';
       customName = '社区爱心诊所与便民药房';
       revTip = '门诊挂号看诊费、平价药品与检查费等全部进账';
-      rev = 50000;
+      rev = 2200;
       cogs = [
-        { id: 'cogs_meds', name: '常用中西药品与药剂采购', description: '抗生素、感冒退热、降压等常备药品', amount: 16000 },
-        { id: 'cogs_supplies', name: '医用敷料耗材与消毒器械', description: '一次性注射器、纱布胶布、消毒酒精、手套', amount: 3500 }
+        { id: 'cogs_meds', name: '常用中西药品与药剂采购', description: '抗生素、感冒退热、降压等常备药品', amount: 650 },
+        { id: 'cogs_supplies', name: '医用敷料耗材与消毒器械', description: '一次性注射器、纱布胶布、消毒酒精、手套', amount: 150 }
       ];
       opex = [
-        { id: 'opex_rent', name: '诊所场地租金与物业', description: '每月固定房租与物业费', amount: 4500 },
-        { id: 'opex_staff', name: '本地护士与药房助理津贴', description: '全职护士与配药同工薪酬', amount: 6000 },
-        { id: 'opex_utility', name: '冷藏电费、水电与通讯', description: '药品冰箱冷藏用电、日常水电与宽带', amount: 1200 },
-        { id: 'opex_misc', name: '医疗固废清运与执照年检', description: '合规环保清运与消耗品', amount: 800 }
+        { id: 'opex_rent', name: '诊所场地租金与物业', description: '每月固定房租与物业费', amount: 400 },
+        { id: 'opex_staff', name: '本地护士与药房助理津贴', description: '全职护士与配药同工薪酬', amount: 600 },
+        { id: 'opex_utility', name: '冷藏电费、水电与通讯', description: '药品冰箱冷藏用电、日常水电与宽带', amount: 120 },
+        { id: 'opex_misc', name: '医疗固废清运与执照年检', description: '合规环保清运与消耗品', amount: 80 }
       ];
       advice = '爱心门诊药品采购成本约占总进账 30%-40%，建议常备 3.5 个月固定开支备用金。';
     } else if (/咖啡|烘焙|面包|餐厅|小吃|甜品|茶|cafe|bakery|coffee|food|restaurant/i.test(pLower)) {
@@ -481,17 +487,17 @@ app.post('/api/ai/infer-business-structure', async (req, res) => {
       displayName = '☕ 餐饮烘焙 / 社区咖啡';
       customName = '社区烘焙工坊与精品咖啡';
       revTip = '堂食点单、现烤面包甜点、外卖及咖啡豆零售总进账';
-      rev = 60000;
+      rev = 3000;
       cogs = [
-        { id: 'cogs_beans_milk', name: '咖啡生豆/熟豆、鲜牛奶与糖浆', description: '高品质咖啡豆、鲜牛奶/燕麦奶原料', amount: 14000 },
-        { id: 'cogs_baking', name: '烘焙面粉、黄油、酵母与配料', description: '烘焙专用面粉、动物黄油、乳酪等食材', amount: 9000 },
-        { id: 'cogs_packaging', name: '外带环保纸杯、吸管与打包盒袋', description: '定制环保咖啡纸杯、封口膜、食品包装袋', amount: 2500 }
+        { id: 'cogs_beans_milk', name: '咖啡生豆/熟豆、鲜牛奶与糖浆', description: '高品质咖啡豆、鲜牛奶/燕麦奶原料', amount: 700 },
+        { id: 'cogs_baking', name: '烘焙面粉、黄油、酵母与配料', description: '烘焙专用面粉、动物黄油、乳酪等食材', amount: 450 },
+        { id: 'cogs_packaging', name: '外带环保纸杯、吸管与打包盒袋', description: '定制环保咖啡纸杯、封口膜、食品包装袋', amount: 150 }
       ];
       opex = [
-        { id: 'opex_rent', name: '临街旺铺/社区店面租金', description: '每月固定门面铺租', amount: 8500 },
-        { id: 'opex_barista', name: '咖啡师与烘焙师傅薪资', description: '全职与兼职店员薪酬', amount: 11000 },
-        { id: 'opex_power', name: '高功率烘焙烤箱与咖啡机电费水费', description: '商用烤箱、浓缩咖啡机动力用电与水费', amount: 2800 },
-        { id: 'opex_maintenance', name: '商用设备日常保养与耗损', description: '滤水器滤芯更换、磨豆机维护与损耗', amount: 1200 }
+        { id: 'opex_rent', name: '临街旺铺/社区店面租金', description: '每月固定门面铺租', amount: 500 },
+        { id: 'opex_barista', name: '咖啡师与烘焙师傅薪资', description: '全职与兼职店员薪酬', amount: 700 },
+        { id: 'opex_power', name: '高功率烘焙烤箱与咖啡机电费水费', description: '商用烤箱、浓缩咖啡机动力用电与水费', amount: 160 },
+        { id: 'opex_maintenance', name: '商用设备日常保养与耗损', description: '滤水器滤芯更换、磨豆机维护与损耗', amount: 80 }
       ];
       advice = '餐饮烘焙行业直接食材成本通常占 35%-45%，毛利率宜保持在 55% 以上，注意控制旺铺租金比重。';
     } else if (/教育|学校|培训|辅导|语言|英语|文化|课后|school|education|language|tutoring/i.test(pLower)) {
@@ -499,16 +505,16 @@ app.post('/api/ai/infer-business-structure', async (req, res) => {
       displayName = '📚 语言教育 / 辅导中心';
       customName = '社区青少年语言学习与课后辅导中心';
       revTip = '学员月度/季度学费、教材费与课后辅导收费';
-      rev = 45000;
+      rev = 2200;
       cogs = [
-        { id: 'cogs_books', name: '教学教材、练习册与课本印制', description: '学生学习讲义、印刷教材与练习文具', amount: 4500 },
-        { id: 'cogs_online', name: '在线教学软件平台与教具耗材', description: '教学课件系统、白板笔与活动道具', amount: 1500 }
+        { id: 'cogs_books', name: '教学教材、练习册与课本印制', description: '学生学习讲义、印刷教材与练习文具', amount: 220 },
+        { id: 'cogs_online', name: '在线教学软件平台与教具耗材', description: '教学课件系统、白板笔与活动道具', amount: 80 }
       ];
       opex = [
-        { id: 'opex_rent', name: '教学教室场地租金', description: '教室、自习室月度固定租金', amount: 6500 },
-        { id: 'opex_teachers', name: '本地授课教师与助教课酬', description: '专职老师与兼职助教薪酬补贴', amount: 14000 },
-        { id: 'opex_utility', name: '教室空调电费、宽带网络与饮用水', description: '教室内照明空调动力电与多媒体网络', amount: 1800 },
-        { id: 'opex_activity', name: '学员文化交流与家长日活动杂费', description: '定期学员文化展示与辅导杂支', amount: 1000 }
+        { id: 'opex_rent', name: '教学教室场地租金', description: '教室、自习室月度固定租金', amount: 500 },
+        { id: 'opex_teachers', name: '本地授课教师与助教课酬', description: '专职老师与兼职助教薪酬补贴', amount: 950 },
+        { id: 'opex_utility', name: '教室空调电费、宽带网络与饮用水', description: '教室内照明空调动力电与多媒体网络', amount: 140 },
+        { id: 'opex_activity', name: '学员文化交流与家长日活动杂费', description: '定期学员文化展示与辅导杂支', amount: 80 }
       ];
       advice = '教育培训属于轻资产服务，直接教材成本低（<15%），核心支出在老师薪资与场地，保持 25% 结余即可稳健运营。';
     } else if (/技能|维修|it|汽修|木工|手工|实训|工坊|workshop|tech|repair|vocational/i.test(pLower)) {
@@ -516,33 +522,33 @@ app.post('/api/ai/infer-business-structure', async (req, res) => {
       displayName = '🛠️ 职业实训 / 手工工坊';
       customName = '青年职业技能实训与手艺工坊';
       revTip = '手作产品销售、维修服务收费与实训学员学费';
-      rev = 42000;
+      rev = 2200;
       cogs = [
-        { id: 'cogs_materials', name: '实训原料、木料/皮革/布料耗材', description: '制作成品消耗的原材料与配件', amount: 11000 },
-        { id: 'cogs_tools', name: '易损刀具、焊锡/五金零配件与损耗', description: '日常实操易耗零部件与五金', amount: 3000 }
+        { id: 'cogs_materials', name: '实训原料、木料/皮革/布料耗材', description: '制作成品消耗的原材料与配件', amount: 500 },
+        { id: 'cogs_tools', name: '易损刀具、焊锡/五金零配件与损耗', description: '日常实操易耗零部件与五金', amount: 160 }
       ];
       opex = [
-        { id: 'opex_rent', name: '实训车间/工坊场地租金', description: '工坊车间月度场地租金', amount: 5000 },
-        { id: 'opex_master', name: '带教技师与工匠师傅津贴', description: '全职技师师傅与车间指导员薪资', amount: 9500 },
-        { id: 'opex_power', name: '动力工业用电、水费与安全保险', description: '大型机床/电动工具动力用电与安全防护', amount: 2200 },
-        { id: 'opex_maintain', name: '机械设备定期检修与润滑耗损', description: '设备磨损维护与零件更换', amount: 1200 }
+        { id: 'opex_rent', name: '实训车间/工坊场地租金', description: '工坊车间月度场地租金', amount: 400 },
+        { id: 'opex_master', name: '带教技师与工匠师傅津贴', description: '全职技师师傅与车间指导员薪资', amount: 700 },
+        { id: 'opex_power', name: '动力工业用电、水费与安全保险', description: '大型机床/电动工具动力用电与安全防护', amount: 150 },
+        { id: 'opex_maintain', name: '机械设备定期检修与润滑耗损', description: '设备磨损维护与零件更换', amount: 90 }
       ];
       advice = '职业实训与工坊需兼顾产品质量与技能传授，建议储备 3 个月以上资金支持设备升级换代。';
-    } else if (/超市|商超|便利|杂货|零售|批发|档口|store|shop|market|retail/i.test(pLower)) {
+    } else if (/超市|商超|便利|杂货|零售|批发|档口|百货|服装|服饰|衣帽|鞋店|箱包|手机|数码|电脑|电器|家电|五金|建材|文具|store|shop|market|retail|clothing|garment|tailor|shoe|phone|electronics|hardware/i.test(pLower)) {
       key = 'retail_store';
       displayName = '🛒 社区零售 / 平价商超';
       customName = '便民社区生活平价超市';
       revTip = '日用百货、食品调料与平价生鲜全部收银流水';
-      rev = 80000;
+      rev = 5000;
       cogs = [
-        { id: 'cogs_stock', name: '商品批量批发进货成本', description: '向一级批发商采购米面粮油、日化日杂底价', amount: 56000 },
-        { id: 'cogs_freight', name: '货品物流运输与搬运装卸费', description: '大宗商品长途配送与到店搬运费', amount: 3500 }
+        { id: 'cogs_stock', name: '商品批量批发进货成本', description: '向一级批发商采购米面粮油、日化日杂底价', amount: 3800 },
+        { id: 'cogs_freight', name: '货品物流运输与搬运装卸费', description: '大宗商品长途配送与到店搬运费', amount: 200 }
       ];
       opex = [
-        { id: 'opex_rent', name: '临街商铺月度租金', description: '社区出入口商铺固定月租', amount: 7000 },
-        { id: 'opex_cashier', name: '收银员与理货店员薪资', description: '全职与排班理货员工资', amount: 6500 },
-        { id: 'opex_utility', name: '商超照明、冰柜冷藏用电与网络', description: '陈列冷饮柜持续用电及收银宽带', amount: 2000 },
-        { id: 'opex_loss', name: '货品合理损耗、防盗与包装袋', description: '生鲜自然损耗、环保购物袋采购', amount: 1200 }
+        { id: 'opex_rent', name: '临街商铺月度租金', description: '社区出入口商铺固定月租', amount: 400 },
+        { id: 'opex_cashier', name: '收银员与理货店员薪资', description: '全职与排班理货员工资', amount: 350 },
+        { id: 'opex_utility', name: '商超照明、冰柜冷藏用电与网络', description: '陈列冷饮柜持续用电及收银宽带', amount: 100 },
+        { id: 'opex_loss', name: '货品合理损耗、防盗与包装袋', description: '生鲜自然损耗、环保购物袋采购', amount: 50 }
       ];
       advice = '社区零售走量为主，毛利率通常在 20%-30%，需严格把控进货周转率与损耗。';
     } else if (/农场|农业|种植|养殖|果园|蔬菜|farm|agriculture/i.test(pLower)) {
@@ -550,16 +556,16 @@ app.post('/api/ai/infer-business-structure', async (req, res) => {
       displayName = '🌱 现代农业 / 生态种植';
       customName = '生态农业种植与扶贫合作社';
       revTip = '果蔬收成批发、生态农产品直销与订单进账';
-      rev = 35000;
+      rev = 1800;
       cogs = [
-        { id: 'cogs_seeds', name: '优良种苗、有机肥料与生物农药', description: '非转基因优质种子、有机堆肥与生物防虫剂', amount: 8500 },
-        { id: 'cogs_packaging', name: '保鲜包装箱、果筐与田间耗材', description: '透气果蔬纸箱、冷链冰袋与包装膜', amount: 2500 }
+        { id: 'cogs_seeds', name: '优良种苗、有机肥料与生物农药', description: '非转基因优质种子、有机堆肥与生物防虫剂', amount: 380 },
+        { id: 'cogs_packaging', name: '保鲜包装箱、果筐与田间耗材', description: '透气果蔬纸箱、冷链冰袋与包装膜', amount: 120 }
       ];
       opex = [
-        { id: 'opex_rent', name: '农田土地租赁与大棚租金', description: '合作社耕地与温室大棚承包租金', amount: 3500 },
-        { id: 'opex_farmers', name: '本地农工与田间管理人员工资', description: '全职农艺师与采摘季节工薪酬', amount: 7500 },
-        { id: 'opex_irrigation', name: '灌溉水费、农机柴油与电力', description: '水泵灌溉用电、微耕机农用柴油', amount: 1800 },
-        { id: 'opex_tools', name: '农具维护与水肥一体化管网保养', description: '滴灌管道检修与农机配件耗损', amount: 900 }
+        { id: 'opex_rent', name: '农田土地租赁与大棚租金', description: '合作社耕地与温室大棚承包租金', amount: 280 },
+        { id: 'opex_farmers', name: '本地农工与田间管理人员工资', description: '全职农艺师与采摘季节工薪酬', amount: 550 },
+        { id: 'opex_irrigation', name: '灌溉水费、农机柴油与电力', description: '水泵灌溉用电、微耕机农用柴油', amount: 150 },
+        { id: 'opex_tools', name: '农具维护与水肥一体化管网保养', description: '滴灌管道检修与农机配件耗损', amount: 80 }
       ];
       advice = '农业受季节与天气影响较大，建议预留 4-6 个月固定开销作为越冬或休耕期周转资金。';
     } else if (/儿童|日托|学前|启蒙|幼托|childcare|daycare|kindergarten/i.test(pLower)) {
@@ -567,36 +573,61 @@ app.post('/api/ai/infer-business-structure', async (req, res) => {
       displayName = '🧒 儿童日托 / 社区启蒙';
       customName = '社区贫困儿童日托与学前启蒙中心';
       revTip = '家长托育服务费、营养膳食费与爱心助学款';
-      rev = 38000;
+      rev = 1900;
       cogs = [
-        { id: 'cogs_food', name: '儿童每日营养膳食与辅食原料', description: '新鲜牛奶、鸡蛋、蔬果及安全营养食材', amount: 7500 },
-        { id: 'cogs_toys', name: '益智教具、绘画文具与卫生纸品', description: '安全积木、绘本、儿童专用消毒洗手液', amount: 2200 }
+        { id: 'cogs_food', name: '儿童每日营养膳食与辅食原料', description: '新鲜牛奶、鸡蛋、蔬果及安全营养食材', amount: 320 },
+        { id: 'cogs_toys', name: '益智教具、绘画文具与卫生纸品', description: '安全积木、绘本、儿童专用消毒洗手液', amount: 90 }
       ];
       opex = [
-        { id: 'opex_rent', name: '安全日托场地与户外活动区租金', description: '符合儿童安全规范的室内外场地租金', amount: 5500 },
-        { id: 'opex_teachers', name: '专职幼教老师与保育同工薪资', description: '全职幼师、保育员与厨师阿姨补贴', amount: 11000 },
-        { id: 'opex_utility', name: '恒温空调电费、温水与空气净化', description: '保持适宜室内温度用电与净化器滤网', amount: 1600 },
-        { id: 'opex_safety', name: '儿童安全保险与定期消毒杂费', description: '活动责任险与紫外线消毒耗材', amount: 800 }
+        { id: 'opex_rent', name: '安全日托场地与户外活动区租金', description: '符合儿童安全规范的室内外场地租金', amount: 380 },
+        { id: 'opex_teachers', name: '专职幼教老师与保育同工薪资', description: '全职幼师、保育员与厨师阿姨补贴', amount: 750 },
+        { id: 'opex_utility', name: '恒温空调电费、温水与空气净化', description: '保持适宜室内温度用电与净化器滤网', amount: 120 },
+        { id: 'opex_safety', name: '儿童安全保险与定期消毒杂费', description: '活动责任险与紫外线消毒耗材', amount: 70 }
       ];
       advice = '儿童日托重在安全与营养，保持 3.5 个月以上流动储备以应对公共卫生或突发紧急情况。';
+    } else if (/美容|美发|理发|美甲|纹绣|洗护|洗衣|干洗|salon|beauty|hair|barber|nail|laundry/i.test(pLower)) {
+      key = 'community_service';
+      displayName = '🤝 美容美发 / 社区生活服务';
+      customName = '社区美容美发与便民生活服务';
+      revTip = '理发美容服务、护理套餐与会员卡储值全部进账';
+      rev = 1800;
+      cogs = [
+        { id: 'cogs_materials', name: '洗护美发用品与美容护理耗材', description: '洗发水、染膏、护理液与一次性耗材', amount: 260 },
+        { id: 'cogs_products', name: '零售护发美容产品进货', description: '店售护发素、护肤品等商品批发成本', amount: 100 }
+      ];
+      opex = [
+        { id: 'opex_rent', name: '社区沿街店面租金', description: '每月固定门面铺租', amount: 380 },
+        { id: 'opex_staff', name: '理发师与美容技师薪资', description: '全职技师与学徒薪酬补贴', amount: 650 },
+        { id: 'opex_utility', name: '水电热水与门店清洁耗材', description: '洗护用水用电与毛巾消毒杂支', amount: 120 },
+        { id: 'opex_misc', name: '设备维护与证照年检杂费', description: '吹风机电推维护与营业执照年检', amount: 70 }
+      ];
+      advice = '美容美发属于高毛利生活服务，耗材成本低，核心是稳定客流与会员复购，建议常备 3 个月以上固定开支。';
     } else {
       // General custom business
       key = 'custom';
       displayName = '💡 定制实体 / 小微商业';
       customName = projectName || '定制小微商业实体';
       revTip = '每月提供商品或服务产生的全部营业进账流水';
-      rev = 45000;
+      rev = 2200;
       cogs = [
-        { id: 'cogs_1', name: '核心原材料与直接货品采购', description: '随业务量直接波动的商品或原辅料进货花费', amount: 15000 },
-        { id: 'cogs_2', name: '包装材料与直接加工耗材', description: '包装物、消耗性辅料与直接耗材', amount: 3000 }
+        { id: 'cogs_1', name: '核心原材料与直接货品采购', description: '随业务量直接波动的商品或原辅料进货花费', amount: 700 },
+        { id: 'cogs_2', name: '包装材料与直接加工耗材', description: '包装物、消耗性辅料与直接耗材', amount: 150 }
       ];
       opex = [
-        { id: 'opex_rent', name: '经营场所与办公室月度租金', description: '每月固定支付给业主的场地租金', amount: 5000 },
-        { id: 'opex_labor', name: '全职员工与业务骨干薪资补贴', description: '全职团队与骨干同工每月固定薪酬', amount: 9000 },
-        { id: 'opex_utility', name: '水电物业与网络通讯杂支', description: '每月固定水电能耗与宽带通讯费', amount: 1500 },
-        { id: 'opex_other', name: '设备折旧维护与证照杂项', description: '工具维护、年检与日常杂支', amount: 1000 }
+        { id: 'opex_rent', name: '经营场所与办公室月度租金', description: '每月固定支付给业主的场地租金', amount: 400 },
+        { id: 'opex_labor', name: '全职员工与业务骨干薪资补贴', description: '全职团队与骨干同工每月固定薪酬', amount: 650 },
+        { id: 'opex_utility', name: '水电物业与网络通讯杂支', description: '每月固定水电能耗与宽带通讯费', amount: 120 },
+        { id: 'opex_other', name: '设备折旧维护与证照杂项', description: '工具维护、年检与日常杂支', amount: 80 }
       ];
     }
+
+    // 行业基准金额采用"美元/月"合理量级，按推断币种换算为当地货币，
+    // 让 AI 填入表单的营业收入与物料/开支金额与所选币种同口径、量级真实
+    const inferredRate = SUPPORTED_CURRENCIES.find((c) => c.code === curr)?.rateToUsd || 1;
+    const toLocal = (usd: number) => Math.round(usd * inferredRate);
+    rev = toLocal(rev);
+    cogs = cogs.map((it) => ({ ...it, amount: toLocal(it.amount) }));
+    opex = opex.map((it) => ({ ...it, amount: toLocal(it.amount) }));
 
     return res.json({
       success: true,

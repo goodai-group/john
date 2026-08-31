@@ -312,16 +312,16 @@ export const AssessmentForm: React.FC<FormProps> = ({
       setCustomCurrencyCode(code);
     }
 
-    // 动态成本项：后端返回 cogsItems/opexItems（含 name + amount 预估），兼容字符串数组别名
-    // 关键修复：AI 的"建议金额"绝对不能直接写入表单值，否则若估算恰好 ≈ 月营收，
-    // 用户未察觉就会被算成 100% 进货占比。改为默认 0 + 占位符提示建议区间。
+    // 动态成本项：后端返回 cogsItems/opexItems（含 name + 已按币种换算的行业估值金额），
+    // 直接填入明细与总额（用户可改）。仅当用户已手动调整过成本项（cogsTouched）时
+    // 保留用户数据、不做覆盖，避免 AI 重推时破坏真实经营数据。
     const rawCogs = (result.cogsItems || []).filter((it) => it.name);
     const rawOpex = (result.opexItems || []).filter((it) => it.name);
     const finalCogs = rawCogs.length
-      ? rawCogs.map((it) => ({ label: it.name!, amount: 0, suggestedAmount: Number(it.amount) || 0 }))
+      ? rawCogs.map((it) => ({ label: it.name!, amount: Number(it.amount) || 0, suggestedAmount: Number(it.amount) || 0 }))
       : (result.suggestedCogs || []).map((label) => ({ label, amount: 0 }));
     const finalOpex = rawOpex.length
-      ? rawOpex.map((it) => ({ label: it.name!, amount: 0, suggestedAmount: Number(it.amount) || 0 }))
+      ? rawOpex.map((it) => ({ label: it.name!, amount: Number(it.amount) || 0, suggestedAmount: Number(it.amount) || 0 }))
       : (result.suggestedOpex || []).map((label) => ({ label, amount: 0 }));
 
     const cogsItems = finalCogs.map((it) => ({
@@ -338,24 +338,32 @@ export const AssessmentForm: React.FC<FormProps> = ({
       suggestedAmount: (it as any).suggestedAmount,
       isFixed: false
     }));
-    patch.dynamicCogsItems = cogsItems;
-    patch.dynamicOpexItems = opexItems;
-    setAiSuggested({ cogs: finalCogs, opex: finalOpex });
 
-    // —— 关键修复：用 AI 估算同步营收与进货总额，清除旧 demo/seed 残留值 ——
+    // —— 用 AI 估算同步营收与进货总额，清除旧 demo/seed 残留值 ——
     // 否则表单里会残留 INITIAL_PRESET（如 330000 KES / 132000 KES），与 AI 推断的
     // 明细项完全脱节，导致进货占比算出 100% 或畸形比例。
-    // 仅当用户尚未手动改过这两个字段时才覆盖（避免覆盖用户真实数据）。
+    // 仅当用户尚未手动改过对应字段时才覆盖（避免覆盖用户真实数据）。
     const aiRev = Number(result.estimatedMonthlyRevenue) || 0;
     const aiCogs = (result.cogsItems || []).reduce((s, it) => s + (Number(it.amount) || 0), 0);
-    // 收入：建议填入 AI 估算（用户可改）
-    if (aiRev > 0 && !revenueTouched) {
-      patch.monthlyRevenue = { amount: aiRev, currency: (patch.baseCurrency as any) || 'USD' };
-    }
-    // 进货总额：把 AI 给出的 cogs 合计作为建议值写入 cogsCost（简单模式下用户会看到它；
-    // 动态模式下后续由明细驱动，这里同样填建议值，避免残留旧数）
+    // 金额币种：优先用本次推断出的币种，否则沿用表单当前币种（不再写死 USD）
+    const inferCurrency = (patch.baseCurrency as any) || formData.baseCurrency || 'USD';
+
+    // 成本：明细 + 总额一起写入（动态模式下评分以明细合计为准，不会重复计算）
+    setAiSuggested({ cogs: finalCogs, opex: finalOpex });
     if (!cogsTouched) {
-      patch.cogsCost = { amount: aiCogs, currency: (patch.baseCurrency as any) || 'USD' };
+      patch.dynamicCogsItems = cogsItems;
+      patch.cogsCost = { amount: aiCogs, currency: inferCurrency };
+    }
+    if (!opexTouched) {
+      patch.dynamicOpexItems = opexItems;
+    }
+    // 收入：总流水与真实主营收入同步为 AI 行业估值（用户可改）
+    if (aiRev > 0 && !revenueTouched) {
+      patch.monthlyRevenue = { amount: aiRev, currency: inferCurrency };
+      patch.monthlyRealOperatingRevenue = {
+        amount: Math.max(0, aiRev - (formData.monthlyExternalGrants?.amount || 0)),
+        currency: inferCurrency
+      };
     }
 
     setFormData((prev) => ({ ...prev, ...patch }));
