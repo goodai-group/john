@@ -1,0 +1,180 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]: 智能自动体检
+        - generic [ref=e10]: "|"
+        - generic [ref=e11]: 专为宣教工场爱心门诊、辅导中心与营商服事量身定制 · 永久免费
+      - generic [ref=e12]:
+        - button "使用指南 (3分钟看懂)" [ref=e13] [cursor=pointer]
+        - button "EN" [ref=e18] [cursor=pointer]
+    - generic [ref=e24]:
+      - generic [ref=e25] [cursor=pointer]:
+        - generic [ref=e26]: ✝️
+        - generic [ref=e27]:
+          - heading "商业宣教商业模型财务测算" [level=1] [ref=e28]
+          - paragraph [ref=e29]: 评估商业宣教项目的财务健康度、现金跑道与抗风险能力
+      - navigation [ref=e30]:
+        - button "📋 快速体检" [ref=e31] [cursor=pointer]
+        - button "📊 体检报告" [ref=e36] [cursor=pointer]
+        - button "🧮 沙盒试算" [ref=e41] [cursor=pointer]
+        - button "📖 评分规则" [ref=e45] [cursor=pointer]
+        - button "📁 我的项目" [ref=e49] [cursor=pointer]
+      - generic [ref=e53]:
+        - button "云端备份" [ref=e54] [cursor=pointer]
+        - button "AI 答疑" [ref=e58] [cursor=pointer]
+  - main [ref=e63]:
+    - generic [ref=e64]:
+      - generic [ref=e65]:
+        - generic [ref=e66]:
+          - generic [ref=e67]:
+            - heading "商业宣教商业模型财务测算" [level=1] [ref=e68]
+            - paragraph [ref=e69]: 输入核心财务收支与储备数据，系统实时测算商业模型的健康度、现金跑道与抗风险能力。
+          - button "⚡ 回到极简单页" [ref=e605] [cursor=pointer]
+        - generic [ref=e606]:
+          - button "STEP 01 基本信息与安全模式" [ref=e607] [cursor=pointer]:
+            - generic [ref=e608]: STEP 01
+            - generic [ref=e609]: 基本信息与安全模式
+          - button "STEP 02 资金证明与断点流水" [ref=e610] [cursor=pointer]:
+            - generic [ref=e611]: STEP 02
+            - generic [ref=e612]: 资金证明与断点流水
+          - button "STEP 03 营业收入与混合资金" [ref=e613] [cursor=pointer]:
+            - generic [ref=e614]: STEP 03
+            - generic [ref=e615]: 营业收入与混合资金
+          - button "STEP 04 成本开销与资产负债" [ref=e616] [cursor=pointer]:
+            - generic [ref=e617]: STEP 04
+            - generic [ref=e618]: 成本开销与资产负债
+          - button "STEP 05 多人协作与核对提交" [ref=e619] [cursor=pointer]:
+            - generic [ref=e620]: STEP 05
+            - generic [ref=e621]: 多人协作与核对提交
+      - generic [ref=e77]:
+        - generic [ref=e78]:
+          - generic [ref=e79]:
+            - generic [ref=e80]: 📊
+            - generic [ref=e81]:
+              - generic [ref=e82]:
+                - generic [ref=e83]: 实时晴雨表
+                - generic [ref=e84]: 100% 自动计算
+              - heading "商宣模式运转健康实时测算" [level=3] [ref=e85]
+          - generic [ref=e86]:
+            - generic [ref=e87]:
+              - generic [ref=e88]: 预估健康分
+              - generic [ref=e89]: 81 / 100
+            - generic [ref=e90]: AA 级
+        - generic [ref=e91]:
+          - generic [ref=e92]:
+            - generic [ref=e93]:
+              - generic [ref=e94]: 救命现金电池 (能撑多久)
+              - generic [ref=e100]: 较为吃紧 (1.5~3个月)
+            - generic [ref=e101]:
+              - generic [ref=e102]: 2.6 个月
+              - generic [ref=e103]: 备用金 450,000 KES
+            - paragraph [ref=e106]: ⚠️ 现金储备中等，建议适度控制进货与非必要开销，留足 3 个月以上。
+          - generic [ref=e107]:
+            - generic [ref=e108]:
+              - generic [ref=e109]: 每进账 100 块钱怎么分的？
+              - generic [ref=e114]: 大白话收支构成
+            - generic [ref=e115]:
+              - 'generic "进货成本: 40%" [ref=e116]'
+              - 'generic "房租人工水电: 37%" [ref=e117]'
+              - 'generic "净利润: 23%" [ref=e118]'
+            - generic [ref=e119]:
+              - generic [ref=e122]:
+                - text: 进货
+                - strong [ref=e123]: 40%
+              - generic [ref=e126]:
+                - text: 租金人工
+                - strong [ref=e127]: 37%
+              - generic [ref=e130]:
+                - text: 净赚落袋
+                - strong [ref=e131]: 23%
+            - paragraph [ref=e132]: 🎉 净利润率非常健康，自我造血与抗风险能力优秀。
+      - generic [ref=e668]:
+        - generic [ref=e669]:
+          - generic [ref=e671]:
+            - heading "2. 资金证明方式多元化与断点流水处理" [level=3] [ref=e672]
+            - paragraph [ref=e676]: 没有正规银行流水？凭证有无只影响录入便捷度，与打分和通过率完全无关。
+          - generic [ref=e677]:
+            - generic [ref=e678] [cursor=pointer]:
+              - generic [ref=e679]:
+                - generic [ref=e680]: 无凭证纯手动填写
+                - radio "无凭证纯手动填写 直接手动录入 14 项经营数字，跳过文件上传，打分逻辑完全一致。 兜底平等路径" [ref=e681]
+              - paragraph [ref=e682]: 直接手动录入 14 项经营数字，跳过文件上传，打分逻辑完全一致。
+              - generic [ref=e683]: 兜底平等路径
+            - generic [ref=e684] [cursor=pointer]:
+              - generic [ref=e685]:
+                - generic [ref=e686]: 移动支付截图 / 账单
+                - radio "移动支付截图 / 账单 M-Pesa / 微信收款 / WhatsApp 转账记录等电子凭证。 支持拍照识别" [checked] [ref=e687]
+              - paragraph [ref=e688]: M-Pesa / 微信收款 / WhatsApp 转账记录等电子凭证。
+              - generic [ref=e689]: 支持拍照识别
+            - generic [ref=e690] [cursor=pointer]:
+              - generic [ref=e691]:
+                - generic [ref=e692]: 手写 / 电子记账本照片
+                - radio "手写 / 电子记账本照片 日常手工记账流水单页、账本拍照上传，AI 自动预提取。 适合传统小商户" [ref=e693]
+              - paragraph [ref=e694]: 日常手工记账流水单页、账本拍照上传，AI 自动预提取。
+              - generic [ref=e695]: 适合传统小商户
+            - generic [ref=e696] [cursor=pointer]:
+              - generic [ref=e697]:
+                - generic [ref=e698]: 教会 / 合作社内部记录
+                - radio "教会 / 合作社内部记录 机构出具的经营往来对账单或证明函件。" [ref=e699]
+              - paragraph [ref=e700]: 机构出具的经营往来对账单或证明函件。
+            - generic [ref=e701] [cursor=pointer]:
+              - generic [ref=e702]:
+                - generic [ref=e703]: 正规银行对账单 (PDF)
+                - radio "正规银行对账单 (PDF) 正规银行账户导出的月度对账明细。" [ref=e704]
+              - paragraph [ref=e705]: 正规银行账户导出的月度对账明细。
+          - generic [ref=e706]:
+            - generic [ref=e707]: 上传佐证凭证文件（选填 / 敏感地区模式下识别后立即销毁原图）
+            - generic [ref=e708]:
+              - paragraph [ref=e712]: 点击选择图片或 PDF 文件，或直接拖拽到此处
+              - paragraph [ref=e713]: 支持 JPG、PNG、PDF（单文件不超过 10MB）
+              - generic [ref=e714] [cursor=pointer]: 选择凭证附件
+            - generic [ref=e720]:
+              - generic [ref=e721]:
+                - generic [ref=e725]: M-Pesa_2026_Till_Statement.pdf
+                - generic [ref=e726]: (1387 KB)
+              - generic [ref=e727]:
+                - generic [ref=e728]: 已识别提取
+                - button [ref=e729]
+          - generic [ref=e733]:
+            - generic [ref=e734]:
+              - generic [ref=e735]:
+                - heading "近 6 个月月度流水记录与断点估算 (P0)" [level=4] [ref=e736]
+                - paragraph [ref=e737]: 若部分月份断续缺失，AI 可自动按前后月均值算出一个参考估算值供您确认。
+              - button "AI 计算中..." [disabled] [ref=e792] [cursor=pointer]
+            - generic [ref=e745]:
+              - generic [ref=e746]:
+                - generic [ref=e747]: 2026-01
+                - generic [ref=e749]:
+                  - generic [ref=e750]: KES
+                  - spinbutton [ref=e751]: "320000"
+              - generic [ref=e752]:
+                - generic [ref=e753]: 2026-02
+                - generic [ref=e755]:
+                  - generic [ref=e756]: KES
+                  - spinbutton [ref=e757]: "310000"
+              - generic [ref=e758]:
+                - generic [ref=e759]: 2026-03
+                - generic [ref=e761]:
+                  - generic [ref=e762]: KES
+                  - spinbutton [ref=e763]: "345000"
+              - generic [ref=e764]:
+                - generic [ref=e765]: 2026-04
+                - generic [ref=e767]:
+                  - generic [ref=e768]: KES
+                  - spinbutton [ref=e769]: "330000"
+              - generic [ref=e770]:
+                - generic [ref=e771]:
+                  - generic [ref=e772]: 2026-05
+                  - generic [ref=e773]: AI 估算
+                - generic [ref=e774]:
+                  - generic [ref=e775]: KES
+                  - spinbutton [ref=e776]: "325000"
+              - generic [ref=e777]:
+                - generic [ref=e778]: 2026-06
+                - generic [ref=e780]:
+                  - generic [ref=e781]: KES
+                  - spinbutton [ref=e782]: "350000"
+        - generic [ref=e783]:
+          - button "上一步" [ref=e784] [cursor=pointer]
+          - button "下一步：营业收入与混合资金" [ref=e788] [cursor=pointer]

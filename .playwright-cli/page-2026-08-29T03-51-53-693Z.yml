@@ -1,0 +1,177 @@
+- generic [ref=f2e3]:
+  - banner [ref=f2e4]:
+    - generic [ref=f2e5]:
+      - generic [ref=f2e6]:
+        - generic [ref=f2e7]: 智能自动体检
+        - generic [ref=f2e10]: "|"
+        - generic [ref=f2e11]: 专为宣教工场爱心门诊、辅导中心与营商服事量身定制
+        - button "永久免费 · 费用透明" [ref=f2e223] [cursor=pointer]
+      - generic [ref=f2e16]:
+        - button "使用指南 (3分钟看懂)" [ref=f2e224] [cursor=pointer]
+        - button "EN" [ref=f2e225] [cursor=pointer]
+    - generic [ref=f2e28]:
+      - generic [ref=f2e29] [cursor=pointer]:
+        - generic [ref=f2e30]: ✝️
+        - generic [ref=f2e31]:
+          - heading "商业宣教商业模型财务测算" [level=1] [ref=f2e226]
+          - paragraph [ref=f2e33]: 评估商业宣教项目的财务健康度、现金跑道与抗风险能力
+      - navigation [ref=f2e34]:
+        - button "📋 快速体检" [ref=f2e227] [cursor=pointer]
+        - button "📊 体检报告" [ref=f2e228] [cursor=pointer]
+        - button "🧮 沙盒试算" [ref=f2e229] [cursor=pointer]
+        - button "📖 评分规则" [ref=f2e230] [cursor=pointer]
+        - button "📁 我的项目" [ref=f2e231] [cursor=pointer]
+      - generic [ref=f2e57]:
+        - button "云端备份" [ref=f2e58] [cursor=pointer]
+        - button "AI 答疑" [ref=f2e62] [cursor=pointer]
+  - main [ref=f2e67]:
+    - generic [ref=f2e234]:
+      - generic [ref=f2e235]:
+        - generic [ref=f2e236]:
+          - generic [ref=f2e237]:
+            - button "⚡ 三分钟小白看懂速览 (一眼看懂)" [ref=f2e238] [cursor=pointer]
+            - button "专业财务明细模式" [active] [ref=f2e243] [cursor=pointer]
+          - generic [ref=f2e248]:
+            - generic [ref=f2e249]: "历史版本:"
+            - combobox [ref=f2e250]:
+              - option "v21 (2026/8/29) - 81分" [selected]
+              - option "v20 (2026/8/29) - 45分"
+              - option "v19 (2026/8/29) - 81分"
+              - option "v19 (2026/8/29) - 45分"
+              - option "v18 (2026/8/29) - 36分"
+              - option "v16 (2026/8/29) - 36分"
+              - option "v14 (2026/8/28) - 31分"
+              - option "v13 (2026/8/28) - 31分"
+              - option "v12 (2026/8/28) - 31分"
+              - option "v11 (2026/8/28) - 31分"
+              - option "v10 (2026/8/28) - 31分"
+              - option "v9 (2026/8/28) - 31分"
+              - option "v8 (2026/8/28) - 30分"
+              - option "v7 (2026/8/28) - 30分"
+              - option "v6 (2026/8/28) - 30分"
+              - option "v5 (2026/8/28) - 30分"
+              - option "v4 (2026/8/28) - 30分"
+              - option "v3 (2026/8/28) - 81分"
+              - option "v2 (2026/8/26) - 81分"
+              - option "v2 (2026/8/29) - 65分"
+              - option "v1 (2026/8/28) - 81分"
+            - button "对比" [ref=f2e251] [cursor=pointer]
+        - generic [ref=f2e258]:
+          - button "复制摘要" [ref=f2e259] [cursor=pointer]
+          - button "重新测算" [ref=f2e264] [cursor=pointer]
+          - button "📸 保存体检卡（打印/另存 PDF）" [ref=f2e269] [cursor=pointer]
+          - button "备份" [ref=f2e275] [cursor=pointer]
+          - button "彻底删除" [ref=f2e281] [cursor=pointer]
+      - generic [ref=f2e576]:
+        - generic [ref=f2e577]:
+          - generic [ref=f2e579]:
+            - generic [ref=f2e580]:
+              - generic [ref=f2e581]: 工场服事标准体检评估报告
+              - generic [ref=f2e582]: "生成时间: 2026/8/29"
+            - heading "阳光工坊社区烘焙店 (Sunny Bakehouse)" [level=2] [ref=f2e583]
+            - paragraph [ref=f2e584]: 行业领域：food_beverage ｜ 申报版本：v21 ｜ 基准币种：KES
+          - generic [ref=f2e586]:
+            - generic [ref=f2e587]:
+              - generic [ref=f2e588]: SCORE & GRADE
+              - generic [ref=f2e589]: 等级
+            - generic [ref=f2e590]:
+              - generic [ref=f2e591]: 81/100
+              - generic [ref=f2e592]: 综合抗风险与自我造血指数
+            - generic [ref=f2e593]:
+              - generic [ref=f2e594]: "门槛红线 (Gates):"
+              - generic [ref=f2e595]: 全部通过 (4/4)
+        - generic [ref=f2e600]:
+          - generic [ref=f2e601]:
+            - generic [ref=f2e602]:
+              - heading "4 项一票否决门槛红线 (Gate Checks)" [level=3] [ref=f2e603]
+              - paragraph [ref=f2e608]: 依据标准规范，任何一项触发即判定商业模式存在资金断流或倒挂风险。
+            - generic [ref=f2e609]: 全部红线合规
+          - generic [ref=f2e610]:
+            - generic [ref=f2e617]:
+              - generic [ref=f2e618]:
+                - generic [ref=f2e619]: GATE-1
+                - heading "真实经营收入占比 (Real Revenue Ratio)" [level=4] [ref=f2e620]
+              - paragraph
+            - generic [ref=f2e627]:
+              - generic [ref=f2e628]:
+                - generic [ref=f2e629]: GATE-2
+                - heading "毛利率底线 (Gross Profit Margin)" [level=4] [ref=f2e630]
+              - paragraph
+            - generic [ref=f2e637]:
+              - generic [ref=f2e638]:
+                - generic [ref=f2e639]: GATE-3
+                - heading "运营开销覆盖能力 (OPEX Coverage)" [level=4] [ref=f2e640]
+              - paragraph
+            - generic [ref=f2e647]:
+              - generic [ref=f2e648]:
+                - generic [ref=f2e649]: GATE-4
+                - heading "净盈利与正向现金流 (PAT / Net Margin)" [level=4] [ref=f2e650]
+              - paragraph
+            - generic [ref=f2e657]:
+              - generic [ref=f2e658]:
+                - generic [ref=f2e659]: GATE-5
+                - heading "债务偿付安全边际 (Debt Service Ratio)" [level=4] [ref=f2e660]
+              - paragraph
+        - generic [ref=f2e661]:
+          - generic [ref=f2e662]:
+            - generic [ref=f2e663]:
+              - heading "5 维能力雷达透视" [level=3] [ref=f2e664]
+              - paragraph [ref=f2e665]: 对比行业前 20% 标杆基准线
+            - img [ref=f2e667]:
+              - generic [ref=f2e679]: Market & Profitability
+              - generic [ref=f2e680]: Cost Control (COGS/OPEX)
+              - generic [ref=f2e681]: Cashflow Resilience
+              - generic [ref=f2e682]: Solvency & Debt Buffer
+              - generic [ref=f2e683]: Continuity & Transparency
+            - generic [ref=f2e684]:
+              - generic [ref=f2e685]: 本项目得分
+              - generic [ref=f2e688]: 行业标杆线
+          - generic [ref=f2e691]:
+            - generic [ref=f2e692]:
+              - heading "5 维得分明细" [level=3] [ref=f2e693]
+              - paragraph [ref=f2e694]: 每项满分 100 分，加权综合后构成总分 100 分
+            - generic [ref=f2e695]:
+              - generic [ref=f2e696]:
+                - generic [ref=f2e697]:
+                  - generic [ref=f2e698]: Market & Profitability
+                  - generic [ref=f2e699]: 100 / 100
+                - generic [ref=f2e702]: "行业标杆: 75/100"
+              - generic [ref=f2e704]:
+                - generic [ref=f2e705]:
+                  - generic [ref=f2e706]: Cost Control (COGS/OPEX)
+                  - generic [ref=f2e707]: 96 / 100
+                - generic [ref=f2e710]: "行业标杆: 70/100"
+              - generic [ref=f2e712]:
+                - generic [ref=f2e713]:
+                  - generic [ref=f2e714]: Cashflow Resilience
+                  - generic [ref=f2e715]: 34 / 100
+                - generic [ref=f2e718]: "行业标杆: 65/100"
+              - generic [ref=f2e720]:
+                - generic [ref=f2e721]:
+                  - generic [ref=f2e722]: Solvency & Debt Buffer
+                  - generic [ref=f2e723]: 100 / 100
+                - generic [ref=f2e726]: "行业标杆: 70/100"
+              - generic [ref=f2e728]:
+                - generic [ref=f2e729]:
+                  - generic [ref=f2e730]: Continuity & Transparency
+                  - generic [ref=f2e731]: 100 / 100
+                - generic [ref=f2e734]: "行业标杆: 65/100"
+        - generic [ref=f2e736]:
+          - heading "标准化财务指标核算" [level=3] [ref=f2e737]
+          - generic [ref=f2e738]:
+            - generic [ref=f2e739]:
+              - generic [ref=f2e740]: 月真实毛利率
+              - generic [ref=f2e741]: 60%
+              - generic [ref=f2e742]: 月毛利 KSh 198,000
+            - generic [ref=f2e743]:
+              - generic [ref=f2e744]: 月净利润率
+              - generic [ref=f2e745]: 23%
+              - generic [ref=f2e746]: 净利润 KSh 76,000
+            - generic [ref=f2e747]:
+              - generic [ref=f2e748]: 固定开支占比 (OPEX)
+              - generic [ref=f2e749]: 34.2%
+              - generic [ref=f2e750]: 固定开销 KSh 113,000
+            - generic [ref=f2e751]:
+              - generic [ref=f2e752]: 备用金支撑月数
+              - generic [ref=f2e753]: 1.7 个月
+              - generic [ref=f2e754]: 安全底线为 ≥ 3.0 月

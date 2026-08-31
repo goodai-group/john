@@ -54,6 +54,19 @@ export const isCloudDatabaseAvailable = (): boolean => {
   return isFirebaseReady && dbInstance !== null;
 };
 
+// Firestore 拒绝写入 undefined 字段。递归移除对象中的 undefined，
+// 避免"Unsupported field value: undefined (field xxx)"错误导致云端保存失败。
+export const stripUndefined = <T>(obj: T): T => {
+  if (obj === null || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map((item) => stripUndefined(item)) as unknown as T;
+  const clean: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+    if (value === undefined) continue;
+    clean[key] = stripUndefined(value);
+  }
+  return clean as T;
+};
+
 // ========================
 // 🔐 GOOGLE AUTH METHODS
 // ========================
@@ -129,7 +142,7 @@ export const saveAssessmentToCloud = async (
       ...(user ? { ownerUid: user.uid, ownerEmail: user.email || data.ownerEmail } : {}),
       cloudSyncedAt: new Date().toISOString()
     };
-    await setDoc(docRef, payload, { merge: true });
+    await setDoc(docRef, stripUndefined(payload), { merge: true });
     return true;
   } catch (err) {
     console.warn('saveAssessmentToCloud failed:', err);
@@ -194,7 +207,7 @@ export const saveReportToCloud = async (
       ...(user ? { ownerUid: user.uid, ownerEmail: user.email || report.ownerEmail } : {}),
       cloudSyncedAt: new Date().toISOString()
     };
-    await setDoc(docRef, payload, { merge: true });
+    await setDoc(docRef, stripUndefined(payload), { merge: true });
     return true;
   } catch (err) {
     console.warn('saveReportToCloud failed:', err);
@@ -249,10 +262,10 @@ export const saveQuestionToCloud = async (q: EscalatedQuestion): Promise<boolean
   if (!dbInstance) return false;
   try {
     const docRef = doc(dbInstance, 'escalated_questions', q.id);
-    await setDoc(docRef, {
+    await setDoc(docRef, stripUndefined({
       ...q,
       cloudSyncedAt: new Date().toISOString()
-    }, { merge: true });
+    }), { merge: true });
     return true;
   } catch (err) {
     console.warn('saveQuestionToCloud failed:', err);

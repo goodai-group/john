@@ -1,0 +1,241 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]: 智能自动体检
+        - generic [ref=e10]: "|"
+        - generic [ref=e11]: 专为宣教工场爱心门诊、辅导中心与营商服事量身定制 · 永久免费
+      - generic [ref=e12]:
+        - button "使用指南 (3分钟看懂)" [ref=e13] [cursor=pointer]
+        - button "EN" [ref=e18] [cursor=pointer]
+    - generic [ref=e24]:
+      - generic [ref=e25] [cursor=pointer]:
+        - generic [ref=e26]: ✝️
+        - generic [ref=e27]:
+          - heading "商业宣教商业模型财务测算" [level=1] [ref=e28]
+          - paragraph [ref=e29]: 评估商业宣教项目的财务健康度、现金跑道与抗风险能力
+      - navigation [ref=e30]:
+        - button "📋 快速体检" [ref=e31] [cursor=pointer]
+        - button "📊 体检报告" [ref=e36] [cursor=pointer]
+        - button "🧮 沙盒试算" [ref=e41] [cursor=pointer]
+        - button "📖 评分规则" [ref=e45] [cursor=pointer]
+        - button "📁 我的项目" [ref=e49] [cursor=pointer]
+      - generic [ref=e53]:
+        - button "云端备份" [ref=e54] [cursor=pointer]
+        - button "AI 答疑" [ref=e58] [cursor=pointer]
+  - main [ref=e63]:
+    - generic [ref=e213]:
+      - generic [ref=e215]:
+        - generic [ref=e220]:
+          - generic [ref=e221]:
+            - heading "商业模型试算器 (Sandbox Simulator)" [level=2] [ref=e222]
+            - generic [ref=e223]: 不提交 · 不记录
+          - paragraph [ref=e224]: 随意滑动滑块测算不同进货成本、租金人工与毛利变化对红线判定与最终得分的影响，数据纯本地计算。
+        - generic [ref=e225]:
+          - button "重置默认参数" [active] [ref=e226] [cursor=pointer]
+          - button "带入正式申报表" [ref=e231] [cursor=pointer]
+      - generic [ref=e235]:
+        - generic [ref=e236]:
+          - generic [ref=e237]:
+            - generic [ref=e238]:
+              - heading "1. 收入与毛利参数调校" [level=3] [ref=e239]
+              - generic [ref=e244]:
+                - generic [ref=e245]: "试算币种:"
+                - combobox [ref=e246]:
+                  - option "USD ($)" [selected]
+                  - option "CNY (¥)"
+                  - option "EUR (€)"
+                  - option "GBP (£)"
+                  - option "KES (KSh)"
+                  - option "THB (฿)"
+                  - option "VND (₫)"
+                  - option "NGN (₦)"
+                  - option "EGP (E£)"
+                  - option "IDR (Rp)"
+                  - option "PHP (₱)"
+                  - option "MYR (RM)"
+                  - option "SGD (S$)"
+                  - option "INR (₹)"
+                  - option "JPY (¥)"
+                  - option "KRW (₩)"
+                  - option "HKD (HK$)"
+                  - option "TWD (NT$)"
+                  - option "ZAR (R)"
+                  - option "UGX (USh)"
+                  - option "TZS (TSh)"
+                  - option "ETB (Br)"
+                  - option "GHS (GH₵)"
+                  - option "RWF (FRw)"
+                  - option "MAD (MAD)"
+                  - option "XOF (CFA)"
+                  - option "XAF (FCFA)"
+                  - option "ZMW (ZK)"
+                  - option "MZN (MT)"
+                  - option "BWP (P)"
+                  - option "KHR (៛)"
+                  - option "LAK (₭)"
+                  - option "MMK (K)"
+                  - option "PKR (₨)"
+                  - option "BDT (৳)"
+                  - option "NPR (रू)"
+                  - option "LKR (Rs)"
+                  - option "MNT (₮)"
+                  - option "KZT (₸)"
+                  - option "UZS (so'm)"
+                  - option "AED (AED)"
+                  - option "SAR (SAR)"
+                  - option "QAR (QR)"
+                  - option "KWD (KD)"
+                  - option "ILS (₪)"
+                  - option "JOD (JD)"
+                  - option "TRY (₺)"
+                  - option "CAD (CA$)"
+                  - option "MXN (Mex$)"
+                  - option "BRL (R$)"
+                  - option "ARS (ARS$)"
+                  - option "COP (COL$)"
+                  - option "CLP (CLP$)"
+                  - option "PEN (S/.)"
+                  - option "CRC (₡)"
+                  - option "DOP (RD$)"
+                  - option "CHF (CHF)"
+                  - option "SEK (kr)"
+                  - option "NOK (kr)"
+                  - option "DKK (kr)"
+                  - option "PLN (zł)"
+                  - option "CZK (Kč)"
+                  - option "HUF (Ft)"
+                  - option "AUD (A$)"
+                  - option "NZD (NZ$)"
+                  - option "TMT (TMT)"
+                  - option "TJS (SM)"
+                  - option "KGS (сом)"
+                  - option "AFN (؋)"
+                  - option "AZN (₼)"
+                  - option "AMD (֏)"
+                  - option "GEL (₾)"
+                  - option "CDF (FC)"
+                  - option "AOA (Kz)"
+                  - option "BIF (FBu)"
+                  - option "MGA (Ar)"
+                  - option "SOS (S)"
+                  - option "SDG (SDG)"
+                  - option "SLE (Le)"
+                  - option "GMD (D)"
+                  - option "MVR (Rf)"
+                  - option "BOB (Bs)"
+                  - option "UYU ($U)"
+                  - option "VES (Bs.S)"
+                  - option "PYG (₲)"
+                  - option "GTQ (Q)"
+                  - option "HNL (L)"
+                  - option "NIO (C$)"
+                  - option "JMD (J$)"
+                  - option "TTD (TT$)"
+                  - option "BSD (B$)"
+                  - option "HTG (G)"
+                  - option "BBD (Bds$)"
+                  - option "RON (lei)"
+                  - option "BGN (лв)"
+                  - option "UAH (₴)"
+                  - option "RSD (дин)"
+                  - option "DZD (DA)"
+                  - option "LYD (LD)"
+                  - option "IQD (ع.د)"
+                  - option "LBP (L.L)"
+                  - option "OMR (OMR)"
+                  - option "YER (YR)"
+                  - option "BHD (BD)"
+                  - option "SRD ($)"
+                  - option "GYD (G$)"
+                  - option "PGK (K)"
+                  - option "FJD (FJ$)"
+                  - option "WST (WS$)"
+                  - option "TOP (T$)"
+                  - option "VUV (VT)"
+                  - option "SBD (SI$)"
+                  - option "__CUSTOM__ (¤)"
+            - generic [ref=e247]:
+              - generic [ref=e248]:
+                - generic [ref=e249]: 月均总流水 (Gross Revenue)
+                - generic [ref=e250]: $ 5,000
+              - slider [ref=e251] [cursor=pointer]: "5000"
+            - generic [ref=e252]:
+              - generic [ref=e253]:
+                - generic [ref=e254]:
+                  - generic [ref=e255]: 真实自营收入占比 (排除借款/赠款)
+                  - generic [ref=e256]: "[Gate-1 ≥ 60%]"
+                - generic [ref=e257]: 90% ($ 4,500)
+              - slider [ref=e258] [cursor=pointer]: "90"
+            - generic [ref=e259]:
+              - generic [ref=e260]:
+                - generic [ref=e261]:
+                  - generic [ref=e262]: COGS 原材料与直接进货成本占比
+                  - generic [ref=e263]: "[毛利率: 60.0%]"
+                - generic [ref=e264]: 40% ($ 1,800)
+              - slider [ref=e265] [cursor=pointer]: "40"
+          - generic [ref=e266]:
+            - heading "2. OPEX 运营固定开销与债务结构" [level=3] [ref=e267]
+            - generic [ref=e268]:
+              - generic [ref=e269]:
+                - generic [ref=e270]: 每月房租 (Rent)
+                - spinbutton [ref=e271]: "600"
+              - generic [ref=e272]:
+                - generic [ref=e273]: 员工工资 (Labor)
+                - spinbutton [ref=e274]: "1200"
+              - generic [ref=e275]:
+                - generic [ref=e276]: 水电杂费 (Utility)
+                - spinbutton [ref=e277]: "250"
+              - generic [ref=e278]:
+                - generic [ref=e279]: 税金及规费 (Tax)
+                - spinbutton [ref=e280]: "150"
+              - generic [ref=e281]:
+                - generic [ref=e282]: 每月偿债本息 (Debt)
+                - spinbutton [ref=e283]: "200"
+              - generic [ref=e284]:
+                - generic [ref=e285]: 现有可用备用金 (Cash)
+                - spinbutton [ref=e286]: "8000"
+        - generic [ref=e287]:
+          - generic [ref=e288]:
+            - generic [ref=e289]:
+              - generic [ref=e290]: 实时预估综合评分
+              - generic [ref=e291]: 通过红线检查
+            - generic [ref=e292]:
+              - generic [ref=e293]:
+                - generic [ref=e294]: "55"
+                - generic [ref=e295]: / 100 分 · 客观推演
+              - generic [ref=e296]:
+                - generic [ref=e297]: BB
+                - generic [ref=e298]: TIER
+            - generic [ref=e299]:
+              - generic [ref=e300]:
+                - generic [ref=e301]: 毛利率
+                - generic [ref=e302]: 60.0%
+              - generic [ref=e303]:
+                - generic [ref=e304]: 月到手纯利
+                - text: $ 300
+              - generic [ref=e305]:
+                - generic [ref=e306]: OPEX 固定比
+                - generic [ref=e307]: 50.0%
+              - generic [ref=e308]:
+                - generic [ref=e309]: 备用金缓冲
+                - generic [ref=e310]: 1.9 个月
+          - generic [ref=e311]:
+            - heading "5 项 Gate 红线底线检查状态" [level=4] [ref=e312]
+            - generic [ref=e317]:
+              - generic [ref=e318]:
+                - generic [ref=e319]: 真实营业额占比 ≥ 60%
+                - generic [ref=e324]: 90%
+              - generic [ref=e325]:
+                - generic [ref=e326]: 毛利率底线 ≥ 20%
+                - generic [ref=e331]: 60.0%
+              - generic [ref=e332]:
+                - generic [ref=e333]: 毛利润覆盖每月固定开销
+                - generic [ref=e338]: 已全额覆盖
+              - generic [ref=e339]:
+                - generic [ref=e340]: 税后净利润 PAT ≥ 0
+                - generic [ref=e345]: 正向盈利
+              - generic [ref=e346]:
+                - generic [ref=e347]: 偿债保障 ≥ 1.25x 或 无债
+                - generic [ref=e352]: 2.25x
+            - generic [ref=e353]: 试算仅供自我推演，如需生成带有雷达图与行业对比的正式诊断报告，可点击上方“带入正式申报表”一键填报。

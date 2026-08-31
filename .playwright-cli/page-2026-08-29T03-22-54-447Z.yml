@@ -1,0 +1,164 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]: 智能自动体检
+        - generic [ref=e10]: "|"
+        - generic [ref=e11]: 专为宣教工场爱心门诊、辅导中心与营商服事量身定制
+        - button "永久免费 · 费用透明" [ref=e12] [cursor=pointer]
+      - generic [ref=e16]:
+        - button "使用指南 (3分钟看懂)" [ref=e17] [cursor=pointer]
+        - button "EN" [ref=e22] [cursor=pointer]
+    - generic [ref=e28]:
+      - generic [ref=e29] [cursor=pointer]:
+        - generic [ref=e30]: ✝️
+        - generic [ref=e31]:
+          - heading "商业宣教商业模型财务测算" [level=1] [ref=e32]
+          - paragraph [ref=e33]: 评估商业宣教项目的财务健康度、现金跑道与抗风险能力
+      - navigation [ref=e34]:
+        - button "📋 快速体检" [ref=e35] [cursor=pointer]
+        - button "📊 体检报告" [ref=e40] [cursor=pointer]
+        - button "🧮 沙盒试算" [ref=e45] [cursor=pointer]
+        - button "📖 评分规则" [ref=e49] [cursor=pointer]
+        - button "📁 我的项目" [ref=e53] [cursor=pointer]
+      - generic [ref=e57]:
+        - button "云端备份" [ref=e58] [cursor=pointer]
+        - button "AI 答疑" [ref=e62] [cursor=pointer]
+  - main [ref=e67]:
+    - generic [ref=e225]:
+      - generic [ref=e226]:
+        - generic [ref=e227]:
+          - generic [ref=e228]:
+            - button "⚡ 三分钟小白看懂速览 (一眼看懂)" [ref=e229] [cursor=pointer]
+            - button "专业财务明细模式" [ref=e234] [cursor=pointer]
+          - generic [ref=e239]:
+            - generic [ref=e240]: "历史版本:"
+            - combobox [ref=e241]:
+              - option "v19 (2026/8/29) - 81分" [selected]
+              - option "v18 (2026/8/29) - 36分"
+              - option "v16 (2026/8/29) - 36分"
+              - option "v14 (2026/8/28) - 31分"
+              - option "v13 (2026/8/28) - 31分"
+              - option "v12 (2026/8/28) - 31分"
+              - option "v11 (2026/8/28) - 31分"
+              - option "v10 (2026/8/28) - 31分"
+              - option "v9 (2026/8/28) - 31分"
+              - option "v8 (2026/8/28) - 30分"
+              - option "v7 (2026/8/28) - 30分"
+              - option "v6 (2026/8/28) - 30分"
+              - option "v5 (2026/8/28) - 30分"
+              - option "v4 (2026/8/28) - 30分"
+              - option "v3 (2026/8/28) - 81分"
+              - option "v2 (2026/8/26) - 81分"
+              - option "v2 (2026/8/29) - 65分"
+              - option "v1 (2026/8/28) - 81分"
+            - button "对比" [ref=e242] [cursor=pointer]
+        - generic [ref=e249]:
+          - button "复制摘要" [ref=e250] [cursor=pointer]
+          - button "重新测算" [ref=e255] [cursor=pointer]
+          - button "📸 保存体检卡（打印/另存 PDF）" [ref=e260] [cursor=pointer]
+          - button "备份" [ref=e266] [cursor=pointer]
+          - button "彻底删除" [ref=e272] [cursor=pointer]
+      - generic [ref=e541]:
+        - generic [ref=e542]:
+          - generic [ref=e544]:
+            - generic [ref=e545]:
+              - generic [ref=e546]: 工场服事标准体检评估报告
+              - generic [ref=e547]: "生成时间: 2026/8/29"
+            - heading "阳光工坊社区烘焙店 (Sunny Bakehouse)" [level=2] [ref=e548]
+            - paragraph [ref=e549]: 行业领域：food_beverage ｜ 申报版本：v19 ｜ 基准币种：KES
+          - generic [ref=e551]:
+            - generic [ref=e552]:
+              - generic [ref=e553]: SCORE & GRADE
+              - generic [ref=e554]: 等级
+            - generic [ref=e555]:
+              - generic [ref=e556]: 81/100
+              - generic [ref=e557]: 综合抗风险与自我造血指数
+            - generic [ref=e558]:
+              - generic [ref=e559]: "门槛红线 (Gates):"
+              - generic [ref=e560]: 全部通过 (4/4)
+        - generic [ref=e565]:
+          - generic [ref=e566]:
+            - generic [ref=e567]:
+              - heading "4 项一票否决门槛红线 (Gate Checks)" [level=3] [ref=e568]
+              - paragraph [ref=e573]: 依据标准规范，任何一项触发即判定商业模式存在资金断流或倒挂风险。
+            - generic [ref=e574]: 全部红线合规
+          - generic [ref=e575]:
+            - generic [ref=e582]:
+              - heading "真实经营收入占比 (Real Revenue Ratio)" [level=4] [ref=e584]
+              - paragraph
+            - generic [ref=e591]:
+              - heading "毛利率底线 (Gross Profit Margin)" [level=4] [ref=e593]
+              - paragraph
+            - generic [ref=e600]:
+              - heading "运营开销覆盖能力 (OPEX Coverage)" [level=4] [ref=e602]
+              - paragraph
+            - generic [ref=e609]:
+              - heading "净盈利与正向现金流 (PAT / Net Margin)" [level=4] [ref=e611]
+              - paragraph
+            - generic [ref=e618]:
+              - heading "债务偿付安全边际 (Debt Service Ratio)" [level=4] [ref=e620]
+              - paragraph
+        - generic [ref=e621]:
+          - generic [ref=e622]:
+            - generic [ref=e623]:
+              - heading "5 维能力雷达透视" [level=3] [ref=e624]
+              - paragraph [ref=e625]: 对比行业前 20% 标杆基准线
+            - img [ref=e627]:
+              - generic [ref=e639]: Market & Profitability
+              - generic [ref=e640]: Cost Control (COGS/OPEX)
+              - generic [ref=e641]: Cashflow Resilience
+              - generic [ref=e642]: Solvency & Debt Buffer
+              - generic [ref=e643]: Continuity & Transparency
+            - generic [ref=e644]:
+              - generic [ref=e645]: 本项目得分
+              - generic [ref=e648]: 行业标杆线
+          - generic [ref=e651]:
+            - generic [ref=e652]:
+              - heading "5 维得分明细" [level=3] [ref=e653]
+              - paragraph [ref=e654]: 每项满分 100 分，加权综合后构成总分 100 分
+            - generic [ref=e655]:
+              - generic [ref=e656]:
+                - generic [ref=e657]:
+                  - generic [ref=e658]: Market & Profitability
+                  - generic [ref=e659]: 100 / 100
+                - generic [ref=e662]: "行业标杆: 75/100"
+              - generic [ref=e664]:
+                - generic [ref=e665]:
+                  - generic [ref=e666]: Cost Control (COGS/OPEX)
+                  - generic [ref=e667]: 96 / 100
+                - generic [ref=e670]: "行业标杆: 70/100"
+              - generic [ref=e672]:
+                - generic [ref=e673]:
+                  - generic [ref=e674]: Cashflow Resilience
+                  - generic [ref=e675]: 34 / 100
+                - generic [ref=e678]: "行业标杆: 65/100"
+              - generic [ref=e680]:
+                - generic [ref=e681]:
+                  - generic [ref=e682]: Solvency & Debt Buffer
+                  - generic [ref=e683]: 100 / 100
+                - generic [ref=e686]: "行业标杆: 70/100"
+              - generic [ref=e688]:
+                - generic [ref=e689]:
+                  - generic [ref=e690]: Continuity & Transparency
+                  - generic [ref=e691]: 100 / 100
+                - generic [ref=e694]: "行业标杆: 65/100"
+        - generic [ref=e696]:
+          - heading "标准化财务指标核算" [level=3] [ref=e697]
+          - generic [ref=e698]:
+            - generic [ref=e699]:
+              - generic [ref=e700]: 月真实毛利率
+              - generic [ref=e701]: 60%
+              - generic [ref=e702]: 月毛利 KSh 198,000
+            - generic [ref=e703]:
+              - generic [ref=e704]: 月净利润率
+              - generic [ref=e705]: 23%
+              - generic [ref=e706]: 净利润 KSh 76,000
+            - generic [ref=e707]:
+              - generic [ref=e708]: 固定开支占比 (OPEX)
+              - generic [ref=e709]: 34.2%
+              - generic [ref=e710]: 固定开销 KSh 113,000
+            - generic [ref=e711]:
+              - generic [ref=e712]: 备用金支撑月数
+              - generic [ref=e713]: 1.7 个月
+              - generic [ref=e714]: 安全底线为 ≥ 3.0 月

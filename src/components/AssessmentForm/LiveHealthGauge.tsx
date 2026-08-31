@@ -19,26 +19,36 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
   // Real-time calculated metrics
   const report = calculateAssessmentReport(formData);
 
-  const totalRev = Math.max(1, formData.monthlyRevenue.amount);
-  const cogs = formData.cogsCost.amount;
-  const opex =
-    formData.rentCost.amount +
-    formData.laborCost.amount +
-    formData.utilityCost.amount +
-    formData.taxCost.amount +
-    formData.otherOpex.amount;
+  const totalRev = formData.monthlyRevenue.amount;
+  const hasRevenue = totalRev > 0;
+  // COGS / OPEX / 毛利 / 净利 一律复用评分引擎统一口径
+  // （动态明细项优先、OPEX 不含税费），保证晴雨表与体检报告完全一致
+  const nf = report.normalizedFinancials;
+  const cogs = nf.monthlyCogs;
+  const opex = nf.monthlyOpex;
+  const tax = formData.taxCost.amount;
   const cash = formData.cashAndLiquidAssets.amount;
 
-  const grossProfit = Math.max(0, totalRev - cogs);
-  const netProfit = grossProfit - opex;
+  const grossProfit = nf.grossProfit;
+  const netProfit = nf.netProfit;
 
-  const opexRatioPct = Math.round((opex / totalRev) * 100);
-  const netMarginPct = Math.round((netProfit / totalRev) * 100);
+  const opexRatioPct = hasRevenue ? Math.round((opex / totalRev) * 100) : 0;
+  const netMarginPct = hasRevenue ? Math.round((netProfit / totalRev) * 100) : 0;
 
-  // Runway in months
-  const monthlyBurn = opex + cogs * 0.4;
-  const runwayMonths = monthlyBurn > 0 ? (cash / monthlyBurn).toFixed(1) : '99.0';
-  const runwayNum = parseFloat(runwayMonths);
+  // 现金跑道直接复用评分引擎的统一口径（COGS + OPEX + 还贷，不含税），
+  // 保证"快速体检晴雨表"与"体检报告"显示完全一致
+  const runwayNum = report.normalizedFinancials.cashRunwayMonths || 0;
+  // 无任何开销但持有储备金时视为"几乎不会耗尽"；连储备金都没有则直接显示 0 个月
+  const runwayMonths =
+    runwayNum > 0 ? runwayNum.toFixed(1) : cash > 0 ? '99.0' : '0.0';
+
+  // 收支构成三段（进货/开销/净利）。净利为负时三段合计可能超过 100%，
+  // 按比例压缩进度条宽度避免溢出，文字仍显示真实百分比。
+  const cogsPct = hasRevenue ? Math.max(0, (cogs / totalRev) * 100) : 0;
+  const opexPct = hasRevenue ? Math.max(0, (opex / totalRev) * 100) : 0;
+  const netPct = hasRevenue ? Math.max(0, (netProfit / totalRev) * 100) : 0;
+  const totalPct = cogsPct + opexPct + netPct;
+  const scale = totalPct > 100 ? 100 / totalPct : 1;
 
   // Runway battery color
   let batteryColor = 'text-emerald-600 bg-emerald-50 border-emerald-200';
@@ -155,17 +165,17 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
           <div className="w-full h-4 rounded-full overflow-hidden flex bg-neutral-200">
             <div
               className="bg-rose-400 h-full transition-all duration-300"
-              style={{ width: `${Math.max(0, Math.min(100, (cogs / totalRev) * 100))}%` }}
-              title={`进货成本: ${Math.round((cogs / totalRev) * 100)}%`}
+              style={{ width: `${cogsPct * scale}%` }}
+              title={`进货成本: ${Math.round(cogsPct)}%`}
             />
             <div
               className="bg-amber-400 h-full transition-all duration-300"
-              style={{ width: `${Math.max(0, Math.min(100, (opex / totalRev) * 100))}%` }}
-              title={`房租人工水电: ${Math.round((opex / totalRev) * 100)}%`}
+              style={{ width: `${opexPct * scale}%` }}
+              title={`房租人工水电: ${Math.round(opexPct)}%`}
             />
             <div
               className="bg-emerald-500 h-full transition-all duration-300"
-              style={{ width: `${Math.max(0, Math.min(100, (Math.max(0, netProfit) / totalRev) * 100))}%` }}
+              style={{ width: `${netPct * scale}%` }}
               title={`净利润: ${Math.max(0, netMarginPct)}%`}
             />
           </div>
@@ -173,7 +183,7 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
           <div className="grid grid-cols-3 gap-1 text-xs sm:text-sm font-semibold pt-1">
             <div className="flex items-center gap-1.5 text-rose-800">
               <span className="w-2.5 h-2.5 rounded-full bg-rose-400 shrink-0" />
-              <span>进货 <strong>{Math.round((cogs / totalRev) * 100)}%</strong></span>
+              <span>进货 <strong>{Math.round(cogsPct)}%</strong></span>
             </div>
             <div className="flex items-center gap-1.5 text-amber-800">
               <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" />
@@ -186,7 +196,9 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
           </div>
 
           <p className="text-xs sm:text-sm text-neutral-600 leading-relaxed font-medium">
-            {netMarginPct >= 20
+            {netProfit < 0
+              ? '🚨 当前处于亏损状态：每进账 100 块，进货与开销已占满甚至超过 100%，需优先压缩成本或提升售价。'
+              : netMarginPct >= 20
               ? '🎉 净利润率非常健康，自我造血与抗风险能力优秀。'
               : netMarginPct >= 8
               ? '👍 属于微利稳健运行，注意控制房租和原料损耗。'

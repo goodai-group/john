@@ -29,10 +29,48 @@ import {
   Language,
   MoneyField,
   MonthlyBreakdown,
-  ProofType
+  ProofType,
+  proofTypeLabel
 } from '../../types';
-import { SUPPORTED_CURRENCIES, formatMoney } from '../../lib/currencies';
+import { SUPPORTED_CURRENCIES, formatMoney, CUSTOM_CURRENCY_VALUE } from '../../lib/currencies';
 import { INDUSTRY_BENCHMARKS } from '../../lib/industryBenchmarks';
+
+/** 行业枚举值集合，用于在 AI 返回值与可选项之间做映射 */
+const INDUSTRY_KEYS = INDUSTRY_BENCHMARKS.map((b) => b.id) as string[];
+/** 下拉里选中的"自定义行业"占位值 */
+export const CUSTOM_INDUSTRY_VALUE = '__CUSTOM__';
+
+interface InferredStructure {
+  // 后端真实返回字段
+  inferredIndustryKey?: string;
+  industryDisplayName?: string;
+  customIndustryName?: string;
+  suggestedCurrency?: string;
+  cogsItems?: Array<{ id?: string; name?: string; amount?: number }>;
+  opexItems?: Array<{ id?: string; name?: string; amount?: number }>;
+  estimatedMonthlyRevenue?: number;
+  // 兼容别名（备用）
+  industry?: string;
+  baseCurrency?: string;
+  suggestedCogs?: string[];
+  suggestedOpex?: string[];
+}
+
+/** 调用后端 AI 接口，基于项目/店铺名称推算行业、币种与成本结构 */
+async function callInferBusinessStructure(projectName: string): Promise<InferredStructure | null> {
+  try {
+    const res = await fetch('/api/ai/infer-business-structure', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ projectName })
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    return data as InferredStructure;
+  } catch {
+    return null;
+  }
+}
 import { saveActiveDraft, clearActiveDraft } from '../../lib/storage';
 import { LiveHealthGauge } from './LiveHealthGauge';
 
@@ -65,28 +103,28 @@ const DEFAULT_FORM_DATA: BusinessFormData = {
   proofType: 'mobile_payment',
   proofFiles: [],
   monthlyBreakdowns: [
-    { month: '2026-01', revenue: { amount: 3500, currency: 'USD' } },
-    { month: '2026-02', revenue: { amount: 3800, currency: 'USD' } },
-    { month: '2026-03', revenue: { amount: 3600, currency: 'USD' } },
-    { month: '2026-04', revenue: { amount: 4100, currency: 'USD' } },
-    { month: '2026-05', revenue: { amount: 3900, currency: 'USD' } },
-    { month: '2026-06', revenue: { amount: 4200, currency: 'USD' } }
+    { month: '2026-01', revenue: { amount: 0, currency: 'USD' } },
+    { month: '2026-02', revenue: { amount: 0, currency: 'USD' } },
+    { month: '2026-03', revenue: { amount: 0, currency: 'USD' } },
+    { month: '2026-04', revenue: { amount: 0, currency: 'USD' } },
+    { month: '2026-05', revenue: { amount: 0, currency: 'USD' } },
+    { month: '2026-06', revenue: { amount: 0, currency: 'USD' } }
   ],
-  monthlyRevenue: { amount: 3850, currency: 'USD' },
-  monthlyRealOperatingRevenue: { amount: 3850, currency: 'USD' },
+  monthlyRevenue: { amount: 0, currency: 'USD' },
+  monthlyRealOperatingRevenue: { amount: 0, currency: 'USD' },
   monthlyExternalGrants: { amount: 0, currency: 'USD' },
-  cogsCost: { amount: 1540, currency: 'USD' },
-  rentCost: { amount: 450, currency: 'USD' },
-  laborCost: { amount: 600, currency: 'USD' },
-  utilityCost: { amount: 150, currency: 'USD' },
-  taxCost: { amount: 80, currency: 'USD' },
-  otherOpex: { amount: 120, currency: 'USD' },
-  existingDebtMonthlyPayment: { amount: 100, currency: 'USD' },
-  cashAndLiquidAssets: { amount: 5000, currency: 'USD' },
-  inventoryValue: { amount: 2000, currency: 'USD' },
-  operatingMonthsCount: 16,
-  fullTimeEmployeesCount: 2,
-  ownerEmail: 'owner@example.com',
+  cogsCost: { amount: 0, currency: 'USD' },
+  rentCost: { amount: 0, currency: 'USD' },
+  laborCost: { amount: 0, currency: 'USD' },
+  utilityCost: { amount: 0, currency: 'USD' },
+  taxCost: { amount: 0, currency: 'USD' },
+  otherOpex: { amount: 0, currency: 'USD' },
+  existingDebtMonthlyPayment: { amount: 0, currency: 'USD' },
+  cashAndLiquidAssets: { amount: 0, currency: 'USD' },
+  inventoryValue: { amount: 0, currency: 'USD' },
+  operatingMonthsCount: 12,
+  fullTimeEmployeesCount: 1,
+  ownerEmail: '',
   collaborators: [],
   isSubmitted: false,
   isDraft: true
@@ -112,6 +150,25 @@ export const AssessmentForm: React.FC<FormProps> = ({
   const [collaboratorSection, setCollaboratorSection] = useState('all');
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
 
+  // —— AI 推算行业/币种/成本结构 相关状态 ——
+  const [inferState, setInferState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
+  const [customIndustry, setCustomIndustry] = useState(formData.industry === CUSTOM_INDUSTRY_VALUE ? formData.customIndustryName || '' : '');
+  const [customCurrencyCode, setCustomCurrencyCode] = useState(
+    formData.baseCurrency === CUSTOM_CURRENCY_VALUE ? formData.customCurrencyCode || '' : ''
+  );
+  // 后端返回的 AI 建议（用于"恢复 AI 建议"按钮）
+  // AI 建议的成本项结构（含 label + 预估金额 amount），用于"恢复 AI 建议"
+  const [aiSuggested, setAiSuggested] = useState<{
+    cogs: Array<{ label: string; amount: number }>;
+    opex: Array<{ label: string; amount: number }>;
+  } | null>(null);
+  // 用户是否手动改过动态项（用于显示"已手动调整"标记）
+  const [cogsTouched, setCogsTouched] = useState(false);
+  const [opexTouched, setOpexTouched] = useState(false);
+  const [revenueTouched, setRevenueTouched] = useState(false);
+  const inferTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inferReqId = React.useRef(0);
+
   // Auto-save local draft on any change
   useEffect(() => {
     saveActiveDraft(formData);
@@ -126,6 +183,230 @@ export const AssessmentForm: React.FC<FormProps> = ({
       [key]: value,
       updatedAt: new Date().toISOString()
     }));
+  };
+
+  // —— 动态成本项（COGS / OPEX）辅助函数 ——
+  const updateDynamicCogsItem = (id: string, patch: Partial<{ label: string; value: number; isFixed: boolean }>) => {
+    setCogsTouched(true);
+    setFormData((prev) => ({
+      ...prev,
+      dynamicCogsItems: (prev.dynamicCogsItems || []).map((it) => (it.id === id ? { ...it, ...patch } : it)),
+      updatedAt: new Date().toISOString()
+    }));
+  };
+  const addDynamicCogsItem = () => {
+    setCogsTouched(true);
+    setFormData((prev) => ({
+      ...prev,
+      dynamicCogsItems: [
+        ...(prev.dynamicCogsItems || []),
+        { id: `cogs-${Date.now()}`, label: '新增物料成本项', value: 0, isFixed: false }
+      ],
+      updatedAt: new Date().toISOString()
+    }));
+  };
+  const removeDynamicCogsItem = (id: string) => {
+    setCogsTouched(true);
+    setFormData((prev) => ({
+      ...prev,
+      dynamicCogsItems: (prev.dynamicCogsItems || []).filter((it) => it.id !== id),
+      updatedAt: new Date().toISOString()
+    }));
+  };
+
+  const updateDynamicOpexItem = (id: string, patch: Partial<{ label: string; value: number; isFixed: boolean }>) => {
+    setOpexTouched(true);
+    setFormData((prev) => ({
+      ...prev,
+      dynamicOpexItems: (prev.dynamicOpexItems || []).map((it) => (it.id === id ? { ...it, ...patch } : it)),
+      updatedAt: new Date().toISOString()
+    }));
+  };
+  const addDynamicOpexItem = () => {
+    setOpexTouched(true);
+    setFormData((prev) => ({
+      ...prev,
+      dynamicOpexItems: [
+        ...(prev.dynamicOpexItems || []),
+        { id: `opex-${Date.now()}`, label: '新增运营开支项', value: 0, isFixed: false }
+      ],
+      updatedAt: new Date().toISOString()
+    }));
+  };
+  const removeDynamicOpexItem = (id: string) => {
+    setOpexTouched(true);
+    setFormData((prev) => ({
+      ...prev,
+      dynamicOpexItems: (prev.dynamicOpexItems || []).filter((it) => it.id !== id),
+      updatedAt: new Date().toISOString()
+    }));
+  };
+
+  // —— 行业自定义 / 币种自定义 处理 ——
+  const handleIndustryChange = (value: string) => {
+    if (value === CUSTOM_INDUSTRY_VALUE) {
+      updateField('industry', CUSTOM_INDUSTRY_VALUE as any);
+      // 若用户尚未自填自定义行业，先用项目名预填，降低空框困惑
+      const prefill = customIndustry || formData.projectName.trim();
+      setCustomIndustry(prefill);
+      updateField('customIndustryName', prefill || undefined);
+      return;
+    }
+    updateField('industry', value as BusinessFormData['industry']);
+    updateField('customIndustryName', undefined as any);
+    setCustomIndustry('');
+  };
+  const handleCustomIndustryInput = (value: string) => {
+    setCustomIndustry(value);
+    updateField('customIndustryName', value || undefined);
+  };
+
+  const handleCurrencyChange = (value: string) => {
+    if (value === CUSTOM_CURRENCY_VALUE) {
+      updateField('baseCurrency', CUSTOM_CURRENCY_VALUE as any);
+      return;
+    }
+    updateField('baseCurrency', value as CurrencyCode);
+    updateField('customCurrencyCode', undefined as any);
+    setCustomCurrencyCode('');
+  };
+  const handleCustomCurrencyInput = (value: string) => {
+    const code = value.trim().toUpperCase().slice(0, 3);
+    setCustomCurrencyCode(code);
+    updateField('customCurrencyCode', code);
+  };
+
+  // —— AI 推算：根据项目/店铺名称推断行业、币种与成本结构 ——
+  const applyInferResult = (result: InferredStructure) => {
+    const patch: Partial<BusinessFormData> = { updatedAt: new Date().toISOString() };
+
+    // 行业：优先使用后端 inferredIndustryKey，兼容 industry 别名；命中枚举则使用枚举，否则归为自定义行业
+    // 注意：后端兜底规则对未匹配项返回 'custom'，应视为未命中枚举，改用 customIndustryName（即用户所填项目名）
+    const rawIndustryKey = result.inferredIndustryKey || result.industry || '';
+    const rawIndustry =
+      rawIndustryKey && rawIndustryKey !== 'custom' ? rawIndustryKey : (result.customIndustryName || '');
+    const matchedIndustry = rawIndustry && INDUSTRY_KEYS.includes(rawIndustry) ? rawIndustry : null;
+    if (matchedIndustry) {
+      patch.industry = matchedIndustry as BusinessFormData['industry'];
+      patch.customIndustryName = undefined as any;
+      setCustomIndustry('');
+    } else if (rawIndustry) {
+      patch.industry = CUSTOM_INDUSTRY_VALUE as any;
+      patch.customIndustryName = rawIndustry;
+      setCustomIndustry(rawIndustry);
+    }
+
+    // 币种：优先 suggestedCurrency，兼容 baseCurrency 别名
+    const rawCurrency = (result.suggestedCurrency || result.baseCurrency || '').trim();
+    const knownCurrency = SUPPORTED_CURRENCIES.find(
+      (c) => !c.isCustomOption && c.code.toUpperCase() === rawCurrency.toUpperCase()
+    );
+    if (knownCurrency) {
+      patch.baseCurrency = knownCurrency.code as CurrencyCode;
+      patch.customCurrencyCode = undefined as any;
+      setCustomCurrencyCode('');
+    } else if (rawCurrency) {
+      const code = rawCurrency.toUpperCase().slice(0, 3);
+      patch.baseCurrency = CUSTOM_CURRENCY_VALUE as any;
+      patch.customCurrencyCode = code;
+      setCustomCurrencyCode(code);
+    }
+
+    // 动态成本项：后端返回 cogsItems/opexItems（含 name + amount 预估），兼容字符串数组别名
+    // 关键修复：AI 的"建议金额"绝对不能直接写入表单值，否则若估算恰好 ≈ 月营收，
+    // 用户未察觉就会被算成 100% 进货占比。改为默认 0 + 占位符提示建议区间。
+    const rawCogs = (result.cogsItems || []).filter((it) => it.name);
+    const rawOpex = (result.opexItems || []).filter((it) => it.name);
+    const finalCogs = rawCogs.length
+      ? rawCogs.map((it) => ({ label: it.name!, amount: 0, suggestedAmount: Number(it.amount) || 0 }))
+      : (result.suggestedCogs || []).map((label) => ({ label, amount: 0 }));
+    const finalOpex = rawOpex.length
+      ? rawOpex.map((it) => ({ label: it.name!, amount: 0, suggestedAmount: Number(it.amount) || 0 }))
+      : (result.suggestedOpex || []).map((label) => ({ label, amount: 0 }));
+
+    const cogsItems = finalCogs.map((it) => ({
+      id: `cogs-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      label: it.label,
+      value: it.amount,
+      suggestedAmount: (it as any).suggestedAmount,
+      isFixed: false
+    }));
+    const opexItems = finalOpex.map((it) => ({
+      id: `opex-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      label: it.label,
+      value: it.amount,
+      suggestedAmount: (it as any).suggestedAmount,
+      isFixed: false
+    }));
+    patch.dynamicCogsItems = cogsItems;
+    patch.dynamicOpexItems = opexItems;
+    setAiSuggested({ cogs: finalCogs, opex: finalOpex });
+
+    // —— 关键修复：用 AI 估算同步营收与进货总额，清除旧 demo/seed 残留值 ——
+    // 否则表单里会残留 INITIAL_PRESET（如 330000 KES / 132000 KES），与 AI 推断的
+    // 明细项完全脱节，导致进货占比算出 100% 或畸形比例。
+    // 仅当用户尚未手动改过这两个字段时才覆盖（避免覆盖用户真实数据）。
+    const aiRev = Number(result.estimatedMonthlyRevenue) || 0;
+    const aiCogs = (result.cogsItems || []).reduce((s, it) => s + (Number(it.amount) || 0), 0);
+    // 收入：建议填入 AI 估算（用户可改）
+    if (aiRev > 0 && !revenueTouched) {
+      patch.monthlyRevenue = { amount: aiRev, currency: (patch.baseCurrency as any) || 'USD' };
+    }
+    // 进货总额：把 AI 给出的 cogs 合计作为建议值写入 cogsCost（简单模式下用户会看到它；
+    // 动态模式下后续由明细驱动，这里同样填建议值，避免残留旧数）
+    if (!cogsTouched) {
+      patch.cogsCost = { amount: aiCogs, currency: (patch.baseCurrency as any) || 'USD' };
+    }
+
+    setFormData((prev) => ({ ...prev, ...patch }));
+  };
+
+  const handleProjectNameChange = (value: string) => {
+    updateField('projectName', value);
+    if (inferTimer.current) clearTimeout(inferTimer.current);
+    const name = value.trim();
+    if (name.length < 2) {
+      setInferState('idle');
+      return;
+    }
+    setInferState('loading');
+    inferTimer.current = setTimeout(async () => {
+      const reqId = ++inferReqId.current;
+      const result = await callInferBusinessStructure(name);
+      if (reqId !== inferReqId.current) return; // 丢弃过期请求
+      if (result && (result.inferredIndustryKey || result.suggestedCurrency || result.opexItems?.length || result.cogsItems?.length)) {
+        applyInferResult(result);
+        setInferState('done');
+      } else {
+        setInferState('error');
+      }
+    }, 1200);
+  };
+
+  /** 将动态成本项恢复为 AI 上次建议的结构（含预估金额） */
+  const restoreAiSuggestion = () => {
+    if (!aiSuggested) return;
+    const ok = window.confirm(
+      '恢复 AI 建议会把明细金额填回 AI 的估值（仅供参考，不代表你的真实成本）。\n\n建议：把数字改回你的实际值，避免数据失真。\n\n确认要恢复吗？'
+    );
+    if (!ok) return;
+    const cogsItems = aiSuggested.cogs.map((it) => ({
+      id: `cogs-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      label: it.label,
+      value: it.amount,
+      suggestedAmount: it.suggestedAmount,
+      isFixed: false
+    }));
+    const opexItems = aiSuggested.opex.map((it) => ({
+      id: `opex-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      label: it.label,
+      value: it.amount,
+      suggestedAmount: it.suggestedAmount,
+      isFixed: false
+    }));
+    setFormData((prev) => ({ ...prev, dynamicCogsItems: cogsItems, dynamicOpexItems: opexItems, updatedAt: new Date().toISOString() }));
+    setCogsTouched(false);
+    setOpexTouched(false);
   };
 
   const updateMoney = (
@@ -145,22 +426,37 @@ export const AssessmentForm: React.FC<FormProps> = ({
     amount: number,
     currency?: CurrencyCode
   ) => {
-    setFormData((prev) => ({
-      ...prev,
-      [fieldKey]: {
-        amount: Math.max(0, isNaN(amount) ? 0 : amount),
-        currency: currency || prev[fieldKey].currency || prev.baseCurrency,
-        lastEditedBy: prev.ownerEmail,
-        lastEditedAt: new Date().toISOString()
-      },
-      updatedAt: new Date().toISOString()
-    }));
+    if (fieldKey === 'monthlyRevenue') setRevenueTouched(true);
+    setFormData((prev) => {
+      const sanitized = Math.max(0, isNaN(amount) ? 0 : amount);
+      const patch: Record<string, unknown> = {
+        [fieldKey]: {
+          amount: sanitized,
+          currency: currency || prev[fieldKey].currency || prev.baseCurrency,
+          lastEditedBy: prev.ownerEmail,
+          lastEditedAt: new Date().toISOString()
+        },
+        updatedAt: new Date().toISOString()
+      };
+      // 关键同步：总流水 ≈ 真实经营收入 + 外部赠款。
+      // 若不同步，晴雨表"收支构成"（按总流水）与"健康分"（按真实经营收入）会使用不同收入，
+      // 导致用户改流水后出现"显示亏损但健康分仍及格"的矛盾结果。
+      if (fieldKey === 'monthlyRevenue') {
+        patch.monthlyRealOperatingRevenue = {
+          ...prev.monthlyRealOperatingRevenue,
+          amount: Math.max(0, sanitized - (prev.monthlyExternalGrants?.amount || 0)),
+          lastEditedBy: prev.ownerEmail,
+          lastEditedAt: new Date().toISOString()
+        };
+      }
+      return { ...prev, ...patch };
+    });
   };
 
   const updateMonthlyBreakdown = (index: number, amount: number) => {
     const updated = [...formData.monthlyBreakdowns];
     if (updated[index]) {
-      updated[index].revenue.amount = amount;
+      updated[index].revenue.amount = Math.max(0, isNaN(amount) ? 0 : amount);
       updated[index].isEstimated = false; // 用户手动编辑后解除估算标识
       setFormData((prev) => ({ ...prev, monthlyBreakdowns: updated }));
     }
@@ -246,10 +542,12 @@ export const AssessmentForm: React.FC<FormProps> = ({
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="space-y-1 max-w-2xl">
             <h1 className="text-xl sm:text-2xl font-black text-neutral-900 tracking-tight">
-              商业宣教商业模型财务测算
+              {language === 'en' ? 'BAM Financial Health Assessment' : '商业宣教商业模型财务测算'}
             </h1>
             <p className="text-xs sm:text-sm text-neutral-600 font-medium leading-relaxed">
-              输入核心财务收支与储备数据，系统实时测算商业模型的健康度、现金跑道与抗风险能力。
+              {language === 'en'
+                ? 'Enter your core financials to instantly measure business-model health, cash runway and resilience.'
+                : '输入核心财务收支与储备数据，系统实时测算商业模型的健康度、现金跑道与抗风险能力。'}
             </p>
           </div>
 
@@ -261,31 +559,24 @@ export const AssessmentForm: React.FC<FormProps> = ({
               </span>
             )}
 
-            {/* Mode Switcher Toggle: 极简单页 / 完整分步 */}
-            <div className="flex p-1 bg-neutral-100 rounded-2xl border border-neutral-200">
+            {/* 模式切换：默认极简，详细模式弱化为可选入口（乔布斯式：不让用户一进门做选择） */}
+            {formMode === 'detailed' ? (
               <button
                 type="button"
                 onClick={() => setFormMode('simple')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer ${
-                  formMode === 'simple'
-                    ? 'bg-indigo-600 text-white shadow-xs'
-                    : 'text-neutral-600 hover:text-neutral-900'
-                }`}
+                className="text-xs px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-700 font-bold border border-indigo-200 hover:bg-indigo-100 transition-colors cursor-pointer"
               >
-                ⚡ 极简单页测算
+                ⚡ 回到极简单页
               </button>
+            ) : (
               <button
                 type="button"
                 onClick={() => setFormMode('detailed')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer ${
-                  formMode === 'detailed'
-                    ? 'bg-indigo-600 text-white shadow-xs'
-                    : 'text-neutral-600 hover:text-neutral-900'
-                }`}
+                className="text-xs px-3 py-1.5 rounded-full text-neutral-500 font-semibold border border-neutral-200 hover:bg-neutral-50 hover:text-neutral-700 transition-colors cursor-pointer"
               >
-                📑 完整分步明细
+                📑 想填更细？完整分步明细
               </button>
-            </div>
+            )}
           </div>
         </div>
 
@@ -320,64 +611,96 @@ export const AssessmentForm: React.FC<FormProps> = ({
       {/* ZERO-BARRIER SIMPLE MODE FORM (SINGLE SCREEN) */}
       {formMode === 'simple' && (
         <div className="bg-white rounded-3xl p-6 sm:p-8 border-2 border-neutral-200 shadow-sm space-y-8 animate-in fade-in">
-          {/* Section 1: Store & Industry */}
+          {/* Section 1: 英雄输入框 —— 你准备开个什么店？ */}
           <div className="space-y-4">
-            <div className="flex items-center gap-2 pb-2 border-b border-neutral-100">
-              <span className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-sm">
-                1
-              </span>
-              <h3 className="text-base sm:text-lg font-black text-neutral-900">
-                项目基本信息
+            <div className="text-center space-y-1.5">
+              <h3 className="text-xl sm:text-2xl font-black text-neutral-900 tracking-tight">
+                你准备开个什么店？
               </h3>
+              <p className="text-xs sm:text-sm text-neutral-500 font-medium">
+                🙏 别担心看不懂财务。打完这一句，行业和成本 AI 会帮你猜好，你只改改数字就行。
+              </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-bold text-neutral-800 mb-1.5">
-                  项目/店铺名称 <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="例如：恩典社区义诊所 / 阳光社区烘焙坊"
-                  value={formData.projectName}
-                  onChange={(e) => updateField('projectName', e.target.value)}
-                  className="w-full p-3.5 border-2 border-neutral-200 rounded-2xl font-bold text-neutral-800 text-base focus:border-indigo-500 focus:outline-hidden"
-                />
+            <div>
+              <input
+                autoFocus
+                type="text"
+                placeholder="例如：恩典社区义诊所 / 阳光社区烘焙坊 / 乡村旧物改造坊"
+                value={formData.projectName}
+                onChange={(e) => handleProjectNameChange(e.target.value)}
+                className="w-full p-5 sm:p-6 border-2 border-neutral-300 rounded-3xl font-bold text-neutral-800 text-lg sm:text-xl text-center focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 focus:outline-hidden shadow-sm"
+              />
+              <div className="mt-2 text-center text-sm min-h-[1.25rem]">
+                {inferState === 'loading' && (
+                  <span className="text-indigo-500 font-semibold animate-pulse">🤖 AI 正在根据你的店名，推算行业、币种和每一项成本…</span>
+                )}
+                {inferState === 'done' && (
+                  <span className="text-emerald-600 font-semibold">✓ 已自动猜好并预填，下方可改，或点“恢复 AI 建议”</span>
+                )}
+                {inferState === 'error' && (
+                  <span className="text-amber-600 font-semibold">
+                    ⚠ 暂时连不上 AI，你仍可手动选择。
+                    <button
+                      type="button"
+                      onClick={() => formData.projectName.trim().length >= 2 && handleProjectNameChange(formData.projectName)}
+                      className="ml-2 underline font-bold hover:text-amber-700 cursor-pointer"
+                    >
+                      重新推算
+                    </button>
+                  </span>
+                )}
+                {inferState === 'idle' && formData.projectName.trim().length < 2 && (
+                  <span className="text-neutral-400">填完店名后稍等一下，AI 就开始帮你填表 ✨</span>
+                )}
               </div>
+            </div>
 
-              <div>
-                <label className="block text-sm font-bold text-neutral-800 mb-1.5">
-                  所属行业领域 <span className="text-rose-500">*</span>
-                </label>
+            {/* 行业 / 币种：AI 自动填，弱化展示，仅在需要时展开 */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
+                <label className="block text-[11px] font-bold text-neutral-500 mb-1">所属行业（AI 已猜，可改）</label>
                 <select
                   value={formData.industry}
-                  onChange={(e) => updateField('industry', e.target.value)}
-                  className="w-full p-3.5 border-2 border-neutral-200 rounded-2xl font-bold text-neutral-800 text-base bg-white focus:border-indigo-500 focus:outline-hidden"
+                  onChange={(e) => handleIndustryChange(e.target.value)}
+                  className="w-full p-2.5 border border-slate-300 rounded-xl font-bold text-neutral-800 text-sm bg-white focus:border-indigo-500 focus:outline-hidden"
                 >
-                  <option value="medical_health">🩺 医疗健康 / 爱心诊所</option>
-                  <option value="education_training">📚 语言教育 / 辅导中心</option>
-                  <option value="vocational_training">🛠️ 职业实训 / 手工工坊</option>
-                  <option value="food_beverage">☕ 餐饮烘焙 / 社区咖啡</option>
-                  <option value="child_care">🧒 儿童日托 / 社区启蒙</option>
-                  <option value="community_service">🤝 综合助贫 / 社会企业</option>
+                  {INDUSTRY_BENCHMARKS.map((b) => (
+                    <option key={b.id} value={b.id}>{b.nameZh}</option>
+                  ))}
+                  <option value={CUSTOM_INDUSTRY_VALUE}>➕ 其他行业（自定义输入）</option>
                 </select>
+                {formData.industry === CUSTOM_INDUSTRY_VALUE && (
+                  <input
+                    type="text"
+                    placeholder="例如：社区旧物改造 / 乡村物流配送"
+                    value={customIndustry}
+                    onChange={(e) => handleCustomIndustryInput(e.target.value)}
+                    className="mt-2 w-full p-2.5 border-2 border-indigo-300 rounded-xl font-bold text-neutral-800 text-sm focus:border-indigo-500 focus:outline-hidden"
+                  />
+                )}
               </div>
 
-              <div>
-                <label className="block text-sm font-bold text-neutral-800 mb-1.5">
-                  测算主币种 <span className="text-rose-500">*</span>
-                </label>
+              <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
+                <label className="block text-[11px] font-bold text-neutral-500 mb-1">主币种（AI 已猜，可改）</label>
                 <select
                   value={formData.baseCurrency}
-                  onChange={(e) => updateField('baseCurrency', e.target.value as CurrencyCode)}
-                  className="w-full p-3.5 border-2 border-neutral-200 rounded-2xl font-bold text-neutral-800 text-base bg-white focus:border-indigo-500 focus:outline-hidden"
+                  onChange={(e) => handleCurrencyChange(e.target.value)}
+                  className="w-full p-2.5 border border-slate-300 rounded-xl font-bold text-neutral-800 text-sm bg-white focus:border-indigo-500 focus:outline-hidden"
                 >
                   {SUPPORTED_CURRENCIES.map((c) => (
-                    <option key={c.code} value={c.code}>
-                      {c.nameZh} ({c.code} - {c.symbol})
-                    </option>
+                    <option key={c.code} value={c.code}>{c.nameZh} ({c.code} - {c.symbol})</option>
                   ))}
                 </select>
+                {formData.baseCurrency === CUSTOM_CURRENCY_VALUE && (
+                  <input
+                    type="text"
+                    placeholder="3 字母代码，例如：SLE / MVR / PGK"
+                    value={customCurrencyCode}
+                    onChange={(e) => handleCustomCurrencyInput(e.target.value)}
+                    className="mt-2 w-full p-2.5 border-2 border-indigo-300 rounded-xl font-bold text-neutral-800 text-sm focus:border-indigo-500 focus:outline-hidden"
+                  />
+                )}
               </div>
             </div>
           </div>
@@ -392,6 +715,9 @@ export const AssessmentForm: React.FC<FormProps> = ({
                 营业收入与直接物料成本
               </h3>
             </div>
+            <p className="text-[11px] text-neutral-500 font-medium -mt-1">
+              💡 以下金额都请填「最近半年的月平均」，不要填某一个月或全年总额。
+            </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <div className="p-5 rounded-2xl bg-emerald-50/70 border-2 border-emerald-200 space-y-2">
@@ -401,6 +727,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                 <div className="relative">
                   <input
                     type="number"
+                    min="0"
                     value={formData.monthlyRevenue.amount || ''}
                     onChange={(e) => updateMoney('monthlyRevenue', Number(e.target.value))}
                     className="w-full p-4 border-2 border-emerald-300 rounded-2xl font-mono text-xl sm:text-2xl font-black text-emerald-950 bg-white focus:border-emerald-500 focus:outline-hidden"
@@ -415,27 +742,101 @@ export const AssessmentForm: React.FC<FormProps> = ({
                 </p>
               </div>
 
-              <div className="p-5 rounded-2xl bg-rose-50/70 border-2 border-rose-200 space-y-2">
-                <label className="block text-sm sm:text-base font-black text-rose-950">
-                  直接物料 / 耗材 / 进货采购成本 <span className="text-rose-500">*</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    value={formData.cogsCost.amount || ''}
-                    onChange={(e) => updateMoney('cogsCost', Number(e.target.value))}
-                    className="w-full p-4 border-2 border-rose-300 rounded-2xl font-mono text-xl sm:text-2xl font-black text-rose-950 bg-white focus:border-rose-500 focus:outline-hidden"
-                    placeholder="15000"
-                  />
-                  <span className="absolute right-4 top-4 font-bold text-rose-700">
-                    {formData.baseCurrency} / 月
-                  </span>
-                </div>
-                <p className="text-xs text-rose-800 font-medium">
-                  如采购药品器材、食材原料、教材耗材等随业务量波动的直接进货成本。
-                </p>
-              </div>
+              {(() => {
+                const hasDynamicCogs = (formData.dynamicCogsItems || []).length > 0;
+                return hasDynamicCogs ? (
+                  <div className="p-5 rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200 space-y-2">
+                    <label className="block text-sm sm:text-base font-black text-slate-500">
+                      直接物料 / 耗材 / 进货采购成本（已由下方细分项自动合计）
+                    </label>
+                    <div className="text-sm text-slate-500 bg-white rounded-2xl p-4 border-2 border-slate-200">
+                      🤖 已根据你填写的店名，由 AI 按行业生成了细分成本项（如咖啡豆、面粉、包装），
+                      <span className="font-bold text-rose-600"> 物料总成本 = 下方各项之和 </span>
+                      ，无需在此重复填写。
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-5 rounded-2xl bg-rose-50/70 border-2 border-rose-200 space-y-2">
+                    <label className="block text-sm sm:text-base font-black text-rose-950">
+                      直接物料 / 耗材 / 进货采购成本 <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="0"
+                        value={formData.cogsCost.amount || ''}
+                        onChange={(e) => updateMoney('cogsCost', Number(e.target.value))}
+                        className="w-full p-4 border-2 border-rose-300 rounded-2xl font-mono text-xl sm:text-2xl font-black text-rose-950 bg-white focus:border-rose-500 focus:outline-hidden"
+                        placeholder="15000"
+                      />
+                      <span className="absolute right-4 top-4 font-bold text-rose-700">
+                        {formData.baseCurrency} / 月
+                      </span>
+                    </div>
+                    <p className="text-xs text-rose-800 font-medium">
+                      如采购药品器材、食材原料、教材耗材等随业务量波动的直接进货成本。
+                    </p>
+                  </div>
+                );
+              })()}
             </div>
+
+            {/* AI 推断的动态物料成本明细（不同行业填写项不同） */}
+            {(formData.dynamicCogsItems || []).length > 0 && (
+              <div className="p-5 rounded-2xl bg-rose-50/40 border-2 border-dashed border-rose-300 space-y-3">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <span className="text-sm font-black text-rose-900">
+                    🤖 按行业细分的物料成本明细（可增删改）
+                    {cogsTouched && (
+                      <span className="ml-2 inline-block text-[11px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-bold align-middle">⚙ 已手动调整</span>
+                    )}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={restoreAiSuggestion}
+                    className="text-xs px-2.5 py-1 rounded-lg bg-rose-100 text-rose-700 font-bold hover:bg-rose-200 transition cursor-pointer"
+                  >
+                    <RefreshCw className="inline w-3 h-3 mr-1" />恢复 AI 建议
+                  </button>
+                </div>
+                <span className="text-[11px] text-rose-700">明细合计即为物料总成本，使用细分项时上方总额框可留空</span>
+                {(formData.dynamicCogsItems || []).map((it) => (
+                  <div key={it.id} className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={it.label}
+                      onChange={(e) => updateDynamicCogsItem(it.id, { label: e.target.value })}
+                      className="flex-1 p-2.5 border-2 border-rose-200 rounded-xl font-bold text-neutral-800 text-sm bg-white"
+                    />
+                    <input
+                      type="number"
+                      min="0"
+                      value={it.value || ''}
+                      onChange={(e) => updateDynamicCogsItem(it.id, { value: Math.max(0, isNaN(Number(e.target.value)) ? 0 : Number(e.target.value)) })}
+                      className="w-28 p-2.5 border-2 border-rose-200 rounded-xl font-mono text-sm font-bold text-neutral-900 bg-white"
+                      placeholder={it.suggestedAmount ? `AI建议 ${it.suggestedAmount}` : '金额'}
+                      title={it.suggestedAmount ? `AI 建议参考金额：${it.suggestedAmount}（仅供参考，请填你的真实数字）` : '请填你的真实月度金额'}
+                    />
+                    <span className="text-xs text-rose-700 w-12">{formData.baseCurrency}/月</span>
+                    <button
+                      type="button"
+                      onClick={() => removeDynamicCogsItem(it.id)}
+                      className="p-2 text-rose-500 hover:text-rose-700 cursor-pointer"
+                      title="删除该项"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={addDynamicCogsItem}
+                  className="text-xs px-3 py-1.5 rounded-lg border-2 border-rose-300 text-rose-700 font-bold hover:bg-rose-100 transition cursor-pointer"
+                >
+                  ＋ 添加物料成本项
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Section 3: Fixed OPEX Expenses */}
@@ -448,56 +849,134 @@ export const AssessmentForm: React.FC<FormProps> = ({
                 每月固定运营开支
               </h3>
             </div>
+            <p className="text-[11px] text-neutral-500 font-medium -mt-1">
+              💡 这一节和上面所有金额，都请填「最近半年的月平均」，不要填某一个月或全年总额。
+            </p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="p-4 rounded-2xl bg-neutral-50 border-2 border-neutral-200 space-y-1.5">
-                <label className="block text-xs sm:text-sm font-bold text-neutral-800">
-                  场地租金
-                </label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    value={formData.rentCost.amount || ''}
-                    onChange={(e) => updateMoney('rentCost', Number(e.target.value))}
-                    className="w-full p-3 border-2 border-neutral-300 rounded-xl font-mono text-lg font-bold text-neutral-900 bg-white"
-                    placeholder="3500"
-                  />
+            {(() => {
+              const hasDynamicOpex = (formData.dynamicOpexItems || []).length > 0;
+              return hasDynamicOpex ? (
+                <div className="p-5 rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200 space-y-2">
+                  <label className="block text-sm sm:text-base font-black text-slate-500">
+                    房租 / 薪酬 / 水电等固定运营开销（已由下方细分项自动合计）
+                  </label>
+                  <div className="text-sm text-slate-500 bg-white rounded-2xl p-4 border-2 border-slate-200">
+                    🤖 已根据你填写的店名，由 AI 按行业生成了细分运营开支项（如房租、薪资、水电），
+                    <span className="font-bold text-indigo-600"> 运营开销总成本 = 下方各项之和 </span>
+                    ，无需在此重复填写。
+                  </div>
                 </div>
-                <span className="text-[11px] text-neutral-500 block">每月固定支付给房东的租金</span>
-              </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="p-4 rounded-2xl bg-neutral-50 border-2 border-neutral-200 space-y-1.5">
+                    <label className="block text-xs sm:text-sm font-bold text-neutral-800">
+                      场地租金
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="0"
+                        value={formData.rentCost.amount || ''}
+                        onChange={(e) => updateMoney('rentCost', Number(e.target.value))}
+                        className="w-full p-3 border-2 border-neutral-300 rounded-xl font-mono text-lg font-bold text-neutral-900 bg-white"
+                        placeholder="3500"
+                      />
+                    </div>
+                    <span className="text-[11px] text-neutral-500 block">每月固定支付给房东的租金</span>
+                  </div>
 
-              <div className="p-4 rounded-2xl bg-neutral-50 border-2 border-neutral-200 space-y-1.5">
-                <label className="block text-xs sm:text-sm font-bold text-neutral-800">
-                  人员薪酬与同工补贴
-                </label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    value={formData.laborCost.amount || ''}
-                    onChange={(e) => updateMoney('laborCost', Number(e.target.value))}
-                    className="w-full p-3 border-2 border-neutral-300 rounded-xl font-mono text-lg font-bold text-neutral-900 bg-white"
-                    placeholder="4800"
-                  />
-                </div>
-                <span className="text-[11px] text-neutral-500 block">本地员工或全职同工补贴 (无则填0)</span>
-              </div>
+                  <div className="p-4 rounded-2xl bg-neutral-50 border-2 border-neutral-200 space-y-1.5">
+                    <label className="block text-xs sm:text-sm font-bold text-neutral-800">
+                      人员薪酬与同工补贴
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="0"
+                        value={formData.laborCost.amount || ''}
+                        onChange={(e) => updateMoney('laborCost', Number(e.target.value))}
+                        className="w-full p-3 border-2 border-neutral-300 rounded-xl font-mono text-lg font-bold text-neutral-900 bg-white"
+                        placeholder="4800"
+                      />
+                    </div>
+                    <span className="text-[11px] text-neutral-500 block">本地员工或全职同工补贴 (无则填0)</span>
+                  </div>
 
-              <div className="p-4 rounded-2xl bg-neutral-50 border-2 border-neutral-200 space-y-1.5">
-                <label className="block text-xs sm:text-sm font-bold text-neutral-800">
-                  水电、网络及日常杂支
-                </label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    value={formData.utilityCost.amount || ''}
-                    onChange={(e) => updateMoney('utilityCost', Number(e.target.value))}
-                    className="w-full p-3 border-2 border-neutral-300 rounded-xl font-mono text-lg font-bold text-neutral-900 bg-white"
-                    placeholder="950"
-                  />
+                  <div className="p-4 rounded-2xl bg-neutral-50 border-2 border-neutral-200 space-y-1.5">
+                    <label className="block text-xs sm:text-sm font-bold text-neutral-800">
+                      水电、网络及日常杂支
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="0"
+                        value={formData.utilityCost.amount || ''}
+                        onChange={(e) => updateMoney('utilityCost', Number(e.target.value))}
+                        className="w-full p-3 border-2 border-neutral-300 rounded-xl font-mono text-lg font-bold text-neutral-900 bg-white"
+                        placeholder="950"
+                      />
+                    </div>
+                    <span className="text-[11px] text-neutral-500 block">水费、电费、通讯网络及其他杂费</span>
+                  </div>
                 </div>
-                <span className="text-[11px] text-neutral-500 block">水费、电费、通讯网络及其他杂费</span>
+              );
+            })()}
+
+            {/* AI 推断的动态运营开支明细（不同行业填写项不同） */}
+            {(formData.dynamicOpexItems || []).length > 0 && (
+              <div className="p-5 rounded-2xl bg-indigo-50/40 border-2 border-dashed border-indigo-300 space-y-3">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <span className="text-sm font-black text-indigo-900">
+                    🤖 按行业细分的运营开支明细（可增删改）
+                    {opexTouched && (
+                      <span className="ml-2 inline-block text-[11px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-bold align-middle">⚙ 已手动调整</span>
+                    )}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={restoreAiSuggestion}
+                    className="text-xs px-2.5 py-1 rounded-lg bg-indigo-100 text-indigo-700 font-bold hover:bg-indigo-200 transition cursor-pointer"
+                  >
+                    <RefreshCw className="inline w-3 h-3 mr-1" />恢复 AI 建议
+                  </button>
+                </div>
+                {(formData.dynamicOpexItems || []).map((it) => (
+                  <div key={it.id} className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={it.label}
+                      onChange={(e) => updateDynamicOpexItem(it.id, { label: e.target.value })}
+                      className="flex-1 p-2.5 border-2 border-indigo-200 rounded-xl font-bold text-neutral-800 text-sm bg-white"
+                    />
+                    <input
+                      type="number"
+                      min="0"
+                      value={it.value || ''}
+                      onChange={(e) => updateDynamicOpexItem(it.id, { value: Math.max(0, isNaN(Number(e.target.value)) ? 0 : Number(e.target.value)) })}
+                      className="w-28 p-2.5 border-2 border-indigo-200 rounded-xl font-mono text-sm font-bold text-neutral-900 bg-white"
+                      placeholder={it.suggestedAmount ? `AI建议 ${it.suggestedAmount}` : '金额'}
+                      title={it.suggestedAmount ? `AI 建议参考金额：${it.suggestedAmount}（仅供参考，请填你的真实数字）` : '请填你的真实月度金额'}
+                    />
+                    <span className="text-xs text-indigo-700 w-12">{formData.baseCurrency}/月</span>
+                    <button
+                      type="button"
+                      onClick={() => removeDynamicOpexItem(it.id)}
+                      className="p-2 text-indigo-500 hover:text-indigo-700 cursor-pointer"
+                      title="删除该项"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={addDynamicOpexItem}
+                  className="text-xs px-3 py-1.5 rounded-lg border-2 border-indigo-300 text-indigo-700 font-bold hover:bg-indigo-100 transition cursor-pointer"
+                >
+                  ＋ 添加运营开支项
+                </button>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Section 4: Cash Buffer & Track Record */}
@@ -518,6 +997,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                 </label>
                 <input
                   type="number"
+                  min="0"
                   value={formData.cashAndLiquidAssets.amount || ''}
                   onChange={(e) => updateMoney('cashAndLiquidAssets', Number(e.target.value))}
                   className="w-full p-3 border-2 border-sky-300 rounded-xl font-mono text-lg font-black text-sky-950 bg-white"
@@ -534,8 +1014,9 @@ export const AssessmentForm: React.FC<FormProps> = ({
                 </label>
                 <input
                   type="number"
+                  min="0"
                   value={formData.operatingMonthsCount || ''}
-                  onChange={(e) => updateField('operatingMonthsCount', Number(e.target.value))}
+                  onChange={(e) => updateField('operatingMonthsCount', Math.max(0, isNaN(Number(e.target.value)) ? 0 : Number(e.target.value)))}
                   className="w-full p-3 border-2 border-neutral-300 rounded-xl font-mono text-lg font-bold text-neutral-900 bg-white"
                   placeholder="24"
                 />
@@ -548,8 +1029,9 @@ export const AssessmentForm: React.FC<FormProps> = ({
                 </label>
                 <input
                   type="number"
+                  min="0"
                   value={formData.fullTimeEmployeesCount || ''}
-                  onChange={(e) => updateField('fullTimeEmployeesCount', Number(e.target.value))}
+                  onChange={(e) => updateField('fullTimeEmployeesCount', Math.max(0, isNaN(Number(e.target.value)) ? 0 : Number(e.target.value)))}
                   className="w-full p-3 border-2 border-neutral-300 rounded-xl font-mono text-lg font-bold text-neutral-900 bg-white"
                   placeholder="2"
                 />
@@ -595,9 +1077,25 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   type="text"
                   placeholder="例如：阳光工坊社区烘焙店"
                   value={formData.projectName}
-                  onChange={(e) => updateField('projectName', e.target.value)}
+                  onChange={(e) => handleProjectNameChange(e.target.value)}
                   className="w-full p-2.5 border border-slate-300 rounded-xl font-medium text-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
                 />
+                <div className="mt-1 text-[11px]">
+                  {inferState === 'loading' && <span className="text-indigo-500 font-semibold animate-pulse">🤖 AI 正在推算行业、币种与成本结构…</span>}
+                  {inferState === 'done' && <span className="text-emerald-600 font-semibold">✓ AI 已自动预填，可修改或点“恢复 AI 建议”</span>}
+                  {inferState === 'error' && (
+                    <span className="text-amber-600 font-semibold">
+                      ⚠ 无法自动推算，请手动选择。
+                      <button
+                        type="button"
+                        onClick={() => formData.projectName.trim().length >= 2 && handleProjectNameChange(formData.projectName)}
+                        className="ml-1 underline font-bold hover:text-amber-700 cursor-pointer"
+                      >
+                        重新推算
+                      </button>
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div>
@@ -606,7 +1104,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                 </label>
                 <select
                   value={formData.industry}
-                  onChange={(e) => updateField('industry', e.target.value)}
+                  onChange={(e) => handleIndustryChange(e.target.value)}
                   className="w-full p-2.5 border border-slate-300 rounded-xl font-medium text-slate-800 bg-white"
                 >
                   {INDUSTRY_BENCHMARKS.map((b) => (
@@ -614,7 +1112,17 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       {b.nameZh}
                     </option>
                   ))}
+                  <option value={CUSTOM_INDUSTRY_VALUE}>➕ 其他行业（自定义输入）</option>
                 </select>
+                {formData.industry === CUSTOM_INDUSTRY_VALUE && (
+                  <input
+                    type="text"
+                    placeholder="请输入所属行业领域"
+                    value={customIndustry}
+                    onChange={(e) => handleCustomIndustryInput(e.target.value)}
+                    className="mt-2 w-full p-2.5 border-2 border-indigo-300 rounded-xl font-medium text-slate-800"
+                  />
+                )}
               </div>
 
               <div>
@@ -623,7 +1131,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                 </label>
                 <select
                   value={formData.baseCurrency}
-                  onChange={(e) => updateField('baseCurrency', e.target.value as CurrencyCode)}
+                  onChange={(e) => handleCurrencyChange(e.target.value)}
                   className="w-full p-2.5 border border-slate-300 rounded-xl font-bold text-slate-800 bg-white"
                 >
                   {SUPPORTED_CURRENCIES.map((c) => (
@@ -632,6 +1140,15 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     </option>
                   ))}
                 </select>
+                {formData.baseCurrency === CUSTOM_CURRENCY_VALUE && (
+                  <input
+                    type="text"
+                    placeholder="请输入 3 字母币种代码，例如：SLE / MVR / PGK"
+                    value={customCurrencyCode}
+                    onChange={(e) => handleCustomCurrencyInput(e.target.value)}
+                    className="mt-2 w-full p-2.5 border-2 border-indigo-300 rounded-xl font-bold text-slate-800"
+                  />
+                )}
                 <p className="text-[11px] text-slate-400 mt-1">
                   后续所有其他币种金额将自动依据汇率折算为该主币种。
                 </p>
@@ -1294,6 +1811,53 @@ export const AssessmentForm: React.FC<FormProps> = ({
                 onChange={(e) => updateMoney('cogsCost', Number(e.target.value))}
                 className="w-full p-2.5 border border-slate-300 rounded-xl font-bold text-slate-900 bg-white"
               />
+
+              {/* AI 推断的动态物料成本明细 */}
+              {(formData.dynamicCogsItems || []).length > 0 && (
+                <div className="mt-3 p-3 rounded-xl bg-rose-50/50 border border-dashed border-rose-300 space-y-2">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <span className="text-[11px] font-black text-rose-900">
+                      🤖 按行业细分的物料成本明细（可增删改）
+                      {cogsTouched && (
+                        <span className="ml-1.5 inline-block text-[9px] px-1 py-0.5 rounded bg-amber-100 text-amber-700 font-bold align-middle">⚙ 已手动调整</span>
+                      )}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={restoreAiSuggestion}
+                      className="text-[10px] px-2 py-0.5 rounded bg-rose-100 text-rose-700 font-bold hover:bg-rose-200 cursor-pointer"
+                    >
+                      <RefreshCw className="inline w-3 h-3 mr-0.5" />恢复 AI 建议
+                    </button>
+                  </div>
+                  <span className="text-[10px] text-rose-700">明细合计即物料总成本，使用细分项时上方总额框可留空</span>
+                  {(formData.dynamicCogsItems || []).map((it) => (
+                    <div key={it.id} className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={it.label}
+                        onChange={(e) => updateDynamicCogsItem(it.id, { label: e.target.value })}
+                        className="flex-1 p-1.5 border border-rose-200 rounded-lg font-semibold text-slate-800"
+                      />
+                      <input
+                        type="number"
+                        value={it.value || ''}
+                        onChange={(e) => updateDynamicCogsItem(it.id, { value: Number(e.target.value) })}
+                        className="w-24 p-1.5 border border-rose-200 rounded-lg font-mono font-semibold"
+                        placeholder={it.suggestedAmount ? `AI建议 ${it.suggestedAmount}` : '金额'}
+                        title={it.suggestedAmount ? `AI 建议参考金额：${it.suggestedAmount}（仅供参考，请填你的真实数字）` : '请填你的真实月度金额'}
+                      />
+                      <span className="text-[10px] text-rose-700 w-12">{formData.baseCurrency}/月</span>
+                      <button type="button" onClick={() => removeDynamicCogsItem(it.id)} className="p-1 text-rose-500 hover:text-rose-700 cursor-pointer">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                  <button type="button" onClick={addDynamicCogsItem} className="text-[10px] px-2 py-1 rounded border border-rose-300 text-rose-700 font-bold hover:bg-rose-100 cursor-pointer">
+                    ＋ 添加物料成本项
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* OPEX Items Grid */}
@@ -1381,6 +1945,53 @@ export const AssessmentForm: React.FC<FormProps> = ({
                 />
               </div>
             </div>
+
+            {/* AI 推断的动态运营开支明细 */}
+            {(formData.dynamicOpexItems || []).length > 0 && (
+              <div className="p-3 rounded-xl bg-indigo-50/50 border border-dashed border-indigo-300 space-y-2">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <span className="text-[11px] font-black text-indigo-900">
+                    🤖 按行业细分的运营开支明细（可增删改）
+                    {opexTouched && (
+                      <span className="ml-1.5 inline-block text-[9px] px-1 py-0.5 rounded bg-amber-100 text-amber-700 font-bold align-middle">⚙ 已手动调整</span>
+                    )}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={restoreAiSuggestion}
+                    className="text-[10px] px-2 py-0.5 rounded bg-indigo-100 text-indigo-700 font-bold hover:bg-indigo-200 cursor-pointer"
+                  >
+                    <RefreshCw className="inline w-3 h-3 mr-0.5" />恢复 AI 建议
+                  </button>
+                </div>
+                {(formData.dynamicOpexItems || []).map((it) => (
+                  <div key={it.id} className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={it.label}
+                      onChange={(e) => updateDynamicOpexItem(it.id, { label: e.target.value })}
+                      className="flex-1 p-1.5 border border-indigo-200 rounded-lg font-semibold text-slate-800"
+                    />
+                    <input
+                      type="number"
+                      min="0"
+                      value={it.value || ''}
+                      onChange={(e) => updateDynamicOpexItem(it.id, { value: Math.max(0, isNaN(Number(e.target.value)) ? 0 : Number(e.target.value)) })}
+                      className="w-24 p-1.5 border border-indigo-200 rounded-lg font-mono font-semibold"
+                      placeholder={it.suggestedAmount ? `AI建议 ${it.suggestedAmount}` : '金额'}
+                      title={it.suggestedAmount ? `AI 建议参考金额：${it.suggestedAmount}（仅供参考，请填你的真实数字）` : '请填你的真实月度金额'}
+                    />
+                    <span className="text-[10px] text-indigo-700 w-12">{formData.baseCurrency}/月</span>
+                    <button type="button" onClick={() => removeDynamicOpexItem(it.id)} className="p-1 text-indigo-500 hover:text-indigo-700 cursor-pointer">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+                <button type="button" onClick={addDynamicOpexItem} className="text-[10px] px-2 py-1 rounded border border-indigo-300 text-indigo-700 font-bold hover:bg-indigo-100 cursor-pointer">
+                  ＋ 添加运营开支项
+                </button>
+              </div>
+            )}
 
             {/* Operating Duration & Team scale */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs pt-2">
@@ -1515,7 +2126,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                 <div>
                   <span className="text-slate-500 block">资金证明方式:</span>
                   <span className="font-bold">
-                    {formData.proofType === 'none' ? '无凭证纯手动填写' : formData.proofType}
+                    {proofTypeLabel(formData.proofType, language)}
                   </span>
                 </div>
                 <div>

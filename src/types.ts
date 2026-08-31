@@ -20,20 +20,34 @@ export type ProofType =
   | 'mobile_payment' // 移动支付截图 (微信/WhatsApp/M-Pesa/OPay/Wave)
   | 'institution_record'; // 教会 / 合作社 / 机构内部财务记录
 
+// 凭证方式 → 中文/英文可读标签（用于列表与核对速览，避免直接暴露英文代码）
+export const PROOF_TYPE_LABELS: Record<ProofType, { zh: string; en: string }> = {
+  none: { zh: '纯手动无凭证', en: 'Manual entry, no proof' },
+  bank_statement: { zh: '正规银行流水', en: 'Bank statement' },
+  handwritten_book: { zh: '手写/电子记账本', en: 'Handwritten/electronic ledger' },
+  mobile_payment: { zh: '移动支付截图', en: 'Mobile payment screenshots' },
+  institution_record: { zh: '机构内部财务记录', en: 'Institution financial records' }
+};
+
+export const proofTypeLabel = (type: string | undefined, lang: Language): string => {
+  if (!type) return lang === 'en' ? 'Not specified' : '未选择';
+  const entry = PROOF_TYPE_LABELS[type as ProofType];
+  if (!entry) return type; // 未知值兜底显示原文
+  return lang === 'en' ? entry.en : entry.zh;
+};
+
 export interface DynamicCostItem {
   id: string;
-  name: string;
-  description?: string;
-  amount: number;
-  currency?: CurrencyCode;
+  label: string;
+  value: number;
+  isFixed?: boolean;
 }
 
 export interface DynamicOpexItem {
   id: string;
-  name: string;
-  description?: string;
-  amount: number;
-  currency?: CurrencyCode;
+  label: string;
+  value: number;
+  isFixed?: boolean;
 }
 
 export interface MoneyField {
@@ -183,6 +197,7 @@ export interface AssessmentReport {
   // Gate 判定结果 (底线红线检查)
   gates: GateCheckResult[];
   gatePassed: boolean;
+  failedGates: GateCheckResult[];
 
   // 逐项明细打分
   metrics: MetricScore[];
@@ -194,6 +209,7 @@ export interface AssessmentReport {
     monthlyExternalGrants: number;
     monthlyCogs: number;
     monthlyOpex: number;
+    monthlyBurn: number; // 每月现金消耗 = COGS + OPEX + 还贷（不含税），用于统一"能撑多久"口径
     grossProfit: number;
     grossMarginPercent: number;
     operatingProfit: number; // PBT
@@ -206,6 +222,10 @@ export interface AssessmentReport {
 
   // AI 大白话诊断与建议
   aiActionableAdvice: string[];
+
+  // 按行业细分的动态成本明细（AI 推断，用户可增删改）
+  dynamicCogsItems?: DynamicCostItem[];
+  dynamicOpexItems?: DynamicOpexItem[];
 }
 
 export interface EscalatedQuestion {

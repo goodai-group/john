@@ -3,7 +3,8 @@ import {
   BusinessFormData,
   AssessmentReport,
   Language,
-  AppUser
+  AppUser,
+  proofTypeLabel
 } from '../types';
 import {
   Plus,
@@ -221,7 +222,7 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
                     <div>
                       <span className="text-neutral-400 block text-[10px] font-bold uppercase mb-0.5">凭证方式:</span>
                       <span className="font-bold text-neutral-800">
-                        {proj.proofType === 'none' ? '纯手动无凭证' : proj.proofType}
+                        {proofTypeLabel(proj.proofType, language)}
                       </span>
                     </div>
                   </div>

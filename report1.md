@@ -1,0 +1,256 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]: 智能自动体检
+        - generic [ref=e10]: "|"
+        - generic [ref=e11]: 专为宣教工场爱心门诊、辅导中心与营商服事量身定制 · 永久免费
+      - generic [ref=e12]:
+        - button "使用指南 (3分钟看懂)" [ref=e13] [cursor=pointer]
+        - button "EN" [ref=e18] [cursor=pointer]
+    - generic [ref=e24]:
+      - generic [ref=e25] [cursor=pointer]:
+        - generic [ref=e26]: ✝️
+        - generic [ref=e27]:
+          - heading "商业宣教商业模型财务测算" [level=1] [ref=e28]
+          - paragraph [ref=e29]: 评估商业宣教项目的财务健康度、现金跑道与抗风险能力
+      - navigation [ref=e30]:
+        - button "📋 快速体检" [ref=e31] [cursor=pointer]
+        - button "📊 体检报告" [ref=e36] [cursor=pointer]
+        - button "🧮 沙盒试算" [ref=e41] [cursor=pointer]
+        - button "📖 评分规则" [ref=e45] [cursor=pointer]
+        - button "📁 我的项目" [ref=e49] [cursor=pointer]
+      - generic [ref=e53]:
+        - button "云端备份" [ref=e54] [cursor=pointer]
+        - button "AI 答疑" [ref=e58] [cursor=pointer]
+  - main [ref=e63]:
+    - generic [ref=e986]:
+      - generic [ref=e987]:
+        - generic [ref=e988]:
+          - generic [ref=e989]:
+            - button "⚡ 三分钟小白看懂速览 (一眼看懂)" [ref=e990] [cursor=pointer]
+            - button "专业财务明细模式" [ref=e995] [cursor=pointer]
+          - generic [ref=e1000]:
+            - generic [ref=e1001]: "历史版本:"
+            - combobox [ref=e1002]:
+              - option "v2 (2026/8/28) - 81分" [selected]
+              - option "v2 (2026/8/26) - 81分"
+            - button "对比" [ref=e1003] [cursor=pointer]
+        - generic [ref=e1010]:
+          - button "复制摘要" [ref=e1011] [cursor=pointer]
+          - button "重新测算" [ref=e1016] [cursor=pointer]
+          - button "📸 保存体检卡（可发微信）" [ref=e1021] [cursor=pointer]
+          - button "备份" [ref=e1027] [cursor=pointer]
+          - button "彻底删除" [ref=e1033] [cursor=pointer]
+      - generic [ref=e1038]:
+        - generic [ref=e1040]:
+          - generic [ref=e1041]:
+            - generic [ref=e1042]:
+              - generic [ref=e1043]:
+                - generic [ref=e1044]: 🟢
+                - generic [ref=e1045]: 基本面良好 · 利润空间稳健
+              - generic [ref=e1046]:
+                - text: 项目名称：
+                - strong [ref=e1047]: 阳光工坊社区烘焙店 (Sunny Bakehouse)
+            - heading "生意能正常盈利，建议适度增强现金储备与控成本。" [level=2] [ref=e1048]
+            - paragraph [ref=e1049]: 每月净利润为 KSh 76,000 (利润率 23%)，整体处于良性循环，注意别盲目扩大固定负债。
+            - paragraph [ref=e1050]: 💡 大白话：小店能赚钱，但手头备用金不算厚，别急着借钱扩张，先多攒点"救命钱"。
+          - generic [ref=e1051]:
+            - generic [ref=e1052]:
+              - generic [ref=e1053]: 综合体检得分
+              - generic [ref=e1054]: 81/100
+            - generic [ref=e1057]:
+              - generic [ref=e1058]: 🟢
+              - generic [ref=e1059]: 基本面良好 · 利润空间稳健
+        - generic [ref=e1060]:
+          - heading "这个小店的故事" [level=3] [ref=e1064]
+          - paragraph [ref=e1065]:
+            - text: 你这小店每天开门大约要花 KSh 3,767。 手里的备用金目前够撑
+            - generic [ref=e1066]: 51 天（约 1.7 个月）
+            - text: ——不算厚。 别急着借钱扩张，先想办法多攒点"救命钱"，让这条线拉到 3 个月以上更稳妥。
+        - generic [ref=e1067]:
+          - generic [ref=e1068]:
+            - heading "你的现金存活线" [level=3] [ref=e1072]
+            - generic [ref=e1073]: 🟢 还能撑 51 天
+          - generic [ref=e1078]:
+            - generic [ref=e1079]: 0 天
+            - generic [ref=e1080]: ⚠ 危险线 45 天
+            - generic [ref=e1081]: 180 天（安心）
+          - paragraph [ref=e1082]: 红色虚线左侧是「危险区」：备用金撑不到一个半月，一点点淡季就会断粮。把这条绿线拉过危险线，小店才算站稳。
+        - generic [ref=e1083]:
+          - generic [ref=e1084]:
+            - heading "每收入 100 块钱，最终去了哪里？" [level=3] [ref=e1089]
+            - paragraph [ref=e1090]: 直观拆解你的每笔营业额流向：多少付了进货成本、多少交了房租工人工资、多少真正落入口袋。
+          - generic [ref=e1091]:
+            - generic [ref=e1092]:
+              - 'generic "进货采购: 40% (KSh 132,000)" [ref=e1093]': 进货 40元
+              - 'generic "房租与工人工资: 34% (KSh 113,000)" [ref=e1095]': 房租人工 34元
+              - 'generic "税费与杂支: 3%" [ref=e1097]'
+              - 'generic "净赚利润: 23% (KSh 76,000)" [ref=e1098]': 净赚 23元
+            - text: "0"
+            - generic [ref=e1100]:
+              - generic [ref=e1101]:
+                - generic [ref=e1102]: 1. 进货采购成本
+                - generic [ref=e1105]: 40 块钱/百元
+                - generic [ref=e1106]: 每月花费 KSh 132,000
+              - generic [ref=e1107]:
+                - generic [ref=e1108]: 2. 房租工人工资
+                - generic [ref=e1111]: 34 块钱/百元
+                - generic [ref=e1112]: 每月花费 KSh 113,000
+              - generic [ref=e1113]:
+                - generic [ref=e1114]: 3. 税费与杂支
+                - generic [ref=e1117]: 3 块钱/百元
+                - generic [ref=e1118]: 合规与日常消耗
+              - generic [ref=e1119]:
+                - generic [ref=e1120]: 4. 真正落袋净利
+                - generic [ref=e1123]: 23 块钱/百元
+                - generic [ref=e1124]: 每月净落袋 KSh 76,000
+        - generic [ref=e1125]:
+          - generic [ref=e1126]:
+            - heading "日常经营 4 大核心关键指标体检" [level=3] [ref=e1132]
+            - paragraph [ref=e1133]: 直接回答你关于赚钱能力、抗风险能力与固定开销的最重要问题。
+          - generic [ref=e1134]:
+            - generic [ref=e1135]:
+              - generic [ref=e1136]:
+                - generic [ref=e1137]:
+                  - generic [ref=e1138]: QUESTION 01
+                  - heading "1. 这个生意到底能不能赚到钱？" [level=4] [ref=e1139]
+                - generic [ref=e1140]: 🟢 稳定盈利
+              - generic [ref=e1141]:
+                - generic [ref=e1142]: KSh 76,000/ 每月净赚
+                - generic [ref=e1143]:
+                  - text: "净利润率:"
+                  - strong [ref=e1144]: 23%
+                  - text: (高于小微行业均值)
+              - paragraph [ref=e1145]: 💡 大白话：扣除所有进货和开销后，真正能装进自己腰包的纯收益。
+            - generic [ref=e1146]:
+              - generic [ref=e1147]:
+                - generic [ref=e1148]:
+                  - generic [ref=e1149]: QUESTION 02
+                  - heading "2. 产品卖得贵不贵，毛利空间够不够大？" [level=4] [ref=e1150]
+                - generic [ref=e1151]: 🟢 空间充足
+              - generic [ref=e1152]:
+                - generic [ref=e1153]:
+                  - text: 60%
+                  - generic [ref=e1154]: (月毛利 KSh 198,000)
+                - generic [ref=e1155]:
+                  - text: 扣除进货直接成本后，每 100 块钱能剩下
+                  - strong [ref=e1156]: 60 块钱
+              - paragraph [ref=e1157]: 💡 大白话：毛利是包住所有房租和发工资的源泉，毛利率越高，抵御供货商涨价的能力越强。
+            - generic [ref=e1158]:
+              - generic [ref=e1159]:
+                - generic [ref=e1160]:
+                  - generic [ref=e1161]: QUESTION 03
+                  - heading "3. 房租和工人工资开销重不重？" [level=4] [ref=e1162]
+                - generic [ref=e1163]: 🟢 负担轻便
+              - generic [ref=e1164]:
+                - generic [ref=e1165]:
+                  - text: 34.2%
+                  - generic [ref=e1166]: (月固定开销 KSh 113,000)
+                - generic [ref=e1167]:
+                  - text: "毛利润是否包得住固定开销:"
+                  - strong [ref=e1168]: ✅ 完全包住并有盈余
+              - paragraph [ref=e1169]: 💡 大白话：每月雷打不动要付出去的店租和员工薪资，只要毛利润能轻松包住，小店就不会慌。
+            - generic [ref=e1170]:
+              - generic [ref=e1171]:
+                - generic [ref=e1172]:
+                  - generic [ref=e1173]: QUESTION 04
+                  - heading "4. 万一生意突发断流，账上备用金能撑多久？" [level=4] [ref=e1174]
+                - generic [ref=e1175]: 🔴 必须补充
+              - generic [ref=e1176]:
+                - generic [ref=e1177]: 1.7 个月
+                - generic [ref=e1178]:
+                  - text: "债务偿还安全性:"
+                  - strong [ref=e1179]: 5.67x 保障倍数
+              - paragraph [ref=e1180]: 💡 大白话：即使遇到极端突发情况一个月没有新进账，现有可用现金还能坚持发工资和交租金几个月。
+        - generic [ref=e1181]:
+          - generic [ref=e1183]:
+            - heading "同行老手横向对比表（food_beverage）" [level=3] [ref=e1190]
+            - paragraph [ref=e1191]: 一眼看清你的各项财务表现是跑赢同行还是需要追赶。
+          - table [ref=e1193]:
+            - rowgroup [ref=e1194]:
+              - row [ref=e1195]:
+                - columnheader "经营指标 (大白话)" [ref=e1196]
+                - columnheader "你的店当前表现" [ref=e1197]
+                - columnheader "同行老手基准线" [ref=e1198]
+                - columnheader "综合评价" [ref=e1199]
+            - rowgroup [ref=e1200]:
+              - row [ref=e1201]:
+                - cell "💰 每月到手纯利润率 赚到手里的净利润比例" [ref=e1202]:
+                  - text: 💰 每月到手纯利润率
+                  - generic [ref=e1203]: 赚到手里的净利润比例
+                - cell "23%" [ref=e1204]
+                - cell "≥ 15%" [ref=e1205]
+                - cell "优于同行平均" [ref=e1206]
+              - row [ref=e1211]:
+                - cell "📦 进货采购成本占比 买原材料和商品花了多少" [ref=e1212]:
+                  - text: 📦 进货采购成本占比
+                  - generic [ref=e1213]: 买原材料和商品花了多少
+                - cell "40%" [ref=e1214]
+                - cell "35% - 55%" [ref=e1215]
+                - cell "进货成本控制得当" [ref=e1216]
+              - row [ref=e1221]:
+                - cell "🏠 房租人工固定开销占比 每月雷打不动的固定花费" [ref=e1222]:
+                  - text: 🏠 房租人工固定开销占比
+                  - generic [ref=e1223]: 每月雷打不动的固定花费
+                - cell "34.2%" [ref=e1224]
+                - cell "≤ 45%" [ref=e1225]
+                - cell "开销处于安全健康线内" [ref=e1226]
+              - row [ref=e1231]:
+                - cell "🛡️ 应急备用金缓冲期 账上备用金可支撑的月数" [ref=e1232]:
+                  - text: 🛡️ 应急备用金缓冲期
+                  - generic [ref=e1233]: 账上备用金可支撑的月数
+                - cell "1.7 个月" [ref=e1234]
+                - cell "≥ 3.0 个月" [ref=e1235]
+                - cell "🟡 建议再补充备用金至 3 个月以上" [ref=e1236]
+        - generic [ref=e1239]:
+          - generic [ref=e1240]:
+            - generic [ref=e1241]:
+              - generic [ref=e1242]: ✝️
+              - generic [ref=e1243]:
+                - generic [ref=e1244]:
+                  - generic [ref=e1245]: 商宣商业模式检验
+                  - generic [ref=e1246]: 持续运转与社区关怀指数
+                - heading "商宣商业模式检验与忠心管家体检 (三分钟小白看懂)" [level=3] [ref=e1247]
+            - generic [ref=e1248]: 📖「你要详细知道你羊群的景况，留心料理你的牛群」（箴言 27:23）
+          - generic [ref=e1249]:
+            - generic [ref=e1250]:
+              - generic [ref=e1251]:
+                - generic [ref=e1252]: 🕊️ 医疗/教育项目收支平衡率
+                - generic [ref=e1253]: 收支平衡 / 良性运转
+              - generic [ref=e1254]: KSh 76,000/月结余
+              - paragraph [ref=e1255]: ✅ 门诊或学费基本覆盖进药及教学日常花销，能够长期持续为当地人提供关怀。
+            - generic [ref=e1256]:
+              - generic [ref=e1257]:
+                - generic [ref=e1258]: 🛡️ 工场应急储备金
+                - generic [ref=e1259]: 可撑 1.7 个月
+              - generic [ref=e1260]: 1.7 个月安全缓冲
+              - paragraph [ref=e1261]: ⚠️ 储备不足 3 个月，建议优先储备紧急备用金以保障关键救命物资采购。
+            - generic [ref=e1262]:
+              - generic [ref=e1263]:
+                - generic [ref=e1264]: 🤝 社区帮助与关怀
+                - generic [ref=e1265]: 爱心服事当地人
+              - generic [ref=e1266]: 0 位本地同工培养与帮扶
+              - paragraph [ref=e1267]: 以专业医疗救治与知识技能赋能当地百姓，在社区建立美好见证并切切实实帮助需要的人。
+        - generic [ref=e1268]:
+          - generic [ref=e1269]:
+            - heading "宣教同工行动清单：打勾追踪优化进度" [level=3] [ref=e1274]
+            - button "获取 Gemini 3.7 AI 实时深度战略诊断" [ref=e1275] [cursor=pointer]
+          - generic [ref=e1280]:
+            - generic [ref=e1281] [cursor=pointer]:
+              - generic [ref=e1282]:
+                - generic [ref=e1283]:
+                  - generic [ref=e1284]: "01"
+                  - checkbox [ref=e1285]
+                - heading "药品/教材端：优化采购损耗" [level=4] [ref=e1286]
+                - paragraph [ref=e1287]: ✅ 恭喜！各项核心红线（Gate）全部达标，商业模型具备健康的自我造血与盈利能力。
+              - generic [ref=e1288]: 👉 点击标记为已完成
+            - generic [ref=e1289] [cursor=pointer]:
+              - generic [ref=e1290]:
+                - generic [ref=e1291]:
+                  - generic [ref=e1292]: "02"
+                  - checkbox [ref=e1293]
+                - heading "开销端：精简运转与固定支出" [level=4] [ref=e1294]
+                - paragraph [ref=e1295]: 💡 应急现金储备少于2个月：建议暂停非必要设备购置，优先积攒至少3个月的流动现金缓冲垫。
+              - generic [ref=e1296]: 👉 点击标记为已完成
+          - button "想看更深入的雷达透视图与原始财务公式？点击切换至专业财务明细模式" [ref=e1298] [cursor=pointer]

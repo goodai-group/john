@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Heart } from 'lucide-react';
 import {
   BusinessFormData,
   AssessmentReport,
@@ -49,6 +50,8 @@ export default function App() {
   const [isAccessibilityOpen, setIsAccessibilityOpen] = useState(false);
   const [isAiDrawerOpen, setIsAiDrawerOpen] = useState(false);
   const [aiInitialTopic, setAiInitialTopic] = useState<string | undefined>(undefined);
+  // 生成报告过场（让"算完了"有仪式感，乔布斯式体验）
+  const [isGenerating, setIsGenerating] = useState(false);
 
   // Accessibility settings
   const [largeFont, setLargeFont] = useState(false);
@@ -156,40 +159,48 @@ export default function App() {
 
   // Submit form handler
   const handleFormSubmit = (submittedData: BusinessFormData) => {
-    // 1. Calculate latest version report
-    const existingReportsForProj = reports.filter((r) => r.projectId === submittedData.id);
-    const nextVersion = existingReportsForProj.length + 1;
-    const projectWithVersion = {
-      ...submittedData,
-      version: nextVersion,
-      ...(currentUser ? { ownerUid: currentUser.uid, ownerEmail: currentUser.email || submittedData.ownerEmail } : {})
-    };
+    // 1. 先进入"正在生成报告"过场，让结果出炉有仪式感
+    setIsGenerating(true);
 
-    const newReport = calculateAssessmentReport(projectWithVersion);
-    if (currentUser) {
-      newReport.ownerUid = currentUser.uid;
-      newReport.ownerEmail = currentUser.email || undefined;
-    }
+    // 用 setTimeout 把真实计算与导航包起来，制造一段可感知的"生成"过程
+    setTimeout(() => {
+      // 2. Calculate latest version report
+      const existingReportsForProj = reports.filter((r) => r.projectId === submittedData.id);
+      // 取历史最大版本号 + 1，避免旧数据中版本号重复导致列表 key 冲突
+      const nextVersion = existingReportsForProj.reduce((max, r) => Math.max(max, r.version || 0), 0) + 1;
+      const projectWithVersion = {
+        ...submittedData,
+        version: nextVersion,
+        ...(currentUser ? { ownerUid: currentUser.uid, ownerEmail: currentUser.email || submittedData.ownerEmail } : {})
+      };
 
-    // 2. Update projects list
-    const updatedProjects = [
-      projectWithVersion,
-      ...projects.filter((p) => p.id !== submittedData.id)
-    ];
-    setProjects(updatedProjects);
-    saveStoredProjects(updatedProjects);
-    saveProject(projectWithVersion);
+      const newReport = calculateAssessmentReport(projectWithVersion);
+      if (currentUser) {
+        newReport.ownerUid = currentUser.uid;
+        newReport.ownerEmail = currentUser.email || undefined;
+      }
 
-    // 3. Update reports list
-    const updatedReports = [newReport, ...reports];
-    setReports(updatedReports);
-    saveStoredReports(updatedReports);
-    saveReport(newReport);
+      // 3. Update projects list
+      const updatedProjects = [
+        projectWithVersion,
+        ...projects.filter((p) => p.id !== submittedData.id)
+      ];
+      setProjects(updatedProjects);
+      saveStoredProjects(updatedProjects);
+      saveProject(projectWithVersion);
 
-    // 4. Navigate to report view
-    setActiveProjectId(submittedData.id);
-    setActiveReportId(newReport.id);
-    setActiveTab('report');
+      // 4. Update reports list
+      const updatedReports = [newReport, ...reports];
+      setReports(updatedReports);
+      saveStoredReports(updatedReports);
+      saveReport(newReport);
+
+      // 5. Navigate to report view
+      setActiveProjectId(submittedData.id);
+      setActiveReportId(newReport.id);
+      setActiveTab('report');
+      setIsGenerating(false);
+    }, 1100);
   };
 
   // Delete project and all associated reports (P0 data withdrawal)
@@ -312,7 +323,11 @@ export default function App() {
     setSyncStatusMsg('正在与 Firebase 云端数据库集合同步 (/assessments, /reports, /escalated_questions)...');
     try {
       if (isCloudDatabaseAvailable()) {
-        await syncWithCloudDatabase(currentUser);
+        // 超时保护：Firestore 网络不可用时不再无限挂起"同步中"，8 秒后明确提示失败
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('云端连接超时（网络不可用或未登录），已保留本地数据，可稍后重试')), 8000)
+        );
+        await Promise.race([syncWithCloudDatabase(currentUser), timeoutPromise]);
         const refreshedProjects = loadStoredProjects();
         const refreshedReports = loadStoredReports();
         setProjects(refreshedProjects);
@@ -322,7 +337,7 @@ export default function App() {
         setSyncStatusMsg('💡 本地持久化模式正常运行中');
       }
     } catch (e: any) {
-      setSyncStatusMsg(`同步提示：${e.message || '本地数据已保存'}`);
+      setSyncStatusMsg(`⚠️ 同步失败：${e.message || '本地数据已保存'}`);
     }
     setTimeout(() => setSyncStatusMsg(null), 5000);
   };
@@ -461,6 +476,21 @@ export default function App() {
         language={language}
         initialTopic={aiInitialTopic}
       />
+
+      {/* 生成报告过场：让"算完了"有仪式感 */}
+      {isGenerating && (
+        <div className="fixed inset-0 z-[100] bg-neutral-950/95 backdrop-blur-sm flex flex-col items-center justify-center text-center px-6 animate-in fade-in">
+          <div className="relative w-20 h-20 mb-6">
+            <div className="absolute inset-0 rounded-full border-4 border-white/15"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-amber-400 border-t-transparent animate-spin"></div>
+            <Heart className="w-8 h-8 text-amber-400 absolute inset-0 m-auto animate-pulse" />
+          </div>
+          <h2 className="text-white text-lg sm:text-xl font-black tracking-tight">正在为你生成体检报告…</h2>
+          <p className="text-neutral-400 text-sm mt-2 max-w-sm leading-relaxed">
+            我们正把你的店名、行业和每一笔开支，算成一句你能听懂的人话。
+          </p>
+        </div>
+      )}
     </div>
   );
 }

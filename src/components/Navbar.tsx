@@ -82,8 +82,16 @@ export const Navbar: React.FC<NavbarProps> = ({
           </span>
           <span className="hidden md:inline text-neutral-400">|</span>
           <span className="hidden md:inline text-neutral-500 font-medium">
-            专为宣教工场爱心门诊、辅导中心与营商服事量身定制 · 永久免费
+            专为宣教工场爱心门诊、辅导中心与营商服事量身定制
           </span>
+          <button
+            onClick={onOpenFeeModal}
+            className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 font-bold transition-colors cursor-pointer"
+            title={language === 'zh' ? '查看费用透明度说明' : 'View fee transparency details'}
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+            {language === 'zh' ? '永久免费 · 费用透明' : 'Free & Transparent'}
+          </button>
         </div>
 
         <div className="flex items-center gap-2">
@@ -224,7 +232,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
 
             <button
-              onClick={() => onOpenAiHelper()}
+              onClick={() => onOpenAiHelper(true)}
               className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-bold shadow-sm transition-all cursor-pointer shrink-0"
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-300" />

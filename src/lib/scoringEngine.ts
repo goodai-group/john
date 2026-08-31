@@ -5,10 +5,13 @@ import {
   MetricScore,
   ProofType
 } from '../types';
-import { convertToTargetCurrency } from './currencies';
+import { convertToTargetCurrency, CUSTOM_CURRENCY_VALUE } from './currencies';
+
+/** 与 AssessmentForm 中 CUSTOM_INDUSTRY_VALUE 保持一致的占位常量 */
+const CUSTOM_INDUSTRY_VALUE = '__CUSTOM__';
 
 export function runBusinessAssessment(formData: BusinessFormData): AssessmentReport {
-  const baseCurrency = formData.baseCurrency || 'USD';
+  const baseCurrency = formData.baseCurrency === CUSTOM_CURRENCY_VALUE && formData.customCurrencyCode ? formData.customCurrencyCode : (formData.baseCurrency || 'USD');
   const customRateVal = formData.hasMultipleRates ? formData.customExchangeRateValue : undefined;
   const customRateCode = formData.hasMultipleRates ? formData.baseCurrency : undefined;
 
@@ -19,7 +22,13 @@ export function runBusinessAssessment(formData: BusinessFormData): AssessmentRep
   const monthlyGrossRev = conv(formData.monthlyRevenue);
   const monthlyRealRev = conv(formData.monthlyRealOperatingRevenue) || monthlyGrossRev;
   const monthlyGrants = conv(formData.monthlyExternalGrants);
-  const cogs = conv(formData.cogsCost);
+  // 动态物料成本明细（AI 按行业推断，用户可增删改）按主币种金额直接并入 COGS
+  const dynamicCogsTotal = (formData.dynamicCogsItems || []).reduce(
+    (sum, it) => sum + (Number(it.value) || 0),
+    0
+  );
+  // 若用户使用了 AI 按行业生成的动态物料成本明细，则以其合计为准（避免与 cogsCost 总额重复计入）
+  const cogs = dynamicCogsTotal > 0 ? dynamicCogsTotal : conv(formData.cogsCost);
   const rent = conv(formData.rentCost);
   const labor = conv(formData.laborCost);
   const utility = conv(formData.utilityCost);
@@ -29,8 +38,17 @@ export function runBusinessAssessment(formData: BusinessFormData): AssessmentRep
   const liquidCash = conv(formData.cashAndLiquidAssets);
   const inventory = conv(formData.inventoryValue);
 
-  // 运营费用总和 (OPEX) = 房租 + 人工 + 水电 + 其他开销
-  const totalOpex = rent + labor + utility + otherOpex;
+  // 动态运营开支明细（AI 按行业推断，用户可增删改）按主币种金额直接并入 OPEX
+  const dynamicOpexTotal = (formData.dynamicOpexItems || []).reduce(
+    (sum, it) => sum + (Number(it.value) || 0),
+    0
+  );
+  // 运营费用总和 (OPEX)
+  // 修复：动态运营开支明细（AI 按行业生成的房租/薪资/水电等细分项）与上方固定字段同义，
+  // 若用户填写了动态项则以其合计为准（避免与固定字段重复计入），否则回退到固定字段合计。
+  // 其他开销 (otherOpex) 为独立类别，两种模式均计入。
+  const fixedOpex = rent + labor + utility;
+  const totalOpex = dynamicOpexTotal > 0 ? dynamicOpexTotal + otherOpex : fixedOpex + otherOpex;
 
   // 毛利 (Gross Profit) = 真实主营收入 - COGS
   const grossProfit = Math.max(0, monthlyRealRev - cogs);
@@ -51,8 +69,12 @@ export function runBusinessAssessment(formData: BusinessFormData): AssessmentRep
 
   // 现金储备月数 (Cash Runway) = 可用流动资金 / 每月必须支出 (COGS + OPEX + 还贷)
   const monthlyBurn = cogs + totalOpex + debtPayment;
-  const cashRunwayMonths =
+  const _rawRunwayMonths =
     monthlyBurn > 0 ? Number((liquidCash / monthlyBurn).toFixed(1)) : liquidCash > 0 ? 12 : 0;
+  // 出口封顶：超过 60 个月（约 5 年）即视为"充裕"，避免下游 UI 显示几亿天这类
+  // 与现实脱节的数字（用户多半是多输入了几个 0，或极端小项目开销几近为零）。
+  // 原始值仍可通过 _rawRunwayMonths 在内部获取；此处仅对展示/评分口径做合理化。
+  const cashRunwayMonths = Math.min(_rawRunwayMonths, 60);
 
   // 债务保障倍数 (DSCR) = 经营性净现金 / 每月债务还款
   const debtServiceCoverageRatio =
@@ -137,6 +159,7 @@ export function runBusinessAssessment(formData: BusinessFormData): AssessmentRep
   ];
 
   const gatePassed = gates.every((g) => g.status === 'PASS');
+  const failedGates = gates.filter((g) => g.status !== 'PASS');
 
   // 3. 梯度指标打分 (MetricScores)
   const metrics: MetricScore[] = [
@@ -323,7 +346,9 @@ export function runBusinessAssessment(formData: BusinessFormData): AssessmentRep
     version: formData.version,
     createdAt: new Date().toISOString(),
     projectName: formData.projectName || '未命名商业自测项目',
-    industry: formData.industry || '综合商业',
+    industry:
+      (formData.industry === CUSTOM_INDUSTRY_VALUE ? formData.customIndustryName : formData.industry) ||
+      '综合商业',
     baseCurrency,
     isSensitiveRegion: formData.isSensitiveRegion,
     dataMinimizationNotice: formData.isSensitiveRegion
@@ -341,13 +366,19 @@ export function runBusinessAssessment(formData: BusinessFormData): AssessmentRep
     radarScores,
     gates,
     gatePassed,
+    failedGates,
     metrics,
+    aiActionableAdvice,
+    // 透传按行业细分的动态成本明细，供报告分项展示
+    dynamicCogsItems: formData.dynamicCogsItems || [],
+    dynamicOpexItems: formData.dynamicOpexItems || [],
     normalizedFinancials: {
       monthlyGrossRevenue: monthlyGrossRev,
       monthlyRealRevenue: monthlyRealRev,
       monthlyExternalGrants: monthlyGrants,
       monthlyCogs: cogs,
       monthlyOpex: totalOpex,
+      monthlyBurn,
       grossProfit,
       grossMarginPercent,
       operatingProfit: operatingProfitPBT,
@@ -356,8 +387,7 @@ export function runBusinessAssessment(formData: BusinessFormData): AssessmentRep
       opexRatioPercent,
       cashRunwayMonths,
       debtServiceCoverageRatio
-    },
-    aiActionableAdvice
+    }
   };
 }
 

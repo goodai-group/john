@@ -76,8 +76,71 @@ export const SUPPORTED_CURRENCIES: CurrencyRate[] = [
   { code: 'CZK', nameZh: '捷克克朗 (CZK)', nameEn: 'Czech Koruna', symbol: 'Kč', rateToUsd: 23.2, region: '欧洲' },
   { code: 'HUF', nameZh: '匈牙利福林 (HUF)', nameEn: 'Hungarian Forint', symbol: 'Ft', rateToUsd: 362.0, region: '欧洲' },
   { code: 'AUD', nameZh: '澳大利亚元 (AUD)', nameEn: 'Australian Dollar', symbol: 'A$', rateToUsd: 1.52, region: '大洋洲' },
-  { code: 'NZD', nameZh: '新西兰元 (NZD)', nameEn: 'New Zealand Dollar', symbol: 'NZ$', rateToUsd: 1.66, region: '大洋洲' }
+  { code: 'NZD', nameZh: '新西兰元 (NZD)', nameEn: 'New Zealand Dollar', symbol: 'NZ$', rateToUsd: 1.66, region: '大洋洲' },
+
+  // 🌏 中亚及西亚补充 (Central / West Asia)
+  { code: 'TMT', nameZh: '土库曼斯坦马纳特 (TMT)', nameEn: 'Turkmenistani Manat', symbol: 'TMT', rateToUsd: 3.5, region: '中亚' },
+  { code: 'TJS', nameZh: '塔吉克斯坦索莫尼 (TJS)', nameEn: 'Tajikistani Somoni', symbol: 'SM', rateToUsd: 10.9, region: '中亚' },
+  { code: 'KGS', nameZh: '吉尔吉斯索姆 (KGS)', nameEn: 'Kyrgyzstani Som', symbol: 'сом', rateToUsd: 87.5, region: '中亚' },
+  { code: 'AFN', nameZh: '阿富汗尼 (AFN)', nameEn: 'Afghan Afghani', symbol: '؋', rateToUsd: 71.0, region: '中亚' },
+  { code: 'AZN', nameZh: '阿塞拜疆马纳特 (AZN)', nameEn: 'Azerbaijani Manat', symbol: '₼', rateToUsd: 1.7, region: '西亚' },
+  { code: 'AMD', nameZh: '亚美尼亚德拉姆 (AMD)', nameEn: 'Armenian Dram', symbol: '֏', rateToUsd: 390.0, region: '西亚' },
+  { code: 'GEL', nameZh: '格鲁吉亚拉里 (GEL)', nameEn: 'Georgian Lari', symbol: '₾', rateToUsd: 2.7, region: '西亚' },
+
+  // 🌍 非洲补充 (Africa extended)
+  { code: 'CDF', nameZh: '刚果法郎 (CDF)', nameEn: 'Congolese Franc', symbol: 'FC', rateToUsd: 2850.0, region: '非洲' },
+  { code: 'AOA', nameZh: '安哥拉宽扎 (AOA)', nameEn: 'Angolan Kwanza', symbol: 'Kz', rateToUsd: 920.0, region: '非洲' },
+  { code: 'BIF', nameZh: '布隆迪法郎 (BIF)', nameEn: 'Burundian Franc', symbol: 'FBu', rateToUsd: 2950.0, region: '非洲' },
+  { code: 'MGA', nameZh: '马达加斯加阿里亚里 (MGA)', nameEn: 'Malagasy Ariary', symbol: 'Ar', rateToUsd: 4600.0, region: '非洲' },
+  { code: 'SOS', nameZh: '索马里先令 (SOS)', nameEn: 'Somali Shilling', symbol: 'S', rateToUsd: 571.0, region: '非洲' },
+  { code: 'SDG', nameZh: '苏丹镑 (SDG)', nameEn: 'Sudanese Pound', symbol: 'SDG', rateToUsd: 600.0, region: '非洲' },
+  { code: 'SLE', nameZh: '塞拉利昂利昂 (SLE)', nameEn: 'Sierra Leonean Leone', symbol: 'Le', rateToUsd: 20.5, region: '非洲' },
+  { code: 'GMD', nameZh: '冈比亚达拉西 (GMD)', nameEn: 'Gambian Dalasi', symbol: 'D', rateToUsd: 67.0, region: '非洲' },
+  { code: 'MVR', nameZh: '马尔代夫拉菲亚 (MVR)', nameEn: 'Maldivian Rufiyaa', symbol: 'Rf', rateToUsd: 15.4, region: '南亚' },
+
+  // 🌎 美洲补充 (Americas extended)
+  { code: 'BOB', nameZh: '玻利维亚玻利维亚诺 (BOB)', nameEn: 'Bolivian Boliviano', symbol: 'Bs', rateToUsd: 6.96, region: '拉美' },
+  { code: 'UYU', nameZh: '乌拉圭比索 (UYU)', nameEn: 'Uruguayan Peso', symbol: '$U', rateToUsd: 40.5, region: '拉美' },
+  { code: 'VES', nameZh: '委内瑞拉玻利瓦尔 (VES)', nameEn: 'Venezuelan Bolívar', symbol: 'Bs.S', rateToUsd: 36.5, region: '拉美' },
+  { code: 'PYG', nameZh: '巴拉圭瓜拉尼 (PYG)', nameEn: 'Paraguayan Guarani', symbol: '₲', rateToUsd: 7350.0, region: '拉美' },
+  { code: 'GTQ', nameZh: '危地马拉格查尔 (GTQ)', nameEn: 'Guatemalan Quetzal', symbol: 'Q', rateToUsd: 7.7, region: '拉美' },
+  { code: 'HNL', nameZh: '洪都拉斯伦皮拉 (HNL)', nameEn: 'Honduran Lempira', symbol: 'L', rateToUsd: 24.7, region: '拉美' },
+  { code: 'NIO', nameZh: '尼加拉瓜科多巴 (NIO)', nameEn: 'Nicaraguan Córdoba', symbol: 'C$', rateToUsd: 36.6, region: '拉美' },
+  { code: 'JMD', nameZh: '牙买加元 (JMD)', nameEn: 'Jamaican Dollar', symbol: 'J$', rateToUsd: 158.0, region: '加勒比' },
+  { code: 'TTD', nameZh: '特立尼达多巴哥元 (TTD)', nameEn: 'Trinidad & Tobago Dollar', symbol: 'TT$', rateToUsd: 6.8, region: '加勒比' },
+  { code: 'BSD', nameZh: '巴哈马元 (BSD)', nameEn: 'Bahamian Dollar', symbol: 'B$', rateToUsd: 1.0, region: '加勒比' },
+  { code: 'HTG', nameZh: '海地古德 (HTG)', nameEn: 'Haitian Gourde', symbol: 'G', rateToUsd: 133.0, region: '加勒比' },
+  { code: 'BBD', nameZh: '巴巴多斯元 (BBD)', nameEn: 'Barbadian Dollar', symbol: 'Bds$', rateToUsd: 2.0, region: '加勒比' },
+
+  // 🌏 欧洲、中东、亚太补充
+  { code: 'RON', nameZh: '罗马尼亚列伊 (RON)', nameEn: 'Romanian Leu', symbol: 'lei', rateToUsd: 4.6, region: '欧洲' },
+  { code: 'BGN', nameZh: '保加利亚列弗 (BGN)', nameEn: 'Bulgarian Lev', symbol: 'лв', rateToUsd: 1.8, region: '欧洲' },
+  { code: 'UAH', nameZh: '乌克兰格里夫纳 (UAH)', nameEn: 'Ukrainian Hryvnia', symbol: '₴', rateToUsd: 41.0, region: '欧洲' },
+  { code: 'RSD', nameZh: '塞尔维亚第纳尔 (RSD)', nameEn: 'Serbian Dinar', symbol: 'дин', rateToUsd: 107.0, region: '欧洲' },
+  { code: 'DZD', nameZh: '阿尔及利亚第纳尔 (DZD)', nameEn: 'Algerian Dinar', symbol: 'DA', rateToUsd: 134.0, region: '中东' },
+  { code: 'LYD', nameZh: '利比亚第纳尔 (LYD)', nameEn: 'Libyan Dinar', symbol: 'LD', rateToUsd: 4.8, region: '中东' },
+  { code: 'IQD', nameZh: '伊拉克第纳尔 (IQD)', nameEn: 'Iraqi Dinar', symbol: 'ع.د', rateToUsd: 1310.0, region: '中东' },
+  { code: 'LBP', nameZh: '黎巴嫩镑 (LBP)', nameEn: 'Lebanese Pound', symbol: 'L.L', rateToUsd: 89500.0, region: '中东' },
+  { code: 'OMR', nameZh: '阿曼里亚尔 (OMR)', nameEn: 'Omani Rial', symbol: 'OMR', rateToUsd: 0.384, region: '中东' },
+  { code: 'YER', nameZh: '也门里亚尔 (YER)', nameEn: 'Yemeni Rial', symbol: 'YR', rateToUsd: 250.0, region: '中东' },
+  { code: 'BHD', nameZh: '巴林第纳尔 (BHD)', nameEn: 'Bahraini Dinar', symbol: 'BD', rateToUsd: 0.376, region: '中东' },
+  { code: 'SRD', nameZh: '苏里南元 (SRD)', nameEn: 'Surinamese Dollar', symbol: '$', rateToUsd: 37.0, region: '拉美' },
+  { code: 'GYD', nameZh: '圭亚那元 (GYD)', nameEn: 'Guyanese Dollar', symbol: 'G$', rateToUsd: 209.0, region: '拉美' },
+
+  // 🌊 太平洋岛国 (Pacific Islands)
+  { code: 'PGK', nameZh: '巴布亚新几内亚基那 (PGK)', nameEn: 'Papua New Guinea Kina', symbol: 'K', rateToUsd: 3.95, region: '太平洋' },
+  { code: 'FJD', nameZh: '斐济元 (FJD)', nameEn: 'Fijian Dollar', symbol: 'FJ$', rateToUsd: 2.25, region: '太平洋' },
+  { code: 'WST', nameZh: '萨摩亚塔拉 (WST)', nameEn: 'Samoan Tala', symbol: 'WS$', rateToUsd: 2.7, region: '太平洋' },
+  { code: 'TOP', nameZh: '汤加潘加 (TOP)', nameEn: 'Tongan Paʻanga', symbol: 'T$', rateToUsd: 2.35, region: '太平洋' },
+  { code: 'VUV', nameZh: '瓦努阿图瓦图 (VUV)', nameEn: 'Vanuatu Vatu', symbol: 'VT', rateToUsd: 118.0, region: '太平洋' },
+  { code: 'SBD', nameZh: '所罗门群岛元 (SBD)', nameEn: 'Solomon Islands Dollar', symbol: 'SI$', rateToUsd: 8.4, region: '太平洋' },
+
+  // ➕ 自定义币种占位（实际由用户在 UI 中输入 3 字母代码）
+  { code: '__CUSTOM__', nameZh: '➕ 其他币种（自定义 3 字母代码）', nameEn: 'Other (Custom Code)', symbol: '¤', rateToUsd: 1.0, region: '其他', isCustomOption: true }
 ];
+
+/** 特殊标记：币种下拉中选中此项代表用户要自定义输入币种代码 */
+export const CUSTOM_CURRENCY_VALUE = '__CUSTOM__';
 
 export function getCurrencyInfo(code: CurrencyCode): CurrencyRate {
   if (!code) return SUPPORTED_CURRENCIES[0];

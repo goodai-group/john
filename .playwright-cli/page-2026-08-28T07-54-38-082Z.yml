@@ -1,0 +1,132 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]: 智能自动体检
+        - generic [ref=e10]: "|"
+        - generic [ref=e11]: 专为宣教工场爱心门诊、辅导中心与营商服事量身定制 · 永久免费
+      - generic [ref=e12]:
+        - button "使用指南 (3分钟看懂)" [ref=e13] [cursor=pointer]
+        - button "EN" [ref=e18] [cursor=pointer]
+    - generic [ref=e24]:
+      - generic [ref=e25] [cursor=pointer]:
+        - generic [ref=e26]: ✝️
+        - generic [ref=e27]:
+          - heading "商业宣教商业模型财务测算" [level=1] [ref=e28]
+          - paragraph [ref=e29]: 评估商业宣教项目的财务健康度、现金跑道与抗风险能力
+      - navigation [ref=e30]:
+        - button "📋 快速体检" [ref=e31] [cursor=pointer]
+        - button "📊 体检报告" [ref=e36] [cursor=pointer]
+        - button "🧮 沙盒试算" [ref=e41] [cursor=pointer]
+        - button "📖 评分规则" [ref=e45] [cursor=pointer]
+        - button "📁 我的项目" [ref=e49] [cursor=pointer]
+      - generic [ref=e53]:
+        - button "云端备份" [ref=e54] [cursor=pointer]
+        - button "AI 答疑" [ref=e58] [cursor=pointer]
+  - main [ref=e63]:
+    - generic [ref=e64]:
+      - generic [ref=e65]:
+        - generic [ref=e66]:
+          - generic [ref=e67]:
+            - heading "商业宣教商业模型财务测算" [level=1] [ref=e68]
+            - paragraph [ref=e69]: 输入核心财务收支与储备数据，系统实时测算商业模型的健康度、现金跑道与抗风险能力。
+          - button "⚡ 回到极简单页" [ref=e605] [cursor=pointer]
+        - generic [ref=e606]:
+          - button "STEP 01 基本信息与安全模式" [ref=e607] [cursor=pointer]:
+            - generic [ref=e608]: STEP 01
+            - generic [ref=e609]: 基本信息与安全模式
+          - button "STEP 02 资金证明与断点流水" [ref=e610] [cursor=pointer]:
+            - generic [ref=e611]: STEP 02
+            - generic [ref=e612]: 资金证明与断点流水
+          - button "STEP 03 营业收入与混合资金" [ref=e613] [cursor=pointer]:
+            - generic [ref=e614]: STEP 03
+            - generic [ref=e615]: 营业收入与混合资金
+          - button "STEP 04 成本开销与资产负债" [ref=e616] [cursor=pointer]:
+            - generic [ref=e617]: STEP 04
+            - generic [ref=e618]: 成本开销与资产负债
+          - button "STEP 05 多人协作与核对提交" [ref=e619] [cursor=pointer]:
+            - generic [ref=e620]: STEP 05
+            - generic [ref=e621]: 多人协作与核对提交
+      - generic [ref=e77]:
+        - generic [ref=e78]:
+          - generic [ref=e79]:
+            - generic [ref=e80]: 📊
+            - generic [ref=e81]:
+              - generic [ref=e82]:
+                - generic [ref=e83]: 实时晴雨表
+                - generic [ref=e84]: 100% 自动计算
+              - heading "商宣模式运转健康实时测算" [level=3] [ref=e85]
+          - generic [ref=e86]:
+            - generic [ref=e87]:
+              - generic [ref=e88]: 预估健康分
+              - generic [ref=e89]: 81 / 100
+            - generic [ref=e90]: AA 级
+        - generic [ref=e91]:
+          - generic [ref=e92]:
+            - generic [ref=e93]:
+              - generic [ref=e94]: 救命现金电池 (能撑多久)
+              - generic [ref=e100]: 较为吃紧 (1.5~3个月)
+            - generic [ref=e101]:
+              - generic [ref=e102]: 2.6 个月
+              - generic [ref=e103]: 备用金 450,000 KES
+            - paragraph [ref=e106]: ⚠️ 现金储备中等，建议适度控制进货与非必要开销，留足 3 个月以上。
+          - generic [ref=e107]:
+            - generic [ref=e108]:
+              - generic [ref=e109]: 每进账 100 块钱怎么分的？
+              - generic [ref=e114]: 大白话收支构成
+            - generic [ref=e115]:
+              - 'generic "进货成本: 40%" [ref=e116]'
+              - 'generic "房租人工水电: 37%" [ref=e117]'
+              - 'generic "净利润: 23%" [ref=e118]'
+            - generic [ref=e119]:
+              - generic [ref=e122]:
+                - text: 进货
+                - strong [ref=e123]: 40%
+              - generic [ref=e126]:
+                - text: 租金人工
+                - strong [ref=e127]: 37%
+              - generic [ref=e130]:
+                - text: 净赚落袋
+                - strong [ref=e131]: 23%
+            - paragraph [ref=e132]: 🎉 净利润率非常健康，自我造血与抗风险能力优秀。
+      - generic [ref=e915]:
+        - generic [ref=e916]:
+          - generic [ref=e917]:
+            - heading "5. 多人协作填写与最终确认提交 (Collaboration & Audit)" [level=3] [ref=e918]
+            - paragraph [ref=e925]: 可邀请配偶、当地同工协同录入；系统自动留存修改记录，最终提交需负责人确认。
+          - generic [ref=e926]:
+            - generic [ref=e927]:
+              - generic [ref=e928]: 邀请项目协作者 (1-2名)
+              - generic [ref=e929]: 权限分级：仅项目负责人可最终提交
+            - generic [ref=e930]:
+              - textbox "输入协作者邮箱 (如 partner@example.com)" [ref=e931]
+              - button "发送邀请" [ref=e932] [cursor=pointer]
+            - generic [ref=e934]:
+              - generic [ref=e935]:
+                - generic [ref=e941]: john.accountant@sunnybake.africa
+                - generic [ref=e942]: 协作者 · 可编辑
+              - button [ref=e943]
+          - generic [ref=e947]:
+            - generic [ref=e948]: 提交前信息核对速览
+            - generic [ref=e953]:
+              - generic [ref=e954]:
+                - generic [ref=e955]: "项目名称:"
+                - text: 阳光工坊社区烘焙店 (Sunny Bakehouse)
+              - generic [ref=e956]:
+                - generic [ref=e957]: "主报告币种:"
+                - text: KES
+              - generic [ref=e958]:
+                - generic [ref=e959]: "资金证明方式:"
+                - text: mobile_payment
+              - generic [ref=e960]:
+                - generic [ref=e961]: "敏感地区模式:"
+                - text: 未开启
+              - generic [ref=e962]:
+                - generic [ref=e963]: "月均总流水:"
+                - generic [ref=e964]: KES 330000
+              - generic [ref=e965]:
+                - generic [ref=e966]: "原材料采购(COGS):"
+                - generic [ref=e967]: KES 132000
+        - generic [ref=e968]:
+          - button "上一步" [ref=e969] [cursor=pointer]
+          - button "确认提交 · 生成财务测算与评估报告" [ref=e973] [cursor=pointer]

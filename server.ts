@@ -659,7 +659,7 @@ app.post('/api/ai/deep-diagnosis', async (req, res) => {
             financials: report.normalizedFinancials,
             radarScores: report.radarScores,
             totalScore: report.totalScore,
-            letterGrade: report.letterGrade,
+            tier: report.tier,
             gatePassed: report.gatePassed,
             failedGates: report.failedGates
           })}`,
@@ -701,7 +701,7 @@ app.post('/api/ai/deep-diagnosis', async (req, res) => {
     res.json({
       success: true,
       summaryHeadline: report.gatePassed ? '整体经营稳健，具备可持续造血能力' : '存在部分成本或流动性承压风险',
-      plainExplanation: `您的项目综合得分为 ${report.totalScore}分 (${report.letterGrade})，每月净利润约为 ${financials.netProfit} ${report.baseCurrency}。`,
+      plainExplanation: `您的项目综合得分为 ${report.totalScore}分 (${report.tier})，每月净利润约为 ${financials.netProfit} ${report.baseCurrency}。`,
       actionableAdvices: advices,
       potentialGrowthAreas: ['提高老客户复购率以摊薄获客成本', '优化高毛利核心单品销售比例']
     });

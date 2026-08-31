@@ -1,0 +1,155 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]: 智能自动体检
+        - generic [ref=e10]: "|"
+        - generic [ref=e11]: 专为宣教工场爱心门诊、辅导中心与营商服事量身定制 · 永久免费
+      - generic [ref=e12]:
+        - button "使用指南 (3分钟看懂)" [ref=e13] [cursor=pointer]
+        - button "EN" [ref=e18] [cursor=pointer]
+    - generic [ref=e24]:
+      - generic [ref=e25] [cursor=pointer]:
+        - generic [ref=e26]: ✝️
+        - generic [ref=e27]:
+          - heading "商业宣教商业模型财务测算" [level=1] [ref=e28]
+          - paragraph [ref=e29]: 评估商业宣教项目的财务健康度、现金跑道与抗风险能力
+      - navigation [ref=e30]:
+        - button "📋 快速体检" [ref=e31] [cursor=pointer]
+        - button "📊 体检报告" [ref=e36] [cursor=pointer]
+        - button "🧮 沙盒试算" [ref=e41] [cursor=pointer]
+        - button "📖 评分规则" [active] [ref=e45] [cursor=pointer]
+        - button "📁 我的项目" [ref=e49] [cursor=pointer]
+      - generic [ref=e53]:
+        - button "云端备份" [ref=e54] [cursor=pointer]
+        - button "AI 答疑" [ref=e58] [cursor=pointer]
+  - main [ref=e63]:
+    - generic [ref=e506]:
+      - generic [ref=e507]:
+        - generic [ref=e512]:
+          - generic [ref=e513]:
+            - heading "公开评分标准与行业基准库" [level=2] [ref=e514]
+            - generic [ref=e515]: STANDARDS HUB
+          - paragraph [ref=e516]: 公式公开 · 规则透明 · 大白话双行对照 · 凭证有无绝不影响打分
+        - generic [ref=e517]: 核心公平性承诺：凭证类型不作为任何评分输入。无论您上传正规银行流水、手写记账本照片、移动支付截图，还是纯手动填写 14 项数字，梯度评分与 Gate 底线判定均执行完全相同的计算逻辑，用户可核实、可追责。
+      - generic [ref=e522]:
+        - generic [ref=e524]:
+          - heading "5 项 Gate 底线红线判定规则（一票否决项）" [level=3] [ref=e525]
+          - paragraph [ref=e529]: 底线指标必须全部达标，否则触发预警或一票否决，确保商业模式具备真实造血能力。
+        - generic [ref=e530]:
+          - generic [ref=e531]:
+            - generic [ref=e532]:
+              - generic [ref=e533]: "Gate-1: 真实经营收入占比"
+              - generic [ref=e534]: ≥ 60%
+            - paragraph [ref=e535]: 大白话：排除借款和外部赠款后，客户买单付给你的钱要占总进账的 60% 以上。
+            - paragraph [ref=e536]: 💡 改善方向提示：专注提升核心主营商品或服务的销售复购，逐步降低对一次性救济款的依赖。
+          - generic [ref=e537]:
+            - generic [ref=e538]:
+              - generic [ref=e539]: "Gate-2: 毛利率底线 (Gross Margin)"
+              - generic [ref=e540]: ≥ 20%
+            - paragraph [ref=e541]: 大白话：每卖出 100 块钱东西，扣除直接进货和原材料成本后，至少要剩下 20 块钱毛利。
+            - paragraph [ref=e542]: 💡 改善方向提示：与上游批发商谈判争取批量折扣，或精简损耗严重的低毛利进货品种。
+          - generic [ref=e543]:
+            - generic [ref=e544]:
+              - generic [ref=e545]: "Gate-3: OPEX 运营固定开销覆盖"
+              - generic [ref=e546]: 毛利 ≥ OPEX
+            - paragraph [ref=e547]: 大白话：每月赚出来的毛利润，必须能够全额包住房租、工人工资与水电网络等固定支出。
+            - paragraph [ref=e548]: 💡 改善方向提示：OPEX 超标时，通常可以从工时弹性排班、转租分摊部分场地或削减杂费入手。
+          - generic [ref=e549]:
+            - generic [ref=e550]:
+              - generic [ref=e551]: "Gate-4: 最终税后净利润 (PAT)"
+              - generic [ref=e552]: PAT ≥ 0
+            - paragraph [ref=e553]: 大白话：扣掉所有成本、开销和税金后，每月到手必须是正数，不能处于持续倒贴亏损状态。
+            - paragraph [ref=e554]: 💡 改善方向提示：梳理非生产性杂费支出，提升单客消费客单价以拉正月度利润。
+      - generic [ref=e555]:
+        - generic [ref=e556]:
+          - heading "梯度评分指标双行标准表 (板块 B-G)" [level=3] [ref=e557]
+          - paragraph [ref=e563]: 表头统一采用【专业术语 + 大白话副标题】双行展示，消除财务术语理解门槛。
+        - table [ref=e565]:
+          - rowgroup [ref=e566]:
+            - row [ref=e567]:
+              - columnheader "指标专业名称 大白话通俗说明" [ref=e568]:
+                - generic [ref=e569]: 指标专业名称
+                - generic [ref=e570]: 大白话通俗说明
+              - columnheader "权重" [ref=e571]
+              - columnheader "健康基准区间" [ref=e572]
+              - columnheader "未达标通用改善方向" [ref=e573]
+          - rowgroup [ref=e574]:
+            - row [ref=e575]:
+              - cell "COGS Ratio / 原材料与直接成本占比 进货原料花了多少钱" [ref=e576]:
+                - generic [ref=e577]: COGS Ratio / 原材料与直接成本占比
+                - generic [ref=e578]: 进货原料花了多少钱
+              - cell "20%" [ref=e579]
+              - cell "35% - 60%" [ref=e580]
+              - cell "寻找就近源头供货商，减少中间商加价；优化配方或包装成本。" [ref=e581]
+            - row [ref=e582]:
+              - cell "OPEX Overhead / 运营固定开支占比 每月房租、工人工资与日常杂费" [ref=e583]:
+                - generic [ref=e584]: OPEX Overhead / 运营固定开支占比
+                - generic [ref=e585]: 每月房租、工人工资与日常杂费
+              - cell "15%" [ref=e586]
+              - cell "≤ 45%" [ref=e587]
+              - cell "精简人工冗余工时、协商按月分段付租或分租部分场地以降低固定负担。" [ref=e588]
+            - row [ref=e589]:
+              - cell "Net Profit Margin (PAT) / 到手纯利润率 最终揣进兜里的纯利润比例" [ref=e590]:
+                - generic [ref=e591]: Net Profit Margin (PAT) / 到手纯利润率
+                - generic [ref=e592]: 最终揣进兜里的纯利润比例
+              - cell "20%" [ref=e593]
+              - cell "≥ 15%" [ref=e594]
+              - cell "通过老客户会员复购或组合套餐提高客单价，严格压缩零碎损耗。" [ref=e595]
+            - row [ref=e596]:
+              - cell "Cash Runway / 现金储备可支撑月数 即使不进账，账上备用金能维持几个月" [ref=e597]:
+                - generic [ref=e598]: Cash Runway / 现金储备可支撑月数
+                - generic [ref=e599]: 即使不进账，账上备用金能维持几个月
+              - cell "15%" [ref=e600]
+              - cell "≥ 3.0 个月" [ref=e601]
+              - cell "每月坚持将 10%-15% 净利润提取到独立应急资金池，防范突发事件。" [ref=e602]
+            - row [ref=e603]:
+              - cell "DSCR / 债务偿付保障倍数 还债抗压能力（赚的钱够不够还贷）" [ref=e604]:
+                - generic [ref=e605]: DSCR / 债务偿付保障倍数
+                - generic [ref=e606]: 还债抗压能力（赚的钱够不够还贷）
+              - cell "15%" [ref=e607]
+              - cell "≥ 1.25x 或 无债" [ref=e608]
+              - cell "协商延长贷款还款年限以降低月供，避免过度举债扩大规模。" [ref=e609]
+            - row [ref=e610]:
+              - cell "Continuity / 稳定经营时间与团队 开了多少个月，团队规模是否平稳" [ref=e611]:
+                - generic [ref=e612]: Continuity / 稳定经营时间与团队
+                - generic [ref=e613]: 开了多少个月，团队规模是否平稳
+              - cell "15%" [ref=e614]
+              - cell "≥ 12 个月" [ref=e615]
+              - cell "建立清晰的经营台账，与核心员工签订互信分成机制以稳住团队。" [ref=e616]
+      - generic [ref=e617]:
+        - generic [ref=e618]:
+          - generic [ref=e619]:
+            - heading "行业基准对照表与通俗自然语言总结 (板块 H)" [level=3] [ref=e620]
+            - paragraph [ref=e626]: 每个行业附带一句自然语言总结，让经营者一眼看懂行业常规盈利水平。
+          - generic [ref=e627]:
+            - button "☕" [ref=e628] [cursor=pointer]
+            - button "🩺" [ref=e629] [cursor=pointer]
+            - button "🛒" [ref=e630] [cursor=pointer]
+            - button "📚" [ref=e631] [cursor=pointer]
+            - button "🛠️" [ref=e632] [cursor=pointer]
+            - button "🌱" [ref=e633] [cursor=pointer]
+            - button "🧒" [ref=e634] [cursor=pointer]
+            - button "🤝" [ref=e635] [cursor=pointer]
+            - button "💡" [ref=e636] [cursor=pointer]
+        - generic [ref=e637]:
+          - generic [ref=e638]:
+            - heading "☕ 餐饮烘焙 / 社区咖啡 (Bakery & Cafe)" [level=4] [ref=e639]
+            - generic [ref=e640]: Bakery, Coffee Shop & Catering
+          - generic [ref=e641]:
+            - generic [ref=e642]:
+              - generic [ref=e643]: 典型毛利率区间
+              - text: 55% - 70%
+            - generic [ref=e644]:
+              - generic [ref=e645]: 典型固定开销比
+              - text: 30% - 48%
+            - generic [ref=e646]:
+              - generic [ref=e647]: 典型到手纯利
+              - text: 12% - 25%
+            - generic [ref=e648]:
+              - generic [ref=e649]: 抗风险备用金
+              - text: ≥ 3.0 个月
+          - generic [ref=e650]:
+            - generic [ref=e651]: 行业通俗大白话总结：
+            - paragraph [ref=e655]: “餐饮烘焙与社区咖啡馆，直接食材（咖啡豆、面粉、乳制品）与打包耗材通常占总进账的 30% 到 45%。注意控制临街铺租与咖啡师人工，保持 15% 净结余可长期良性运转。”
+            - generic [ref=e656]: 关键经营诀窍：严控高损耗生鲜原辅料库存，推出特色高毛利单品组合与外带套餐。

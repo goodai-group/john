@@ -696,27 +696,48 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
         </div>
 
         {/* Input Bar */}
-        <div className="p-3 sm:p-4 border-t border-slate-200 bg-white flex gap-2">
-          <input
-            type="text"
-            placeholder="输入您想咨询的做买卖指标（如：流水、毛利、备用金、汇率）..."
-            value={questionInput}
-            onChange={(e) => setQuestionInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !isLoading) {
-                handleAskQuestion(questionInput);
-              }
-            }}
-            className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-indigo-500 focus:bg-white transition-all"
-          />
-          <button
-            onClick={() => handleAskQuestion(questionInput)}
-            disabled={isLoading || !questionInput.trim()}
-            className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer shrink-0"
-          >
-            <Send className="w-3.5 h-3.5" />
-            <span>{isLoading ? '解答中...' : '提问'}</span>
-          </button>
+        <div className="p-3 sm:p-4 border-t border-slate-200 bg-white">
+          {/* 传教士常问 · 一键提问 */}
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {[
+              '我该留多少现金才安全？',
+              '一个月最少赚多少才不亏？',
+              '同工工资怎么定合理？',
+              '启动资金大概要多少？'
+            ].map((q) => (
+              <button
+                key={q}
+                type="button"
+                onClick={() => handleAskQuestion(q)}
+                disabled={isLoading}
+                className="text-[11px] px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 font-semibold border border-indigo-200 hover:bg-indigo-100 disabled:opacity-50 transition-colors cursor-pointer"
+              >
+                {q}
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="输入您想咨询的做买卖指标（如：流水、毛利、备用金、汇率）..."
+              value={questionInput}
+              onChange={(e) => setQuestionInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !isLoading) {
+                  handleAskQuestion(questionInput);
+                }
+              }}
+              className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-indigo-500 focus:bg-white transition-all"
+            />
+            <button
+              onClick={() => handleAskQuestion(questionInput)}
+              disabled={isLoading || !questionInput.trim()}
+              className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer shrink-0"
+            >
+              <Send className="w-3.5 h-3.5" />
+              <span>{isLoading ? '解答中...' : '提问'}</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
