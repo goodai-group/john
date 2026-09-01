@@ -12,7 +12,8 @@ import {
   User as UserIcon,
   Cloud,
   Loader2,
-  ShieldCheck
+  ShieldCheck,
+  MessageCircle
 } from 'lucide-react';
 import { Language, ActiveTab, AppUser } from '../types';
 
@@ -117,6 +118,16 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span>{language === 'zh' ? '永久免费' : 'Free'}</span>
             </button>
 
+            {/* AI 答疑：任何不懂的地方都能问 */}
+            <button
+              onClick={() => onOpenAiHelper()}
+              className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-xs font-bold shadow-sm hover:from-violet-500 hover:to-indigo-500 hover:shadow transition-all cursor-pointer"
+              title={language === 'zh' ? 'AI 答疑：任何不懂的地方都能问' : 'Ask AI anything'}
+            >
+              <MessageCircle className="w-3.5 h-3.5" />
+              <span>{language === 'zh' ? 'AI 答疑' : 'Ask AI'}</span>
+            </button>
+
             {onOpenAppGuide && (
               <button
                 onClick={onOpenAppGuide}
@@ -209,22 +220,32 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Mobile Tab Row */}
         <div className="md:hidden flex overflow-x-auto pt-2 gap-1 scrollbar-none">
           {navItems.map((item) => {
-            const isActive = activeTab === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => onTabChange(item.id)}
-                className={`px-3 py-1 rounded-lg text-xs whitespace-nowrap font-medium transition-all ${
-                  isActive
-                    ? 'bg-indigo-600 text-white font-bold'
-                    : 'bg-neutral-100 text-neutral-600'
-                }`}
-              >
-                {item.label}
-              </button>
-            );
+          const isActive = activeTab === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => onTabChange(item.id)}
+              className={`px-3 py-2 rounded-lg text-xs whitespace-nowrap font-medium transition-all min-h-[32px] ${
+                isActive
+                  ? 'bg-indigo-600 text-white font-bold'
+                  : 'bg-neutral-100 text-neutral-600'
+              }`}
+            >
+              {item.label}
+            </button>
+          );
           })}
-        </div>
+          {/* AI 答疑移动端入口 */}
+          <button
+            onClick={() => onOpenAiHelper()}
+            className="px-3 py-2 rounded-lg text-xs whitespace-nowrap font-bold min-h-[32px] bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-sm hover:from-violet-500 hover:to-indigo-500 transition-all cursor-pointer"
+          >
+            <span className="inline-flex items-center gap-1">
+              <MessageCircle className="w-3.5 h-3.5" />
+              AI 答疑
+            </span>
+          </button>
+          </div>
       </div>
     </header>
   );

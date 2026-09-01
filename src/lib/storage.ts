@@ -397,11 +397,17 @@ export async function syncWithCloudDatabase(currentUser?: AppUser | null): Promi
     // If cloud has projects, merge them with local
     if (cloudProjects.length > 0) {
       const localProjects = getStoredProjects();
+      // 以项目 id 为键合并（保留最新版本），避免同一项目多版本同时进入列表导致 React 重复 key
       const mergedProjectsMap = new Map<string, BusinessFormData>();
-      // First put local projects
-      localProjects.forEach((p) => mergedProjectsMap.set(`${p.id}-v${p.version}`, p));
+      const putLatest = (p: BusinessFormData) => {
+        const existing = mergedProjectsMap.get(p.id);
+        if (!existing || (p.version || 0) >= (existing.version || 0)) {
+          mergedProjectsMap.set(p.id, p);
+        }
+      };
+      localProjects.forEach(putLatest);
       // Cloud projects take precedence
-      cloudProjects.forEach((p) => mergedProjectsMap.set(`${p.id}-v${p.version}`, p));
+      cloudProjects.forEach(putLatest);
       const mergedList = Array.from(mergedProjectsMap.values());
       localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(mergedList));
     } else {

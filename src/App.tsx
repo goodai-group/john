@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Heart, X, AlertTriangle, ExternalLink } from 'lucide-react';
+import { Heart, X, AlertTriangle, ExternalLink, MessageCircle } from 'lucide-react';
 import firebaseConfig from '../firebase-applet-config.json';
 import {
   BusinessFormData,
@@ -551,6 +551,22 @@ export default function App() {
           />
         )}
       </main>
+
+      {/* 全局 AI 答疑悬浮入口：任何页面随时提问 */}
+      {!isAiDrawerOpen && (
+        <button
+          onClick={() => {
+            setAiInitialTopic(undefined);
+            setIsAiDrawerOpen(true);
+          }}
+          aria-label="打开 AI 答疑"
+          title="AI 答疑：任何不懂的地方都能问"
+          className="fixed bottom-6 right-5 sm:right-6 z-40 flex items-center gap-2 pl-4 pr-5 py-3 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-sm font-bold shadow-xl hover:shadow-2xl hover:from-violet-500 hover:to-indigo-500 active:scale-95 transition-all cursor-pointer animate-in fade-in"
+        >
+          <MessageCircle className="w-5 h-5" />
+          <span className="hidden sm:inline">AI 答疑</span>
+        </button>
+      )}
 
       {/* Global Modals & Drawers */}
       <FeeTransparencyModal
