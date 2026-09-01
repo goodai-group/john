@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Heart } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Heart, X, AlertTriangle, ExternalLink } from 'lucide-react';
+import firebaseConfig from '../firebase-applet-config.json';
 import {
   BusinessFormData,
   AssessmentReport,
@@ -75,28 +76,67 @@ export default function App() {
 
   const [activeProjectId, setActiveProjectId] = useState<string>(SAMPLE_PROJECT.id);
   const [activeReportId, setActiveReportId] = useState<string>(INITIAL_SAMPLE_REPORT.id);
-  const [syncStatusMsg, setSyncStatusMsg] = useState<string | null>(null);
+
+  // 顶部的状态横幅
+  // kind: 'info' 普通提示（4 秒后自动消失），'error' 错误（不会自动消失，需手动关闭）
+  type Banner = {
+    kind: 'info' | 'error';
+    text: string;
+    action?: { href: string; label: string };
+  };
+  const [banner, setBanner] = useState<Banner | null>(null);
+  const bannerTimerRef = useRef<number | null>(null);
+
+  const pushBanner = (next: Banner | null, autoDismissMs?: number) => {
+    if (bannerTimerRef.current) {
+      window.clearTimeout(bannerTimerRef.current);
+      bannerTimerRef.current = null;
+    }
+    setBanner(next);
+    // info 类才自动消失，error 必须用户手动关，避免一闪而过看不清
+    if (next && next.kind === 'info' && autoDismissMs && autoDismissMs > 0) {
+      bannerTimerRef.current = window.setTimeout(() => setBanner(null), autoDismissMs);
+    }
+  };
+  const dismissBanner = () => {
+    if (bannerTimerRef.current) {
+      window.clearTimeout(bannerTimerRef.current);
+      bannerTimerRef.current = null;
+    }
+    setBanner(null);
+  };
+  // Firebase 控制台 Authentication Settings 直达链接
+  const firebaseAuthSettingsUrl = `https://console.firebase.google.com/project/${firebaseConfig.projectId}/authentication/settings`;
+  const firebaseAuthProvidersUrl = `https://console.firebase.google.com/project/${firebaseConfig.projectId}/authentication/providers`;
 
   // Subscribe to Firebase Google Auth state
   useEffect(() => {
     const unsubscribe = subscribeToAuthChanges(async (user) => {
       setCurrentUser(user);
       if (user) {
-        setSyncStatusMsg(`欢迎回来，${user.displayName || user.email}！正在载入您的专属云端档案...`);
+        pushBanner(
+          { kind: 'info', text: `欢迎回来，${user.displayName || user.email}！正在载入您的专属云端档案...` }
+        );
         try {
           await syncWithCloudDatabase(user);
           const refreshedProjects = loadStoredProjects();
           const refreshedReports = loadStoredReports();
           setProjects(refreshedProjects);
           setReports(refreshedReports);
-          setSyncStatusMsg(`已同步 ${user.displayName || user.email} 的专属云端自测档案`);
-        } catch (e) {
-          console.warn('User cloud sync error:', e);
+          pushBanner(
+            { kind: 'info', text: `已同步 ${user.displayName || user.email} 的专属云端自测档案` },
+            4000
+          );
+        } catch (e: any) {
+          pushBanner({
+            kind: 'error',
+            text: `云端同步失败：${e?.message || '已自动使用本地数据'}`
+          });
         }
-        setTimeout(() => setSyncStatusMsg(null), 4000);
       }
     });
     return () => unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Find active project & active report
@@ -118,7 +158,7 @@ export default function App() {
       const user = await signInWithGoogle();
       if (user) {
         setCurrentUser(user);
-        setSyncStatusMsg(`Google 登录成功！已与 ${user.email} 绑定`);
+        pushBanner({ kind: 'info', text: `Google 登录成功！已与 ${user.email} 绑定` }, 4000);
         await syncWithCloudDatabase(user);
         const refreshedProjects = loadStoredProjects();
         const refreshedReports = loadStoredReports();
@@ -126,22 +166,57 @@ export default function App() {
         setReports(refreshedReports);
       }
     } catch (err: any) {
+      const code = err?.code || '';
+      const msg = err?.message || '';
       if (
-        err?.code === 'auth/popup-closed-by-user' ||
-        err?.code === 'auth/cancelled-popup-request' ||
-        err?.message?.includes('popup-closed-by-user') ||
-        err?.message?.includes('cancelled-popup-request')
+        code === 'auth/popup-closed-by-user' ||
+        code === 'auth/cancelled-popup-request' ||
+        msg.includes('popup-closed-by-user') ||
+        msg.includes('cancelled-popup-request')
       ) {
-        // 用户主动关闭了登录窗口，显示温和的引导提示
-        setSyncStatusMsg('您已关闭 Google 登录窗口。仍可正常使用本地保存，或随时再次点击登录。');
-      } else if (err?.code === 'auth/popup-blocked' || err?.message?.includes('popup-blocked')) {
-        setSyncStatusMsg('浏览器阻止了登录弹出窗口，请在地址栏允许弹窗后重试。');
+        // 用户主动关闭了登录窗口，显示温和的引导提示（普通信息，4s 自动消失）
+        pushBanner(
+          {
+            kind: 'info',
+            text: '您已关闭 Google 登录窗口。仍可正常使用本地保存，或随时再次点击登录。'
+          },
+          4000
+        );
+      } else if (code === 'auth/popup-blocked' || msg.includes('popup-blocked')) {
+        pushBanner(
+          {
+            kind: 'info',
+            text: '浏览器阻止了登录弹出窗口，请在地址栏允许弹窗后重试。'
+          },
+          5000
+        );
+      } else if (
+        code === 'auth/unauthorized-domain' ||
+        msg.includes('unauthorized-domain') ||
+        msg.includes('not authorized for OAuth')
+      ) {
+        // 当前域名未加入 Firebase 授权域名列表（本地开发常见：localhost 未授权）
+        pushBanner({
+          kind: 'error',
+          text:
+            '登录被 Firebase 拦截：当前访问域名未加入授权名单。请在 Firebase 控制台 → Authentication → Settings → Authorized domains 中添加 localhost（若用 IP 访问也要加上 127.0.0.1），保存后回到本页刷新即可重新登录。',
+          action: { href: firebaseAuthSettingsUrl, label: '打开 Firebase 设置' }
+        });
+      } else if (code === 'auth/operation-not-allowed' || msg.includes('operation-not-allowed')) {
+        pushBanner({
+          kind: 'error',
+          text:
+            'Google 登录方式尚未开启：请在 Firebase 控制台 → Authentication → Sign-in method 中启用 Google 登录，保存后重试。',
+          action: { href: firebaseAuthProvidersUrl, label: '打开登录方式设置' }
+        });
       } else {
-        setSyncStatusMsg(`登录提示：${err?.message || '无法连接 Google 登录服务，已自动使用本地保存模式'}`);
+        pushBanner({
+          kind: 'error',
+          text: `登录失败：${msg || '无法连接 Google 登录服务，已自动使用本地保存模式'}`
+        });
       }
     } finally {
       setIsSigningIn(false);
-      setTimeout(() => setSyncStatusMsg(null), 4000);
     }
   };
 
@@ -150,8 +225,7 @@ export default function App() {
     try {
       await logoutGoogleUser();
       setCurrentUser(null);
-      setSyncStatusMsg('已安全退出 Google 登录。');
-      setTimeout(() => setSyncStatusMsg(null), 3000);
+      pushBanner({ kind: 'info', text: '已安全退出 Google 登录。' }, 3000);
     } catch (err) {
       console.warn('Logout error:', err);
     }
@@ -320,7 +394,7 @@ export default function App() {
   }, []);
 
   const handleTriggerSync = async () => {
-    setSyncStatusMsg('正在与 Firebase 云端数据库集合同步 (/assessments, /reports, /escalated_questions)...');
+    pushBanner({ kind: 'info', text: '正在与 Firebase 云端数据库集合同步 (/assessments, /reports, /escalated_questions)...' });
     try {
       if (isCloudDatabaseAvailable()) {
         // 超时保护：Firestore 网络不可用时不再无限挂起"同步中"，8 秒后明确提示失败
@@ -332,14 +406,16 @@ export default function App() {
         const refreshedReports = loadStoredReports();
         setProjects(refreshedProjects);
         setReports(refreshedReports);
-        setSyncStatusMsg('云端数据库双向同步已完成！数据已安全持久化');
+        pushBanner({ kind: 'info', text: '云端数据库双向同步已完成！数据已安全持久化' }, 4000);
       } else {
-        setSyncStatusMsg('本地持久化模式正常运行中');
+        pushBanner({ kind: 'info', text: '本地持久化模式正常运行中' }, 4000);
       }
     } catch (e: any) {
-      setSyncStatusMsg(`同步失败：${e.message || '本地数据已保存'}`);
+      pushBanner({
+        kind: 'error',
+        text: `同步失败：${e.message || '本地数据已保存'}`
+      });
     }
-    setTimeout(() => setSyncStatusMsg(null), 5000);
   };
 
   return (
@@ -369,10 +445,45 @@ export default function App() {
       />
 
       {/* Sync Status Banner */}
-      {syncStatusMsg && (
+      {banner && (
         <div className="max-w-7xl mx-auto px-4 mt-3">
-          <div className="bg-white border border-neutral-200 text-neutral-700 text-xs font-semibold px-4 py-2.5 rounded-xl shadow-sm flex items-center justify-between animate-in fade-in">
-            <span>{syncStatusMsg}</span>
+          <div
+            role={banner.kind === 'error' ? 'alert' : 'status'}
+            className={`animate-in fade-in px-4 py-3 rounded-2xl shadow-sm flex items-start gap-3 text-xs sm:text-sm font-semibold border-2 ${
+              banner.kind === 'error'
+                ? 'bg-rose-50 border-rose-300 text-rose-900'
+                : 'bg-white border-neutral-200 text-neutral-700'
+            }`}
+          >
+            {banner.kind === 'error' && (
+              <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-rose-500 shrink-0 mt-0.5" />
+            )}
+            <div className="flex-1 leading-relaxed">
+              <span className="block">{banner.text}</span>
+              {banner.action && (
+                <a
+                  href={banner.action.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 mt-2 px-3 py-1.5 rounded-lg bg-rose-600 text-white font-bold text-[11px] sm:text-xs hover:bg-rose-700 transition-colors"
+                >
+                  {banner.action.label}
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={dismissBanner}
+              aria-label="关闭通知"
+              className={`shrink-0 rounded-md p-1 transition-colors ${
+                banner.kind === 'error'
+                  ? 'hover:bg-rose-200 text-rose-700'
+                  : 'hover:bg-neutral-100 text-neutral-500'
+              }`}
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         </div>
       )}

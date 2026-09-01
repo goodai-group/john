@@ -1,1 +1,1 @@
-{"headless": true, "logLevel": "error", "device": "Desktop Chrome"}
+{"headless": false, "logLevel": "error", "device": "Desktop Chrome"}

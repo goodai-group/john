@@ -1,0 +1,122 @@
+- generic [ref=e4]:
+  - generic [ref=e7]:
+    - img "Google" [ref=e10]
+    - generic [ref=e11]:
+      - generic [ref=e13]:
+        - heading "登录" [level=1] [ref=e14]
+        - paragraph [ref=e15]: 使用您的 Google 账号
+      - generic [ref=e18]:
+        - generic [ref=e21]:
+          - generic [ref=e26]:
+            - textbox "邮箱或电话号码" [active] [ref=e27]
+            - generic: 邮箱或电话号码
+          - paragraph [ref=e28]:
+            - link "忘记了邮箱？" [ref=e29] [cursor=pointer]:
+              - /url: /signin/usernamerecovery?continue=https://accounts.google.com/&dsh=S-536861669:1788232264797822&flowEntry=ServiceLogin&flowName=WebLiteSignIn&followup=https://accounts.google.com/
+        - paragraph [ref=e32]:
+          - text: 不是您自己的计算机？请使用无痕浏览窗口进行登录。
+          - link "详细了解如何使用访客模式（外部链接，在新窗口中打开）" [ref=e33] [cursor=pointer]:
+            - /url: https://support.google.com/accounts?p=signin_privatebrowsing&hl=zh-CN
+            - text: 详细了解如何使用访客模式
+        - generic [ref=e35]:
+          - button "下一步" [ref=e37]
+          - link "创建账号" [ref=e39] [cursor=pointer]:
+            - /url: /lifecycle/flows/signup?continue=https://accounts.google.com/&dsh=S-536861669:1788232264797822&flowEntry=SignUp&flowName=GlifWebSignIn&followup=https://accounts.google.com/
+  - contentinfo [ref=e40]:
+    - combobox [ref=e43] [cursor=pointer]:
+      - option "繁體中文"
+      - option "简体中文" [selected]
+      - option "日本語"
+      - option "中文（香港）"
+      - option "Afrikaans"
+      - option "azərbaycan"
+      - option "bosanski"
+      - option "català"
+      - option "Čeština"
+      - option "Cymraeg"
+      - option "Dansk"
+      - option "Deutsch"
+      - option "eesti"
+      - option "English (United Kingdom)"
+      - option "English (United States)"
+      - option "Español (España)"
+      - option "Español (Latinoamérica)"
+      - option "euskara"
+      - option "Filipino"
+      - option "Français (Canada)"
+      - option "Français (France)"
+      - option "Gaeilge"
+      - option "galego"
+      - option "Hrvatski"
+      - option "Indonesia"
+      - option "isiZulu"
+      - option "íslenska"
+      - option "Italiano"
+      - option "Kiswahili"
+      - option "latviešu"
+      - option "lietuvių"
+      - option "magyar"
+      - option "Melayu"
+      - option "Nederlands"
+      - option "norsk"
+      - option "o‘zbek"
+      - option "polski"
+      - option "Português (Brasil)"
+      - option "Português (Portugal)"
+      - option "română"
+      - option "shqip"
+      - option "Slovenčina"
+      - option "slovenščina"
+      - option "srpski (latinica)"
+      - option "Suomi"
+      - option "Svenska"
+      - option "Tiếng Việt"
+      - option "Türkçe"
+      - option "Ελληνικά"
+      - option "беларуская"
+      - option "български"
+      - option "кыргызча"
+      - option "қазақ тілі"
+      - option "македонски"
+      - option "монгол"
+      - option "Русский"
+      - option "српски (ћирилица)"
+      - option "Українська"
+      - option "ქართული"
+      - option "հայերեն"
+      - option "‫עברית‬‎"
+      - option "‫اردو‬‎"
+      - option "‫العربية‬‎"
+      - option "‫فارسی‬‎"
+      - option "አማርኛ"
+      - option "नेपाली"
+      - option "मराठी"
+      - option "हिन्दी"
+      - option "অসমীয়া"
+      - option "বাংলা"
+      - option "ਪੰਜਾਬੀ"
+      - option "ગુજરાતી"
+      - option "ଓଡ଼ିଆ"
+      - option "தமிழ்"
+      - option "తెలుగు"
+      - option "ಕನ್ನಡ"
+      - option "മലയാളം"
+      - option "සිංහල"
+      - option "ไทย"
+      - option "ລາວ"
+      - option "မြန်မာ"
+      - option "ខ្មែរ"
+      - option "한국어"
+    - list [ref=e44]:
+      - listitem [ref=e45]:
+        - link "打开 Google 账号帮助中心（外部链接，在新窗口中打开）" [ref=e46] [cursor=pointer]:
+          - /url: https://support.google.com/accounts?hl=zh-CN&p=account_iph
+          - text: 帮助
+      - listitem [ref=e47]:
+        - link "《隐私权政策》（外部链接，在新窗口中打开）" [ref=e48] [cursor=pointer]:
+          - /url: https://accounts.google.com/TOS?loc=US&hl=zh-CN&privacy=true
+          - text: 隐私权
+      - listitem [ref=e49]:
+        - link "《Google 服务条款》（外部链接，在新窗口中打开）" [ref=e50] [cursor=pointer]:
+          - /url: https://accounts.google.com/TOS?loc=US&hl=zh-CN
+          - text: 条款
