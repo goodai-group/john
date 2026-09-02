@@ -34,6 +34,10 @@ interface AiDrawerProps {
   initialTopic?: string;
 }
 
+interface ChatRecord extends EscalatedQuestion {
+  aiMode?: 'gemini' | 'rules';
+}
+
 // Industry Big Data Benchmarks Dataset
 export const INDUSTRY_BIG_DATA = [
   {
@@ -112,7 +116,9 @@ const FAQ_PRESETS = [
   '账上备用金要留几个月才算安全不扣分？',
   '我们只有手写记账本和微信收款截图，打分会吃亏吗？',
   '当地官方汇率和民间实际兑换汇率差了一倍多，自报汇率会扣分吗？',
-  '做季节性水产生意，每年有3个月休渔期完全没进账，该怎么填？'
+  '做季节性水产生意，每年有3个月休渔期完全没进账，该怎么填？',
+  '一个月最少赚多少才不亏？',
+  '100美元等于多少人民币？'
 ];
 
 export const AiRuleConsultationDrawer: React.FC<AiDrawerProps> = ({
@@ -125,11 +131,20 @@ export const AiRuleConsultationDrawer: React.FC<AiDrawerProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'chat' | 'benchmarks' | 'public_archive'>('chat');
   const [archivedList, setArchivedList] = useState<EscalatedQuestion[]>([]);
-  const [chatHistory, setChatHistory] = useState<EscalatedQuestion[]>([]);
+  const [chatHistory, setChatHistory] = useState<ChatRecord[]>([]);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  // 服务端是否配置了真实 AI（GEMINI_API_KEY）。null=未知，true=已配置，false=未配置
+  const [aiConfigured, setAiConfigured] = useState<boolean | null>(null);
 
   useEffect(() => {
     setArchivedList(getEscalatedQuestions());
+    if (isOpen) {
+      // 探测后端 AI 配置状态，未配置时给出升级引导
+      fetch('/api/health')
+        .then((r) => r.json())
+        .then((h) => setAiConfigured(Boolean(h?.hasGeminiKey)))
+        .catch(() => setAiConfigured(null));
+    }
   }, [isOpen]);
 
   useEffect(() => {
@@ -141,7 +156,7 @@ export const AiRuleConsultationDrawer: React.FC<AiDrawerProps> = ({
   if (!isOpen) return null;
 
   // Smart local resolver for instant & reliable big-data backed responses
-  const resolveLocalKnowledge = (text: string): EscalatedQuestion => {
+  const resolveLocalKnowledge = (text: string): ChatRecord => {
     const isEdge = /休渔|季节|倒闭|天灾|战乱|物物交换|欠条|赊账|没有发票|教会赠款|非官方汇率|两套账|换人|无执照/i.test(
       text
     );
@@ -151,7 +166,109 @@ export const AiRuleConsultationDrawer: React.FC<AiDrawerProps> = ({
     let suggestedAction = '规则清晰，可正常填报';
     let conservativePaths: any[] | undefined = undefined;
 
-    if (/流水|营业额|总进账|是收入还是|营业收入|做买卖收的钱|总销售/i.test(text)) {
+    // ============ 通用常识意图（问候 / 致谢 / 身份 / 时间 / 计算 / 保本 / 薪酬 / 启动资金）============
+    if (/^(你好|您好|哈喽|嗨|早上好|下午好|晚上好|hello|hi|hey)[，。!！~\s]*$/i.test(text.trim())) {
+      category = '日常问候';
+      suggestedAction = '';
+      answer = `【👋 您好！很高兴见到您！】
+
+我是本平台的 AI 智能答疑助手，可以为您解答：
+
+1️⃣ 商业财务大白话：经营月均总流水、进货成本/毛利、房租人工固定开销、应急备用金、自报汇率、凭证同权等填报概念；
+2️⃣ 行业大数据基准：各行业平均流水、毛利率、净利润率与抗风险安全线；
+3️⃣ 实用小工具：简单的加减乘除计算、主流币种换算、日期时间等；
+4️⃣ 生活与技术小知识。
+
+直接输入您的问题，我会立刻为您解答！`;
+    } else if (/^(谢谢|感谢|多谢|谢谢您|感谢您|thanks|thank you|thx)[，。!！~\s]*$/i.test(text.trim())) {
+      category = '日常致谢';
+      suggestedAction = '';
+      answer = `【🙏 不客气！】
+
+很高兴能帮到您！如果还有其他问题（无论是本平台的填报/评分，还是日常实用知识），随时继续问我。祝您生意兴隆，稳健发展！`;
+    } else if (/^(你是谁|你是什么|你能做什么|你能干什么|你有哪些功能|你的功能|what are you|who are you|what can you do)/i.test(text.trim())) {
+      category = '助手自我介绍';
+      suggestedAction = '';
+      answer = `【🤖 我是 AI 智能答疑助手】
+
+我可以帮您：
+
+1️⃣ 商业财务大白话解析：经营月均总流水、进货成本（COGS）、毛利、房租人工固定开销（OPEX）、应急备用金/现金跑道、自报汇率、凭证同权规则等；
+2️⃣ 行业大数据基准对标：餐饮、零售、外贸、生活服务、工坊、农业等行业平均流水与利润基准；
+3️⃣ 实用小工具：币种换算、简单计算、日期时间等；
+4️⃣ 平台规则指引：5 维雷达打分公式、4 大门槛红线与边缘疑难情况的保守填报路径。`;
+    } else if (/现在几点了?|当前时间|现在时间|今天几号|今天是几号|今天星期几|what time|what day/i.test(text)) {
+      const now = new Date();
+      const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+      category = '日期时间';
+      suggestedAction = '';
+      answer = `【🕐 当前日期与时间】
+今天是 ${now.getFullYear()} 年 ${now.getMonth() + 1} 月 ${now.getDate()} 日（星期${weekdays[now.getDay()]}）
+服务器当前时间：${now.toLocaleTimeString('zh-CN', { hour12: false })}`;
+    } else if (/计算|等于多少|是多少|算一下|加减乘除|几加几|几减几|几乘几|几除以几/.test(text) && /(\d+(?:\.\d+)?)\s*(乘以|乘于|乘|除以|加|减|加上|减去|\+|\-|−|×|÷|\*|\/|／)\s*(\d+(?:\.\d+)?)/.test(text)) {
+      const m = text.match(/(\d+(?:\.\d+)?)\s*(乘以|乘于|乘|除以|加|减|加上|减去|\+|\-|−|×|÷|\*|\/|／)\s*(\d+(?:\.\d+)?)/);
+      if (m) {
+        const a = parseFloat(m[1]);
+        const opRaw = m[2];
+        const b = parseFloat(m[3]);
+        let opSymbol = opRaw;
+        if (opRaw === '加' || opRaw === '加上') opSymbol = '+';
+        else if (opRaw === '减' || opRaw === '减去' || opRaw === '−') opSymbol = '-';
+        else if (opRaw === '乘' || opRaw === '乘以' || opRaw === '乘于' || opRaw === '*') opSymbol = '×';
+        else if (opRaw === '除以' || opRaw === '/' || opRaw === '／') opSymbol = '÷';
+        let result: number | null = null;
+        if (opSymbol === '+') result = a + b;
+        else if (opSymbol === '-') result = a - b;
+        else if (opSymbol === '×') result = a * b;
+        else if (opSymbol === '÷') result = b === 0 ? null : a / b;
+        if (result !== null) {
+          category = '实用计算';
+          suggestedAction = '';
+          answer = `【🧮 快速计算】
+${a} ${opSymbol} ${b} = ${Number.isInteger(result) ? result : result.toFixed(2)}`;
+        }
+      }
+    } else if (/保本|不亏|盈亏平衡|赚多少才不亏|最少赚多少|月流水多少才不亏/i.test(text)) {
+      category = '保本点与盈亏平衡测算';
+      suggestedAction = '月度保本流水 = 每月固定开销 ÷ 毛利率，低于该数即当月亏损';
+      answer = `【🧮 保本点（盈亏平衡）大白话】
+
+1. 怎么算：保本月流水 = 每月固定开销（房租+工资+水电） ÷ 毛利率。
+举例：房租工资水电每月共 15,000，毛利率 60%，则保本流水 = 15,000 ÷ 0.6 = 25,000 元/月。只要当月营业额超过 25,000，就进入赚钱区。
+
+2. 📊 大数据警戒：
+• 实际月流水 ÷ 保本流水 < 1.1：危险区，稍有波动即亏损；
+• 1.1 ~ 1.5：正常波动区；
+• > 1.5：安全稳健，具备真实造血能力。`;
+    } else if (/同工|工资怎么定|员工工资|薪资|人工成本占比|底薪多少/i.test(text)) {
+      category = '同工薪酬与人工成本占比';
+      suggestedAction = '人工总成本建议控制在月流水的 15%~30% 之间，同工同酬一视同仁';
+      answer = `【👥 同工工资怎么定？】
+
+1. 定价三原则：
+• 同工同酬：相同岗位与工作量，本地员工与外派同工一律同标准；
+• 可负担性：全部员工工资总和 ≤ 月流水 30%（含社保/补贴），超过 40% 就会挤压利润；
+• 区域参照：参考当地同业 25% 分位～中位数工资，留住人又不压垮店铺。
+
+2. 示例（月流水 50,000）：
+• 两名全职员工：各 5,000~6,000/月，合计 10,000~12,000（占 20%~24%）为健康区间；
+• 再加一名兼职：3,000/月，合计仍应控制在 15,000（30%）以内。`;
+    } else if (/启动资金|开店要多少钱|前期投入|初始投入|多少钱能开/i.test(text)) {
+      category = '启动资金评估';
+      suggestedAction = '启动资金建议 = 一次性开办投入 + 至少 3 个月固定开销备用金';
+      answer = `【💰 启动资金大概要多少？】
+
+1. 公式：启动资金 = 一次性开办投入（装修设备首批进货） + 3~6 个月固定开销备用金。
+
+2. 分行业参考（美元/月流水量级）：
+• 街头小吃/茶饮摊：500~2,000
+• 社区小店/杂货铺：2,000~8,000
+• 餐饮/烘焙店：5,000~20,000
+• 生活服务（美发/维修）：3,000~10,000
+• 小型工坊：5,000~25,000
+
+3. 关键提醒：宁可少买设备，也要留足 3 个月房租工资。现金断流是小微创业失败的第一大原因。`;
+    } else if (/流水|营业额|总进账|是收入还是|营业收入|做买卖收的钱|总销售/i.test(text)) {
       category = '核心概念通俗解析';
       suggestedAction = '填报第1项时：填写近3-12个月平均每月客人买单的总进账金额（未扣除进货与房租等开支）';
       answer = `【大白话核心解答：经营月均总流水是“总营业额”，不是到手净利润】
@@ -275,21 +392,22 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
         }
       ];
     } else {
-      category = '小微商业模型自测咨询';
-      suggestedAction = '您可以直接询问具体财务指标（流水/毛利/OPEX）或行业大数据';
-      answer = `【小微商业模型自测专家解答】
+      category = '通用智能问答';
+      suggestedAction = '您可以询问流水/毛利/OPEX/备用金等指标，或通用生活与实用常识';
+      answer = `【🤖 通用 AI 助手 · 本地规则引擎模式】
 
-您好！关于您咨询的：“${text}”：
+关于您咨询的：「${text}」
 
-1. 本平台自测核心：
-围绕【真金白银造血能力】与【抗风险安全底线】，无需复杂会计做账，只看 4 个最接地气的数据：
-• 经营月均总流水（每月总营业额进账）；
-• 直接进货成本（买原料商品的本钱，看毛利率是否及格）；
-• 每月固定开销（房租+员工薪水，看毛利是否包得住）；
-• 账面可用备用金（看万一断流能支撑几个月）。
+📌 两个建议方向：
+1️⃣ 本平台的【填报与评分】问题（流水、毛利、OPEX、备用金、汇率、凭证、季节/休渔等边缘情况），请直接追问相关关键词，我会用大白话 + 行业大数据为您详解；
+2️⃣ 【生活常识 / 实用知识 / 简单计算 / 币种换算】类问题也可以直接问，我能覆盖常见场景。
 
-2. 随时查阅：
-您可以随时在下方或左侧点击【行业大数据基准】或【公开评分标准】查看完整的 5 维雷达打分公式与 4 大门槛红线，所有规则完全公开透明！`;
+🔑 完整版"能回答任何问题"的 AI：
+需要在项目根目录 .env 配置 GEMINI_API_KEY 后重启开发服务器即可解锁（商业、财务、生活、技术、翻译等任何问题都能答）。
+
+📍 本平台快捷入口：
+• 点击【行业大数据基准】查看各行业平均流水、毛利率与安全线；
+• 点击【公开评分标准】查看完整 5 维雷达打分公式与 4 大门槛红线。`;
     }
 
     return {
@@ -301,7 +419,8 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
       aiResponse: answer,
       isEdgeCase: isEdge,
       suggestedAction,
-      archivedAt: new Date().toISOString()
+      archivedAt: new Date().toISOString(),
+      aiMode: 'rules'
     };
   };
 
@@ -314,9 +433,9 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
     setActiveTab('chat');
 
     try {
-      // 6 秒熔断：云端 AI 不可用时快速回落本地规则库，避免用户无限等待
+      // 20 秒熔断：给真 AI 更充足的时间，云端 AI 不可用时再快速回落本地规则库
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 6000);
+      const timeoutId = setTimeout(() => controller.abort(), 20000);
       const res = await fetch('/api/ai-consultation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -332,16 +451,17 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
         if (!rawAnswer || !String(rawAnswer).trim()) {
           throw new Error('AI returned empty answer');
         }
-        const newRecord: EscalatedQuestion = {
+        const newRecord: ChatRecord = {
           id: `esc-${Date.now()}`,
           question: text,
-          category: data.category || '小微经营大白话解析',
+          category: data.category || 'AI 智能答疑',
           confidence: data.confidence || 'HIGH',
-          conservativePaths: data.conservativePaths,
+          conservativePaths: data.conservativePaths && data.conservativePaths.length > 0 ? data.conservativePaths : undefined,
           aiResponse: rawAnswer,
           isEdgeCase: data.isEdgeCase || false,
-          suggestedAction: data.suggestedAction || '规则清晰，可正常填报',
-          archivedAt: new Date().toISOString()
+          suggestedAction: data.suggestedAction || '',
+          archivedAt: new Date().toISOString(),
+          aiMode: data.aiMode === 'gemini' ? 'gemini' : 'rules'
         };
 
         setChatHistory((prev) => [newRecord, ...prev]);
@@ -387,14 +507,22 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-bold text-slate-900">
-                  AI 大白话答疑 · 全球小微大数据
+                  AI 智能答疑 · 任何问题都能问
                 </h2>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                  内置规则知识库
-                </span>
+                {aiConfigured === false ? (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                    本地规则库
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                    AI 智能驱动
+                  </span>
+                )}
               </div>
               <p className="text-xs text-slate-500">
-                通俗人话解答 · 行业真实中位数对比 · 提问记录绝不计入评分
+                {aiConfigured === false
+                  ? '本地规则引擎实时解答 · 商业自测规则精通 · 提问记录绝不计入评分'
+                  : '通用 AI 实时解答 · 商业自测规则精通 · 提问记录绝不计入评分'}
               </p>
             </div>
           </div>
@@ -416,6 +544,17 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
             100% 零凭证歧视
           </span>
         </div>
+
+        {/* AI 未配置提示：引导配置 GEMINI_API_KEY 以启用真正的 AI 智能问答 */}
+        {aiConfigured === false && (
+          <div className="bg-amber-50 border-b border-amber-200 px-5 py-2.5 flex items-start gap-2 text-[11px] text-amber-900 font-medium leading-relaxed">
+            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <span>
+              当前服务器未配置 Gemini API 密钥（GEMINI_API_KEY），回答由内置本地规则库提供，可解答本平台填报与评分问题；
+              如需回答<strong>任何问题</strong>的通用 AI，请在项目根目录 <code>.env</code> 中填入密钥后重启开发服务器。
+            </span>
+          </div>
+        )}
 
         {/* 3 Tabs Switcher */}
         <div className="flex border-b border-slate-200 text-xs font-bold bg-white">
@@ -464,10 +603,10 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
                   <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100 text-xs text-indigo-950 leading-relaxed space-y-1.5">
                     <p className="font-bold text-sm text-indigo-900 flex items-center gap-1.5">
                       <Sparkles className="w-4 h-4 text-indigo-600" />
-                      您好！我是您的小微商业答疑助手
+                      您好！我是 AI 智能助手，任何问题都能为您解答
                     </p>
                     <p>
-                      如果您对<b>「经营月均总流水」</b>、<b>「进货成本」</b>、<b>「房租人工占比」</b>或<b>「自报民间汇率」</b>有疑问，或者想了解<b>各行业大数据基准</b>，请随时点击下方常见问题或直接提问。
+                      您可以问我<b>任何问题</b>——比如<b>「经营月均总流水是什么意思」</b>、<b>「毛利率怎么算」</b>、<b>「现金要留几个月」</b>，也可以问生活常识、实用技巧、语言翻译等。涉及本平台的<b>填报与评分规则</b>时，我会用大白话结合行业大数据为您专业解析。点击下方常见问题或直接输入即可。
                     </p>
                   </div>
 
@@ -503,9 +642,20 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
                           <HelpCircle className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
                           <span>问：{item.question}</span>
                         </div>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 shrink-0">
-                          {item.category}
-                        </span>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {item.aiMode === 'gemini' ? (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 shrink-0">
+                              AI 智能回答
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 shrink-0">
+                              本地规则库
+                            </span>
+                          )}
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 shrink-0">
+                            {item.category}
+                          </span>
+                        </div>
                       </div>
 
                       {/* AI Answer formatted */}
@@ -513,7 +663,7 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
                         <div className="flex items-center justify-between text-indigo-700 font-bold text-xs pb-1 border-b border-slate-200/60">
                           <div className="flex items-center gap-1.5">
                             <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                            <span>专家大白话与大数据解析：</span>
+                            <span>{item.aiMode === 'gemini' ? 'AI 智能解答：' : '专家大白话与大数据解析：'}</span>
                           </div>
                           <button
                             onClick={() => handleCopy(item.id, item.aiResponse)}
@@ -722,7 +872,7 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
           <div className="flex gap-2">
             <input
               type="text"
-              placeholder="输入您想咨询的做买卖指标（如：流水、毛利、备用金、汇率）..."
+              placeholder="输入任何问题，AI 都能为您解答（如：毛利率怎么算？现金要留几个月？）..."
               value={questionInput}
               onChange={(e) => setQuestionInput(e.target.value)}
               onKeyDown={(e) => {

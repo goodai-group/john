@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   BusinessFormData,
   AssessmentReport,
@@ -21,7 +21,10 @@ import {
   CloudCheck,
   AlertCircle,
   UserCheck,
-  Lock
+  Lock,
+  Users,
+  UserPlus,
+  Mail
 } from 'lucide-react';
 import { formatMoney } from '../lib/currencies';
 
@@ -33,10 +36,12 @@ interface ProjectsListProps {
   onSelectProject: (id: string) => void;
   onSelectReport: (reportId: string) => void;
   onDeleteProject: (id: string) => void;
+  onUpdateProject?: (id: string, patch: Partial<BusinessFormData>) => void;
   isCloudDatabaseReady: boolean;
   onTriggerSync: () => void;
   currentUser?: AppUser | null;
-  onLoginWithGoogle?: () => void;
+  /** 打开登录/注册弹窗（Google + 邮箱密码双通道） */
+  onOpenAuth?: () => void;
 }
 
 export const ProjectsListPage: React.FC<ProjectsListProps> = ({
@@ -47,11 +52,46 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
   onSelectProject,
   onSelectReport,
   onDeleteProject,
+  onUpdateProject,
   isCloudDatabaseReady,
   onTriggerSync,
   currentUser,
-  onLoginWithGoogle
+  onOpenAuth
 }) => {
+  // —— 协作者管理（原表单第 5 步，体检后挪到项目管理界面）——
+  const [collabOpenId, setCollabOpenId] = useState<string | null>(null);
+  const [collabEmail, setCollabEmail] = useState('');
+  const [collabError, setCollabError] = useState<string | null>(null);
+
+  const handleAddCollab = (projId: string) => {
+    const email = collabEmail.trim();
+    if (!email || !email.includes('@')) {
+      setCollabError('请输入有效邮箱（例如 partner@example.com）');
+      return;
+    }
+    const proj = projects.find((p) => p.id === projId);
+    const existing = proj?.collaborators || [];
+    if (existing.some((c) => c.email.toLowerCase() === email.toLowerCase())) {
+      setCollabError('该邮箱已在协作者列表中');
+      return;
+    }
+    onUpdateProject?.(projId, {
+      collaborators: [
+        ...existing,
+        { email, role: 'editor', invitedAt: new Date().toISOString(), sectionAccess: ['all'] }
+      ]
+    });
+    setCollabEmail('');
+    setCollabError(null);
+  };
+
+  const handleRemoveCollab = (projId: string, email: string) => {
+    const proj = projects.find((p) => p.id === projId);
+    if (!proj) return;
+    onUpdateProject?.(projId, {
+      collaborators: proj.collaborators.filter((c) => c.email !== email)
+    });
+  };
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
       {/* Header Bento Box */}
@@ -64,7 +104,7 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
           </div>
           <h2 className="text-xl font-black text-neutral-900 tracking-tight">我的申报项目与历史评估</h2>
           <p className="text-xs text-neutral-500 font-medium mt-0.5">
-            数据已接入云端 Firestore 数据库；登录 Google 账号后可跨设备随时找回所有历史评估与多版本报告。
+            数据已接入云端数据库；登录账号（支持 Google 或邮箱密码）后可跨设备随时找回所有历史评估与多版本报告。
           </p>
         </div>
 
@@ -97,7 +137,7 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
           )}
           <div>
             <div className="font-bold flex items-center gap-2">
-              <span>{currentUser ? `已登录 Google 账号：${currentUser.displayName || currentUser.email}` : '未绑定 Google 账号 (当前保存在本地与公共云)'}</span>
+              <span>{currentUser ? `已登录账号：${currentUser.displayName || currentUser.email}` : '未登录账号（数据暂存本地浏览器）'}</span>
               {currentUser && (
                 <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold border border-emerald-200">
                   下次登录随时找回
@@ -106,25 +146,20 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
             </div>
             <p className="text-[11px] opacity-80 mt-0.5">
               {currentUser
-                ? '您的所有商业自测表单与 5 维雷达体检报告已与您的 Google 账户自动双向同步。'
-                : '一键使用 Google 登录，将当前报告永久关联至您的专属云端空间，换手机或电脑随时查看。'}
+                ? '您的所有商业自测表单与 5 维雷达体检报告已与您的账号自动双向同步。'
+                : '注册账号（支持 Google 或邮箱密码），将当前报告永久关联至您的专属云端空间，换手机或电脑随时查看。'}
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          {!currentUser && onLoginWithGoogle && (
+          {!currentUser && onOpenAuth && (
             <button
-              onClick={onLoginWithGoogle}
-              className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-white border-2 border-indigo-300 hover:border-indigo-500 text-indigo-900 font-bold shadow-xs transition-all cursor-pointer hover:scale-102"
+              onClick={onOpenAuth}
+              className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold shadow-md shadow-indigo-600/20 transition-all cursor-pointer hover:scale-102"
             >
-              <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
-              </svg>
-              <span>使用 Google 登录</span>
+              <UserCheck className="w-4 h-4 shrink-0" />
+              <span>登录 / 注册账号</span>
             </button>
           )}
 
@@ -225,6 +260,87 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
                         {proofTypeLabel(proj.proofType, language)}
                       </span>
                     </div>
+                  </div>
+
+                  {/* 协作者管理（原表单第 5 步，体检后挪到项目管理界面） */}
+                  <div className="pt-3">
+                    <button
+                      onClick={() => {
+                        setCollabOpenId(collabOpenId === proj.id ? null : proj.id);
+                        setCollabError(null);
+                      }}
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-700 hover:text-indigo-900 transition-colors cursor-pointer"
+                    >
+                      <Users className="w-3.5 h-3.5 text-indigo-500" />
+                      {proj.collaborators.length > 0
+                        ? `协作者 ${proj.collaborators.length} 人`
+                        : '添加协作者'}
+                      <span className="text-[10px] text-neutral-400 font-medium">
+                        {collabOpenId === proj.id ? '收起' : '管理'}
+                      </span>
+                    </button>
+
+                    {collabOpenId === proj.id && (
+                      <div className="mt-2 p-3 rounded-xl bg-indigo-50/60 border border-indigo-100 space-y-2.5">
+                        {proj.collaborators.length > 0 ? (
+                          <div className="space-y-1.5">
+                            {proj.collaborators.map((c) => (
+                              <div
+                                key={c.email}
+                                className="flex items-center justify-between p-2 rounded-lg bg-white border border-indigo-100"
+                              >
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <Mail className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                                  <span className="font-medium text-slate-800 text-xs truncate">
+                                    {c.email}
+                                  </span>
+                                  <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded shrink-0">
+                                    协作者 · 可编辑
+                                  </span>
+                                </div>
+                                <button
+                                  onClick={() => handleRemoveCollab(proj.id, c.email)}
+                                  className="text-slate-400 hover:text-rose-500 p-1 shrink-0 cursor-pointer"
+                                  title="移除协作者"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-[11px] text-indigo-700 font-medium">
+                            暂无协作者。可邀请配偶、当地同工一起核对数据。
+                          </p>
+                        )}
+
+                        <div className="flex gap-2">
+                          <input
+                            type="email"
+                            placeholder="输入协作者邮箱 (如 partner@example.com)"
+                            value={collabEmail}
+                            onChange={(e) => {
+                              setCollabEmail(e.target.value);
+                              setCollabError(null);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleAddCollab(proj.id);
+                            }}
+                            className="flex-1 p-2 border border-slate-300 rounded-lg bg-white text-xs"
+                          />
+                          <button
+                            onClick={() => handleAddCollab(proj.id)}
+                            className="inline-flex items-center gap-1 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-lg shadow-2xs transition-colors text-xs cursor-pointer"
+                          >
+                            <UserPlus className="w-3.5 h-3.5" />
+                            添加
+                          </button>
+                        </div>
+                        {collabError && (
+                          <p className="text-[11px] text-rose-600 font-semibold">⚠️ {collabError}</p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 

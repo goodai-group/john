@@ -33,12 +33,128 @@ function getGeminiClient(): GoogleGenAI | null {
   return aiClient;
 }
 
+// Gemini 模型候选列表：按顺序尝试，首个可用的模型即被使用。
+// （gemini-3.6-flash 为当前最新默认模型；2.5-flash / 2.0-flash 仅对旧账号可用，作为兼容回退）
+const GEMINI_MODELS = ['gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-2.0-flash'];
+
+async function generateGeminiContent(
+  contents: string,
+  systemInstruction: string,
+  timeoutMs = 25000
+): Promise<string> {
+  const ai = getGeminiClient();
+  if (!ai) throw new Error('Gemini API key not configured');
+
+  let lastError: unknown = null;
+  for (const model of GEMINI_MODELS) {
+    try {
+      const response = await Promise.race([
+        ai.models.generateContent({
+          model,
+          contents,
+          config: {
+            systemInstruction,
+            responseMimeType: 'application/json'
+          }
+        }),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error(`Gemini "${model}" timed out after ${timeoutMs}ms`)), timeoutMs)
+        )
+      ]);
+      const text = response.text || '';
+      if (!text.trim()) throw new Error(`Gemini "${model}" returned an empty response`);
+      return text;
+    } catch (err: any) {
+      lastError = err;
+      console.warn(`Gemini model "${model}" failed:`, err?.message || err);
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error('All Gemini models failed');
+}
+
+// ========================
+// 本地规则引擎：通用常识小工具（问候 / 时间 / 计算 / 币种换算）
+// 让"未配置 GEMINI_API_KEY"时也能回答常见通用问题，体验更聪明
+// ========================
+const CURRENCY_ALIASES: Record<string, string[]> = {
+  USD: ['美元', '美金', '美刀', 'usd'],
+  CNY: ['人民币', 'rmb', 'cny', '块钱'],
+  HKD: ['港币', 'hkd'],
+  EUR: ['欧元', 'eur'],
+  GBP: ['英镑', 'gbp'],
+  JPY: ['日元', 'jpy'],
+  KES: ['肯尼亚先令', '肯先令', 'kes'],
+  NGN: ['奈拉', '尼日利亚奈拉', 'ngn'],
+  EGP: ['埃镑', '埃及镑', 'egp'],
+  THB: ['泰铢', 'thb'],
+  VND: ['越南盾', 'vnd'],
+  IDR: ['印尼盾', 'idr'],
+  PHP: ['比索', '菲律宾比索', 'php'],
+  MMK: ['缅元', '缅币', 'mmk'],
+  KHR: ['瑞尔', '柬埔寨瑞尔', 'khr'],
+  LAK: ['基普', '老挝基普', 'lak'],
+  BDT: ['塔卡', '孟加拉塔卡', 'bdt'],
+  LKR: ['卢比', '斯里兰卡卢比', 'lkr'],
+  ETB: ['埃塞俄比亚比尔', '比尔', 'etb']
+};
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+function currencyDisplay(code: string): string {
+  const c = SUPPORTED_CURRENCIES.find((x) => x.code === code);
+  // nameZh 已自带币种代码（如"美元 (USD)"），直接使用即可
+  if (c) return c.nameZh;
+  return code;
+}
+function tryCurrencyConversion(question: string): string | null {
+  // 仅当同时出现"数字 + 币种 + 换算意图词"时才触发，避免吞掉业务类汇率问题
+  if (!/等于|换算|兑换|换成|多少人民币|折合|相当于|convert|exchange/i.test(question)) return null;
+  if (/自报|填报|填多少|怎么填|黑市|官方汇率|民间汇率/.test(question)) return null;
+
+  for (const [code, aliases] of Object.entries(CURRENCY_ALIASES)) {
+    const aliasRegex = aliases.map(escapeRegex).join('|');
+    const m = question.match(new RegExp(`(\\d+(?:[.,]\\d+)?)\\s*(${aliasRegex})`, 'i'));
+    if (!m) continue;
+    const amount = parseFloat(m[1].replace(/,/g, ''));
+    const fromCode = code;
+    const rest = question.replace(m[0], '');
+    let toCode: string | null = null;
+    for (const [c2, aliases2] of Object.entries(CURRENCY_ALIASES)) {
+      if (c2 === fromCode) continue;
+      if (aliases2.some((a) => rest.toLowerCase().includes(a.toLowerCase()))) {
+        toCode = c2;
+        break;
+      }
+    }
+    // 未指明目标币种时：人民币→美元，其余→人民币（中文用户语境）
+    if (!toCode) toCode = fromCode === 'CNY' ? 'USD' : 'CNY';
+
+    const fromRate = SUPPORTED_CURRENCIES.find((c) => c.code === fromCode)?.rateToUsd || 1;
+    const toRate = SUPPORTED_CURRENCIES.find((c) => c.code === toCode)?.rateToUsd || 1;
+    const result = (amount / fromRate) * toRate;
+    const rounded = Math.abs(result) >= 100 ? Math.round(result) : Math.round(result * 100) / 100;
+    return `【💱 币种换算】
+
+${amount.toLocaleString('zh-CN')} ${currencyDisplay(fromCode)} ≈ ${rounded.toLocaleString('zh-CN', { maximumFractionDigits: 2 })} ${currencyDisplay(toCode)}
+
+（平台内置参考汇率：1 USD ≈ ${toRate.toLocaleString('zh-CN', { maximumFractionDigits: 2 })} ${currencyDisplay(toCode)}。实际交易请以当地当日市场汇率为准，本换算仅供参考。）`;
+  }
+  return null;
+}
+
 // 1. Health & Config status API
 app.get('/api/health', (req, res) => {
   const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GEMINI_API_KEY;
   const hasGemini = Boolean(geminiKey && geminiKey !== 'MY_GEMINI_API_KEY');
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  // 前端 Vite 只读取 VITE_* 前缀变量，因此 health 需一并检查，避免"已配置但 badge 仍显示未配置"
+  const supabaseUrl =
+    process.env.SUPABASE_URL ||
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    process.env.VITE_SUPABASE_URL;
+  const supabaseKey =
+    process.env.SUPABASE_ANON_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    process.env.VITE_SUPABASE_ANON_KEY;
   const hasSupabase = Boolean(supabaseUrl && supabaseKey);
   res.json({
     status: 'ok',
@@ -67,55 +183,38 @@ app.post(['/api/ai/chat', '/api/ai-consultation'], async (req, res) => {
 
     if (ai) {
       try {
+        // 通用助手系统提示词：既能回答任何问题，也能在涉及本平台规则时给出专业解答
         const systemInstruction = `
-你是一个专为全球海外小微商业经营者（如餐饮小吃、商超便利、跨境小微、维修汽修、个体工坊等无财务背景老板）打造的"商业模型体检与规则答疑专家"。
-你连接并熟知全球小微商业大数据基准库（覆盖东南亚、非洲、拉美、东亚数万家微型企业真实经营样本）及 BAM-PRD-2026-V1.4 规则规范。
+你是一个友善、博学、乐于助人的通用 AI 助手，服务于"商业宣教财务测算"平台（BAM 平台，全球海外小微商业自测评分工具）。
+你可以回答用户提出的【任何问题】——包括但不限于：财务与商业常识、小微生意经营、平台填报与评分规则、日常实用知识、生活技巧、技术问题、语言翻译、概念解释等。
 
-【严格答疑准则】：
-1. 通俗大白话与人话：杜绝堆砌晦涩英文财务缩写。提到专业概念时必须用通俗人话解释（例如：经营月均总流水就是还没扣任何成本的客人买单总进账；毛利就是扣除进货本钱后留下的钱；OPEX就是每月雷打不动的房租工人工资）。
-2. 连接大数据基准：回答财务概念与经营问题时，主动提供行业大数据参考（如餐饮月流水与毛利率60%左右、零售商超25%左右、生活服务75%左右），让老板知道自己的水平在行业里处于什么位置。
-3. 规则安全与消除焦虑：明确说明"此处的规则提问完全加密且仅用于辅助填报，绝不计入评分系统；无论手写账本还是纯手动填数字，打分一视同仁 100% 同权"。
-4. 边缘疑难情况处理：若遇到战乱汇率、极端季节性（如休渔期）、物物交换等规则外情况，给出 2 种保守填报路径（路径A与路径B）并预估得分与后果。
+【回答准则】
+1. 用户问什么就答什么。不要强行把话题引导到商业自测上，除非用户主动询问本平台的填报/评分/规则。
+2. 使用与用户提问相同的语言回答（中文问题用中文，英文问题用英文，其他语言同理）。
+3. 回答通俗易懂、结构清晰、直接有用；必要时用大白话解释专业术语。
+4. 当问题涉及本平台的"商业模型自测、评分规则、填报指引"时，切换为平台专家模式：
+   - 用大白话解释概念（如：经营月均总流水 = 客人买单的总进账，还没扣任何成本；毛利 = 流水减进货本钱；OPEX = 每月雷打不动的房租与人工）；
+   - 结合行业大数据基准给出参考（如餐饮毛利率约55%-70%、社区零售20%-35%、生活服务70%-88%、备用金建议≥3个月固定开销）；
+   - 明确说明"此处的规则提问仅用于辅助理解，绝不计入评分系统；手写账本、截图与纯手动填写 100% 同权、零歧视"；
+   - 遇到休渔期、战乱汇率、物物交换、无发票等边缘情况时，给出 2 种保守填报路径（路径A/路径B）并预估得分与后果。
 
 返回合法的 JSON 数据，格式如下：
 {
-  "answer": "生动详实的大白话回答（包含：一句话本质定义、大白话对比举例、📊 行业大数据基准、✍️ 针对性填报指引）",
+  "answer": "对用户问题的完整、直接、有用的回答",
   "confidence": "HIGH" | "LOW_EDGE_CASE",
   "isEdgeCase": boolean,
-  "category": "概念大白话解析 | 行业大数据基准 | 规则合规指引 | 边缘疑难推算",
-  "suggestedAction": "简要可落地的填报动作",
-  "bigDataBenchmark": "一句话行业大数据参考总结",
-  "conservativePaths": [
-    {
-      "pathName": "路径 A (例如：12个月年化平摊法 - 推荐)",
-      "assumption": "具体假设",
-      "estimatedScore": "预估得分范围",
-      "consequence": "对评分与报告的影响"
-    }
-  ]
+  "category": "简短的问题类型标签（如：通用问答 | 概念大白话解析 | 行业大数据基准 | 规则合规指引 | 边缘疑难推算）",
+  "suggestedAction": "若涉及填报规则则给出可落地的填报动作，否则为空字符串",
+  "bigDataBenchmark": "若涉及经营财务则给出一句行业大数据参考，否则为空字符串",
+  "conservativePaths": []
 }
 `;
 
-        // 8 秒硬超时：网络不佳或 Gemini 无响应时快速回落本地规则引擎，避免用户无限等待
-        const response = await Promise.race([
-          ai.models.generateContent({
-            model: 'gemini-3.7-flash',
-            contents: `用户提问: "${question}"\n当前上下文: ${JSON.stringify(context || {})}`,
-            config: {
-              systemInstruction,
-              responseMimeType: 'application/json'
-            }
-          }),
-          new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error('Gemini request timed out after 8s')), 8000)
-          )
-        ]);
+        const replyText = await generateGeminiContent(
+          `用户提问: "${question}"\n用户界面语言: ${language}\n当前上下文: ${JSON.stringify(context || {})}`,
+          systemInstruction
+        );
 
-        const replyText = response.text || '';
-        // 空响应或非 JSON 时直接回退本地规则引擎，绝不向前端返回空字符串
-        if (!replyText.trim()) {
-          throw new Error('Gemini returned an empty response');
-        }
         try {
           const parsed = JSON.parse(replyText);
           const answerText = parsed.answer || replyText;
@@ -126,22 +225,26 @@ app.post(['/api/ai/chat', '/api/ai-consultation'], async (req, res) => {
             reply: answerText,
             aiResponse: answerText,
             answer: answerText,
+            aiMode: 'gemini',
             confidence: parsed.confidence || (isEdgeKeyword ? 'LOW_EDGE_CASE' : 'HIGH'),
             isEdgeCase: parsed.isEdgeCase ?? isEdgeKeyword,
-            category: parsed.category || '小微经营大白话解析',
-            suggestedAction: parsed.suggestedAction || '规则清晰，可放心填报',
-            bigDataBenchmark: parsed.bigDataBenchmark,
-            conservativePaths: parsed.conservativePaths
+            category: parsed.category || 'AI 智能答疑',
+            suggestedAction: parsed.suggestedAction || '',
+            bigDataBenchmark: parsed.bigDataBenchmark || '',
+            conservativePaths: parsed.conservativePaths || []
           });
         } catch {
           return res.json({
             reply: replyText,
             aiResponse: replyText,
             answer: replyText,
+            aiMode: 'gemini',
             confidence: isEdgeKeyword ? 'LOW_EDGE_CASE' : 'HIGH',
             isEdgeCase: isEdgeKeyword,
-            category: '小微经营大白话解析',
-            suggestedAction: '规则清晰，可放心填报'
+            category: 'AI 智能答疑',
+            suggestedAction: '',
+            bigDataBenchmark: '',
+            conservativePaths: []
           });
         }
       } catch (err: any) {
@@ -159,8 +262,150 @@ app.post(['/api/ai/chat', '/api/ai-consultation'], async (req, res) => {
 
     const lowerQ = question.toLowerCase();
 
+    // ============ 0. 通用常识意图（问候 / 致谢 / 身份 / 时间 / 计算 / 币种换算）============
+    // 纯问候（整句只有问候才命中，避免吞掉后面的真实问题）
+    if (/^(你好|您好|哈喽|嗨|早上好|下午好|晚上好|hello|hi|hey|good morning|good afternoon|good evening)[，。!！~\s]*$/i.test(question.trim())) {
+      category = '日常问候';
+      suggestedAction = '';
+      bigDataBenchmark = '';
+      fallbackReply = `【👋 您好！很高兴见到您！】
+
+我是本平台的 AI 智能答疑助手，可以为您解答：
+
+1️⃣ 商业财务大白话：经营月均总流水、进货成本/毛利、房租人工固定开销、应急备用金、自报汇率、凭证同权等填报概念；
+2️⃣ 行业大数据基准：各行业平均流水、毛利率、净利润率与抗风险安全线；
+3️⃣ 实用小工具：简单的加减乘除计算、主流币种换算、日期时间等；
+4️⃣ 生活与技术小知识。
+
+直接输入您的问题，我会立刻为您解答！`;
+    }
+    // 致谢
+    else if (/^(谢谢|感谢|多谢|谢谢您|感谢您|thanks|thank you|thx|thankyou)[，。!！~\s]*$/i.test(question.trim())) {
+      category = '日常致谢';
+      suggestedAction = '';
+      bigDataBenchmark = '';
+      fallbackReply = `【🙏 不客气！】
+
+很高兴能帮到您！如果还有其他问题（无论是本平台的填报/评分，还是日常实用知识），随时继续问我。祝您生意兴隆，稳健发展！`;
+    }
+    // 身份 / 能力
+    else if (/^(你是谁|你是什么|你能做什么|你能干什么|你有哪些功能|你的功能|what are you|who are you|what can you do|your capabilit)/i.test(question.trim())) {
+      category = '助手自我介绍';
+      suggestedAction = '';
+      bigDataBenchmark = '';
+      fallbackReply = `【🤖 我是 AI 智能答疑助手】
+
+我可以帮您：
+
+1️⃣ 商业财务大白话解析：经营月均总流水、进货成本（COGS）、毛利、房租人工固定开销（OPEX）、应急备用金/现金跑道、自报汇率、凭证同权规则等；
+2️⃣ 行业大数据基准对标：餐饮、零售、外贸、生活服务、工坊、农业等行业平均流水与利润基准；
+3️⃣ 实用小工具：币种换算、简单计算、日期时间等；
+4️⃣ 平台规则指引：5 维雷达打分公式、4 大门槛红线（Gate 红线）与边缘疑难情况的保守填报路径。
+
+特别说明：本平台提问 100% 匿名、绝不计入任何评分。配置 GEMINI_API_KEY 后，我可以升级为回答任何问题的通用 AI。`;
+    }
+    // 日期 / 时间
+    else if (/现在几点了?|当前时间|现在时间|今天几号|今天是几号|今天星期几|what time|what day|todays date/i.test(question)) {
+      const now = new Date();
+      const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+      category = '日期时间';
+      suggestedAction = '';
+      bigDataBenchmark = '';
+      fallbackReply = `【🕐 当前日期与时间】
+今天是 ${now.getFullYear()} 年 ${now.getMonth() + 1} 月 ${now.getDate()} 日（星期${weekdays[now.getDay()]}）
+服务器当前时间：${now.toLocaleTimeString('zh-CN', { hour12: false })}`;
+    }
+    // 简单算术（支持 + - * / × ÷ 及中文"加/减/乘/除以"，带计算意图词避免误伤"2026/08"）
+    else if (
+      /计算|等于多少|是多少|算一下|加减乘除|几加几|几减几|几乘几|几除以几/.test(question) &&
+      /(\d+(?:\.\d+)?)\s*(乘以|乘于|乘|除以|加|减|加上|减去|\+|\-|−|×|÷|\*|\/|／)\s*(\d+(?:\.\d+)?)/.test(question)
+    ) {
+      const m = question.match(
+        /(\d+(?:\.\d+)?)\s*(乘以|乘于|乘|除以|加|减|加上|减去|\+|\-|−|×|÷|\*|\/|／)\s*(\d+(?:\.\d+)?)/
+      );
+      if (m) {
+        const a = parseFloat(m[1]);
+        const opRaw = m[2];
+        const b = parseFloat(m[3]);
+        let opSymbol = opRaw;
+        if (opRaw === '加' || opRaw === '加上') opSymbol = '+';
+        else if (opRaw === '减' || opRaw === '减去' || opRaw === '−') opSymbol = '-';
+        else if (opRaw === '乘' || opRaw === '乘以' || opRaw === '乘于' || opRaw === '*') opSymbol = '×';
+        else if (opRaw === '除以' || opRaw === '/' || opRaw === '／') opSymbol = '÷';
+        let result: number | null = null;
+        if (opSymbol === '+') result = a + b;
+        else if (opSymbol === '-') result = a - b;
+        else if (opSymbol === '×') result = a * b;
+        else if (opSymbol === '÷') result = b === 0 ? null : a / b;
+        if (result !== null) {
+          category = '实用计算';
+          suggestedAction = '';
+          bigDataBenchmark = '';
+          fallbackReply = `【🧮 快速计算】
+${a} ${opSymbol} ${b} = ${Number.isInteger(result) ? result : result.toFixed(2)}`;
+        }
+      }
+    }
+    // 币种换算（如：100美元等于多少人民币）
+    else if (tryCurrencyConversion(question)) {
+      category = '币种换算';
+      suggestedAction = '';
+      bigDataBenchmark = '';
+      fallbackReply = tryCurrencyConversion(question)!;
+    }
+    // 保本点 / 盈亏平衡（一个月最少赚多少才不亏）
+    else if (/保本|不亏|盈亏平衡|赚多少才不亏|最少赚多少|月流水多少才不亏|breakeven|break-even/i.test(question)) {
+      category = '保本点与盈亏平衡测算';
+      suggestedAction = '月度保本流水 = 每月固定开销 ÷ 毛利率，低于该数即当月亏损';
+      bigDataBenchmark = '多数小微店铺保本流水约为月均总流水的 55%~70%，高于 85% 极易亏损。';
+      fallbackReply = `【🧮 保本点（盈亏平衡）大白话】
+
+1. 怎么算：保本月流水 = 每月固定开销（房租+工资+水电） ÷ 毛利率。
+举例：房租工资水电每月共 15,000，毛利率 60%，则保本流水 = 15,000 ÷ 0.6 = 25,000 元/月。只要当月营业额超过 25,000，就进入赚钱区。
+
+2. 📊 大数据警戒：
+• 实际月流水 ÷ 保本流水 < 1.1：危险区，稍有波动即亏损；
+• 1.1 ~ 1.5：正常波动区；
+• > 1.5：安全稳健，具备真实造血能力。`;
+    }
+    // 同工工资怎么定
+    else if (/同工|工资怎么定|员工工资|薪资|人工成本占比|底薪多少|pay|salary/i.test(question)) {
+      category = '同工薪酬与人工成本占比';
+      suggestedAction = '人工总成本建议控制在月流水的 15%~30% 之间，同工同酬一视同仁';
+      bigDataBenchmark = '全球小微样本中，人工成本占月流水 15%~30% 为健康区间，超过 40% 需警惕。';
+      fallbackReply = `【👥 同工工资怎么定？】
+
+1. 定价三原则：
+• 同工同酬：相同岗位与工作量，本地员工与外派同工一律同标准，既是道德要求也避免合规风险；
+• 可负担性：全部员工工资总和 ≤ 月流水 30%（含社保/补贴），超过 40% 就会挤压利润；
+• 区域参照：参考当地同业 25% 分位～中位数工资，留住人又不压垮店铺。
+
+2. 示例（月流水 50,000）：
+• 两名全职员工：各 5,000~6,000/月，合计 10,000~12,000（占 20%~24%）为健康区间；
+• 再加一名兼职：3,000/月，合计仍应控制在 15,000（30%）以内。`;
+    }
+    // 启动资金大概要多少
+    else if (/启动资金|开店要多少钱|前期投入|初始投入|多少钱能开|startup|initial investment/i.test(question)) {
+      category = '启动资金评估';
+      suggestedAction = '启动资金建议 = 一次性开办投入 + 至少 3 个月固定开销备用金';
+      bigDataBenchmark = '小微创业前 6 个月存活率约 50%，启动资金必须覆盖 3~6 个月固定开销。';
+      fallbackReply = `【💰 启动资金大概要多少？】
+
+1. 公式：启动资金 = 一次性开办投入（装修设备首批进货） + 3~6 个月固定开销备用金。
+
+2. 分行业参考（美元/月流水量级）：
+• 街头小吃/茶饮摊：500~2,000
+• 社区小店/杂货铺：2,000~8,000
+• 餐饮/烘焙店：5,000~20,000
+• 生活服务（美发/维修）：3,000~10,000
+• 小型工坊：5,000~25,000
+
+3. 关键提醒：宁可少买设备，也要留足 3 个月房租工资。现金断流是小微创业失败的第一大原因。`;
+    }
+
     // 1. Term: 流水 vs 收入 / 营业额 (The exact question from user)
-    if (/流水|营业额|总进账|是收入还是|营业收入|做买卖收的钱|总销售/i.test(question)) {
+    // 注意：必须用 else if 接在通用意图链后面，否则通用意图命中后会被下面链的兜底 else 覆盖
+    else if (/流水|营业额|总进账|是收入还是|营业收入|做买卖收的钱|总销售/i.test(question)) {
       category = '核心财务术语通俗解析';
       suggestedAction = '填报时填写近3-12个月扣除退款后的平均每月总进账（未扣除成本）';
       bigDataBenchmark = '全球小微样本库中：餐饮月均流水约3~12万，零售超市约5~25万，生活服务约2~8万。';
@@ -319,28 +564,30 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
     }
     // 9. General fallback
     else {
-      category = '小微商业模型自测咨询';
-      suggestedAction = '您可以直接询问具体财务指标（流水/毛利/OPEX）或行业大数据';
-      bigDataBenchmark = '平台已内置餐饮、零售、电商、服务等 6 大核心行业的大数据基准分布。';
-      fallbackReply = `【💡 小微商业模型自测专家解答】
+      category = '通用智能问答';
+      suggestedAction = '';
+      bigDataBenchmark = '';
+      fallbackReply = `【🤖 通用 AI 助手 · 本地规则引擎模式】
 
-您好！关于您咨询的：“${question}”：
+关于您咨询的：「${question}」
 
-1. 本平台自测核心：
-围绕【真金白银造血能力】与【抗风险安全底线】，无需复杂会计做账，只看 4 个最接地气的数据：
-• 经营月均总流水（每月总营业额进账）；
-• 直接进货成本（买原料商品的本钱，看毛利率是否及格）；
-• 每月固定开销（房租+员工薪水，看毛利是否包得住）；
-• 账面可用备用金（看万一断流能支撑几个月）。
+📌 两个建议方向：
+1️⃣ 如果是本平台的【填报与评分】问题（流水、毛利、OPEX、备用金、汇率、凭证、季节/休渔等边缘情况），请直接追问相关关键词，我会用大白话 + 行业大数据为您详解；
+2️⃣ 如果是【生活常识 / 实用知识 / 简单计算 / 币种换算】，您也可以直接问，我能覆盖常见场景。
 
-2. 随时查阅：
-您可以随时在左下角点击【公开评分标准】查看完整的 5 维雷达打分公式与 4 大门槛红线，所有规则完全公开透明！`;
+🔑 关于"能回答任何问题"：
+当前服务器未配置 GEMINI_API_KEY，本次回答由内置本地规则库提供，覆盖面有限。请在项目根目录 .env 中填入密钥并重启开发服务器，即可解锁真正的通用 AI（商业、财务、生活、技术、翻译等任何问题都能答）。
+
+📍 本平台快捷入口：
+• 【公开评分标准】可查看完整 5 维雷达打分公式与 4 大门槛红线；
+• 【行业大数据基准】可查看各行业平均流水、毛利率与安全线。`;
     }
 
     return res.json({
       reply: fallbackReply,
       aiResponse: fallbackReply,
       answer: fallbackReply,
+      aiMode: 'rules',
       confidence: isEdgeCase ? 'LOW_EDGE_CASE' : 'HIGH',
       isEdgeCase,
       category,
@@ -429,21 +676,12 @@ app.post('/api/ai/infer-business-structure', async (req, res) => {
 }
 `;
 
-        const response = await Promise.race([
-          ai.models.generateContent({
-            model: 'gemini-3.7-flash',
-            contents: `项目/店铺名称: "${projectName}"\n用户当前选择的行业: "${currentIndustry}"\n当前币种: "${baseCurrency}"`,
-            config: {
-              systemInstruction,
-              responseMimeType: 'application/json'
-            }
-          }),
-          new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error('Gemini infer timed out after 8s')), 8000)
-          )
-        ]);
+        const replyText = await generateGeminiContent(
+          `项目/店铺名称: "${projectName}"\n用户当前选择的行业: "${currentIndustry}"\n当前币种: "${baseCurrency}"`,
+          systemInstruction
+        );
 
-        const parsed = JSON.parse(response.text || '{}');
+        const parsed = JSON.parse(replyText || '{}');
         if (parsed.inferredIndustryKey) {
           return res.json({
             success: true,
@@ -700,31 +938,22 @@ app.post('/api/ai/deep-diagnosis', async (req, res) => {
 }
 `;
 
-        const response = await Promise.race([
-          ai.models.generateContent({
-            model: 'gemini-3.7-flash',
-            contents: `商业项目数据：${JSON.stringify({
-              projectName: report.projectName,
-              industry: report.industry,
-              baseCurrency: report.baseCurrency,
-              financials: report.normalizedFinancials,
-              radarScores: report.radarScores,
-              totalScore: report.totalScore,
-              tier: report.tier,
-              gatePassed: report.gatePassed,
-              failedGates: report.failedGates
-            })}`,
-            config: {
-              systemInstruction,
-              responseMimeType: 'application/json'
-            }
-          }),
-          new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error('Gemini deep diagnosis timed out after 8s')), 8000)
-          )
-        ]);
+        const replyText = await generateGeminiContent(
+          `商业项目数据：${JSON.stringify({
+            projectName: report.projectName,
+            industry: report.industry,
+            baseCurrency: report.baseCurrency,
+            financials: report.normalizedFinancials,
+            radarScores: report.radarScores,
+            totalScore: report.totalScore,
+            tier: report.tier,
+            gatePassed: report.gatePassed,
+            failedGates: report.failedGates
+          })}`,
+          systemInstruction
+        );
 
-        const parsed = JSON.parse(response.text || '{}');
+        const parsed = JSON.parse(replyText || '{}');
         // 空诊断结果同样回退本地引擎，避免报告页出现空白的 AI 诊断区
         if (!parsed || (!parsed.summaryHeadline && !parsed.plainExplanation)) {
           throw new Error('Gemini deep diagnosis returned empty result');

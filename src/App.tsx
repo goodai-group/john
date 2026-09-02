@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Heart, X, AlertTriangle, ExternalLink, MessageCircle } from 'lucide-react';
-import firebaseConfig from '../firebase-applet-config.json';
 import {
   BusinessFormData,
   AssessmentReport,
@@ -17,6 +16,7 @@ import { ScoringSimulator } from './components/ScoringSimulator';
 import { PublicScoringStandards } from './components/PublicScoringStandards';
 import { AssessmentForm } from './components/AssessmentForm/AssessmentForm';
 import { AssessmentReportView } from './components/AssessmentReport/AssessmentReportView';
+import { AuthModal } from './components/AuthModal';
 import { ProjectsListPage } from './pages/ProjectsListPage';
 import {
   loadStoredProjects,
@@ -26,14 +26,20 @@ import {
   saveActiveDraft,
   syncWithCloudDatabase,
   saveProject,
-  saveReport
+  saveReport,
+  deleteProjectAndReports,
+  hasAnyStoredProjects,
+  hasAnyStoredReports
 } from './lib/storage';
 import {
   isCloudDatabaseAvailable,
   signInWithGoogle,
+  signInWithEmail,
+  signUpWithEmail,
+  sendPasswordResetEmail,
   logoutGoogleUser,
   subscribeToAuthChanges
-} from './lib/firebase';
+} from './lib/supabaseClient';
 import { calculateAssessmentReport } from './lib/scoringEngine';
 import { SAMPLE_PROJECT, INITIAL_SAMPLE_REPORT } from './lib/seedData';
 
@@ -44,6 +50,7 @@ export default function App() {
   // User Authentication State
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [isSigningIn, setIsSigningIn] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   // Modals & Drawers state
   const [isFeeModalOpen, setIsFeeModalOpen] = useState(false);
@@ -60,18 +67,26 @@ export default function App() {
   const [lowBandwidth, setLowBandwidth] = useState(false);
 
   // Projects and Reports state with seed fallback
+  // ⚠️ 修复：仅在"全新安装"（存储键完全不存在）时播种示例数据；
+  // 用户主动删除全部项目后刷新，不应再被示例数据"复活"
   const [projects, setProjects] = useState<BusinessFormData[]>(() => {
     const local = loadStoredProjects();
     if (local.length > 0) return local;
-    saveStoredProjects([SAMPLE_PROJECT]);
-    return [SAMPLE_PROJECT];
+    if (!hasAnyStoredProjects()) {
+      saveStoredProjects([SAMPLE_PROJECT]);
+      return [SAMPLE_PROJECT];
+    }
+    return [];
   });
 
   const [reports, setReports] = useState<AssessmentReport[]>(() => {
     const local = loadStoredReports();
     if (local.length > 0) return local;
-    saveStoredReports([INITIAL_SAMPLE_REPORT]);
-    return [INITIAL_SAMPLE_REPORT];
+    if (!hasAnyStoredReports()) {
+      saveStoredReports([INITIAL_SAMPLE_REPORT]);
+      return [INITIAL_SAMPLE_REPORT];
+    }
+    return [];
   });
 
   const [activeProjectId, setActiveProjectId] = useState<string>(SAMPLE_PROJECT.id);
@@ -105,15 +120,16 @@ export default function App() {
     }
     setBanner(null);
   };
-  // Firebase 控制台 Authentication Settings 直达链接
-  const firebaseAuthSettingsUrl = `https://console.firebase.google.com/project/${firebaseConfig.projectId}/authentication/settings`;
-  const firebaseAuthProvidersUrl = `https://console.firebase.google.com/project/${firebaseConfig.projectId}/authentication/providers`;
+  // Supabase 控制台 Authentication 直达链接（用户可在浏览器中打开后自行配置 Google 登录）
+  const supabaseAuthUrl = `https://supabase.com/dashboard/project/_/auth/providers`;
+  const supabaseAuthSettingsUrl = `https://supabase.com/dashboard/project/_/auth/url-configuration`;
 
-  // Subscribe to Firebase Google Auth state
+  // Subscribe to Supabase Google Auth state
   useEffect(() => {
     const unsubscribe = subscribeToAuthChanges(async (user) => {
       setCurrentUser(user);
       if (user) {
+        setIsAuthModalOpen(false);
         pushBanner(
           { kind: 'info', text: `欢迎回来，${user.displayName || user.email}！正在载入您的专属云端档案...` }
         );
@@ -151,19 +167,34 @@ export default function App() {
     .filter((r) => r.projectId === activeReport?.projectId)
     .sort((a, b) => b.version - a.version);
 
+  // 登录/注册成功后统一处理：更新用户、关闭登录弹窗、提示并拉取云端档案
+  const applyAuthedUser = async (user: AppUser, welcomeText: string) => {
+    setCurrentUser(user);
+    setIsAuthModalOpen(false);
+    pushBanner({ kind: 'info', text: welcomeText }, 4000);
+    try {
+      await syncWithCloudDatabase(user);
+      setProjects(loadStoredProjects());
+      setReports(loadStoredReports());
+      pushBanner(
+        { kind: 'info', text: `已同步 ${user.displayName || user.email} 的专属云端自测档案` },
+        4000
+      );
+    } catch (e: any) {
+      pushBanner({
+        kind: 'error',
+        text: `云端同步失败：${e?.message || '已自动使用本地数据'}`
+      });
+    }
+  };
+
   // Google Login Action
   const handleLoginWithGoogle = async () => {
     try {
       setIsSigningIn(true);
       const user = await signInWithGoogle();
       if (user) {
-        setCurrentUser(user);
-        pushBanner({ kind: 'info', text: `Google 登录成功！已与 ${user.email} 绑定` }, 4000);
-        await syncWithCloudDatabase(user);
-        const refreshedProjects = loadStoredProjects();
-        const refreshedReports = loadStoredReports();
-        setProjects(refreshedProjects);
-        setReports(refreshedReports);
+        await applyAuthedUser(user, `Google 登录成功！已与 ${user.email} 绑定`);
       }
     } catch (err: any) {
       const code = err?.code || '';
@@ -172,7 +203,9 @@ export default function App() {
         code === 'auth/popup-closed-by-user' ||
         code === 'auth/cancelled-popup-request' ||
         msg.includes('popup-closed-by-user') ||
-        msg.includes('cancelled-popup-request')
+        msg.includes('cancelled-popup-request') ||
+        msg.includes('Popup closed by user') ||
+        msg.includes('user closed')
       ) {
         // 用户主动关闭了登录窗口，显示温和的引导提示（普通信息，4s 自动消失）
         pushBanner(
@@ -182,7 +215,11 @@ export default function App() {
           },
           4000
         );
-      } else if (code === 'auth/popup-blocked' || msg.includes('popup-blocked')) {
+      } else if (
+        msg.includes('popup') ||
+        msg.includes('window.open') ||
+        msg.includes('blocked')
+      ) {
         pushBanner(
           {
             kind: 'info',
@@ -190,24 +227,34 @@ export default function App() {
           },
           5000
         );
-      } else if (
-        code === 'auth/unauthorized-domain' ||
-        msg.includes('unauthorized-domain') ||
-        msg.includes('not authorized for OAuth')
-      ) {
-        // 当前域名未加入 Firebase 授权域名列表（本地开发常见：localhost 未授权）
+      } else if (msg.includes('not configured') || msg.includes('Supabase Auth is not configured')) {
         pushBanner({
           kind: 'error',
           text:
-            '登录被 Firebase 拦截：当前访问域名未加入授权名单。请在 Firebase 控制台 → Authentication → Settings → Authorized domains 中添加 localhost（若用 IP 访问也要加上 127.0.0.1），保存后回到本页刷新即可重新登录。',
-          action: { href: firebaseAuthSettingsUrl, label: '打开 Firebase 设置' }
+            'Supabase 云端尚未配置：请在项目根目录 .env 中填写 VITE_SUPABASE_URL 与 VITE_SUPABASE_ANON_KEY（已为您创建好 .env 模板），然后在 Supabase 控制台 → Authentication → Providers 中启用 Google 登录，最后重启开发服务器。',
+          action: { href: supabaseAuthUrl, label: '打开 Supabase 设置' }
         });
-      } else if (code === 'auth/operation-not-allowed' || msg.includes('operation-not-allowed')) {
+      } else if (
+        msg.includes('Google provider is not enabled') ||
+        msg.includes('provider is not enabled') ||
+        code === 'auth/operation-not-allowed'
+      ) {
         pushBanner({
           kind: 'error',
           text:
-            'Google 登录方式尚未开启：请在 Firebase 控制台 → Authentication → Sign-in method 中启用 Google 登录，保存后重试。',
-          action: { href: firebaseAuthProvidersUrl, label: '打开登录方式设置' }
+            'Google 登录方式尚未在 Supabase 中开启：请在 Supabase 控制台 → Authentication → Providers 中启用 Google（填入 Google OAuth Client ID 与 Secret），保存后重试。',
+          action: { href: supabaseAuthUrl, label: '打开登录方式设置' }
+        });
+      } else if (
+        msg.includes('redirect') ||
+        msg.includes('Redirect URL') ||
+        msg.includes('redirectTo')
+      ) {
+        pushBanner({
+          kind: 'error',
+          text:
+            '登录被拦截：请在 Supabase 控制台 → Authentication → URL Configuration 中，把本站地址（如 http://localhost:3000）加入 Redirect URLs 白名单，保存后重试。',
+          action: { href: supabaseAuthSettingsUrl, label: '打开 URL 设置' }
         });
       } else {
         pushBanner({
@@ -218,6 +265,37 @@ export default function App() {
     } finally {
       setIsSigningIn(false);
     }
+  };
+
+  // 邮箱 + 密码登录 / 注册 / 找回密码
+  const handleEmailLogin = async (email: string, password: string) => {
+    const user = await signInWithEmail(email.trim(), password);
+    if (!user) throw new Error('登录失败，请稍后重试');
+    await applyAuthedUser(user, `账号登录成功！欢迎回来，${user.displayName || user.email}`);
+  };
+
+  const handleEmailSignUp = async (
+    email: string,
+    password: string,
+    displayName: string
+  ): Promise<boolean> => {
+    const result = await signUpWithEmail(email.trim(), password, displayName);
+    if (result.user) {
+      await applyAuthedUser(
+        result.user,
+        `注册成功！欢迎加入，${result.user.displayName || result.user.email}`
+      );
+      return true;
+    }
+    if (result.needsEmailConfirmation) {
+      // Supabase 开启了"邮箱确认"：弹窗内已提示用户去邮箱点验证链接
+      return false;
+    }
+    throw new Error('注册失败，请稍后重试');
+  };
+
+  const handleSendPasswordReset = async (email: string) => {
+    await sendPasswordResetEmail(email.trim());
   };
 
   // Logout Action
@@ -278,6 +356,7 @@ export default function App() {
   };
 
   // Delete project and all associated reports (P0 data withdrawal)
+  // ⚠️ 修复：删除时必须同步清理云端数据，否则刷新后云端合并会把已删除的数据重新拉回本地
   const handleDeleteProject = (projId: string) => {
     const updatedProjects = projects.filter((p) => p.id !== projId);
     const updatedReports = reports.filter((r) => r.projectId !== projId);
@@ -287,6 +366,13 @@ export default function App() {
     setReports(updatedReports);
     saveStoredReports(updatedReports);
 
+    // 同步删除本地与云端（Supabase）中该项目的评估与报告，防止刷新后被云端数据"复活"；
+    // 显式传入被删报告 id，确保删除墓碑能准确记录（本地报告此刻可能已被上方清空）
+    const deletedReportIds = reports.filter((r) => r.projectId === projId).map((r) => r.id);
+    deleteProjectAndReports(projId, deletedReportIds).catch((e) =>
+      console.warn('云端删除失败（本地已删除，可稍后重试同步）:', e)
+    );
+
     if (activeProjectId === projId) {
       if (updatedProjects.length > 0) {
         setActiveProjectId(updatedProjects[0].id);
@@ -295,6 +381,17 @@ export default function App() {
       }
     }
     setActiveTab('projects');
+  };
+
+  // Update a project's metadata (e.g. collaborators managed from Projects page)
+  const handleUpdateProject = (projId: string, patch: Partial<BusinessFormData>) => {
+    const updated = projects.map((p) =>
+      p.id === projId ? { ...p, ...patch, updatedAt: new Date().toISOString() } : p
+    );
+    setProjects(updated);
+    saveStoredProjects(updated);
+    const proj = updated.find((p) => p.id === projId);
+    if (proj) saveProject(proj);
   };
 
   // Re-assess existing project
@@ -375,7 +472,7 @@ export default function App() {
     setActiveTab('form');
   };
 
-  // Auto-sync with Firestore Cloud Database on mount
+  // Auto-sync with Supabase Cloud Database on mount
   useEffect(() => {
     const initSync = async () => {
       if (isCloudDatabaseAvailable()) {
@@ -394,10 +491,10 @@ export default function App() {
   }, []);
 
   const handleTriggerSync = async () => {
-    pushBanner({ kind: 'info', text: '正在与 Firebase 云端数据库集合同步 (/assessments, /reports, /escalated_questions)...' });
+    pushBanner({ kind: 'info', text: '正在与 Supabase 云端数据库集合同步 (projects, assessment_reports, escalated_questions)...' });
     try {
       if (isCloudDatabaseAvailable()) {
-        // 超时保护：Firestore 网络不可用时不再无限挂起"同步中"，8 秒后明确提示失败
+        // 超时保护：Supabase 网络不可用时不再无限挂起"同步中"，8 秒后明确提示失败
         const timeoutPromise = new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error('云端连接超时（网络不可用或未登录），已保留本地数据，可稍后重试')), 8000)
         );
@@ -406,7 +503,14 @@ export default function App() {
         const refreshedReports = loadStoredReports();
         setProjects(refreshedProjects);
         setReports(refreshedReports);
-        pushBanner({ kind: 'info', text: '云端数据库双向同步已完成！数据已安全持久化' }, 4000);
+        if (currentUser) {
+          pushBanner({ kind: 'info', text: '云端数据库双向同步已完成！数据已安全持久化' }, 4000);
+        } else {
+          pushBanner(
+            { kind: 'info', text: '本地数据已安全保存。使用 Google 登录后可开启专属云端档案同步' },
+            4000
+          );
+        }
       } else {
         pushBanner({ kind: 'info', text: '本地持久化模式正常运行中' }, 4000);
       }
@@ -439,7 +543,7 @@ export default function App() {
         }}
         largeFont={largeFont}
         currentUser={currentUser}
-        onLoginWithGoogle={handleLoginWithGoogle}
+        onOpenAuth={() => setIsAuthModalOpen(true)}
         onLogout={handleLogout}
         isSigningIn={isSigningIn}
       />
@@ -544,10 +648,11 @@ export default function App() {
               setActiveTab('report');
             }}
             onDeleteProject={handleDeleteProject}
+            onUpdateProject={handleUpdateProject}
             isCloudDatabaseReady={isCloudDatabaseAvailable()}
             onTriggerSync={handleTriggerSync}
             currentUser={currentUser}
-            onLoginWithGoogle={handleLoginWithGoogle}
+            onOpenAuth={() => setIsAuthModalOpen(true)}
           />
         )}
       </main>
@@ -602,6 +707,18 @@ export default function App() {
         onClose={() => setIsAiDrawerOpen(false)}
         language={language}
         initialTopic={aiInitialTopic}
+      />
+
+      {/* 账号登录 / 注册弹窗（Google + 邮箱密码双通道） */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        language={language}
+        isGoogleLoading={isSigningIn}
+        onGoogleLogin={handleLoginWithGoogle}
+        onEmailLogin={handleEmailLogin}
+        onEmailSignUp={handleEmailSignUp}
+        onSendResetEmail={handleSendPasswordReset}
       />
 
       {/* 生成报告过场：让"算完了"有仪式感 */}

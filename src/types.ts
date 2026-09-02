@@ -11,6 +11,7 @@ export interface CurrencyRate {
   symbol: string;
   rateToUsd: number; // 1 USD = X Local
   region?: string; // 洲际大区分类
+  isCustomOption?: boolean; // 是否为"自定义币种"占位项
 }
 
 export type ProofType =
@@ -89,6 +90,7 @@ export interface BusinessFormData {
 
   // 主报告币种与汇率设置
   baseCurrency: CurrencyCode;
+  customCurrencyCode?: string; // 自定义 3 字母币种代码（当 baseCurrency 为 __CUSTOM__ 时）
   hasMultipleRates: boolean; // 是否存在多重汇率（黑市/民间汇率）
   customExchangeRateType?: string; // 汇率类型 (如 "当地教会/机构日常兑换价")
   customExchangeRateValue?: number; // 用户自报汇率 (1 USD = X Local)

@@ -1,0 +1,584 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e6]:
+      - heading "商业宣教财务测算" [level=1] [ref=e11] [cursor=pointer]
+      - navigation [ref=e12]:
+        - button "快速体检" [ref=e13] [cursor=pointer]
+        - button "体检报告" [ref=e14] [cursor=pointer]
+        - button "我的项目" [ref=e15] [cursor=pointer]
+        - button "更多" [ref=e17] [cursor=pointer]
+      - generic [ref=e23]:
+        - button "永久免费" [ref=e24] [cursor=pointer]
+        - button "AI 答疑" [ref=e29] [cursor=pointer]
+        - button "使用指南" [ref=e33] [cursor=pointer]
+        - button "EN" [ref=e37] [cursor=pointer]
+        - button "云端备份" [ref=e38] [cursor=pointer]
+  - main [ref=e42]:
+    - generic [ref=e43]:
+      - generic [ref=e44]:
+        - paragraph [ref=e46]: 只要两步：先告诉生意叫什么，再填上赚多少、花多少。AI 自动补齐行业、币种与成本结构，30 秒出报告。
+        - generic [ref=e53]:
+          - button "STEP 01 生意叫什么？" [ref=e54] [cursor=pointer]:
+            - generic [ref=e55]: STEP 01
+            - generic [ref=e56]: 生意叫什么？
+          - button "STEP 02 赚多少、花多少、兜里有多少现金" [ref=e57] [cursor=pointer]:
+            - generic [ref=e58]: STEP 02
+            - generic [ref=e59]: 赚多少、花多少、兜里有多少现金
+      - generic [ref=e89]:
+        - generic [ref=e90]:
+          - generic [ref=e91]:
+            - heading "2. 赚多少、花多少、兜里有多少现金" [level=3] [ref=e92]
+            - paragraph [ref=e97]: 左边是收入，右边是成本与现金。填完直接点「出报告」。
+          - generic [ref=e98]:
+            - generic [ref=e99]:
+              - heading "赚多少（每月收入）" [level=4] [ref=e100]
+              - generic [ref=e104]:
+                - generic [ref=e105]:
+                  - generic [ref=e106]:
+                    - generic [ref=e107]:
+                      - generic [ref=e108]: F8. 经营月均总流水
+                      - generic [ref=e109]: 总营业额
+                    - paragraph [ref=e110]: 大白话：客人买单进你口袋的全部毛钱，尚未扣除进货、房租与人工！
+                  - generic [ref=e111]:
+                    - button "AI解答" [ref=e112] [cursor=pointer]
+                    - button "查基准" [ref=e117] [cursor=pointer]
+                    - combobox [ref=e121]:
+                      - option "USD ($)"
+                      - option "CNY (¥)"
+                      - option "EUR (€)"
+                      - option "GBP (£)"
+                      - option "KES (KSh)" [selected]
+                      - option "THB (฿)"
+                      - option "VND (₫)"
+                      - option "NGN (₦)"
+                      - option "EGP (E£)"
+                      - option "IDR (Rp)"
+                      - option "PHP (₱)"
+                      - option "MYR (RM)"
+                      - option "SGD (S$)"
+                      - option "INR (₹)"
+                      - option "JPY (¥)"
+                      - option "KRW (₩)"
+                      - option "HKD (HK$)"
+                      - option "TWD (NT$)"
+                      - option "ZAR (R)"
+                      - option "UGX (USh)"
+                      - option "TZS (TSh)"
+                      - option "ETB (Br)"
+                      - option "GHS (GH₵)"
+                      - option "RWF (FRw)"
+                      - option "MAD (MAD)"
+                      - option "XOF (CFA)"
+                      - option "XAF (FCFA)"
+                      - option "ZMW (ZK)"
+                      - option "MZN (MT)"
+                      - option "BWP (P)"
+                      - option "KHR (៛)"
+                      - option "LAK (₭)"
+                      - option "MMK (K)"
+                      - option "PKR (₨)"
+                      - option "BDT (৳)"
+                      - option "NPR (रू)"
+                      - option "LKR (Rs)"
+                      - option "MNT (₮)"
+                      - option "KZT (₸)"
+                      - option "UZS (so'm)"
+                      - option "AED (AED)"
+                      - option "SAR (SAR)"
+                      - option "QAR (QR)"
+                      - option "KWD (KD)"
+                      - option "ILS (₪)"
+                      - option "JOD (JD)"
+                      - option "TRY (₺)"
+                      - option "CAD (CA$)"
+                      - option "MXN (Mex$)"
+                      - option "BRL (R$)"
+                      - option "ARS (ARS$)"
+                      - option "COP (COL$)"
+                      - option "CLP (CLP$)"
+                      - option "PEN (S/.)"
+                      - option "CRC (₡)"
+                      - option "DOP (RD$)"
+                      - option "CHF (CHF)"
+                      - option "SEK (kr)"
+                      - option "NOK (kr)"
+                      - option "DKK (kr)"
+                      - option "PLN (zł)"
+                      - option "CZK (Kč)"
+                      - option "HUF (Ft)"
+                      - option "AUD (A$)"
+                      - option "NZD (NZ$)"
+                      - option "TMT (TMT)"
+                      - option "TJS (SM)"
+                      - option "KGS (сом)"
+                      - option "AFN (؋)"
+                      - option "AZN (₼)"
+                      - option "AMD (֏)"
+                      - option "GEL (₾)"
+                      - option "CDF (FC)"
+                      - option "AOA (Kz)"
+                      - option "BIF (FBu)"
+                      - option "MGA (Ar)"
+                      - option "SOS (S)"
+                      - option "SDG (SDG)"
+                      - option "SLE (Le)"
+                      - option "GMD (D)"
+                      - option "MVR (Rf)"
+                      - option "BOB (Bs)"
+                      - option "UYU ($U)"
+                      - option "VES (Bs.S)"
+                      - option "PYG (₲)"
+                      - option "GTQ (Q)"
+                      - option "HNL (L)"
+                      - option "NIO (C$)"
+                      - option "JMD (J$)"
+                      - option "TTD (TT$)"
+                      - option "BSD (B$)"
+                      - option "HTG (G)"
+                      - option "BBD (Bds$)"
+                      - option "RON (lei)"
+                      - option "BGN (лв)"
+                      - option "UAH (₴)"
+                      - option "RSD (дин)"
+                      - option "DZD (DA)"
+                      - option "LYD (LD)"
+                      - option "IQD (ع.د)"
+                      - option "LBP (L.L)"
+                      - option "OMR (OMR)"
+                      - option "YER (YR)"
+                      - option "BHD (BD)"
+                      - option "SRD ($)"
+                      - option "GYD (G$)"
+                      - option "PGK (K)"
+                      - option "FJD (FJ$)"
+                      - option "WST (WS$)"
+                      - option "TOP (T$)"
+                      - option "VUV (VT)"
+                      - option "SBD (SI$)"
+                      - option "__CUSTOM__ (¤)"
+                - spinbutton "例如 50000" [ref=e122]: "330000"
+                - paragraph [ref=e123]: 真实经营收入已自动同步为 KSh 330,000（总流水 − 外部赠款）
+              - generic [ref=e124]:
+                - generic [ref=e125]:
+                  - generic [ref=e126]:
+                    - text: 其中：真实客户主营销售收入
+                    - paragraph [ref=e127]: 排除任何亲友借款、救济补贴后，真正由客户买单带来的生意收入。
+                  - combobox [ref=e128]:
+                    - option "USD"
+                    - option "CNY"
+                    - option "EUR"
+                    - option "GBP"
+                    - option "KES" [selected]
+                    - option "THB"
+                    - option "VND"
+                    - option "NGN"
+                    - option "EGP"
+                    - option "IDR"
+                    - option "PHP"
+                    - option "MYR"
+                    - option "SGD"
+                    - option "INR"
+                    - option "JPY"
+                    - option "KRW"
+                    - option "HKD"
+                    - option "TWD"
+                    - option "ZAR"
+                    - option "UGX"
+                    - option "TZS"
+                    - option "ETB"
+                    - option "GHS"
+                    - option "RWF"
+                    - option "MAD"
+                    - option "XOF"
+                    - option "XAF"
+                    - option "ZMW"
+                    - option "MZN"
+                    - option "BWP"
+                    - option "KHR"
+                    - option "LAK"
+                    - option "MMK"
+                    - option "PKR"
+                    - option "BDT"
+                    - option "NPR"
+                    - option "LKR"
+                    - option "MNT"
+                    - option "KZT"
+                    - option "UZS"
+                    - option "AED"
+                    - option "SAR"
+                    - option "QAR"
+                    - option "KWD"
+                    - option "ILS"
+                    - option "JOD"
+                    - option "TRY"
+                    - option "CAD"
+                    - option "MXN"
+                    - option "BRL"
+                    - option "ARS"
+                    - option "COP"
+                    - option "CLP"
+                    - option "PEN"
+                    - option "CRC"
+                    - option "DOP"
+                    - option "CHF"
+                    - option "SEK"
+                    - option "NOK"
+                    - option "DKK"
+                    - option "PLN"
+                    - option "CZK"
+                    - option "HUF"
+                    - option "AUD"
+                    - option "NZD"
+                    - option "TMT"
+                    - option "TJS"
+                    - option "KGS"
+                    - option "AFN"
+                    - option "AZN"
+                    - option "AMD"
+                    - option "GEL"
+                    - option "CDF"
+                    - option "AOA"
+                    - option "BIF"
+                    - option "MGA"
+                    - option "SOS"
+                    - option "SDG"
+                    - option "SLE"
+                    - option "GMD"
+                    - option "MVR"
+                    - option "BOB"
+                    - option "UYU"
+                    - option "VES"
+                    - option "PYG"
+                    - option "GTQ"
+                    - option "HNL"
+                    - option "NIO"
+                    - option "JMD"
+                    - option "TTD"
+                    - option "BSD"
+                    - option "HTG"
+                    - option "BBD"
+                    - option "RON"
+                    - option "BGN"
+                    - option "UAH"
+                    - option "RSD"
+                    - option "DZD"
+                    - option "LYD"
+                    - option "IQD"
+                    - option "LBP"
+                    - option "OMR"
+                    - option "YER"
+                    - option "BHD"
+                    - option "SRD"
+                    - option "GYD"
+                    - option "PGK"
+                    - option "FJD"
+                    - option "WST"
+                    - option "TOP"
+                    - option "VUV"
+                    - option "SBD"
+                    - option "__CUSTOM__"
+                - spinbutton [ref=e129]: "330000"
+              - generic [ref=e130]:
+                - generic [ref=e131]:
+                  - generic [ref=e132]:
+                    - text: 其中：外部支持款 / 机构赠款
+                    - paragraph [ref=e133]: 若有教会补助、慈善捐赠或救济资金，请在此单独列出，不会被误计入真实经营占比。
+                  - combobox [ref=e134]:
+                    - option "USD"
+                    - option "CNY"
+                    - option "EUR"
+                    - option "GBP"
+                    - option "KES" [selected]
+                    - option "THB"
+                    - option "VND"
+                    - option "NGN"
+                    - option "EGP"
+                    - option "IDR"
+                    - option "PHP"
+                    - option "MYR"
+                    - option "SGD"
+                    - option "INR"
+                    - option "JPY"
+                    - option "KRW"
+                    - option "HKD"
+                    - option "TWD"
+                    - option "ZAR"
+                    - option "UGX"
+                    - option "TZS"
+                    - option "ETB"
+                    - option "GHS"
+                    - option "RWF"
+                    - option "MAD"
+                    - option "XOF"
+                    - option "XAF"
+                    - option "ZMW"
+                    - option "MZN"
+                    - option "BWP"
+                    - option "KHR"
+                    - option "LAK"
+                    - option "MMK"
+                    - option "PKR"
+                    - option "BDT"
+                    - option "NPR"
+                    - option "LKR"
+                    - option "MNT"
+                    - option "KZT"
+                    - option "UZS"
+                    - option "AED"
+                    - option "SAR"
+                    - option "QAR"
+                    - option "KWD"
+                    - option "ILS"
+                    - option "JOD"
+                    - option "TRY"
+                    - option "CAD"
+                    - option "MXN"
+                    - option "BRL"
+                    - option "ARS"
+                    - option "COP"
+                    - option "CLP"
+                    - option "PEN"
+                    - option "CRC"
+                    - option "DOP"
+                    - option "CHF"
+                    - option "SEK"
+                    - option "NOK"
+                    - option "DKK"
+                    - option "PLN"
+                    - option "CZK"
+                    - option "HUF"
+                    - option "AUD"
+                    - option "NZD"
+                    - option "TMT"
+                    - option "TJS"
+                    - option "KGS"
+                    - option "AFN"
+                    - option "AZN"
+                    - option "AMD"
+                    - option "GEL"
+                    - option "CDF"
+                    - option "AOA"
+                    - option "BIF"
+                    - option "MGA"
+                    - option "SOS"
+                    - option "SDG"
+                    - option "SLE"
+                    - option "GMD"
+                    - option "MVR"
+                    - option "BOB"
+                    - option "UYU"
+                    - option "VES"
+                    - option "PYG"
+                    - option "GTQ"
+                    - option "HNL"
+                    - option "NIO"
+                    - option "JMD"
+                    - option "TTD"
+                    - option "BSD"
+                    - option "HTG"
+                    - option "BBD"
+                    - option "RON"
+                    - option "BGN"
+                    - option "UAH"
+                    - option "RSD"
+                    - option "DZD"
+                    - option "LYD"
+                    - option "IQD"
+                    - option "LBP"
+                    - option "OMR"
+                    - option "YER"
+                    - option "BHD"
+                    - option "SRD"
+                    - option "GYD"
+                    - option "PGK"
+                    - option "FJD"
+                    - option "WST"
+                    - option "TOP"
+                    - option "VUV"
+                    - option "SBD"
+                    - option "__CUSTOM__"
+                - spinbutton "无则填 0" [ref=e135]
+            - generic [ref=e136]:
+              - heading "花多少 + 兜里有多少现金" [level=4] [ref=e137]
+              - generic [ref=e142]:
+                - generic [ref=e143]:
+                  - generic [ref=e144]:
+                    - generic [ref=e145]:
+                      - generic [ref=e146]: F10. 原材料与直接采购成本 (COGS)
+                      - generic [ref=e147]: 进货本钱
+                    - paragraph [ref=e148]: 进货货款、生鲜食材原料等直接买货成本（包含长途运费，不含房租和员工工资）。
+                  - generic [ref=e149]:
+                    - button "AI咨询" [ref=e150] [cursor=pointer]
+                    - combobox [ref=e155]:
+                      - option "USD"
+                      - option "CNY"
+                      - option "EUR"
+                      - option "GBP"
+                      - option "KES" [selected]
+                      - option "THB"
+                      - option "VND"
+                      - option "NGN"
+                      - option "EGP"
+                      - option "IDR"
+                      - option "PHP"
+                      - option "MYR"
+                      - option "SGD"
+                      - option "INR"
+                      - option "JPY"
+                      - option "KRW"
+                      - option "HKD"
+                      - option "TWD"
+                      - option "ZAR"
+                      - option "UGX"
+                      - option "TZS"
+                      - option "ETB"
+                      - option "GHS"
+                      - option "RWF"
+                      - option "MAD"
+                      - option "XOF"
+                      - option "XAF"
+                      - option "ZMW"
+                      - option "MZN"
+                      - option "BWP"
+                      - option "KHR"
+                      - option "LAK"
+                      - option "MMK"
+                      - option "PKR"
+                      - option "BDT"
+                      - option "NPR"
+                      - option "LKR"
+                      - option "MNT"
+                      - option "KZT"
+                      - option "UZS"
+                      - option "AED"
+                      - option "SAR"
+                      - option "QAR"
+                      - option "KWD"
+                      - option "ILS"
+                      - option "JOD"
+                      - option "TRY"
+                      - option "CAD"
+                      - option "MXN"
+                      - option "BRL"
+                      - option "ARS"
+                      - option "COP"
+                      - option "CLP"
+                      - option "PEN"
+                      - option "CRC"
+                      - option "DOP"
+                      - option "CHF"
+                      - option "SEK"
+                      - option "NOK"
+                      - option "DKK"
+                      - option "PLN"
+                      - option "CZK"
+                      - option "HUF"
+                      - option "AUD"
+                      - option "NZD"
+                      - option "TMT"
+                      - option "TJS"
+                      - option "KGS"
+                      - option "AFN"
+                      - option "AZN"
+                      - option "AMD"
+                      - option "GEL"
+                      - option "CDF"
+                      - option "AOA"
+                      - option "BIF"
+                      - option "MGA"
+                      - option "SOS"
+                      - option "SDG"
+                      - option "SLE"
+                      - option "GMD"
+                      - option "MVR"
+                      - option "BOB"
+                      - option "UYU"
+                      - option "VES"
+                      - option "PYG"
+                      - option "GTQ"
+                      - option "HNL"
+                      - option "NIO"
+                      - option "JMD"
+                      - option "TTD"
+                      - option "BSD"
+                      - option "HTG"
+                      - option "BBD"
+                      - option "RON"
+                      - option "BGN"
+                      - option "UAH"
+                      - option "RSD"
+                      - option "DZD"
+                      - option "LYD"
+                      - option "IQD"
+                      - option "LBP"
+                      - option "OMR"
+                      - option "YER"
+                      - option "BHD"
+                      - option "SRD"
+                      - option "GYD"
+                      - option "PGK"
+                      - option "FJD"
+                      - option "WST"
+                      - option "TOP"
+                      - option "VUV"
+                      - option "SBD"
+                      - option "__CUSTOM__"
+                - spinbutton "例如 20000" [ref=e156]: "132000"
+              - generic [ref=e157]:
+                - generic [ref=e158]:
+                  - generic [ref=e159]:
+                    - generic [ref=e160]: F11. 场地租金与物业
+                    - generic [ref=e161]: KES
+                  - spinbutton [ref=e162]: "35000"
+                - generic [ref=e163]:
+                  - generic [ref=e164]:
+                    - generic [ref=e165]: F12. 员工工资与人工支出
+                    - generic [ref=e166]: KES
+                  - spinbutton [ref=e167]: "48000"
+                - generic [ref=e168]:
+                  - generic [ref=e169]:
+                    - generic [ref=e170]: F13. 水电网络杂费
+                    - generic [ref=e171]: KES
+                  - spinbutton [ref=e172]: "18000"
+                - generic [ref=e173]:
+                  - generic [ref=e174]:
+                    - generic [ref=e175]: F16. 税金及规费
+                    - generic [ref=e176]: KES
+                  - spinbutton [ref=e177]: "9000"
+                - generic [ref=e178]:
+                  - generic [ref=e179]:
+                    - generic [ref=e180]: 每月偿还债务本息
+                    - generic [ref=e181]: KES
+                  - spinbutton "无债务填 0" [ref=e182]: "15000"
+                - generic [ref=e183]:
+                  - generic [ref=e184]:
+                    - generic [ref=e185]: 当前可用现金备用金
+                    - generic [ref=e186]: KES
+                  - spinbutton [ref=e187]: "450000"
+          - button "更多设置（资金证明 / 经营时长 / 员工人数）" [ref=e189] [cursor=pointer]
+          - generic [ref=e194]:
+            - generic [ref=e195]: 提交前信息核对速览
+            - generic [ref=e200]:
+              - generic [ref=e201]:
+                - generic [ref=e202]: "项目名称:"
+                - text: 阳光工坊社区烘焙店 (Sunny Bakehouse)
+              - generic [ref=e203]:
+                - generic [ref=e204]: "主报告币种:"
+                - text: KES
+              - generic [ref=e205]:
+                - generic [ref=e206]: "所属行业:"
+                - text: 餐饮烘焙 / 社区咖啡 (Bakery & Cafe)
+              - generic [ref=e207]:
+                - generic [ref=e208]: "敏感地区模式:"
+                - text: 未开启
+              - generic [ref=e209]:
+                - generic [ref=e210]: "月均总流水:"
+                - text: KSh 330,000
+              - generic [ref=e211]:
+                - generic [ref=e212]: "原材料采购(COGS):"
+                - text: KSh 132,000
+        - generic [ref=e213]:
+          - button "上一步" [ref=e214] [cursor=pointer]
+          - button "出报告 · 生成财务测算与评估报告" [ref=e218] [cursor=pointer]
+  - button "打开 AI 答疑" [ref=e85] [cursor=pointer]:
+    - generic [ref=e88]: AI 答疑

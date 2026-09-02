@@ -1,0 +1,228 @@
+- generic [ref=f1e3]:
+  - banner [ref=f1e4]:
+    - generic [ref=f1e6]:
+      - heading "商业宣教财务测算" [level=1] [ref=f1e11] [cursor=pointer]
+      - navigation [ref=f1e12]:
+        - button "快速体检" [ref=f1e13] [cursor=pointer]
+        - button "体检报告" [ref=f1e14] [cursor=pointer]
+        - button "我的项目" [ref=f1e15] [cursor=pointer]
+        - button "更多" [ref=f1e17] [cursor=pointer]
+      - generic [ref=f1e23]:
+        - button "永久免费" [ref=f1e24] [cursor=pointer]
+        - button "AI 答疑" [ref=f1e29] [cursor=pointer]
+        - button "使用指南" [ref=f1e33] [cursor=pointer]
+        - button "EN" [ref=f1e37] [cursor=pointer]
+        - button "云端备份" [ref=f1e38] [cursor=pointer]
+  - main [ref=f1e42]:
+    - generic [ref=f1e748]:
+      - generic [ref=f1e749]:
+        - generic [ref=f1e750]:
+          - generic [ref=f1e751]: PROJECTS & CLOUD HUB
+          - heading "我的申报项目与历史评估" [level=2] [ref=f1e753]
+          - paragraph [ref=f1e754]: 数据已接入云端 Firestore 数据库；登录 Google 账号后可跨设备随时找回所有历史评估与多版本报告。
+        - button "新建商业自测项目" [ref=f1e756] [cursor=pointer]
+      - generic [ref=f1e759]:
+        - generic [ref=f1e766]:
+          - generic [ref=f1e767]: 未绑定 Google 账号 (当前保存在本地与公共云)
+          - paragraph [ref=f1e769]: 一键使用 Google 登录，将当前报告永久关联至您的专属云端空间，换手机或电脑随时查看。
+        - generic [ref=f1e770]:
+          - button "使用 Google 登录" [ref=f1e771] [cursor=pointer]
+          - button "云端双向同步" [ref=f1e778] [cursor=pointer]
+      - generic [ref=f1e783]:
+        - generic [ref=f1e784]:
+          - generic [ref=f1e785]:
+            - generic [ref=f1e786]:
+              - generic [ref=f1e787]:
+                - generic [ref=f1e788]:
+                  - generic [ref=f1e789]: 常规模式
+                  - generic [ref=f1e790]: 2026/8/10
+                - heading "阳光工坊社区烘焙店 (Sunny Bakehouse)" [level=3] [ref=f1e791]
+                - paragraph [ref=f1e792]: 社区烘焙与熟食 ｜ 币种：KES
+              - generic [ref=f1e793]:
+                - generic [ref=f1e794]: "81"
+                - generic [ref=f1e795]: AA
+            - generic [ref=f1e796]:
+              - generic [ref=f1e797]:
+                - generic [ref=f1e798]: "月均总流水:"
+                - text: KSh 330,000
+              - generic [ref=f1e799]:
+                - generic [ref=f1e800]: "凭证方式:"
+                - text: 移动支付截图
+            - generic [ref=f1e801]:
+              - button "协作者 1 人 收起" [active] [ref=f1e1045] [cursor=pointer]:
+                - text: 协作者 1 人
+                - generic [ref=f1e808]: 收起
+              - generic [ref=f1e1046]:
+                - generic [ref=f1e1048]:
+                  - generic [ref=f1e1049]:
+                    - generic [ref=f1e1053]: john.accountant@sunnybake.africa
+                    - generic [ref=f1e1054]: 协作者 · 可编辑
+                  - button "移除协作者" [ref=f1e1055] [cursor=pointer]
+                - generic [ref=f1e1059]:
+                  - textbox "输入协作者邮箱 (如 partner@example.com)" [ref=f1e1060]
+                  - button "添加" [ref=f1e1061] [cursor=pointer]
+          - generic [ref=f1e809]:
+            - button "删除此项目" [ref=f1e810] [cursor=pointer]
+            - generic [ref=f1e814]:
+              - button "编辑申报" [ref=f1e815] [cursor=pointer]
+              - button "查看诊断报告" [ref=f1e816] [cursor=pointer]
+        - generic [ref=f1e822]:
+          - generic [ref=f1e823]:
+            - generic [ref=f1e824]:
+              - generic [ref=f1e825]:
+                - generic [ref=f1e826]:
+                  - generic [ref=f1e827]: 敏感脱敏
+                  - generic [ref=f1e831]: 2026/8/18
+                - heading "高原传统手工编织合作社 (Highland Artisan)" [level=3] [ref=f1e832]
+                - paragraph [ref=f1e833]: 特色民族手工艺出口与内销 ｜ 币种：EGP
+              - generic [ref=f1e834]: 草稿待评
+            - generic [ref=f1e835]:
+              - generic [ref=f1e836]:
+                - generic [ref=f1e837]: "月均总流水:"
+                - text: E£ 52,000
+              - generic [ref=f1e838]:
+                - generic [ref=f1e839]: "凭证方式:"
+                - text: 手写/电子记账本
+            - button "添加协作者 管理" [ref=f1e841] [cursor=pointer]:
+              - text: 添加协作者
+              - generic [ref=f1e847]: 管理
+          - generic [ref=f1e848]:
+            - button "删除此项目" [ref=f1e849] [cursor=pointer]
+            - button "编辑申报" [ref=f1e854] [cursor=pointer]
+        - generic [ref=f1e855]:
+          - generic [ref=f1e856]:
+            - generic [ref=f1e857]:
+              - generic [ref=f1e858]:
+                - generic [ref=f1e859]:
+                  - generic [ref=f1e860]: 常规模式
+                  - generic [ref=f1e861]: 2026/8/22
+                - heading "诚信微型快修与换胎服务 (Quick Auto Service)" [level=3] [ref=f1e862]
+                - paragraph [ref=f1e863]: 社区摩托与汽车快修 ｜ 币种：NGN
+              - generic [ref=f1e864]:
+                - generic [ref=f1e865]: "83"
+                - generic [ref=f1e866]: AA
+            - generic [ref=f1e867]:
+              - generic [ref=f1e868]:
+                - generic [ref=f1e869]: "月均总流水:"
+                - text: ₦ 1,850,000
+              - generic [ref=f1e870]:
+                - generic [ref=f1e871]: "凭证方式:"
+                - text: 纯手动无凭证
+            - button "添加协作者 管理" [ref=f1e873] [cursor=pointer]:
+              - text: 添加协作者
+              - generic [ref=f1e879]: 管理
+          - generic [ref=f1e880]:
+            - button "删除此项目" [ref=f1e881] [cursor=pointer]
+            - generic [ref=f1e885]:
+              - button "编辑申报" [ref=f1e886] [cursor=pointer]
+              - button "查看诊断报告" [ref=f1e887] [cursor=pointer]
+        - generic [ref=f1e893]:
+          - generic [ref=f1e894]:
+            - generic [ref=f1e895]:
+              - generic [ref=f1e896]:
+                - generic [ref=f1e897]:
+                  - generic [ref=f1e898]: 常规模式
+                  - generic [ref=f1e899]: 2026/8/29
+                - heading "FlowTest Bakery" [level=3] [ref=f1e900]
+                - paragraph [ref=f1e901]: 社区小微零售与便民服务 ｜ 币种：USD
+              - generic [ref=f1e902]:
+                - generic [ref=f1e903]: "80"
+                - generic [ref=f1e904]: AA
+            - generic [ref=f1e905]:
+              - generic [ref=f1e906]:
+                - generic [ref=f1e907]: "月均总流水:"
+                - text: $ 5,000
+              - generic [ref=f1e908]:
+                - generic [ref=f1e909]: "凭证方式:"
+                - text: 纯手动无凭证
+            - button "添加协作者 管理" [ref=f1e911] [cursor=pointer]:
+              - text: 添加协作者
+              - generic [ref=f1e917]: 管理
+          - generic [ref=f1e918]:
+            - button "删除此项目" [ref=f1e919] [cursor=pointer]
+            - generic [ref=f1e923]:
+              - button "编辑申报" [ref=f1e924] [cursor=pointer]
+              - button "查看诊断报告" [ref=f1e925] [cursor=pointer]
+        - generic [ref=f1e931]:
+          - generic [ref=f1e932]:
+            - generic [ref=f1e933]:
+              - generic [ref=f1e934]:
+                - generic [ref=f1e935]:
+                  - generic [ref=f1e936]: 常规模式
+                  - generic [ref=f1e937]: 2026/9/1
+                - heading "QA正式流程测试项目" [level=3] [ref=f1e938]
+                - paragraph [ref=f1e939]: 社区小微零售与便民服务 ｜ 币种：USD
+              - generic [ref=f1e940]:
+                - generic [ref=f1e941]: "54"
+                - generic [ref=f1e942]: BB
+            - generic [ref=f1e943]:
+              - generic [ref=f1e944]:
+                - generic [ref=f1e945]: "月均总流水:"
+                - text: $ 2,200
+              - generic [ref=f1e946]:
+                - generic [ref=f1e947]: "凭证方式:"
+                - text: 纯手动无凭证
+            - button "添加协作者 管理" [ref=f1e949] [cursor=pointer]:
+              - text: 添加协作者
+              - generic [ref=f1e955]: 管理
+          - generic [ref=f1e956]:
+            - button "删除此项目" [ref=f1e957] [cursor=pointer]
+            - generic [ref=f1e961]:
+              - button "编辑申报" [ref=f1e962] [cursor=pointer]
+              - button "查看诊断报告" [ref=f1e963] [cursor=pointer]
+        - generic [ref=f1e969]:
+          - generic [ref=f1e970]:
+            - generic [ref=f1e971]:
+              - generic [ref=f1e972]:
+                - generic [ref=f1e973]:
+                  - generic [ref=f1e974]: 常规模式
+                  - generic [ref=f1e975]: 2026/9/1
+                - heading "快速体检项目" [level=3] [ref=f1e976]
+                - paragraph [ref=f1e977]: 餐饮与熟食 ｜ 币种：USD
+              - generic [ref=f1e978]:
+                - generic [ref=f1e979]: "79"
+                - generic [ref=f1e980]: A
+            - generic [ref=f1e981]:
+              - generic [ref=f1e982]:
+                - generic [ref=f1e983]: "月均总流水:"
+                - text: $ 50,000
+              - generic [ref=f1e984]:
+                - generic [ref=f1e985]: "凭证方式:"
+                - text: 移动支付截图
+            - button "添加协作者 管理" [ref=f1e987] [cursor=pointer]:
+              - text: 添加协作者
+              - generic [ref=f1e993]: 管理
+          - generic [ref=f1e994]:
+            - button "删除此项目" [ref=f1e995] [cursor=pointer]
+            - generic [ref=f1e999]:
+              - button "编辑申报" [ref=f1e1000] [cursor=pointer]
+              - button "查看诊断报告" [ref=f1e1001] [cursor=pointer]
+        - generic [ref=f1e1007]:
+          - generic [ref=f1e1008]:
+            - generic [ref=f1e1009]:
+              - generic [ref=f1e1010]:
+                - generic [ref=f1e1011]:
+                  - generic [ref=f1e1012]: 常规模式
+                  - generic [ref=f1e1013]: 2026/9/1
+                - heading "快速体检项目" [level=3] [ref=f1e1014]
+                - paragraph [ref=f1e1015]: 餐饮与熟食 ｜ 币种：USD
+              - generic [ref=f1e1016]:
+                - generic [ref=f1e1017]: "79"
+                - generic [ref=f1e1018]: A
+            - generic [ref=f1e1019]:
+              - generic [ref=f1e1020]:
+                - generic [ref=f1e1021]: "月均总流水:"
+                - text: $ 50,000
+              - generic [ref=f1e1022]:
+                - generic [ref=f1e1023]: "凭证方式:"
+                - text: 移动支付截图
+            - button "添加协作者 管理" [ref=f1e1025] [cursor=pointer]:
+              - text: 添加协作者
+              - generic [ref=f1e1031]: 管理
+          - generic [ref=f1e1032]:
+            - button "删除此项目" [ref=f1e1033] [cursor=pointer]
+            - generic [ref=f1e1037]:
+              - button "编辑申报" [ref=f1e1038] [cursor=pointer]
+              - button "查看诊断报告" [ref=f1e1039] [cursor=pointer]
+  - button "打开 AI 答疑" [ref=f1e85] [cursor=pointer]:
+    - generic [ref=f1e88]: AI 答疑

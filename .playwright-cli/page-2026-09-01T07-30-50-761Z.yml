@@ -1,0 +1,40 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e6]:
+      - heading "商业宣教财务测算" [level=1] [ref=e11] [cursor=pointer]
+      - navigation [ref=e12]:
+        - button "快速体检" [ref=e13] [cursor=pointer]
+        - button "体检报告" [ref=e14] [cursor=pointer]
+        - button "我的项目" [ref=e15] [cursor=pointer]
+        - button "更多" [ref=e17] [cursor=pointer]
+      - generic [ref=e23]:
+        - button "永久免费" [ref=e24] [cursor=pointer]
+        - button "AI 答疑" [ref=e29] [cursor=pointer]
+        - button "使用指南" [ref=e33] [cursor=pointer]
+        - button "EN" [ref=e37] [cursor=pointer]
+        - button "云端备份" [ref=e38] [cursor=pointer]
+  - main [ref=e42]:
+    - generic [ref=e43]:
+      - generic [ref=e44]:
+        - generic [ref=e45]:
+          - paragraph [ref=e46]: 只要两步：先告诉生意叫什么，再填上赚多少、花多少。AI 自动补齐行业、币种与成本结构，30 秒出报告。
+          - generic [ref=e47]: 草稿已自动暂存至本地
+        - generic [ref=e53]:
+          - button "STEP 01 生意叫什么？" [ref=e54] [cursor=pointer]:
+            - generic [ref=e55]: STEP 01
+            - generic [ref=e56]: 生意叫什么？
+          - button "STEP 02 赚多少、花多少、兜里有多少现金" [ref=e57] [cursor=pointer]:
+            - generic [ref=e58]: STEP 02
+            - generic [ref=e59]: 赚多少、花多少、兜里有多少现金
+      - generic [ref=e60]:
+        - generic [ref=e61]:
+          - generic [ref=e62]:
+            - heading "1. 生意叫什么？" [level=3] [ref=e63]
+            - paragraph [ref=e68]: 只填名字。行业、币种、成本结构，AI 都会自动替你推断，也可以随时在下方「高级设置」里改。
+          - generic [ref=e69]:
+            - generic [ref=e70]: 项目 / 店铺名称 *
+            - textbox "例如：阳光工坊社区烘焙店" [ref=e71]: 阳光工坊社区烘焙店 (Sunny Bakehouse)
+          - button "高级设置（币种 / 行业 / 汇率 / 安全模式）" [ref=e73] [cursor=pointer]
+        - button "下一步：赚多少、花多少" [ref=e81] [cursor=pointer]
+  - button "打开 AI 答疑" [ref=e85] [cursor=pointer]:
+    - generic [ref=e88]: AI 答疑

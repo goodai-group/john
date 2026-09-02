@@ -9,11 +9,12 @@ import {
   HelpCircle,
   Globe,
   LogOut,
+  LogIn,
   User as UserIcon,
-  Cloud,
   Loader2,
   ShieldCheck,
-  MessageCircle
+  MessageCircle,
+  MoreHorizontal
 } from 'lucide-react';
 import { Language, ActiveTab, AppUser } from '../types';
 
@@ -28,7 +29,8 @@ interface NavbarProps {
   onOpenAiHelper: (topic?: string) => void;
   largeFont?: boolean;
   currentUser: AppUser | null;
-  onLoginWithGoogle: () => void;
+  /** 打开登录/注册弹窗（Google + 邮箱密码双通道） */
+  onOpenAuth?: () => void;
   onLogout: () => void;
   isSigningIn?: boolean;
 }
@@ -43,12 +45,14 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenAiHelper,
   largeFont,
   currentUser,
-  onLoginWithGoogle,
+  onOpenAuth,
   onLogout,
   isSigningIn = false
 }) => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
 
   // Close user dropdown on outside click
   useEffect(() => {
@@ -56,17 +60,24 @@ export const Navbar: React.FC<NavbarProps> = ({
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setIsUserMenuOpen(false);
       }
+      if (moreMenuRef.current && !moreMenuRef.current.contains(event.target as Node)) {
+        setIsMoreMenuOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const navItems: { id: ActiveTab; label: string; icon: any; tag?: string }[] = [
+  // 主导航只保留核心主线：填数据 → 看报告 → 管项目
+  const primaryNav: { id: ActiveTab; label: string; icon: any }[] = [
     { id: 'form', label: language === 'zh' ? '快速体检' : 'Assessment', icon: FileText },
     { id: 'report', label: language === 'zh' ? '体检报告' : 'Report', icon: Sparkles },
-    { id: 'simulator', label: language === 'zh' ? '沙盒试算' : 'Simulator', icon: Calculator },
-    { id: 'standards', label: language === 'zh' ? '评分规则' : 'Rules', icon: BookOpen },
     { id: 'projects', label: language === 'zh' ? '我的项目' : 'Projects', icon: FolderKanban }
+  ];
+  // 次级功能降级为「更多」菜单，避免主界面入口过杂
+  const secondaryNav: { id: ActiveTab; label: string; icon: any }[] = [
+    { id: 'simulator', label: language === 'zh' ? '沙盒试算' : 'Simulator', icon: Calculator },
+    { id: 'standards', label: language === 'zh' ? '评分规则' : 'Rules', icon: BookOpen }
   ];
 
   return (
@@ -88,7 +99,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Desktop Nav Tabs */}
           <nav className="hidden md:flex items-center gap-0.5">
-            {navItems.map((item) => {
+            {primaryNav.map((item) => {
               const isActive = activeTab === item.id;
               return (
                 <button
@@ -104,6 +115,45 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </button>
               );
             })}
+
+            {/* 更多：次级功能收纳入口 */}
+            <div className="relative" ref={moreMenuRef}>
+              <button
+                onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
+                className={`px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1 ${
+                  secondaryNav.some((s) => s.id === activeTab)
+                    ? 'text-indigo-700 bg-indigo-50 font-bold'
+                    : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
+                }`}
+              >
+                <MoreHorizontal className="w-3.5 h-3.5" />
+                <span>更多</span>
+              </button>
+              {isMoreMenuOpen && (
+                <div className="absolute left-0 mt-1.5 w-44 rounded-2xl bg-white border border-neutral-200 shadow-xl p-1.5 z-50 animate-in fade-in">
+                  {secondaryNav.map((item) => {
+                    const isActive = activeTab === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => {
+                          onTabChange(item.id);
+                          setIsMoreMenuOpen(false);
+                        }}
+                        className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+                          isActive
+                            ? 'bg-indigo-50 text-indigo-700'
+                            : 'text-neutral-700 hover:bg-neutral-100'
+                        }`}
+                      >
+                        <item.icon className="w-3.5 h-3.5 text-indigo-500" />
+                        {item.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </nav>
 
           {/* Right Area */}
@@ -201,17 +251,17 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
             ) : (
               <button
-                onClick={onLoginWithGoogle}
-                disabled={isSigningIn}
+                onClick={onOpenAuth}
+                disabled={isSigningIn || !onOpenAuth}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-neutral-50 text-neutral-800 text-xs font-bold border border-neutral-300 shadow-xs transition-all cursor-pointer"
-                title="登录 Google 账号，自动备份您的自测档案"
+                title={language === 'zh' ? '登录账号（支持 Google 或邮箱密码），自动备份您的自测档案' : 'Sign in to back up your assessments to the cloud'}
               >
                 {isSigningIn ? (
                   <Loader2 className="w-3.5 h-3.5 text-indigo-600 animate-spin" />
                 ) : (
-                  <Cloud className="w-3.5 h-3.5 text-indigo-600" />
+                  <LogIn className="w-3.5 h-3.5 text-indigo-600" />
                 )}
-                <span>云端备份</span>
+                <span>{language === 'zh' ? '登录' : 'Sign in'}</span>
               </button>
             )}
           </div>
@@ -219,7 +269,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Mobile Tab Row */}
         <div className="md:hidden flex overflow-x-auto pt-2 gap-1 scrollbar-none">
-          {navItems.map((item) => {
+          {primaryNav.map((item) => {
           const isActive = activeTab === item.id;
           return (
             <button
@@ -235,6 +285,44 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           );
           })}
+          {/* 更多：移动端次级功能收纳入口 */}
+          <div className="relative" ref={moreMenuRef}>
+            <button
+              onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
+              className={`px-3 py-2 rounded-lg text-xs whitespace-nowrap font-bold min-h-[32px] flex items-center gap-1 ${
+                secondaryNav.some((s) => s.id === activeTab)
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-neutral-100 text-neutral-600'
+              }`}
+            >
+              <MoreHorizontal className="w-3.5 h-3.5" />
+              更多
+            </button>
+            {isMoreMenuOpen && (
+              <div className="absolute left-0 mt-1.5 w-44 rounded-2xl bg-white border border-neutral-200 shadow-xl p-1.5 z-50 animate-in fade-in">
+                {secondaryNav.map((item) => {
+                  const isActive = activeTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        onTabChange(item.id);
+                        setIsMoreMenuOpen(false);
+                      }}
+                      className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+                        isActive
+                          ? 'bg-indigo-50 text-indigo-700'
+                          : 'text-neutral-700 hover:bg-neutral-100'
+                      }`}
+                    >
+                      <item.icon className="w-3.5 h-3.5 text-indigo-500" />
+                      {item.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
           {/* AI 答疑移动端入口 */}
           <button
             onClick={() => onOpenAiHelper()}

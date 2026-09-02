@@ -16,6 +16,7 @@ import {
   Info,
   Layers,
   ArrowRight,
+  ArrowLeft,
   TrendingUp,
   Percent,
   Calendar,
@@ -266,30 +267,10 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
       {/* Top Action Bar */}
       <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-3xl border-2 border-neutral-200 shadow-xs print:hidden">
         <div className="flex items-center flex-wrap gap-3">
-          {/* Mode Switcher Tabs */}
-          <div className="flex items-center bg-neutral-100 p-1 rounded-2xl border border-neutral-200">
-            <button
-              onClick={() => setViewMode('simple')}
-              className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                viewMode === 'simple'
-                  ? 'bg-white text-neutral-900 shadow-xs'
-                  : 'text-neutral-500 hover:text-neutral-800'
-              }`}
-            >
-              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-              <span>三分钟小白看懂速览</span>
-            </button>
-            <button
-              onClick={() => setViewMode('detailed')}
-              className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                viewMode === 'detailed'
-                  ? 'bg-white text-neutral-900 shadow-xs'
-                  : 'text-neutral-500 hover:text-neutral-800'
-              }`}
-            >
-              <FileText className="w-3.5 h-3.5 text-indigo-600" />
-              <span>专业财务明细模式</span>
-            </button>
+          {/* 当前视图标识：默认只展示"小白速览"，专业明细降级为报告底部的次级入口 */}
+          <div className="flex items-center space-x-1.5 px-3 py-1.5 rounded-2xl bg-neutral-100 border border-neutral-200 text-neutral-700">
+            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+            <span className="text-xs font-bold">{viewMode === 'simple' ? '小白速览（默认）' : '专业明细'}</span>
           </div>
 
           {/* Version Switcher */}
@@ -466,6 +447,31 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                 <p className="text-[11px] sm:text-xs text-neutral-500 font-medium mt-1.5 leading-relaxed max-w-3xl">
                   大白话：{getPlainVerdict()}
                 </p>
+
+                {/* 红线合规状态：从专业明细模式精简为一行，默认就能看见 */}
+                <div
+                  className={`mt-3 inline-flex flex-wrap items-center gap-x-2 gap-y-1 px-3 py-1.5 rounded-xl border-2 text-xs font-bold ${
+                    report.gatePassed
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                      : 'bg-rose-50 border-rose-200 text-rose-800'
+                  }`}
+                >
+                  {report.gatePassed ? (
+                    <span className="flex items-center gap-1.5">
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                      4 项安全红线全部通过，无资金断流或倒挂风险
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1.5">
+                      <AlertOctagon className="w-3.5 h-3.5 text-rose-600" />
+                      触发 {((report.failedGates || report.gates.filter((g) => g.status !== 'PASS')).length)} 项安全红线：
+                      {(report.failedGates && report.failedGates.length > 0
+                        ? report.failedGates
+                        : report.gates.filter((g) => g.status !== 'PASS')
+                      ).map((g) => g.plainName || g.name).join('、')}
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Total Score & Grade Badge */}
@@ -870,6 +876,14 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
       {/* ========================================================================= */}
       {viewMode === 'detailed' && (
         <div className="space-y-6 animate-in fade-in duration-200">
+          {/* 返回小白速览：专业明细仅作为次级的按需查看入口 */}
+          <button
+            onClick={() => setViewMode('simple')}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-neutral-100 hover:bg-neutral-200/80 border border-neutral-200 text-neutral-700 text-xs font-bold transition-colors cursor-pointer print:hidden"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>返回小白速览</span>
+          </button>
           {/* Main Bento Grid Header Section */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
             {/* Left Bento: Project Identity & Specs */}

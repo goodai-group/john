@@ -15,13 +15,48 @@ import {
   fetchReportsFromCloud,
   fetchQuestionsFromCloud,
   isCloudDatabaseAvailable
-} from './firebase';
+} from './supabaseClient';
 
 const STORAGE_KEY_PROJECTS = 'bam_projects_v14';
 const STORAGE_KEY_REPORTS = 'bam_reports_v14';
 const STORAGE_KEY_DRAFT = 'bam_active_draft_v14';
 const STORAGE_KEY_RULES_REPO = 'bam_escalated_rules_v14';
 const STORAGE_KEY_INITIAL_SEEDED = 'bam_cloud_seeded_v14';
+// 删除墓碑：记录用户已删除的云端数据 id，防止同步合并时被云端旧数据"复活"
+const STORAGE_KEY_DELETED_PROJECTS = 'bam_deleted_projects_v1';
+const STORAGE_KEY_DELETED_REPORTS = 'bam_deleted_reports_v1';
+
+// ========================
+// 删除墓碑（Tombstone）工具
+// 核心思路：用户删除某条数据时，先把 id 同步写入本地墓碑列表（同步操作），
+// 再异步删除云端。之后每次云端同步合并时都会先过滤掉墓碑 id，
+// 即使云端删除失败/未完成，刷新页面也不会再把已删除的数据合并回来。
+// ========================
+function readDeletedIds(key: string): string[] {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((x) => typeof x === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+function writeDeletedIds(key: string, ids: string[]): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(ids));
+  } catch (e) {
+    console.warn('Failed to persist deleted ids:', e);
+  }
+}
+export const getDeletedProjectIds = (): string[] => readDeletedIds(STORAGE_KEY_DELETED_PROJECTS);
+export const getDeletedReportIds = (): string[] => readDeletedIds(STORAGE_KEY_DELETED_REPORTS);
+function markDeleted(list: string[], id: string): string[] {
+  return list.includes(id) ? list : [...list, id];
+}
+function unmarkDeleted(list: string[], id: string): string[] {
+  return list.filter((x) => x !== id);
+}
 
 export const INITIAL_PRESET_PROJECTS: BusinessFormData[] = [
   {
@@ -245,6 +280,8 @@ export function getStoredProjects(): BusinessFormData[] {
 }
 
 export function saveProject(project: BusinessFormData): void {
+  // 重新保存即视为"存活"，从删除墓碑中移除（避免同 id 数据被墓碑误拦）
+  writeDeletedIds(STORAGE_KEY_DELETED_PROJECTS, unmarkDeleted(getDeletedProjectIds(), project.id));
   const current = getStoredProjects();
   const index = current.findIndex((p) => p.id === project.id && p.version === project.version);
   if (index >= 0) {
@@ -254,7 +291,7 @@ export function saveProject(project: BusinessFormData): void {
   }
   localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(current));
 
-  // Sync to Cloud Firestore Table /assessments
+  // Sync to Supabase Cloud Table /projects
   if (isCloudDatabaseAvailable()) {
     saveAssessmentToCloud(project).catch((err) =>
       console.warn('Background cloud save assessment failed:', err)
@@ -262,26 +299,41 @@ export function saveProject(project: BusinessFormData): void {
   }
 }
 
-export function deleteProjectAndReports(projectId: string): void {
-  // 彻底撤回/删除项目及其所有版本与报告
+export function deleteProjectAndReports(projectId: string, explicitReportIds?: string[]): Promise<boolean> {
+  // 彻底撤回/删除项目及其所有版本与报告（本地 + 云端同步删除，防止刷新后被云端数据"复活"）
+  // 注意：调用方（App.tsx）可能已先清空本地报告，此时 getAllReports() 读不到目标报告，
+  // 因此需支持显式传入 reportIds，确保报告墓碑也能准确记录，杜绝残留报告回流"复活"。
+  const allReports = getAllReports();
+  const targetReports = allReports.filter((r) => r.projectId === projectId);
+  const targetReportIds = targetReports.map((r) => r.id);
+  const allDeletedReportIds = Array.from(
+    new Set([...getDeletedReportIds(), ...targetReportIds, ...(explicitReportIds || [])])
+  );
+
   const projects = getStoredProjects().filter((p) => p.id !== projectId);
   localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(projects));
 
-  const targetReports = getAllReports().filter((r) => r.projectId === projectId);
-  const remainingReports = getAllReports().filter((r) => r.projectId !== projectId);
+  const remainingReports = allReports.filter((r) => r.projectId !== projectId);
   localStorage.setItem(STORAGE_KEY_REPORTS, JSON.stringify(remainingReports));
 
-  // Remove from Cloud Firestore Tables
-  if (isCloudDatabaseAvailable()) {
-    deleteAssessmentFromCloud(projectId).catch((err) =>
-      console.warn('Cloud delete assessment failed:', err)
-    );
-    targetReports.forEach((r) => {
-      deleteReportFromCloud(r.id).catch((err) =>
-        console.warn('Cloud delete report failed:', err)
-      );
-    });
+  // 同步写入"删除墓碑"（同步操作，立即生效）：
+  // 即使云端删除失败或被中断，刷新时同步合并也会把这些 id 过滤掉，杜绝"复活"
+  writeDeletedIds(STORAGE_KEY_DELETED_PROJECTS, markDeleted(getDeletedProjectIds(), projectId));
+  writeDeletedIds(STORAGE_KEY_DELETED_REPORTS, allDeletedReportIds);
+
+  // Remove from Cloud (Supabase) Tables
+  if (!isCloudDatabaseAvailable()) {
+    return Promise.resolve(true);
   }
+  return Promise.all([
+    deleteAssessmentFromCloud(projectId),
+    ...targetReports.map((r) => deleteReportFromCloud(r.id))
+  ])
+    .then((results) => results.every(Boolean))
+    .catch((err) => {
+      console.warn('Cloud delete failed (本地已删除，墓碑会拦截云端旧数据回流):', err);
+      return false;
+    });
 }
 
 export function getAllReports(): AssessmentReport[] {
@@ -301,6 +353,8 @@ export function getAllReports(): AssessmentReport[] {
 }
 
 export function saveReport(report: AssessmentReport): void {
+  // 重新保存即视为"存活"，从删除墓碑中移除
+  writeDeletedIds(STORAGE_KEY_DELETED_REPORTS, unmarkDeleted(getDeletedReportIds(), report.id));
   const current = getAllReports();
   const index = current.findIndex((r) => r.id === report.id);
   if (index >= 0) {
@@ -310,7 +364,7 @@ export function saveReport(report: AssessmentReport): void {
   }
   localStorage.setItem(STORAGE_KEY_REPORTS, JSON.stringify(current));
 
-  // Sync to Cloud Firestore Table /reports
+  // Sync to Supabase Cloud Table /assessment_reports
   if (isCloudDatabaseAvailable()) {
     saveReportToCloud(report).catch((err) =>
       console.warn('Background cloud save report failed:', err)
@@ -358,7 +412,7 @@ export function addEscalatedQuestion(q: EscalatedQuestion): void {
   list.unshift(q);
   localStorage.setItem(STORAGE_KEY_RULES_REPO, JSON.stringify(list));
 
-  // Sync to Cloud Firestore Table /escalated_questions
+  // Sync to Supabase Cloud Table /escalated_questions
   if (isCloudDatabaseAvailable()) {
     saveQuestionToCloud(q).catch((err) =>
       console.warn('Background cloud save question failed:', err)
@@ -384,18 +438,41 @@ export function updateEscalatedQuestionFeedback(
 }
 
 // Initial Sync & Cloud Seeder
-export async function syncWithCloudDatabase(currentUser?: AppUser | null): Promise<void> {
+// 串行化同步：StrictMode 双挂载 / 多处并发调用时排队执行，避免合并结果互相覆盖
+let syncChain: Promise<void> = Promise.resolve();
+export function syncWithCloudDatabase(currentUser?: AppUser | null): Promise<void> {
+  syncChain = syncChain.then(() => performCloudSync(currentUser));
+  return syncChain;
+}
+
+async function performCloudSync(currentUser?: AppUser | null): Promise<void> {
   if (!isCloudDatabaseAvailable()) return;
 
+  const deletedProjectIds = getDeletedProjectIds();
+  const deletedReportIds = getDeletedReportIds();
+
   try {
+    // 0. 先重试把"已删除墓碑"对应的云端记录彻底删干净
+    //    （上次删除失败/未完成时，这里补删，从根上消灭刷新"复活"）
+    if (deletedProjectIds.length > 0 || deletedReportIds.length > 0) {
+      await Promise.all([
+        ...deletedProjectIds.map((id) => deleteAssessmentFromCloud(id)),
+        ...deletedReportIds.map((id) => deleteReportFromCloud(id))
+      ]);
+    }
+
     const [cloudProjects, cloudReports, cloudQuestions] = await Promise.all([
       fetchAssessmentsFromCloud(currentUser),
       fetchReportsFromCloud(currentUser),
       fetchQuestionsFromCloud()
     ]);
 
+    // 过滤掉"用户已删除"的云端记录（墓碑），其余才允许合并回本地
+    const liveCloudProjects = cloudProjects.filter((p) => !deletedProjectIds.includes(p.id));
+    const liveCloudReports = cloudReports.filter((r) => !deletedReportIds.includes(r.id));
+
     // If cloud has projects, merge them with local
-    if (cloudProjects.length > 0) {
+    if (liveCloudProjects.length > 0) {
       const localProjects = getStoredProjects();
       // 以项目 id 为键合并（保留最新版本），避免同一项目多版本同时进入列表导致 React 重复 key
       const mergedProjectsMap = new Map<string, BusinessFormData>();
@@ -407,25 +484,25 @@ export async function syncWithCloudDatabase(currentUser?: AppUser | null): Promi
       };
       localProjects.forEach(putLatest);
       // Cloud projects take precedence
-      cloudProjects.forEach(putLatest);
+      liveCloudProjects.forEach(putLatest);
       const mergedList = Array.from(mergedProjectsMap.values());
       localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(mergedList));
-    } else {
-      // If cloud is completely empty, seed initial local projects
+    } else if (currentUser?.uid) {
+      // 仅登录用户：云端为空时把本地数据上传（未登录的匿名访问不向公共表写入数据，避免数据串扰/泄漏）
       const localProjects = getStoredProjects();
       for (const p of localProjects) {
         await saveAssessmentToCloud(p, currentUser);
       }
     }
 
-    if (cloudReports.length > 0) {
+    if (liveCloudReports.length > 0) {
       const localReports = getAllReports();
       const mergedReportsMap = new Map<string, AssessmentReport>();
       localReports.forEach((r) => mergedReportsMap.set(r.id, r));
-      cloudReports.forEach((r) => mergedReportsMap.set(r.id, r));
+      liveCloudReports.forEach((r) => mergedReportsMap.set(r.id, r));
       const mergedList = Array.from(mergedReportsMap.values());
       localStorage.setItem(STORAGE_KEY_REPORTS, JSON.stringify(mergedList));
-    } else {
+    } else if (currentUser?.uid) {
       const localReports = getAllReports();
       for (const r of localReports) {
         await saveReportToCloud(r, currentUser);
@@ -446,7 +523,7 @@ export async function syncWithCloudDatabase(currentUser?: AppUser | null): Promi
       }
     }
 
-    console.log('✅ Cloud Firestore tables synced with user state.');
+    console.log('✅ Supabase cloud tables synced with user state.');
   } catch (err) {
     console.warn('Cloud sync encountered non-fatal issue:', err);
   }
@@ -459,4 +536,19 @@ export const saveStoredProjects = (projects: BusinessFormData[]): void => {
 export const loadStoredReports = getAllReports;
 export const saveStoredReports = (reports: AssessmentReport[]): void => {
   localStorage.setItem(STORAGE_KEY_REPORTS, JSON.stringify(reports));
+};
+// 判断是否为"全新安装"（对应存储键完全不存在），用于避免用户删除全部数据后刷新又被示例数据"复活"
+export const hasAnyStoredProjects = (): boolean => {
+  try {
+    return localStorage.getItem(STORAGE_KEY_PROJECTS) !== null;
+  } catch {
+    return false;
+  }
+};
+export const hasAnyStoredReports = (): boolean => {
+  try {
+    return localStorage.getItem(STORAGE_KEY_REPORTS) !== null;
+  } catch {
+    return false;
+  }
 };
