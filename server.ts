@@ -20,6 +20,20 @@ const PORT = 3000;
 
 app.use(express.json({ limit: '10mb' }));
 
+// Express 4 不会自动捕获 async 路由抛出的异常（Promise rejection 会导致请求挂起，
+// 在 Vercel 上最终表现为 500 / FUNCTION_INVOCATION_FAILED / 超时）。
+// 统一用 asyncHandler 包装所有 async 路由，让任意异常进入下方的 JSON 错误中间件。
+type AsyncRouteHandler = (
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+) => Promise<unknown>;
+function asyncHandler(fn: AsyncRouteHandler) {
+  return (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    Promise.resolve(fn(req, res, next)).catch(next);
+  };
+}
+
 // Lazy Gemini client helper
 let aiClient: GoogleGenAI | null = null;
 function getGeminiClient(): GoogleGenAI | null {
@@ -275,12 +289,18 @@ app.get('/api/health', (req, res) => {
 });
 
 // 2. AI Rule Consultation & Edge Case Evaluator
-app.post(['/api/ai/chat', '/api/ai-consultation'], async (req, res) => {
-  const question = (req.body.question || req.body.message || '').trim();
-  const { context, language = 'zh' } = req.body;
-  if (!question) {
-    return res.status(400).json({ error: 'Question or message is required' });
-  }
+// 注意：asyncHandler 包装保证内部任何异常（含本地兜底引擎崩溃）都会被捕获并返回 JSON 500，
+// 而不是让 Express 4 静默挂起 / 平台直接 FUNCTION_INVOCATION_FAILED。
+app.post(
+  ['/api/ai/chat', '/api/ai-consultation'],
+  asyncHandler(async (req, res) => {
+    // 请求体可能为空（未带 Content-Type 或 body 为空）：先归一化，避免 req.body.question 抛 TypeError
+    const body: any = (req.body && typeof req.body === 'object' ? req.body : {}) || {};
+    const question = String(body.question ?? body.message ?? '').trim();
+    const { context, language = 'zh' } = body;
+    if (!question) {
+      return res.status(400).json({ error: 'Question or message is required' });
+    }
 
   const ai = getGeminiClient();
   // Gemini 失败信息（未配置/调用失败），用于回退分支给前端准确的降级状态
@@ -761,7 +781,8 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
       geminiError,
       geminiErrorKind
     });
-});
+  })
+);
 
 // 2.5 AI Infer Industry & Generate Dynamic Cost/Opex Structure
 app.post('/api/ai/infer-business-structure', async (req, res) => {
@@ -1198,6 +1219,39 @@ app.post('/api/ai/ocr-estimate', async (req, res) => {
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
+});
+
+// ============================================================
+// 兜底错误中间件 & /api 未匹配 404（必须在所有路由注册之后、Vite/静态资源之前）
+// 目的：
+//   1. JSON body 解析失败（SyntaxError / entity.parse.failed）→ 400 JSON，而不是默认 HTML 或 500；
+//   2. 所有 async 路由（经 asyncHandler 包装）抛出的异常 → 500 JSON，而不是请求挂起/平台 500；
+//   3. 未注册的 /api/* → 404 JSON，方便前端立刻识别"接口路径不存在"，不会被 SPA 兜底吞掉。
+// ============================================================
+app.use((err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  const isBodyParseError = Boolean(
+    err &&
+    (err.type === 'entity.parse.failed' ||
+      err.type === 'entity.too.large' ||
+      err instanceof SyntaxError)
+  );
+  const status = isBodyParseError ? 400 : err?.status || err?.statusCode || 500;
+  if (status >= 500) {
+    console.error('[server] unhandled error:', err?.stack || err);
+  }
+  if (res.headersSent) {
+    return;
+  }
+  const message = isBodyParseError
+    ? 'Malformed JSON body: failed to parse request payload'
+    : status >= 500
+      ? 'Internal server error'
+      : String(err?.message || 'Bad request');
+  res.status(status).json({ error: message });
+});
+
+app.use('/api', (req, res) => {
+  res.status(404).json({ error: `API route not found: ${req.method} ${req.originalUrl}` });
 });
 
 async function startServer() {
