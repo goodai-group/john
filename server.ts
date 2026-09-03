@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import path from 'path';
-import { createServer as createViteServer } from 'vite';
+import { pathToFileURL } from 'url';
 import { GoogleGenAI } from '@google/genai';
 import { SUPPORTED_CURRENCIES } from './src/lib/currencies';
 
@@ -1191,14 +1191,19 @@ app.post('/api/ai/ocr-estimate', async (req, res) => {
 });
 
 async function startServer() {
-  // Vite middleware for development
+  // Vite middleware for development (only used by `npm run dev` locally)
   if (process.env.NODE_ENV !== 'production') {
+    // 仅在本地 dev 运行时才动态引入 vite，避免 serverless（Vercel）打包时把整个 Vite 打进函数
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa'
     });
     app.use(vite.middlewares);
-  } else {
+  } else if (!process.env.VERCEL) {
+    // 生产环境非 Vercel 部署（如自有服务器 / Railway / Render）下，
+    // 由本进程托管前端静态资源。Vercel 部署时由 Vercel 自身的静态资源服务负责，
+    // 这里必须跳过，否则 rewrites 会冲突、404 出现。
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
@@ -1211,4 +1216,17 @@ async function startServer() {
   });
 }
 
-startServer();
+// 仅在直接运行（本地 `npm run dev` / `npm start`）时启动监听。
+// Vercel / 其他 serverless 平台通过 import 此模块拿到 `app` 即可，禁止在此启动监听。
+// 注意：不能用 import.meta.url 判断，因为 esbuild 打包为 CJS 时 import.meta.url 会被替换为空字符串，
+// 会导致 `node dist/server.cjs` 启动失败。改用 VERCEL 环境变量判断是最稳妥的方式：
+// - Vercel 部署时 VERCEL=1，跳过监听
+// - 本地任何方式启动都未设置 VERCEL，正常监听
+const isDirectRun = !process.env.VERCEL;
+
+if (isDirectRun) {
+  startServer();
+}
+
+// Vercel serverless function 入口会 `import app from './server'`
+export default app;
