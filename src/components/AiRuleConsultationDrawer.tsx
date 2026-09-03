@@ -2,30 +2,26 @@ import React, { useState, useEffect } from 'react';
 import {
   X,
   Sparkles,
-  ShieldCheck,
   Send,
   HelpCircle,
   ThumbsUp,
   ThumbsDown,
-  Archive,
-  BookOpen,
-  ArrowRight,
-  CheckCircle2,
   AlertTriangle,
   Lightbulb,
   TrendingUp,
-  DollarSign,
   BarChart3,
-  Layers,
   Copy,
   Check
 } from 'lucide-react';
 import { EscalatedQuestion, Language } from '../types';
 import {
-  getEscalatedQuestions,
   addEscalatedQuestion,
   updateEscalatedQuestionFeedback
 } from '../lib/storage';
+import ReactMarkdown from 'react-markdown';
+import type { Components } from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
 
 interface AiDrawerProps {
   isOpen: boolean;
@@ -40,6 +36,8 @@ interface ChatRecord extends EscalatedQuestion {
   geminiUnavailable?: boolean;
   // 后端返回的 Gemini 失败原因摘要（用于显示具体降级原因）
   geminiError?: string | null;
+  // 后端返回的降级原因分类：quota=免费额度用尽 / auth=密钥无效 / model=模型不可用 / timeout=超时 / network=网络错误
+  geminiErrorKind?: string | null;
 }
 
 // Industry Big Data Benchmarks Dataset
@@ -113,17 +111,75 @@ export const INDUSTRY_BIG_DATA = [
 ];
 
 const FAQ_PRESETS = [
-  '经营月均总流水是收入还是什么？',
-  '各行业大数据平均流水与利润基准是多少？',
-  '做买卖的营业额、毛利与到手净利润怎么区分？',
+  '经营流水是什么意思？和赚到手的钱有什么区别？',
   '进货成本（COGS）怎么算？包含运费吗？',
-  '账上备用金要留几个月才算安全不扣分？',
-  '我们只有手写记账本和微信收款截图，打分会吃亏吗？',
-  '当地官方汇率和民间实际兑换汇率差了一倍多，自报汇率会扣分吗？',
-  '做季节性水产生意，每年有3个月休渔期完全没进账，该怎么填？',
-  '一个月最少赚多少才不亏？',
-  '100美元等于多少人民币？'
+  '只有手写记账本和微信收款截图，打分会吃亏吗？',
+  '账上备用金要留几个月才算安全？',
+  '季节性生意（休渔期没进账）该怎么填？'
 ];
+
+// ---- Markdown 渲染 ----
+// AI 返回的是 Markdown 文本，若按纯文本显示会把 `#`、`**`、`-` 等语法符号裸露出来。
+// 这里用 ReactMarkdown 渲染，并针对小字号卡片定制样式，让排版干净、符号最少化。
+const markdownComponents: Components = {
+  p: ({ children }) => <p className="mb-1.5 leading-relaxed last:mb-0">{children}</p>,
+  strong: ({ children }) => <strong className="font-bold text-slate-900">{children}</strong>,
+  h1: ({ children }) => <h1 className="text-[13px] font-bold text-slate-900 mt-2 mb-1 first:mt-0">{children}</h1>,
+  h2: ({ children }) => <h2 className="text-[13px] font-bold text-indigo-800 mt-2 mb-1 first:mt-0">{children}</h2>,
+  h3: ({ children }) => <h3 className="text-xs font-bold text-slate-900 mt-1.5 mb-0.5 first:mt-0">{children}</h3>,
+  h4: ({ children }) => <h4 className="text-xs font-bold text-slate-800 mt-1.5 mb-0.5 first:mt-0">{children}</h4>,
+  ul: ({ children }) => <ul className="list-disc pl-4 mb-1.5 space-y-0.5 last:mb-0">{children}</ul>,
+  ol: ({ children }) => <ol className="list-decimal pl-5 mb-1.5 space-y-0.5 last:mb-0">{children}</ol>,
+  li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+  a: ({ href, children }) => (
+    <a href={href} target="_blank" rel="noopener noreferrer" className="text-indigo-600 underline underline-offset-2 break-all">
+      {children}
+    </a>
+  ),
+  blockquote: ({ children }) => (
+    <blockquote className="border-l-2 border-indigo-200 pl-2.5 my-1.5 text-slate-600">{children}</blockquote>
+  ),
+  hr: () => <hr className="my-2 border-slate-200" />,
+  pre: ({ children }) => (
+    <pre className="bg-slate-900 text-slate-100 rounded-lg p-2.5 overflow-x-auto my-1.5 text-[11px] leading-relaxed">
+      {children}
+    </pre>
+  ),
+  code: ({ className, children, ...rest }) => {
+    const text = String(children);
+    const isBlock = /language-/.test(className || '') || text.includes('\n');
+    if (isBlock) {
+      return (
+        <code className={className} {...rest}>
+          {children}
+        </code>
+      );
+    }
+    return (
+      <code className="px-1 py-px rounded bg-slate-100 text-rose-600 font-mono text-[11px]" {...rest}>
+        {children}
+      </code>
+    );
+  },
+  table: ({ children }) => (
+    <div className="overflow-x-auto my-1.5">
+      <table className="w-full text-left border-collapse">{children}</table>
+    </div>
+  ),
+  thead: ({ children }) => <thead className="bg-slate-100">{children}</thead>,
+  th: ({ children }) => (
+    <th className="px-2 py-1 border border-slate-200 font-bold text-slate-900 whitespace-nowrap">{children}</th>
+  ),
+  td: ({ children }) => <td className="px-2 py-1 border border-slate-200 align-top">{children}</td>
+};
+
+const AnswerMarkdown: React.FC<{ content: string }> = ({ content }) => (
+  <div className="pt-1 text-xs font-normal text-slate-800 leading-relaxed">
+    <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} components={markdownComponents}>
+      {content}
+    </ReactMarkdown>
+  </div>
+);
 
 export const AiRuleConsultationDrawer: React.FC<AiDrawerProps> = ({
   isOpen,
@@ -133,8 +189,7 @@ export const AiRuleConsultationDrawer: React.FC<AiDrawerProps> = ({
 }) => {
   const [questionInput, setQuestionInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'chat' | 'benchmarks' | 'public_archive'>('chat');
-  const [archivedList, setArchivedList] = useState<EscalatedQuestion[]>([]);
+  const [activeTab, setActiveTab] = useState<'chat' | 'benchmarks'>('chat');
   const [chatHistory, setChatHistory] = useState<ChatRecord[]>([]);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   // 服务端是否配置了真实 AI（GEMINI_API_KEY）。null=未知，true=已配置，false=未配置
@@ -143,7 +198,6 @@ export const AiRuleConsultationDrawer: React.FC<AiDrawerProps> = ({
   const [geminiHealthy, setGeminiHealthy] = useState<boolean | null>(null);
 
   useEffect(() => {
-    setArchivedList(getEscalatedQuestions());
     if (isOpen) {
       // 探测后端 AI 配置状态，未配置时给出升级引导
       fetch('/api/health')
@@ -412,7 +466,7 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
 需要在项目根目录 .env 配置 GEMINI_API_KEY 后重启开发服务器即可解锁（商业、财务、生活、技术、翻译等任何问题都能答）。
 
 📍 本平台快捷入口：
-• 点击【行业大数据基准】查看各行业平均流水、毛利率与安全线；
+• 点击【行业数据基准】查看各行业平均流水、毛利率与安全线；
 • 点击【公开评分标准】查看完整 5 维雷达打分公式与 4 大门槛红线。`;
     }
 
@@ -473,12 +527,12 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
           archivedAt: new Date().toISOString(),
           aiMode: data.aiMode === 'gemini' ? 'gemini' : 'rules',
           geminiUnavailable: data.geminiUnavailable === true,
-          geminiError: data.geminiError || null
+          geminiError: data.geminiError || null,
+          geminiErrorKind: data.geminiErrorKind || null
         };
 
         setChatHistory((prev) => [newRecord, ...prev]);
         addEscalatedQuestion(newRecord);
-        setArchivedList(getEscalatedQuestions());
       } else {
         throw new Error('API request failed');
       }
@@ -487,7 +541,6 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
       const fallbackRecord = resolveLocalKnowledge(text);
       setChatHistory((prev) => [fallbackRecord, ...prev]);
       addEscalatedQuestion(fallbackRecord);
-      setArchivedList(getEscalatedQuestions());
     } finally {
       setIsLoading(false);
     }
@@ -504,7 +557,6 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
     setChatHistory((prev) =>
       prev.map((item) => (item.id === id ? { ...item, userFeedback: fb } : item))
     );
-    setArchivedList(getEscalatedQuestions());
   };
 
   return (
@@ -537,9 +589,7 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
                 )}
               </div>
               <p className="text-xs text-slate-500">
-                {aiConfigured === false
-                  ? '本地规则引擎实时解答 · 商业自测规则精通 · 提问记录绝不计入评分'
-                  : '通用 AI 实时解答 · 商业自测规则精通 · 提问记录绝不计入评分'}
+                商业规则大白话解答 · 提问记录绝不计入评分
               </p>
             </div>
           </div>
@@ -551,62 +601,36 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
           </button>
         </div>
 
-        {/* Confidentiality Guarantee Banner */}
-        <div className="bg-indigo-50/80 border-b border-indigo-100 px-5 py-2.5 flex items-center justify-between text-xs text-indigo-900 font-medium">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-indigo-600 shrink-0" />
-            <span>提问全程独立加密，仅用于帮您理解规则，绝不作为任何评分计算输入。</span>
-          </div>
-          <span className="text-[11px] text-indigo-600 font-bold shrink-0 hidden sm:inline">
-            100% 零凭证歧视
-          </span>
-        </div>
-
         {/* AI 未配置提示：引导配置 GEMINI_API_KEY 以启用真正的 AI 智能问答 */}
         {aiConfigured === false && (
-          <div className="bg-amber-50 border-b border-amber-200 px-5 py-2.5 flex items-start gap-2 text-[11px] text-amber-900 font-medium leading-relaxed">
-            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-            <span>
-              当前服务器未配置 Gemini API 密钥（GEMINI_API_KEY），回答由内置本地规则库提供，可解答本平台填报与评分问题；
-              如需回答<strong>任何问题</strong>的通用 AI，请在项目根目录 <code>.env</code> 中填入密钥后重启开发服务器。
-            </span>
+          <div className="bg-amber-50 border-b border-amber-100 px-5 py-1.5 text-[11px] text-amber-900 font-medium">
+            当前为本地规则库模式，可解答平台填报与评分问题；如需通用 AI，请在 .env 配置 GEMINI_API_KEY 后重启。
           </div>
         )}
 
-        {/* 3 Tabs Switcher */}
+        {/* Tabs Switcher */}
         <div className="flex border-b border-slate-200 text-xs font-bold bg-white">
           <button
             onClick={() => setActiveTab('chat')}
-            className={`flex-1 py-3 text-center border-b-2 transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
+            className={`flex-1 py-2.5 text-center border-b-2 transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
               activeTab === 'chat'
                 ? 'border-indigo-600 text-indigo-600 bg-indigo-50/20'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
             <Sparkles className="w-3.5 h-3.5" />
-            <span>实时大白话咨询</span>
+            <span>问答咨询</span>
           </button>
           <button
             onClick={() => setActiveTab('benchmarks')}
-            className={`flex-1 py-3 text-center border-b-2 transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
+            className={`flex-1 py-2.5 text-center border-b-2 transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
               activeTab === 'benchmarks'
                 ? 'border-indigo-600 text-indigo-600 bg-indigo-50/20'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
             <BarChart3 className="w-3.5 h-3.5" />
-            <span>全球行业大数据基准</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('public_archive')}
-            className={`flex-1 py-3 text-center border-b-2 transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
-              activeTab === 'public_archive'
-                ? 'border-indigo-600 text-indigo-600 bg-indigo-50/20'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <Archive className="w-3.5 h-3.5" />
-            <span>边缘案例库 ({archivedList.length})</span>
+            <span>行业数据基准</span>
           </button>
         </div>
 
@@ -616,34 +640,20 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
           {activeTab === 'chat' && (
             <div className="space-y-4">
               {chatHistory.length === 0 ? (
-                <div className="space-y-4">
-                  <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100 text-xs text-indigo-950 leading-relaxed space-y-1.5">
-                    <p className="font-bold text-sm text-indigo-900 flex items-center gap-1.5">
-                      <Sparkles className="w-4 h-4 text-indigo-600" />
-                      您好！我是 AI 智能助手，任何问题都能为您解答
-                    </p>
-                    <p>
-                      您可以问我<b>任何问题</b>——比如<b>「经营月均总流水是什么意思」</b>、<b>「毛利率怎么算」</b>、<b>「现金要留几个月」</b>，也可以问生活常识、实用技巧、语言翻译等。涉及本平台的<b>填报与评分规则</b>时，我会用大白话结合行业大数据为您专业解析。点击下方常见问题或直接输入即可。
-                    </p>
-                  </div>
-
+                <div className="space-y-3">
+                  <p className="text-[13px] leading-relaxed text-slate-700">
+                    您好！我是 AI 助手，<b>经营问题都能用大白话讲清</b>——直接输入提问，或点下方高频问题试一试：
+                  </p>
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between text-xs font-bold text-slate-600">
-                      <span>大家常问的实用问题：</span>
-                      <span className="text-[11px] text-slate-400 font-normal">点击直接解析</span>
-                    </div>
-                    <div className="grid grid-cols-1 gap-2">
-                      {FAQ_PRESETS.map((q, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => handleAskQuestion(q)}
-                          className="w-full text-left p-3 rounded-xl border border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/50 bg-white text-xs font-medium text-slate-800 transition-all flex items-center justify-between group cursor-pointer shadow-xs"
-                        >
-                          <span className="group-hover:text-indigo-700">{q}</span>
-                          <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 shrink-0 ml-2" />
-                        </button>
-                      ))}
-                    </div>
+                    {FAQ_PRESETS.map((q, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => handleAskQuestion(q)}
+                        className="w-full text-left px-3 py-2.5 rounded-xl border border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/50 bg-white text-xs font-medium text-slate-800 transition-all cursor-pointer"
+                      >
+                        {q}
+                      </button>
+                    ))}
                   </div>
                 </div>
               ) : (
@@ -659,28 +669,11 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
                           <HelpCircle className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
                           <span>问：{item.question}</span>
                         </div>
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          {item.aiMode === 'gemini' ? (
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 shrink-0">
-                              AI 智能回答
-                            </span>
-                          ) : item.geminiUnavailable ? (
-                            <span
-                              className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 shrink-0 flex items-center gap-1"
-                              title="Gemini 云端 AI 不可用，本次回答为本地降级"
-                            >
-                              <AlertTriangle className="w-3 h-3" />
-                              AI 暂不可用
-                            </span>
-                          ) : (
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 shrink-0">
-                              本地规则库
-                            </span>
-                          )}
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 shrink-0">
-                            {item.category}
+                        {item.aiMode === 'gemini' && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 shrink-0">
+                            AI 智能回答
                           </span>
-                        </div>
+                        )}
                       </div>
 
                       {/* AI Answer formatted */}
@@ -688,7 +681,7 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
                         <div className="flex items-center justify-between text-indigo-700 font-bold text-xs pb-1 border-b border-slate-200/60">
                           <div className="flex items-center gap-1.5">
                             <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                            <span>{item.aiMode === 'gemini' ? 'AI 智能解答：' : '专家大白话与大数据解析：'}</span>
+                            <span>{item.aiMode === 'gemini' ? 'AI 解答：' : '大白话解答：'}</span>
                           </div>
                           <button
                             onClick={() => handleCopy(item.id, item.aiResponse)}
@@ -708,10 +701,8 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
                           </button>
                         </div>
 
-                        {/* Text breakdown */}
-                        <div className="whitespace-pre-line text-xs font-normal text-slate-800 pt-1 leading-relaxed">
-                          {item.aiResponse}
-                        </div>
+                        {/* Text breakdown (rendered as Markdown) */}
+                        <AnswerMarkdown content={item.aiResponse} />
 
                         {/* Suggested action pill */}
                         {item.suggestedAction && (
@@ -721,30 +712,32 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
                           </div>
                         )}
 
-                        {/* AI 降级提示 + 重试按钮：仅在 Gemini 不可用时显示 */}
+                        {/* AI 降级提示：仅在 Gemini 不可用时显示 */}
                         {item.aiMode !== 'gemini' && item.geminiUnavailable && (
-                          <div className="mt-2.5 pt-2 border-t border-rose-200/70 flex items-start gap-2 text-[11px] text-rose-900 bg-rose-50/80 px-2.5 py-2 rounded-lg font-medium">
-                            <AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0 mt-0.5" />
-                            <div className="flex-1 leading-relaxed">
-                              <div>
-                                ⚠️ <b>云端 Gemini AI 当前不可用</b>
-                                {item.geminiError ? (
-                                  <span className="text-rose-700/90">（原因：{item.geminiError}）</span>
-                                ) : (
-                                  <span className="text-rose-700/90">（网络/额度/区域限制）</span>
-                                )}
-                                ，本次由本地规则库降级回答。
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => handleAskQuestion(item.question)}
-                                disabled={isLoading}
-                                className="mt-1.5 inline-flex items-center gap-1 text-rose-700 hover:text-white hover:bg-rose-600 px-2.5 py-1 rounded-md border border-rose-300 bg-white transition-colors disabled:opacity-50 font-bold cursor-pointer"
-                              >
-                                <ArrowRight className="w-3 h-3" />
-                                <span>{isLoading ? '重试中...' : '重新提问（重试云端 AI）'}</span>
-                              </button>
-                            </div>
+                          <div
+                            className="mt-2 pt-1.5 border-t border-rose-100 flex items-center justify-between gap-2 text-[11px] text-rose-800"
+                            title="本次回答由内置本地规则库提供，提问与回答均不影响任何评分"
+                          >
+                            <span className="flex items-center gap-1 min-w-0">
+                              <AlertTriangle className="w-3 h-3 text-rose-500 shrink-0" />
+                              <span className="truncate">
+                                {item.geminiErrorKind === 'quota'
+                                  ? '云端 AI 免费额度已用完，已用本地规则库回答'
+                                  : item.geminiErrorKind === 'auth'
+                                    ? '云端 AI 密钥无效，已用本地规则库回答'
+                                    : item.geminiErrorKind === 'model'
+                                      ? '云端 AI 模型暂不可用，已用本地规则库回答'
+                                      : '云端 AI 暂不可用，已用本地规则库回答'}
+                              </span>
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleAskQuestion(item.question)}
+                              disabled={isLoading}
+                              className="text-rose-700 hover:text-rose-900 underline underline-offset-2 disabled:opacity-50 cursor-pointer shrink-0"
+                            >
+                              {isLoading ? '重试中...' : '重试'}
+                            </button>
                           </div>
                         )}
 
@@ -775,32 +768,29 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
                       </div>
 
                       {/* Feedback buttons */}
-                      <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
-                        <span>该解答是否清楚？</span>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleFeedback(item.id, 'helpful')}
-                            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg transition-colors cursor-pointer ${
-                              item.userFeedback === 'helpful'
-                                ? 'bg-emerald-100 text-emerald-800 font-bold'
-                                : 'hover:bg-slate-100 text-slate-600'
-                            }`}
-                          >
-                            <ThumbsUp className="w-3 h-3" />
-                            <span>清楚有用</span>
-                          </button>
-                          <button
-                            onClick={() => handleFeedback(item.id, 'not_helpful')}
-                            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg transition-colors cursor-pointer ${
-                              item.userFeedback === 'not_helpful'
-                                ? 'bg-rose-100 text-rose-800 font-bold'
-                                : 'hover:bg-slate-100 text-slate-600'
-                            }`}
-                          >
-                            <ThumbsDown className="w-3 h-3" />
-                            <span>未解决</span>
-                          </button>
-                        </div>
+                      <div className="flex items-center justify-end gap-1 pt-1 text-[11px] text-slate-400">
+                        <button
+                          onClick={() => handleFeedback(item.id, 'helpful')}
+                          className={`flex items-center gap-1 px-2 py-1 rounded-lg transition-colors cursor-pointer ${
+                            item.userFeedback === 'helpful'
+                              ? 'bg-emerald-100 text-emerald-800 font-bold'
+                              : 'hover:bg-slate-100 text-slate-600'
+                          }`}
+                        >
+                          <ThumbsUp className="w-3 h-3" />
+                          <span>有用</span>
+                        </button>
+                        <button
+                          onClick={() => handleFeedback(item.id, 'not_helpful')}
+                          className={`flex items-center gap-1 px-2 py-1 rounded-lg transition-colors cursor-pointer ${
+                            item.userFeedback === 'not_helpful'
+                              ? 'bg-rose-100 text-rose-800 font-bold'
+                              : 'hover:bg-slate-100 text-slate-600'
+                          }`}
+                        >
+                          <ThumbsDown className="w-3 h-3" />
+                          <span>没用</span>
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -870,61 +860,14 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
             </div>
           )}
 
-          {/* TAB 3: PUBLIC ARCHIVE */}
-          {activeTab === 'public_archive' && (
-            <div className="space-y-3">
-              <p className="text-xs text-slate-500">
-                平台将所有用户遭遇的边缘情况脱敏归档，定期由规则委员会复核并吸纳进下一版本官方标准。
-              </p>
-              {archivedList.map((item) => (
-                <div
-                  key={item.id}
-                  className="p-3.5 rounded-xl bg-white border border-slate-200 text-xs space-y-2 shadow-2xs"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-900">{item.question}</span>
-                    <span className="text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md font-medium">
-                      {item.category}
-                    </span>
-                  </div>
-                  <p className="text-slate-600 leading-relaxed">{item.aiResponse}</p>
-                  {item.relatedCaseResult && (
-                    <div className="text-[10px] text-indigo-700 font-semibold flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3" />
-                      <span>过往参考判例：{item.relatedCaseResult}</span>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* Input Bar */}
         <div className="p-3 sm:p-4 border-t border-slate-200 bg-white">
-          {/* 传教士常问 · 一键提问 */}
-          <div className="flex flex-wrap gap-1.5 mb-2">
-            {[
-              '我该留多少现金才安全？',
-              '一个月最少赚多少才不亏？',
-              '同工工资怎么定合理？',
-              '启动资金大概要多少？'
-            ].map((q) => (
-              <button
-                key={q}
-                type="button"
-                onClick={() => handleAskQuestion(q)}
-                disabled={isLoading}
-                className="text-[11px] px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 font-semibold border border-indigo-200 hover:bg-indigo-100 disabled:opacity-50 transition-colors cursor-pointer"
-              >
-                {q}
-              </button>
-            ))}
-          </div>
           <div className="flex gap-2">
             <input
               type="text"
-              placeholder="输入任何问题，AI 都能为您解答（如：毛利率怎么算？现金要留几个月？）..."
+              placeholder="输入经营问题，如：毛利率怎么算？现金要留几个月？..."
               value={questionInput}
               onChange={(e) => setQuestionInput(e.target.value)}
               onKeyDown={(e) => {

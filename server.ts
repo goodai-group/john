@@ -33,6 +33,12 @@ function getGeminiClient(): GoogleGenAI | null {
   return aiClient;
 }
 
+// Gemini 429 配额冷却：免费层对每个模型每天有请求上限（如 gemini-3.6-flash 为 20 次/日）。
+// 收到 429 配额超限后的一段时间内直接走本地规则库，避免每次提问都白等一次注定失败的云端请求，
+// 冷却结束后自动恢复云端 AI。
+let geminiQuotaCooldownUntil = 0;
+const GEMINI_QUOTA_COOLDOWN_MS = 90 * 1000;
+
 // Gemini 模型候选列表：按顺序尝试，首个可用的模型即被使用。
 // 2026-09 现状：
 //   - gemini-2.0-flash：已全局下线（404 "no longer available"）
@@ -270,6 +276,7 @@ app.post(['/api/ai/chat', '/api/ai-consultation'], async (req, res) => {
   // Gemini 失败信息（未配置/调用失败），用于回退分支给前端准确的降级状态
   let geminiUnavailable = !ai;
   let geminiError: string | null = null;
+  let geminiErrorKind: 'quota' | 'auth' | 'model' | 'timeout' | 'network' | null = null;
 
   // Check if query is an edge-case rule boundary question
   const isEdgeKeyword = /休渔|季节|倒闭|天灾|战乱|物物交换|欠条|赊账|没有发票|教会赠款|非官方汇率|两套账|换人|无执照/i.test(
@@ -277,7 +284,13 @@ app.post(['/api/ai/chat', '/api/ai-consultation'], async (req, res) => {
   );
 
   if (ai) {
-    try {
+    // 429 配额冷却期内：不发起注定失败的云端请求，直接走本地规则库兜底
+    if (Date.now() < geminiQuotaCooldownUntil) {
+      geminiUnavailable = true;
+      geminiErrorKind = 'quota';
+      geminiError = 'Gemini 免费配额冷却中，已切换本地规则库回答';
+    } else {
+      try {
       // 通用助手系统提示词：既能回答任何问题，也能在涉及本平台规则时给出专业解答
       const systemInstruction = `
 你是一个友善、博学、乐于助人的通用 AI 助手，服务于"商业宣教财务测算"平台（BAM 平台，全球海外小微商业自测评分工具）。
@@ -292,6 +305,11 @@ app.post(['/api/ai/chat', '/api/ai-consultation'], async (req, res) => {
    - 结合行业大数据基准给出参考（如餐饮毛利率约55%-70%、社区零售20%-35%、生活服务70%-88%、备用金建议≥3个月固定开销）；
    - 明确说明"此处的规则提问仅用于辅助理解，绝不计入评分系统；手写账本、截图与纯手动填写 100% 同权、零歧视"；
    - 遇到休渔期、战乱汇率、物物交换、无发票等边缘情况时，给出 2 种保守填报路径（路径A/路径B）并预估得分与后果。
+5. "answer" 字段请使用规范、简洁的 Markdown 排版，让语法符号与装饰符号尽量少：
+   - 推荐使用：## / ### 小标题、**加粗**、- 无序列表、1. 有序列表；
+   - 不要堆砌装饰性符号与表情符号（例如 ⚠️ 📌 🔑 1️⃣ 【】 等花哨标记），除非表达重要风险提示，一条回答中 emoji 最多 1 个；
+   - 避免用连续特殊符号（如 ===、>>>、•••）装饰版面，保持干净易读；
+   - 需要换行处用空行分段，不要在每行末尾添加两个空格等隐藏符号。
 
 返回合法的 JSON 数据，格式如下：
 {
@@ -328,7 +346,8 @@ app.post(['/api/ai/chat', '/api/ai-consultation'], async (req, res) => {
           bigDataBenchmark: parsed.bigDataBenchmark || '',
           conservativePaths: parsed.conservativePaths || [],
           geminiUnavailable: false,
-          geminiError: null
+          geminiError: null,
+          geminiErrorKind: null
         });
       } catch {
         // Gemini 返回的不是合法 JSON，回退到纯文本模式
@@ -344,14 +363,29 @@ app.post(['/api/ai/chat', '/api/ai-consultation'], async (req, res) => {
           bigDataBenchmark: '',
           conservativePaths: [],
           geminiUnavailable: false,
-          geminiError: null
+          geminiError: null,
+          geminiErrorKind: null
         });
       }
     } catch (err: any) {
       // Gemini 调用失败：标记降级状态，让流程继续走到本地规则库兜底
       console.warn('Gemini API request failed, falling back to smart big-data rule engine:', err?.message || err);
       geminiUnavailable = true;
-      geminiError = (err?.message || String(err) || '').slice(0, 200);
+      const errMsg = (err?.message || String(err) || '').slice(0, 200);
+      geminiError = errMsg;
+      if (/429|RESOURCE_EXHAUSTED|quota|Quota/i.test(errMsg)) {
+        geminiErrorKind = 'quota';
+        geminiQuotaCooldownUntil = Date.now() + GEMINI_QUOTA_COOLDOWN_MS;
+      } else if (/401|403|api key|permission|unauthorized/i.test(errMsg)) {
+        geminiErrorKind = 'auth';
+      } else if (/404|no longer available|not found|does not support/i.test(errMsg)) {
+        geminiErrorKind = 'model';
+      } else if (/timed out|timeout/i.test(errMsg)) {
+        geminiErrorKind = 'timeout';
+      } else {
+        geminiErrorKind = 'network';
+      }
+    }
     }
   }
 
@@ -714,7 +748,8 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
       bigDataBenchmark,
       conservativePaths: paths,
       geminiUnavailable,
-      geminiError
+      geminiError,
+      geminiErrorKind
     });
 });
 
