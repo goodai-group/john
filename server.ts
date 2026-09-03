@@ -1,9 +1,19 @@
-import 'dotenv/config';
 import express from 'express';
 import path from 'path';
-import { pathToFileURL } from 'url';
 import { GoogleGenAI } from '@google/genai';
 import { SUPPORTED_CURRENCIES } from './src/lib/currencies';
+
+// 加载根目录 .env：仅本地开发需要；Vercel 平台会自动注入环境变量。
+// 注意：不能顶层 import 'dotenv/config'——在 Vercel 以 ESM 打包 serverless 函数时，
+// dotenv(CJS) 内部的 require('fs') 会变成动态 require 导致模块加载即崩溃(FUNCTION_INVOCATION_FAILED)。
+// 改用 Node >=20.12 内置 process.loadEnvFile()（同步、零第三方依赖）。
+try {
+  if (!process.env.VERCEL && typeof process.loadEnvFile === 'function') {
+    process.loadEnvFile();
+  }
+} catch {
+  // .env 不存在或读取失败时静默忽略（例如生产环境由平台注入环境变量）
+}
 
 const app = express();
 const PORT = 3000;
