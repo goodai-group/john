@@ -1203,8 +1203,13 @@ app.post('/api/ai/ocr-estimate', async (req, res) => {
 async function startServer() {
   // Vite middleware for development (only used by `npm run dev` locally)
   if (process.env.NODE_ENV !== 'production') {
-    // 仅在本地 dev 运行时才动态引入 vite，避免 serverless（Vercel）打包时把整个 Vite 打进函数
-    const { createServer: createViteServer } = await import('vite');
+    // 仅在本地 dev 运行时才加载 Vite。
+    // 重要：必须用「变量间接 import」而不能写 await import('vite')——
+    // esbuild / Vercel 的依赖追踪会把字符串字面量的 import 静态打包进 serverless 函数，
+    // 导致整个 Vite（含原生二进制）被塞进部署包，引发体积/运行问题。
+    // 变量形式会让打包器无法静态解析，本地 tsx/Node 运行时仍能正常加载 node_modules 里的 vite。
+    const vitePkgName: 'vite' = 'vite';
+    const { createServer: createViteServer } = await import(vitePkgName);
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa'

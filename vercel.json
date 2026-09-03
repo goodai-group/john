@@ -5,14 +5,12 @@
   "outputDirectory": "dist",
   "installCommand": "npm install",
   "framework": null,
-  "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/index"
-    }
-  ],
   "functions": {
-    "api/index.ts": {
+    "api/ai-consultation.ts": {
+      "maxDuration": 30,
+      "memory": 1024
+    },
+    "api/[...path].ts": {
       "maxDuration": 30,
       "memory": 1024
     }
