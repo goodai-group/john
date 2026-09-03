@@ -36,6 +36,10 @@ interface AiDrawerProps {
 
 interface ChatRecord extends EscalatedQuestion {
   aiMode?: 'gemini' | 'rules';
+  // 云端 Gemini AI 是否不可用（true 表示本次回答是降级到本地规则库的回答）
+  geminiUnavailable?: boolean;
+  // 后端返回的 Gemini 失败原因摘要（用于显示具体降级原因）
+  geminiError?: string | null;
 }
 
 // Industry Big Data Benchmarks Dataset
@@ -135,6 +139,8 @@ export const AiRuleConsultationDrawer: React.FC<AiDrawerProps> = ({
   const [copiedId, setCopiedId] = useState<string | null>(null);
   // 服务端是否配置了真实 AI（GEMINI_API_KEY）。null=未知，true=已配置，false=未配置
   const [aiConfigured, setAiConfigured] = useState<boolean | null>(null);
+  // 云端 Gemini AI 调用健康状态：null=未探测，true=最近一次调用成功，false=最近一次调用失败
+  const [geminiHealthy, setGeminiHealthy] = useState<boolean | null>(null);
 
   useEffect(() => {
     setArchivedList(getEscalatedQuestions());
@@ -451,6 +457,10 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
         if (!rawAnswer || !String(rawAnswer).trim()) {
           throw new Error('AI returned empty answer');
         }
+        // 标记 Gemini 健康状态：本次调用是否真正走到云端
+        const usedGemini = data.aiMode === 'gemini';
+        setGeminiHealthy(usedGemini);
+
         const newRecord: ChatRecord = {
           id: `esc-${Date.now()}`,
           question: text,
@@ -461,7 +471,9 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
           isEdgeCase: data.isEdgeCase || false,
           suggestedAction: data.suggestedAction || '',
           archivedAt: new Date().toISOString(),
-          aiMode: data.aiMode === 'gemini' ? 'gemini' : 'rules'
+          aiMode: data.aiMode === 'gemini' ? 'gemini' : 'rules',
+          geminiUnavailable: data.geminiUnavailable === true,
+          geminiError: data.geminiError || null
         };
 
         setChatHistory((prev) => [newRecord, ...prev]);
@@ -512,6 +524,11 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
                 {aiConfigured === false ? (
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
                     本地规则库
+                  </span>
+                ) : geminiHealthy === false ? (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3" />
+                    AI 暂不可用
                   </span>
                 ) : (
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
@@ -647,6 +664,14 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
                             <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 shrink-0">
                               AI 智能回答
                             </span>
+                          ) : item.geminiUnavailable ? (
+                            <span
+                              className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 shrink-0 flex items-center gap-1"
+                              title="Gemini 云端 AI 不可用，本次回答为本地降级"
+                            >
+                              <AlertTriangle className="w-3 h-3" />
+                              AI 暂不可用
+                            </span>
                           ) : (
                             <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 shrink-0">
                               本地规则库
@@ -693,6 +718,33 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
                           <div className="mt-2.5 pt-2 border-t border-slate-200/70 flex items-center gap-1.5 text-[11px] text-indigo-900 bg-indigo-50/60 px-2.5 py-1.5 rounded-lg font-medium">
                             <Lightbulb className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                             <span><b>填报指引：</b>{item.suggestedAction}</span>
+                          </div>
+                        )}
+
+                        {/* AI 降级提示 + 重试按钮：仅在 Gemini 不可用时显示 */}
+                        {item.aiMode !== 'gemini' && item.geminiUnavailable && (
+                          <div className="mt-2.5 pt-2 border-t border-rose-200/70 flex items-start gap-2 text-[11px] text-rose-900 bg-rose-50/80 px-2.5 py-2 rounded-lg font-medium">
+                            <AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0 mt-0.5" />
+                            <div className="flex-1 leading-relaxed">
+                              <div>
+                                ⚠️ <b>云端 Gemini AI 当前不可用</b>
+                                {item.geminiError ? (
+                                  <span className="text-rose-700/90">（原因：{item.geminiError}）</span>
+                                ) : (
+                                  <span className="text-rose-700/90">（网络/额度/区域限制）</span>
+                                )}
+                                ，本次由本地规则库降级回答。
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleAskQuestion(item.question)}
+                                disabled={isLoading}
+                                className="mt-1.5 inline-flex items-center gap-1 text-rose-700 hover:text-white hover:bg-rose-600 px-2.5 py-1 rounded-md border border-rose-300 bg-white transition-colors disabled:opacity-50 font-bold cursor-pointer"
+                              >
+                                <ArrowRight className="w-3 h-3" />
+                                <span>{isLoading ? '重试中...' : '重新提问（重试云端 AI）'}</span>
+                              </button>
+                            </div>
                           </div>
                         )}
 

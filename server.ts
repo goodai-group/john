@@ -34,8 +34,12 @@ function getGeminiClient(): GoogleGenAI | null {
 }
 
 // Gemini 模型候选列表：按顺序尝试，首个可用的模型即被使用。
-// （gemini-3.6-flash 为当前最新默认模型；2.5-flash / 2.0-flash 仅对旧账号可用，作为兼容回退）
-const GEMINI_MODELS = ['gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-2.0-flash'];
+// 2026-09 现状：
+//   - gemini-2.0-flash：已全局下线（404 "no longer available"）
+//   - gemini-2.5-flash：仅对早期账号开放（对当前新账号返回 "no longer available to new users"）
+//   - gemini-3.6-flash：当前默认且对所有账号开放
+// 因此只保留 3.6-flash，避免回退到不可用的旧模型引发误导性的 404 错误。
+const GEMINI_MODELS = ['gemini-3.6-flash'];
 
 async function generateGeminiContent(
   contents: string,
@@ -142,6 +146,95 @@ ${amount.toLocaleString('zh-CN')} ${currencyDisplay(fromCode)} ≈ ${rounded.toL
   return null;
 }
 
+// ============ 通用常识知识库（覆盖常见人物/地名/概念等通用问答） ============
+// 用于本地规则引擎兜底：当 Gemini 不可用时，也能答出一些常见常识问题
+// 扩充方法：直接添加 key-value 即可。匹配规则：question 中包含 key 即可命中（忽略大小写）
+type KnowledgeEntry = {
+  answer: string;
+  hint?: string;
+};
+
+const GENERAL_KNOWLEDGE: Record<string, KnowledgeEntry> = {
+  // ===== 中国古镇 / 景点 =====
+  '周庄': {
+    answer: '周庄位于中国江苏省苏州市昆山市，是一座有 900 多年历史的江南水乡古镇，被誉为"中国第一水乡"，是国家 5A 级旅游景区。全镇依水而建，至今保存着近 100 座明清古建筑（如双桥、沈厅、张厅），画家陈逸飞名作《故乡的回忆》即取材于此。',
+    hint: '中国·江苏·苏州·昆山'
+  },
+  '乌镇': {
+    answer: '乌镇位于中国浙江省嘉兴市桐乡市，京杭大运河畔的典型江南水乡古镇，分为东栅（传统观光）和西栅（休闲度假）两大景区，是世界互联网大会永久会址。',
+    hint: '中国·浙江·嘉兴·桐乡'
+  },
+  '丽江': {
+    answer: '丽江位于中国云南省西北部，是纳西族文化中心。丽江古城（又称大研古镇）始建于宋末元初，是中国保存最完整的少数民族古城之一，1997 年被列入世界文化遗产；著名景点还包括玉龙雪山、泸沽湖、茶马古道等。',
+    hint: '中国·云南'
+  },
+  '平遥': {
+    answer: '平遥位于中国山西省晋中市，平遥古城始建于西周宣王时期（公元前 827 年—前 782 年），是中国保存最完整的明清时期古代县城原型，1997 年与丽江古城等一并列入世界文化遗产；古城内的"日昇昌"是中国最早的票号（银行雏形）。',
+    hint: '中国·山西·晋中'
+  },
+  '凤凰': {
+    answer: '凤凰古城位于中国湖南省湘西土家族苗族自治州沱江下游，依山傍水，是苗族、土家族等少数民族聚居的千年古城，沈从文笔下的《边城》即以此为背景。',
+    hint: '中国·湖南·湘西'
+  },
+  // ===== 中国历史 / 思想人物 =====
+  '孔子': {
+    answer: '孔子（公元前 551 年—公元前 479 年），名丘，字仲尼，春秋时期鲁国（今山东曲阜）人，中国古代最伟大的思想家、教育家之一，儒家学派创始人。核心思想包括"仁""义""礼""智""信"，主张"有教无类"。其言行被弟子辑录为《论语》，对中华文化与东亚文明影响逾两千年。',
+    hint: '春秋·鲁国·儒家'
+  },
+  '老子': {
+    answer: '老子（约公元前 571 年—约公元前 471 年），姓李名耳，字聃，春秋时期楚国（今河南鹿邑）人，道家学派创始人，世界百位历史文化名人之一。其代表作《道德经》（又称《老子》）仅 5,000 余字，却被译成近百种语言，是全球发行量仅次于《圣经》的经典。',
+    hint: '春秋·楚国·道家'
+  },
+  '庄子': {
+    answer: '庄子（约公元前 369 年—约公元前 286 年），名周，战国时期宋国蒙（今河南商丘或安徽蒙城）人，道家学派代表人物，与老子并称"老庄"。代表作《庄子》（又称《南华经》）以寓言著称，"庄周梦蝶""庖丁解牛""鱼之乐"等典故广为流传。',
+    hint: '战国·宋国·道家'
+  },
+  '孟子': {
+    answer: '孟子（约公元前 372 年—约公元前 289 年），名轲，字子舆，战国时期邹国（今山东邹城）人，儒家学派主要代表之一，被尊为"亚圣"。核心思想包括"性善论""仁政""民贵君轻"，与孔子并称"孔孟"。',
+    hint: '战国·邹国·儒家'
+  },
+  '释迦牟尼': {
+    answer: '释迦牟尼（约公元前 565 年—约公元前 486 年），本名乔达摩·悉达多，古印度迦毗罗卫国（今属尼泊尔境内）王子，佛教的创立者。29 岁出家修行，35 岁在菩提伽耶悟道，此后 45 年间在恒河流域传法，奠定了佛教的核心理论（"四圣谛""八正道""缘起"）。',
+    hint: '古印度·佛教'
+  },
+  '耶稣': {
+    answer: '耶稣基督（约公元前 4 年—公元 30/33 年），出生于罗马帝国犹太行省伯利恒，是基督教的核心人物，被基督徒奉为神的儿子和救主。基督教相信他为了救赎人类而降生、被钉十字架、第三天复活。公元纪年即以他出生为分界。',
+    hint: '公元元年·基督教'
+  },
+  // ===== 中国传统文化 / 节日 =====
+  '春节': {
+    answer: '春节（农历正月初一）是中华民族最隆重的传统节日，又称"年节""新春""岁首"，距今已有 4,000 余年历史。传统习俗包括贴春联、放鞭炮、吃年夜饭、给压岁钱、拜年走亲等；2024 年起春节被列入联合国假日。',
+    hint: '农历新年'
+  },
+  '中秋': {
+    answer: '中秋节为农历八月十五，是中国四大传统节日之一，正值三秋之半，故名"中秋"。核心习俗是赏月、吃月饼，象征阖家团圆。中秋源于上古敬月仪式，唐代正式定为节日。',
+    hint: '农历八月十五'
+  },
+  '端午': {
+    answer: '端午节为农历五月初五，又称"端阳""龙舟节"。相传战国时期楚国诗人屈原于该日投汨罗江殉国，故民间有吃粽子、赛龙舟、佩香囊、挂艾草等习俗。2009 年被列入世界非物质文化遗产。',
+    hint: '农历五月初五'
+  },
+  // ===== 基础科学 / 技术概念 =====
+  '区块链': {
+    answer: '区块链（Blockchain）是一种去中心化的分布式账本技术，由按时间顺序串联的"区块"组成，每个区块包含前一个区块的哈希值，使得数据一旦写入便难以篡改。它是比特币等加密货币的底层技术，也被广泛应用于供应链溯源、数字身份、合约自动化（智能合约）等领域。',
+    hint: '分布式账本'
+  },
+  '5g': {
+    answer: '5G 是第五代移动通信技术（5th Generation），相比 4G 具备三大特性：增强移动宽带（eMBB，峰值速率可达 10 Gbps）、超可靠低时延通信（uRLLC，时延低至 1 ms）、海量机器类通信（mMTC，每平方公里支持 100 万设备）。商用场景包括自动驾驶、远程手术、工业互联网、AR/VR 等。',
+    hint: '第五代移动通信'
+  }
+};
+
+function tryGeneralKnowledge(question: string): KnowledgeEntry | null {
+  const q = question.toLowerCase().trim();
+  for (const [key, entry] of Object.entries(GENERAL_KNOWLEDGE)) {
+    if (q.includes(key.toLowerCase())) {
+      return entry;
+    }
+  }
+  return null;
+}
+
 // 1. Health & Config status API
 app.get('/api/health', (req, res) => {
   const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GEMINI_API_KEY;
@@ -167,24 +260,26 @@ app.get('/api/health', (req, res) => {
 
 // 2. AI Rule Consultation & Edge Case Evaluator
 app.post(['/api/ai/chat', '/api/ai-consultation'], async (req, res) => {
-  try {
-    const question = (req.body.question || req.body.message || '').trim();
-    const { context, language = 'zh' } = req.body;
-    if (!question) {
-      return res.status(400).json({ error: 'Question or message is required' });
-    }
+  const question = (req.body.question || req.body.message || '').trim();
+  const { context, language = 'zh' } = req.body;
+  if (!question) {
+    return res.status(400).json({ error: 'Question or message is required' });
+  }
 
-    const ai = getGeminiClient();
+  const ai = getGeminiClient();
+  // Gemini 失败信息（未配置/调用失败），用于回退分支给前端准确的降级状态
+  let geminiUnavailable = !ai;
+  let geminiError: string | null = null;
 
-    // Check if query is an edge-case rule boundary question
-    const isEdgeKeyword = /休渔|季节|倒闭|天灾|战乱|物物交换|欠条|赊账|没有发票|教会赠款|非官方汇率|两套账|换人|无执照/i.test(
-      question
-    );
+  // Check if query is an edge-case rule boundary question
+  const isEdgeKeyword = /休渔|季节|倒闭|天灾|战乱|物物交换|欠条|赊账|没有发票|教会赠款|非官方汇率|两套账|换人|无执照/i.test(
+    question
+  );
 
-    if (ai) {
-      try {
-        // 通用助手系统提示词：既能回答任何问题，也能在涉及本平台规则时给出专业解答
-        const systemInstruction = `
+  if (ai) {
+    try {
+      // 通用助手系统提示词：既能回答任何问题，也能在涉及本平台规则时给出专业解答
+      const systemInstruction = `
 你是一个友善、博学、乐于助人的通用 AI 助手，服务于"商业宣教财务测算"平台（BAM 平台，全球海外小微商业自测评分工具）。
 你可以回答用户提出的【任何问题】——包括但不限于：财务与商业常识、小微生意经营、平台填报与评分规则、日常实用知识、生活技巧、技术问题、语言翻译、概念解释等。
 
@@ -210,47 +305,57 @@ app.post(['/api/ai/chat', '/api/ai-consultation'], async (req, res) => {
 }
 `;
 
-        const replyText = await generateGeminiContent(
-          `用户提问: "${question}"\n用户界面语言: ${language}\n当前上下文: ${JSON.stringify(context || {})}`,
-          systemInstruction
-        );
+      const replyText = await generateGeminiContent(
+        `用户提问: "${question}"\n用户界面语言: ${language}\n当前上下文: ${JSON.stringify(context || {})}`,
+        systemInstruction
+      );
 
-        try {
-          const parsed = JSON.parse(replyText);
-          const answerText = parsed.answer || replyText;
-          if (!answerText.trim()) {
-            throw new Error('Gemini returned empty answer');
-          }
-          return res.json({
-            reply: answerText,
-            aiResponse: answerText,
-            answer: answerText,
-            aiMode: 'gemini',
-            confidence: parsed.confidence || (isEdgeKeyword ? 'LOW_EDGE_CASE' : 'HIGH'),
-            isEdgeCase: parsed.isEdgeCase ?? isEdgeKeyword,
-            category: parsed.category || 'AI 智能答疑',
-            suggestedAction: parsed.suggestedAction || '',
-            bigDataBenchmark: parsed.bigDataBenchmark || '',
-            conservativePaths: parsed.conservativePaths || []
-          });
-        } catch {
-          return res.json({
-            reply: replyText,
-            aiResponse: replyText,
-            answer: replyText,
-            aiMode: 'gemini',
-            confidence: isEdgeKeyword ? 'LOW_EDGE_CASE' : 'HIGH',
-            isEdgeCase: isEdgeKeyword,
-            category: 'AI 智能答疑',
-            suggestedAction: '',
-            bigDataBenchmark: '',
-            conservativePaths: []
-          });
+      try {
+        const parsed = JSON.parse(replyText);
+        const answerText = parsed.answer || replyText;
+        if (!answerText.trim()) {
+          throw new Error('Gemini returned empty answer');
         }
-      } catch (err: any) {
-        console.warn('Gemini API request failed, falling back to smart big-data rule engine:', err.message);
+        return res.json({
+          reply: answerText,
+          aiResponse: answerText,
+          answer: answerText,
+          aiMode: 'gemini',
+          confidence: parsed.confidence || (isEdgeKeyword ? 'LOW_EDGE_CASE' : 'HIGH'),
+          isEdgeCase: parsed.isEdgeCase ?? isEdgeKeyword,
+          category: parsed.category || 'AI 智能答疑',
+          suggestedAction: parsed.suggestedAction || '',
+          bigDataBenchmark: parsed.bigDataBenchmark || '',
+          conservativePaths: parsed.conservativePaths || [],
+          geminiUnavailable: false,
+          geminiError: null
+        });
+      } catch {
+        // Gemini 返回的不是合法 JSON，回退到纯文本模式
+        return res.json({
+          reply: replyText,
+          aiResponse: replyText,
+          answer: replyText,
+          aiMode: 'gemini',
+          confidence: isEdgeKeyword ? 'LOW_EDGE_CASE' : 'HIGH',
+          isEdgeCase: isEdgeKeyword,
+          category: 'AI 智能答疑',
+          suggestedAction: '',
+          bigDataBenchmark: '',
+          conservativePaths: [],
+          geminiUnavailable: false,
+          geminiError: null
+        });
       }
+    } catch (err: any) {
+      // Gemini 调用失败：标记降级状态，让流程继续走到本地规则库兜底
+      console.warn('Gemini API request failed, falling back to smart big-data rule engine:', err?.message || err);
+      geminiUnavailable = true;
+      geminiError = (err?.message || String(err) || '').slice(0, 200);
     }
+  }
+
+  // ============ 走到这里说明 Gemini 不可用或失败，下面是本地兜底引擎 ============
 
     // Smart Big-Data Knowledge Engine (Deterministic Fallback)
     let fallbackReply = '';
@@ -352,6 +457,20 @@ ${a} ${opSymbol} ${b} = ${Number.isInteger(result) ? result : result.toFixed(2)}
       suggestedAction = '';
       bigDataBenchmark = '';
       fallbackReply = tryCurrencyConversion(question)!;
+    }
+    // 通用常识知识库（地名/人物/概念等）：本地兜底，让 AI 不可用时也能答出常见问题
+    else if (tryGeneralKnowledge(question)) {
+      const entry = tryGeneralKnowledge(question)!;
+      category = '通用常识';
+      suggestedAction = '';
+      bigDataBenchmark = '';
+      const hintLine = entry.hint ? `\n🏷️ ${entry.hint}\n` : '';
+      fallbackReply = `【📚 通用常识 · 本地知识库】
+
+关于「${question}」：${hintLine}
+${entry.answer}
+
+📌 说明：以上为本地知识库内置回答，覆盖面有限。如需深度专业解答，请在 .env 配置 GEMINI_API_KEY 后重启开发服务器，云端 AI 可回答任何问题。`;
     }
     // 保本点 / 盈亏平衡（一个月最少赚多少才不亏）
     else if (/保本|不亏|盈亏平衡|赚多少才不亏|最少赚多少|月流水多少才不亏|breakeven|break-even/i.test(question)) {
@@ -575,8 +694,8 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
 1️⃣ 如果是本平台的【填报与评分】问题（流水、毛利、OPEX、备用金、汇率、凭证、季节/休渔等边缘情况），请直接追问相关关键词，我会用大白话 + 行业大数据为您详解；
 2️⃣ 如果是【生活常识 / 实用知识 / 简单计算 / 币种换算】，您也可以直接问，我能覆盖常见场景。
 
-🔑 关于"能回答任何问题"：
-当前服务器未配置 GEMINI_API_KEY，本次回答由内置本地规则库提供，覆盖面有限。请在项目根目录 .env 中填入密钥并重启开发服务器，即可解锁真正的通用 AI（商业、财务、生活、技术、翻译等任何问题都能答）。
+⚠️ 关于"能回答任何问题"：
+当前云端 Gemini AI 服务暂时不可用（网络/额度/区域限制），本次回答由内置本地规则库提供，覆盖面有限。请稍后点击右上角的【重新提问】重试，或换个问法咨询平台规则类问题，即可获得行业大数据基准解析。
 
 📍 本平台快捷入口：
 • 【公开评分标准】可查看完整 5 维雷达打分公式与 4 大门槛红线；
@@ -593,12 +712,10 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
       category,
       suggestedAction,
       bigDataBenchmark,
-      conservativePaths: paths
+      conservativePaths: paths,
+      geminiUnavailable,
+      geminiError
     });
-  } catch (err: any) {
-    console.error('AI chat error:', err);
-    res.status(500).json({ error: 'Internal server error', details: err.message });
-  }
 });
 
 // 2.5 AI Infer Industry & Generate Dynamic Cost/Opex Structure
