@@ -1,6 +1,6 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
-import path from 'path';
+import path from 'node:path';
 import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
@@ -9,7 +9,9 @@ export default defineConfig(() => {
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, '.'),
+        // package.json 已声明 "type": "module"，config 会以 ESM 加载，
+        // __dirname 不可用；npm scripts 均在项目根目录执行，process.cwd() 即项目根。
+        '@': path.resolve(process.cwd()),
       },
     },
     server: {
