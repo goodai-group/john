@@ -9,8 +9,12 @@ export default defineConfig(() => {
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
-        // package.json 已声明 "type": "module"，config 会以 ESM 加载，
-        // __dirname 不可用；npm scripts 均在项目根目录执行，process.cwd() 即项目根。
+        // 注意：根 package.json 不得声明 "type": "module"！
+        // Vercel 会把 api/*.ts 编译为 CJS（无 type:module 时）才能让 Express 正常运行；
+        // 一旦声明 type:module，Vercel 按 ESM 内联打包，Express 的 CJS 动态 require
+        // 会在函数加载期崩溃（FUNCTION_INVOCATION_FAILED / 500）。
+        // 本 config 通过 Vite 独立加载，无需依赖包级 type 字段；npm scripts 均在项目根执行，
+        // process.cwd() 即项目根，__dirname 在两种加载方式下都不可靠。
         '@': path.resolve(process.cwd()),
       },
     },

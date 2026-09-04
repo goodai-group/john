@@ -1247,7 +1247,14 @@ app.use((err: any, req: express.Request, res: express.Response, _next: express.N
     : status >= 500
       ? 'Internal server error'
       : String(err?.message || 'Bad request');
-  res.status(status).json({ error: message });
+  // status>=500 时附加可诊断的 detail（截断，避免泄露超大堆栈），方便前端定位问题来源，
+  // 例如：AI API key 缺失、Supabase 未配置、上游超时等都能从 detail 一眼看出。
+  const payload: Record<string, unknown> = { error: message };
+  if (status >= 500 && err && !isBodyParseError) {
+    const detail = String(err?.message || err?.code || err?.name || 'unknown error');
+    if (detail) payload.detail = detail.slice(0, 300);
+  }
+  res.status(status).json(payload);
 });
 
 app.use('/api', (req, res) => {
