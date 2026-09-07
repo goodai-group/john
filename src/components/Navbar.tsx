@@ -14,7 +14,8 @@ import {
   Loader2,
   ShieldCheck,
   MessageCircle,
-  MoreHorizontal
+  MoreHorizontal,
+  CheckCircle2
 } from 'lucide-react';
 import { Language, ActiveTab, AppUser } from '../types';
 
@@ -33,6 +34,8 @@ interface NavbarProps {
   onOpenAuth?: () => void;
   onLogout: () => void;
   isSigningIn?: boolean;
+  /** 登录成功后的短暂过渡标记：为 true 时显示「✓ 登录成功」，代替登录按钮/头像 */
+  justSignedIn?: boolean;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -47,7 +50,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   currentUser,
   onOpenAuth,
   onLogout,
-  isSigningIn = false
+  isSigningIn = false,
+  justSignedIn = false
 }) => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
@@ -196,6 +200,15 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
 
             {currentUser ? (
+              justSignedIn ? (
+                <div
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-700 text-xs font-bold whitespace-nowrap animate-in fade-in cursor-default"
+                  title={language === 'zh' ? '您已成功登录' : 'You are signed in'}
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>{language === 'zh' ? '登录成功' : 'Signed in'}</span>
+                </div>
+              ) : (
               <div className="relative" ref={userMenuRef}>
                 <button
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
@@ -249,6 +262,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   </div>
                 )}
               </div>
+              )
             ) : (
               <button
                 onClick={onOpenAuth}

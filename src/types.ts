@@ -42,6 +42,7 @@ export interface DynamicCostItem {
   label: string;
   value: number;
   isFixed?: boolean;
+  suggestedAmount?: number; // AI 推断的参考金额（仅用于占位提示，不参与计算）
 }
 
 export interface DynamicOpexItem {
@@ -49,6 +50,7 @@ export interface DynamicOpexItem {
   label: string;
   value: number;
   isFixed?: boolean;
+  suggestedAmount?: number; // AI 推断的参考金额（仅用于占位提示，不参与计算）
 }
 
 export interface MoneyField {

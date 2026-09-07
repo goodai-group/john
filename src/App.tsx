@@ -51,6 +51,18 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  // 登录成功后的短暂过渡：右上角显示「✓ 登录成功」，随后切换为账号头像
+  const [justSignedIn, setJustSignedIn] = useState(false);
+  const justSignedTimerRef = useRef<number | null>(null);
+
+  const flashSignedIn = () => {
+    setJustSignedIn(true);
+    if (justSignedTimerRef.current) {
+      window.clearTimeout(justSignedTimerRef.current);
+      justSignedTimerRef.current = null;
+    }
+    justSignedTimerRef.current = window.setTimeout(() => setJustSignedIn(false), 3000);
+  };
 
   // Modals & Drawers state
   const [isFeeModalOpen, setIsFeeModalOpen] = useState(false);
@@ -170,6 +182,7 @@ export default function App() {
   // 登录/注册成功后统一处理：更新用户、关闭登录弹窗、提示并拉取云端档案
   const applyAuthedUser = async (user: AppUser, welcomeText: string) => {
     setCurrentUser(user);
+    flashSignedIn();
     setIsAuthModalOpen(false);
     pushBanner({ kind: 'info', text: welcomeText }, 4000);
     try {
@@ -195,6 +208,15 @@ export default function App() {
       const user = await signInWithGoogle();
       if (user) {
         await applyAuthedUser(user, `Google 登录成功！已与 ${user.email} 绑定`);
+      } else {
+        // 用户关闭了授权窗口 / 弹窗被拦截 / 等待超时：温和引导，不视为错误
+        pushBanner(
+          {
+            kind: 'info',
+            text: '未完成 Google 登录（已取消或被拦截）。可再次点击登录，或改用邮箱密码登录。'
+          },
+          4000
+        );
       }
     } catch (err: any) {
       const code = err?.code || '';
@@ -546,6 +568,7 @@ export default function App() {
         onOpenAuth={() => setIsAuthModalOpen(true)}
         onLogout={handleLogout}
         isSigningIn={isSigningIn}
+        justSignedIn={justSignedIn}
       />
 
       {/* Sync Status Banner */}

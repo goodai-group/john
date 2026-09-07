@@ -94,31 +94,96 @@ export const subscribeToAuthChanges = (
   };
 };
 
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+// 读取当前会话中的用户（本地 localStorage 读取，无网络请求）
+async function readSessionUser(): Promise<AppUser | null> {
+  if (!supabase) return null;
+  try {
+    const { data: sessionData } = await supabase.auth.getSession();
+    return toAppUser(sessionData.session?.user);
+  } catch {
+    return null;
+  }
+}
+
 export const signInWithGoogle = async (): Promise<AppUser | null> => {
   if (!supabase) {
     throw new Error('Supabase Auth is not configured. 请在项目根目录 .env 配置 Supabase 后重试。');
   }
-  // 使用 PKCE 流程发起 Google OAuth（flowType 已在 createClient 的 auth 配置中声明）；
-  // 登录完成后由 onAuthStateChange / getSession 恢复会话
+  // 若已存在有效会话（例如用户早已登录），直接返回，避免重复弹窗
+  const existingUser = await readSessionUser();
+  if (existingUser) {
+    cachedSupabaseUser = existingUser;
+    return existingUser;
+  }
+
+  // 使用 PKCE 流程发起 Google OAuth（flowType 已在 createClient 的 auth 配置中声明）。
+  // 关闭 SDK 的「整页自动跳转」，改由本函数用授权弹窗 + 轮询会话的方式完成登录，
+  // 确保用户授权完成后能立即拿到会话并同步更新界面登录状态。
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
       redirectTo: window.location.origin,
       queryParams: { prompt: 'select_account' },
-      scopes: 'email profile'
+      scopes: 'email profile',
+      skipBrowserRedirect: true
     }
   });
   if (error) throw error;
+  const authUrl = data?.url;
+  if (!authUrl) return null;
 
-  // OAuth 流程（跳转 Google）建立会话后由 onAuthStateChange 通知；
-  // 此处尝试直接读取会话，若已存在（如已登录用户再次点击）则直接返回用户。
-  if (data?.url) {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const appUser = toAppUser(sessionData.session?.user);
+  // 打开居中的授权弹窗
+  const popupWidth = 560;
+  const popupHeight = 720;
+  const left = Math.max(0, Math.round((window.screen.width - popupWidth) / 2));
+  const top = Math.max(0, Math.round((window.screen.height - popupHeight) / 2));
+  let popup: Window | null = null;
+  try {
+    popup = window.open(
+      authUrl,
+      'supabase_google_oauth',
+      `width=${popupWidth},height=${popupHeight},left=${left},top=${top},resizable=yes,scrollbars=yes`
+    );
+  } catch {
+    popup = null;
+  }
+
+  if (!popup) {
+    if (window.top === window) {
+      // 弹窗被浏览器拦截：退回整页跳转（页面即将卸载，此 Promise 保持挂起即可）
+      window.location.assign(authUrl);
+      return await new Promise<never>(() => {});
+    }
+    // 受限环境（如内嵌 iframe）无法打开弹窗，返回 null 交由调用方提示
+    return null;
+  }
+
+  // 轮询等待：用户在弹窗内完成 Google 授权、会话写入本地后即可立即返回。
+  // 最长等待 3 分钟（给用户挑选账号/输密码留足时间），中途关闭弹窗视为取消。
+  const startedAt = Date.now();
+  const MAX_WAIT_MS = 180_000;
+  while (Date.now() - startedAt < MAX_WAIT_MS) {
+    if (popup.closed) break; // 用户主动关闭了授权窗口 → 视为取消
+    const appUser = await readSessionUser();
     if (appUser) {
       cachedSupabaseUser = appUser;
+      try {
+        popup.close(); // 登录成功，自动收起弹窗
+      } catch {
+        /* 弹窗可能已被关闭，忽略 */
+      }
       return appUser;
     }
+    await sleep(600);
+  }
+
+  // 超时 / 取消：关掉弹窗，返回 null（本次未登录成功）
+  try {
+    if (!popup.closed) popup.close();
+  } catch {
+    /* 忽略 */
   }
   return null;
 };

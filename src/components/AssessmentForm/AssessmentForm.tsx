@@ -35,27 +35,17 @@ import {
 import { SUPPORTED_CURRENCIES, formatMoney, CUSTOM_CURRENCY_VALUE } from '../../lib/currencies';
 import { INDUSTRY_BENCHMARKS } from '../../lib/industryBenchmarks';
 import { saveActiveDraft, clearActiveDraft } from '../../lib/storage';
+import {
+  inferBusinessStructureLocally,
+  normalizeIndustryKey,
+  getIndustryTemplateByKey,
+  InferredStructure
+} from '../../lib/inferBusinessStructure';
 
 /** 行业枚举值集合，用于在 AI 返回值与可选项之间做映射 */
 const INDUSTRY_KEYS = INDUSTRY_BENCHMARKS.map((b) => b.id) as string[];
 /** 下拉里选中的"自定义行业"占位值 */
 export const CUSTOM_INDUSTRY_VALUE = '__CUSTOM__';
-
-interface InferredStructure {
-  // 后端真实返回字段
-  inferredIndustryKey?: string;
-  industryDisplayName?: string;
-  customIndustryName?: string;
-  suggestedCurrency?: string;
-  cogsItems?: Array<{ id?: string; name?: string; amount?: number }>;
-  opexItems?: Array<{ id?: string; name?: string; amount?: number }>;
-  estimatedMonthlyRevenue?: number;
-  // 兼容别名（备用）
-  industry?: string;
-  baseCurrency?: string;
-  suggestedCogs?: string[];
-  suggestedOpex?: string[];
-}
 
 /** 调用后端 AI 接口，基于项目/店铺名称推算行业、币种与成本结构 */
 async function callInferBusinessStructure(projectName: string): Promise<InferredStructure | null> {
@@ -158,8 +148,8 @@ export const AssessmentForm: React.FC<FormProps> = ({
   );
   // 后端返回的 AI 建议（用于"恢复 AI 建议"按钮）
   const [aiSuggested, setAiSuggested] = useState<{
-    cogs: Array<{ label: string; amount: number }>;
-    opex: Array<{ label: string; amount: number }>;
+    cogs: Array<{ label: string; amount: number; suggestedAmount: number }>;
+    opex: Array<{ label: string; amount: number; suggestedAmount: number }>;
   } | null>(null);
   // 用户是否手动改过动态项（用于显示"已手动调整"标记）
   const [cogsTouched, setCogsTouched] = useState(false);
@@ -183,6 +173,60 @@ export const AssessmentForm: React.FC<FormProps> = ({
       updatedAt: new Date().toISOString()
     }));
   };
+
+  // —— 根据推断行业动态调整固定字段标签与提示 ——
+  const cogsFieldMeta = React.useMemo(() => {
+    switch (formData.industry) {
+      case 'food_beverage':
+        return {
+          label: 'F10. 食材与饮品原料成本 (COGS)',
+          badge: '咖啡/烘焙/餐食原料',
+          tip: '咖啡豆、鲜奶、面粉、肉类蔬菜、酱料及一次性环保餐具等直接食材成本（不含房租人工）。'
+        };
+      case 'medical_health':
+        return {
+          label: 'F10. 药品与医用耗材成本 (COGS)',
+          badge: '药品与耗材',
+          tip: '中西药品、注射器、敷料纱布、消毒用品等直接采购成本（不含房租人工）。'
+        };
+      case 'retail_store':
+        return {
+          label: 'F10. 商品进货与采购成本 (COGS)',
+          badge: '进货本钱',
+          tip: '向批发商采购的日用百货、食品调料、数码家电等商品成本（含长途运费，不含房租人工）。'
+        };
+      case 'education_training':
+        return {
+          label: 'F10. 教材与教学耗材成本 (COGS)',
+          badge: '教学资料',
+          tip: '教材讲义、练习册、文具教具、在线平台等直接教学耗材（不含房租人工）。'
+        };
+      case 'vocational_training':
+        return {
+          label: 'F10. 实训原料与工具耗材 (COGS)',
+          badge: '材料与工具',
+          tip: '实训用的木料、皮革、布料、焊锡零配件、五金耗材等（不含房租人工）。'
+        };
+      case 'agriculture':
+        return {
+          label: 'F10. 种苗肥料与农资成本 (COGS)',
+          badge: '农业生产资料',
+          tip: '种子种苗、有机肥料、生物农药、保鲜包装等直接农业投入（不含房租人工）。'
+        };
+      case 'child_care':
+        return {
+          label: 'F10. 儿童膳食与教具耗材 (COGS)',
+          badge: '餐食与用品',
+          tip: '儿童每日营养食材、牛奶、益智教具、绘画文具、卫生纸品等（不含房租人工）。'
+        };
+      default:
+        return {
+          label: 'F10. 原材料与直接采购成本 (COGS)',
+          badge: '进货本钱',
+          tip: '进货货款、生鲜食材原料等直接买货成本（包含长途运费，不含房租和员工工资）。'
+        };
+    }
+  }, [formData.industry]);
 
   // —— 动态成本项（COGS / OPEX）辅助函数 ——
   const updateDynamicCogsItem = (id: string, patch: Partial<{ label: string; value: number; isFixed: boolean }>) => {
@@ -254,6 +298,42 @@ export const AssessmentForm: React.FC<FormProps> = ({
     updateField('industry', value as BusinessFormData['industry']);
     updateField('customIndustryName', undefined as any);
     setCustomIndustry('');
+
+    // 如果用户手动切换行业且尚无动态成本项，自动填充该行业默认模板
+    const hasCogs = (formData.dynamicCogsItems || []).length > 0;
+    const hasOpex = (formData.dynamicOpexItems || []).length > 0;
+    if (!hasCogs || !hasOpex) {
+      const tpl = getIndustryTemplateByKey(value, formData.baseCurrency);
+      const rate = SUPPORTED_CURRENCIES.find((c) => c.code === formData.baseCurrency)?.rateToUsd || 1;
+      const toLocal = (usd: number) => Math.round(usd * rate);
+      const newCogs = (tpl.cogsItems || []).map((it) => ({
+        id: `cogs-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        label: it.name || '物料成本项',
+        value: Number(it.amount) || 0,
+        suggestedAmount: Number(it.amount) || 0,
+        isFixed: false
+      }));
+      const newOpex = (tpl.opexItems || []).map((it) => ({
+        id: `opex-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        label: it.name || '运营开支项',
+        value: Number(it.amount) || 0,
+        suggestedAmount: Number(it.amount) || 0,
+        isFixed: false
+      }));
+      setFormData((prev) => ({
+        ...prev,
+        dynamicCogsItems: prev.dynamicCogsItems?.length ? prev.dynamicCogsItems : newCogs,
+        dynamicOpexItems: prev.dynamicOpexItems?.length ? prev.dynamicOpexItems : newOpex,
+        cogsCost: prev.cogsCost?.amount
+          ? prev.cogsCost
+          : { amount: newCogs.reduce((s, it) => s + it.value, 0), currency: prev.baseCurrency },
+        updatedAt: new Date().toISOString()
+      }));
+      setAiSuggested({
+        cogs: newCogs.map((it) => ({ label: it.label, amount: it.value, suggestedAmount: it.suggestedAmount })),
+        opex: newOpex.map((it) => ({ label: it.label, amount: it.value, suggestedAmount: it.suggestedAmount }))
+      });
+    }
   };
   const handleCustomIndustryInput = (value: string) => {
     setCustomIndustry(value);
@@ -281,7 +361,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
 
     // 行业：优先使用后端 inferredIndustryKey，兼容 industry 别名；命中枚举则使用枚举，否则归为自定义行业
     // 注意：后端兜底规则对未匹配项返回 'custom'，应视为未命中枚举，改用 customIndustryName（即用户所填项目名）
-    const rawIndustryKey = result.inferredIndustryKey || result.industry || '';
+    const rawIndustryKey = normalizeIndustryKey(result.inferredIndustryKey || result.industry || '');
     const rawIndustry =
       rawIndustryKey && rawIndustryKey !== 'custom' ? rawIndustryKey : (result.customIndustryName || '');
     const matchedIndustry = rawIndustry && INDUSTRY_KEYS.includes(rawIndustry) ? rawIndustry : null;
@@ -318,23 +398,23 @@ export const AssessmentForm: React.FC<FormProps> = ({
     const rawOpex = (result.opexItems || []).filter((it) => it.name);
     const finalCogs = rawCogs.length
       ? rawCogs.map((it) => ({ label: it.name!, amount: Number(it.amount) || 0, suggestedAmount: Number(it.amount) || 0 }))
-      : (result.suggestedCogs || []).map((label) => ({ label, amount: 0 }));
+      : (result.suggestedCogs || []).map((label) => ({ label, amount: 0, suggestedAmount: 0 }));
     const finalOpex = rawOpex.length
       ? rawOpex.map((it) => ({ label: it.name!, amount: Number(it.amount) || 0, suggestedAmount: Number(it.amount) || 0 }))
-      : (result.suggestedOpex || []).map((label) => ({ label, amount: 0 }));
+      : (result.suggestedOpex || []).map((label) => ({ label, amount: 0, suggestedAmount: 0 }));
 
     const cogsItems = finalCogs.map((it) => ({
       id: `cogs-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       label: it.label,
       value: it.amount,
-      suggestedAmount: (it as any).suggestedAmount,
+      suggestedAmount: it.suggestedAmount,
       isFixed: false
     }));
     const opexItems = finalOpex.map((it) => ({
       id: `opex-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       label: it.label,
       value: it.amount,
-      suggestedAmount: (it as any).suggestedAmount,
+      suggestedAmount: it.suggestedAmount,
       isFixed: false
     }));
 
@@ -379,14 +459,20 @@ export const AssessmentForm: React.FC<FormProps> = ({
     setInferState('loading');
     inferTimer.current = setTimeout(async () => {
       const reqId = ++inferReqId.current;
-      const result = await callInferBusinessStructure(name);
-      if (reqId !== inferReqId.current) return; // 丢弃过期请求
-      if (result && (result.inferredIndustryKey || result.suggestedCurrency || result.opexItems?.length || result.cogsItems?.length)) {
-        applyInferResult(result);
-        setInferState('done');
-      } else {
-        setInferState('error');
+      let result = await callInferBusinessStructure(name);
+      // 后端失败或返回空时，使用前端本地规则引擎兜底，避免"无法自动推算"
+      const isEmpty =
+        !result ||
+        (!result.inferredIndustryKey &&
+          !result.suggestedCurrency &&
+          !result.opexItems?.length &&
+          !result.cogsItems?.length);
+      if (isEmpty) {
+        result = inferBusinessStructureLocally(name, formData.baseCurrency);
       }
+      if (reqId !== inferReqId.current) return; // 丢弃过期请求
+      applyInferResult(result);
+      setInferState('done');
     }, 1200);
   };
 
@@ -616,7 +702,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                 )}
                 {inferState === 'error' && (
                   <span className="text-amber-600 font-semibold">
-                    无法自动推算，请手动选择。
+                    网络或后端暂时不可用，请检查连接或手动选择行业。
                     <button
                       type="button"
                       onClick={() => formData.projectName.trim().length >= 2 && handleProjectNameChange(formData.projectName)}
@@ -1035,14 +1121,14 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     <div>
                       <div className="flex items-center gap-2">
                         <label className="font-bold text-slate-900">
-                          F10. 原材料与直接采购成本 (COGS)
+                          {cogsFieldMeta.label}
                         </label>
                         <span className="text-[10px] bg-slate-200 text-slate-700 font-bold px-1.5 py-0.5 rounded">
-                          进货本钱
+                          {cogsFieldMeta.badge}
                         </span>
                       </div>
                       <p className="text-[11px] text-slate-500">
-                        进货货款、生鲜食材原料等直接买货成本（包含长途运费，不含房租和员工工资）。
+                        {cogsFieldMeta.tip}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
