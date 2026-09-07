@@ -11,9 +11,11 @@
 //
 // 防 500 / FUNCTION_INVOCATION_FAILED 的关键设计（与 api/ai-consultation.ts 一致）：
 //   a) 严禁在模块顶层 `import app from '../server'`。若打包/运行格式不匹配导致 Express 依赖
-//      在“模块加载期”抛错（例如 ESM 内联打包时 Express 的 CJS 动态 require），顶层 import 会让
-//      函数连启动都失败，Vercel 直接报 FUNCTION_INVOCATION_FAILED(500)。
+//      在“模块加载期”抛错，顶层 import 会让函数连启动都失败，
+//      Vercel 直接报 FUNCTION_INVOCATION_FAILED(500)。
 //      改为在 handler 内部懒加载，加载失败时返回结构化 JSON。
+//      注意：根 package.json 已声明 "type": "module"，Vercel 会按 ESM 加载本函数，
+//      因此相对导入必须写全扩展名 '../server.js'（ESM 不做扩展名补全）。
 //   b) 委托 Express 必须包在 try/catch 中并等待响应结束；
 //   c) 增加响应看门狗，防止内部挂起被平台超时强杀。
 import type { IncomingMessage, ServerResponse } from 'node:http';
@@ -22,7 +24,8 @@ let appPromise: Promise<any> | null = null;
 
 async function getApp(): Promise<any> {
   if (!appPromise) {
-    appPromise = import('../server').then((m: any) => {
+    // ESM 产物中相对导入必须带 .js 扩展名（对应编译后的 server.js）
+    appPromise = import('../server.js').then((m: any) => {
       const mod = m && typeof m === 'object' && 'default' in m ? m.default : m;
       if (!mod || typeof mod !== 'function') {
         throw new Error('server.ts did not export an Express app as default');

@@ -1,4 +1,5 @@
-import { CurrencyCode, CurrencyRate, MoneyField } from '../types';
+// 同上：ESM 产物中相对导入必须显式带 .js 扩展名（TS 会自动映射到 .ts 源文件）
+import { CurrencyCode, CurrencyRate, MoneyField } from '../types.js';
 
 export const SUPPORTED_CURRENCIES: CurrencyRate[] = [
   // 常用重点币种 (Major Global & BAM Key Currencies)

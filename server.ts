@@ -1,7 +1,9 @@
 import express from 'express';
 import path from 'path';
 import { GoogleGenAI } from '@google/genai';
-import { SUPPORTED_CURRENCIES } from './src/lib/currencies';
+// ESM 下相对导入必须带扩展名：Vercel 按根 tsconfig(module=ESNext) 把 .ts 编译为 ESM，
+// 无扩展名的 './src/lib/currencies' 在 Node ESM 解析中会 ERR_MODULE_NOT_FOUND。
+import { SUPPORTED_CURRENCIES } from './src/lib/currencies.js';
 
 // 加载根目录 .env：仅本地开发需要；Vercel 平台会自动注入环境变量。
 // 注意：不能顶层 import 'dotenv/config'——在 Vercel 以 ESM 打包 serverless 函数时，
