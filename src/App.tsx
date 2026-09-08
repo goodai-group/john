@@ -16,8 +16,14 @@ import { ScoringSimulator } from './components/ScoringSimulator';
 import { PublicScoringStandards } from './components/PublicScoringStandards';
 import { AssessmentForm } from './components/AssessmentForm/AssessmentForm';
 import { AssessmentReportView } from './components/AssessmentReport/AssessmentReportView';
-import { AuthModal } from './components/AuthModal';
+import { AuthModal, AuthMode } from './components/AuthModal';
 import { ProjectsListPage } from './pages/ProjectsListPage';
+import {
+  IntroVideoGate,
+  hasSeenIntroVideo,
+  markIntroVideoSeen,
+  isAuthCallbackUrl
+} from './components/IntroVideoGate';
 import {
   loadStoredProjects,
   saveStoredProjects,
@@ -29,7 +35,9 @@ import {
   saveReport,
   deleteProjectAndReports,
   hasAnyStoredProjects,
-  hasAnyStoredReports
+  hasAnyStoredReports,
+  loadStoredTab,
+  saveStoredTab
 } from './lib/storage';
 import {
   isCloudDatabaseAvailable,
@@ -37,20 +45,80 @@ import {
   signInWithEmail,
   signUpWithEmail,
   sendPasswordResetEmail,
+  updatePassword,
   logoutGoogleUser,
-  subscribeToAuthChanges
+  subscribeToAuthChanges,
+  readAuthCallbackError,
+  clearAuthCallbackParams
 } from './lib/supabaseClient';
 import { calculateAssessmentReport } from './lib/scoringEngine';
 import { SAMPLE_PROJECT, INITIAL_SAMPLE_REPORT } from './lib/seedData';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<ActiveTab>('form');
+  // 记住上次所在页面：刷新后仍停在原处，不再被拉回首页
+  const [activeTab, setActiveTab] = useState<ActiveTab>(() => {
+    const saved = loadStoredTab();
+    return saved ? (saved as ActiveTab) : 'form';
+  });
   const [language, setLanguage] = useState<Language>('zh');
+
+  // 统一的页面导航入口：
+  // 1) 写入 history —— 用户点浏览器「后退」时回到上一个页面，而不是直接退出站点；
+  // 2) 记住当前页面 —— 刷新或从外部链接回跳后，仍停在原来所在的页面。
+  // 用 ref 跟踪当前页面，避免异步回调（如生成报告的延时）里用到过期的 tab 值
+  const activeTabRef = useRef<ActiveTab>(activeTab);
+  activeTabRef.current = activeTab;
+
+  const navigateTo = (tab: ActiveTab) => {
+    if (tab === activeTabRef.current) return;
+    activeTabRef.current = tab;
+    try {
+      window.history.pushState({ tab }, '', window.location.pathname + window.location.search);
+    } catch {
+      /* 个别内嵌环境不支持 history API，忽略即可 */
+    }
+    saveStoredTab(tab);
+    setActiveTab(tab);
+  };
+
+  useEffect(() => {
+    const onPopState = (e: PopStateEvent) => {
+      const tab = (e.state?.tab as ActiveTab) || 'form';
+      activeTabRef.current = tab;
+      saveStoredTab(tab);
+      setActiveTab(tab);
+    };
+    window.addEventListener('popstate', onPopState);
+    // 给"进站第一条历史记录"贴上当前页面：这样第一次后退落在站内页面，而不是直接离开站点
+    try {
+      window.history.replaceState(
+        { tab: activeTab },
+        '',
+        window.location.pathname + window.location.search
+      );
+    } catch {
+      /* 忽略 */
+    }
+    return () => window.removeEventListener('popstate', onPopState);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 开场视频门禁：同一浏览器会话（标签页）内只看一次，刷新不再重复打扰；
+  // 从 Google 登录 / 邮箱验证 / 找回密码链接回跳时直接放行，避免挡住登录结果
+  const [introDone, setIntroDone] = useState<boolean>(
+    () => hasSeenIntroVideo() || isAuthCallbackUrl()
+  );
+  const handleIntroFinish = () => {
+    markIntroVideoSeen();
+    setIntroDone(true);
+  };
 
   // User Authentication State
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  // 登录弹窗的初始模式：找回密码链接回跳时直接展示「设置新密码」
+  const [authInitialMode, setAuthInitialMode] = useState<AuthMode | undefined>(undefined);
   // 登录成功后的短暂过渡：右上角显示「✓ 登录成功」，随后切换为账号头像
   const [justSignedIn, setJustSignedIn] = useState(false);
   const justSignedTimerRef = useRef<number | null>(null);
@@ -138,10 +206,22 @@ export default function App() {
 
   // Subscribe to Supabase Google Auth state
   useEffect(() => {
-    const unsubscribe = subscribeToAuthChanges(async (user) => {
+    const unsubscribe = subscribeToAuthChanges(async (user, event) => {
       setCurrentUser(user);
       if (user) {
+        if (event === 'PASSWORD_RECOVERY') {
+          // 用户点开找回密码邮件链接回跳：先让他设置新密码，不要当成普通登录一闪而过
+          setAuthInitialMode('newpass');
+          setIsAuthModalOpen(true);
+          pushBanner({
+            kind: 'info',
+            text: '请为账号设置新密码，保存后即可用新密码登录。'
+          });
+          return;
+        }
         setIsAuthModalOpen(false);
+        // 邮箱验证链接 / Google 登录回跳等场景同样给出"已登录"的即时反馈
+        if (event === 'SIGNED_IN') flashSignedIn();
         pushBanner(
           { kind: 'info', text: `欢迎回来，${user.displayName || user.email}！正在载入您的专属云端档案...` }
         );
@@ -164,6 +244,26 @@ export default function App() {
       }
     });
     return () => unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 认证回跳落地处理：Google 登录 / 邮箱验证 / 找回密码链接跳回本站后的收尾
+  useEffect(() => {
+    const callbackError = readAuthCallbackError();
+    if (callbackError) {
+      const { code, description } = callbackError;
+      const text = /expired|otp_expired/i.test(code) || /expired/i.test(description)
+        ? '该链接已过期或已被使用过，请重新发起登录 / 找回密码。'
+        : /access_denied/i.test(code)
+          ? '该登录链接无效（可能已被使用过或已失效），请重新发起登录。'
+          : `登录链接异常：${description || code}`;
+      pushBanner({ kind: 'error', text });
+      // 清掉 URL 上的错误参数，避免刷新后又弹一次
+      clearAuthCallbackParams();
+    } else if (isAuthCallbackUrl()) {
+      // 回跳成功：标记为已看过开场视频，避免刷新 / 再次进入时被视频挡住登录结果
+      markIntroVideoSeen();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -320,6 +420,22 @@ export default function App() {
     await sendPasswordResetEmail(email.trim());
   };
 
+  // 找回密码回跳后的最后一步：保存新密码（没有这一步，重置邮件点了也没用）
+  const handleSetNewPassword = async (password: string) => {
+    try {
+      await updatePassword(password);
+      setIsAuthModalOpen(false);
+      setAuthInitialMode(undefined);
+      flashSignedIn();
+      pushBanner(
+        { kind: 'info', text: '新密码已保存！下次可直接用新密码登录。' },
+        4000
+      );
+    } catch (err: any) {
+      throw new Error(err?.message || '保存新密码失败，请重新发起找回密码。');
+    }
+  };
+
   // Logout Action
   const handleLogout = async () => {
     try {
@@ -372,7 +488,7 @@ export default function App() {
       // 5. Navigate to report view
       setActiveProjectId(submittedData.id);
       setActiveReportId(newReport.id);
-      setActiveTab('report');
+      navigateTo('report');
       setIsGenerating(false);
     }, 1100);
   };
@@ -402,7 +518,7 @@ export default function App() {
         if (related) setActiveReportId(related.id);
       }
     }
-    setActiveTab('projects');
+    navigateTo('projects');
   };
 
   // Update a project's metadata (e.g. collaborators managed from Projects page)
@@ -418,7 +534,7 @@ export default function App() {
 
   // Re-assess existing project
   const handleReAssess = () => {
-    setActiveTab('form');
+    navigateTo('form');
   };
 
   // Create new project
@@ -477,7 +593,7 @@ export default function App() {
     setProjects(updatedProjects);
     saveStoredProjects(updatedProjects);
     setActiveProjectId(newId);
-    setActiveTab('form');
+    navigateTo('form');
   };
 
   // Apply simulator values into form
@@ -491,7 +607,7 @@ export default function App() {
     const updatedList = projects.map((p) => (p.id === updated.id ? updated : p));
     setProjects(updatedList);
     saveStoredProjects(updatedList);
-    setActiveTab('form');
+    navigateTo('form');
   };
 
   // Auto-sync with Supabase Cloud Database on mount
@@ -553,7 +669,7 @@ export default function App() {
       {/* Top Navbar */}
       <Navbar
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={navigateTo}
         language={language}
         onLanguageChange={setLanguage}
         onOpenFeeModal={() => setIsFeeModalOpen(true)}
@@ -664,11 +780,14 @@ export default function App() {
             onNewProject={handleNewProject}
             onSelectProject={(id) => {
               setActiveProjectId(id);
-              setActiveTab('form');
+              navigateTo('form');
             }}
             onSelectReport={(reportId) => {
+              // ⚠️ 必须同时切换「当前项目」：否则看完 A 的报告再点「重新测算」会打开 B 的表单
+              const target = reports.find((r) => r.id === reportId);
+              if (target?.projectId) setActiveProjectId(target.projectId);
               setActiveReportId(reportId);
-              setActiveTab('report');
+              navigateTo('report');
             }}
             onDeleteProject={handleDeleteProject}
             onUpdateProject={handleUpdateProject}
@@ -742,7 +861,14 @@ export default function App() {
         onEmailLogin={handleEmailLogin}
         onEmailSignUp={handleEmailSignUp}
         onSendResetEmail={handleSendPasswordReset}
+        onSetNewPassword={handleSetNewPassword}
+        initialMode={authInitialMode}
       />
+
+      {/* 开场视频：看完或跳到片尾后才能使用网站 */}
+      {!introDone && (
+        <IntroVideoGate language={language} onFinish={handleIntroFinish} />
+      )}
 
       {/* 生成报告过场：让"算完了"有仪式感 */}
       {isGenerating && (

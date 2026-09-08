@@ -31,9 +31,13 @@ interface AuthModalProps {
   ) => Promise<boolean>;
   // 发送找回密码邮件
   onSendResetEmail: (email: string) => Promise<void>;
+  // 找回密码链接回跳后，用新会话设置新密码
+  onSetNewPassword?: (password: string) => Promise<void>;
+  // 打开时的初始模式（找回密码回跳时直接展示「设置新密码」）
+  initialMode?: AuthMode;
 }
 
-type AuthMode = 'signin' | 'signup' | 'forgot';
+export type AuthMode = 'signin' | 'signup' | 'forgot' | 'newpass';
 
 // 常见 Supabase Auth 错误 → 用户能看懂的中文提示
 function translateAuthError(message: string): string {
@@ -60,9 +64,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   onGoogleLogin,
   onEmailLogin,
   onEmailSignUp,
-  onSendResetEmail
+  onSendResetEmail,
+  onSetNewPassword,
+  initialMode
 }) => {
-  const [mode, setMode] = useState<AuthMode>('signin');
+  const [mode, setMode] = useState<AuthMode>(initialMode || 'signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -73,7 +79,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   // 每次打开弹窗时重置表单状态
   useEffect(() => {
     if (isOpen) {
-      setMode('signin');
+      setMode(initialMode || 'signin');
       setEmail('');
       setPassword('');
       setDisplayName('');
@@ -100,11 +106,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     const trimmedEmail = email.trim();
     const trimmedName = displayName.trim();
 
-    if (!trimmedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
-      setErrMsg(zh ? '请输入有效的邮箱地址。' : 'Please enter a valid email address.');
-      return;
+    if (mode !== 'newpass') {
+      if (!trimmedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+        setErrMsg(zh ? '请输入有效的邮箱地址。' : 'Please enter a valid email address.');
+        return;
+      }
     }
-    if (mode === 'signup' && password.length < 6) {
+    if ((mode === 'signup' || mode === 'newpass') && password.length < 6) {
       setErrMsg(zh ? '密码长度至少需要 6 位。' : 'Password must be at least 6 characters.');
       return;
     }
@@ -115,6 +123,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
     setLoading(true);
     try {
+      if (mode === 'newpass') {
+        // 找回密码回跳后的最后一步：保存新密码（由调用方提示并关闭弹窗）
+        if (!onSetNewPassword) throw new Error('当前不支持设置新密码，请重新发起找回密码。');
+        await onSetNewPassword(password);
+        return;
+      }
       if (mode === 'signin') {
         await onEmailLogin(trimmedEmail, password);
         // 登录成功 → 调用方已接管，直接关闭弹窗
@@ -170,7 +184,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 text-white flex items-center justify-center shadow-md shadow-indigo-600/20 shrink-0">
             {mode === 'signup' ? (
               <UserPlus className="w-5 h-5" />
-            ) : mode === 'forgot' ? (
+            ) : mode === 'forgot' || mode === 'newpass' ? (
               <KeyRound className="w-5 h-5" />
             ) : (
               <LogIn className="w-5 h-5" />
@@ -186,20 +200,28 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   ? zh
                     ? '找回密码'
                     : 'Reset password'
-                  : zh
-                    ? '登录账号'
-                    : 'Sign in'}
+                  : mode === 'newpass'
+                    ? zh
+                      ? '设置新密码'
+                      : 'Set new password'
+                    : zh
+                      ? '登录账号'
+                      : 'Sign in'}
             </h2>
             <p className="text-[11px] text-slate-500 font-medium leading-snug">
-              {zh
-                ? '支持 Google 或邮箱密码登录，档案自动云端备份'
-                : 'Google or email login with cloud backup'}
+              {mode === 'newpass'
+                ? zh
+                  ? '您正在通过邮件链接重置密码，输入新密码后即可用新密码登录'
+                  : 'Set a new password — you can sign in with it right after saving'
+                : zh
+                  ? '支持 Google 或邮箱密码登录，档案自动云端备份'
+                  : 'Google or email login with cloud backup'}
             </p>
           </div>
         </div>
 
         {/* 模式切换标签（仅 登录 / 注册，忘记密码在登录页底部进入） */}
-        {mode !== 'forgot' && (
+        {mode !== 'forgot' && mode !== 'newpass' && (
           <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-slate-100 mb-4">
             {(['signin', 'signup'] as const).map((m) => (
               <button
@@ -246,7 +268,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         )}
 
         {/* Google 一键登录（登录 / 注册模式都展示） */}
-        {mode !== 'forgot' && (
+        {mode !== 'forgot' && mode !== 'newpass' && (
           <>
             <button
               type="button"
@@ -301,6 +323,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </div>
           )}
 
+          {mode !== 'newpass' && (
           <div className="relative">
             <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
@@ -316,6 +339,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-sm transition-all disabled:bg-slate-50"
             />
           </div>
+          )}
 
           {mode !== 'forgot' && (
             <div className="relative">
@@ -328,8 +352,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   setErrMsg(null);
                 }}
                 disabled={submitting}
-                placeholder={mode === 'signup' ? (zh ? '设置密码（至少 6 位）' : 'Password (min 6 characters)') : zh ? '密码' : 'Password'}
-                autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+                placeholder={
+                  mode === 'newpass'
+                    ? zh
+                      ? '新密码（至少 6 位）'
+                      : 'New password (min 6 characters)'
+                    : mode === 'signup'
+                      ? zh
+                        ? '设置密码（至少 6 位）'
+                        : 'Password (min 6 characters)'
+                      : zh
+                        ? '密码'
+                        : 'Password'
+                }
+                autoComplete={mode === 'signup' || mode === 'newpass' ? 'new-password' : 'current-password'}
                 className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-sm transition-all disabled:bg-slate-50"
               />
             </div>
@@ -362,9 +398,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 ? zh
                   ? '注册并登录'
                   : 'Sign up'
-                : zh
-                  ? '发送重置邮件'
-                  : 'Send reset email'}
+                : mode === 'newpass'
+                  ? zh
+                    ? '保存新密码'
+                    : 'Save new password'
+                  : zh
+                    ? '发送重置邮件'
+                    : 'Send reset email'}
           </button>
         </form>
 

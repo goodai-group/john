@@ -72,22 +72,22 @@ function toAppUser(u: User | undefined | null): AppUser | null {
 // ========================
 
 export const subscribeToAuthChanges = (
-  callback: (user: AppUser | null) => void
+  callback: (user: AppUser | null, event?: string) => void
 ): (() => void) => {
   if (!supabase) {
-    callback(null);
+    callback(null, 'INITIAL_SESSION');
     return () => {};
   }
-  const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+  const { data } = supabase.auth.onAuthStateChange((event, session) => {
     const appUser = toAppUser(session?.user);
     cachedSupabaseUser = appUser;
-    callback(appUser);
+    callback(appUser, event);
   });
   // 初始化时先主动拉取一次会话，保证刷新页面后登录状态恢复
   supabase.auth.getSession().then(({ data: sessionData }) => {
     const appUser = toAppUser(sessionData.session?.user);
     cachedSupabaseUser = appUser;
-    callback(appUser);
+    callback(appUser, 'INITIAL_SESSION');
   });
   return () => {
     data.subscription.unsubscribe();
@@ -254,6 +254,55 @@ export const sendPasswordResetEmail = async (email: string): Promise<void> => {
   });
   if (error) throw error;
 };
+
+/**
+ * 找回密码流程的最后一步：用户点开邮件链接回跳本站后，用新会话设置新密码。
+ * 没有这一步，重置邮件形同虚设（点开链接后无处可改密码）。
+ */
+export const updatePassword = async (newPassword: string): Promise<void> => {
+  if (!supabase) {
+    throw new Error('Supabase Auth is not configured. 请在项目根目录 .env 配置 Supabase 后重试。');
+  }
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) throw error;
+};
+
+/**
+ * 读取认证回跳 URL 上的错误信息（Supabase 在链接失效 / 被拒时会带上这些参数）。
+ * 未做这层解析时，用户点开过期链接只会看到一个"什么都没发生"的普通首页。
+ */
+export function readAuthCallbackError(): { code: string; description: string } | null {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    const code =
+      params.get('error_code') ||
+      hashParams.get('error_code') ||
+      params.get('error') ||
+      hashParams.get('error') ||
+      '';
+    const description =
+      params.get('error_description') ||
+      hashParams.get('error_description') ||
+      params.get('error') ||
+      hashParams.get('error') ||
+      '';
+    if (!code && !description) return null;
+    return { code: code || 'unknown', description: description.replace(/\+/g, ' ') };
+  } catch {
+    return null;
+  }
+}
+
+/** 清理回跳 URL 上残留的错误参数，避免刷新后又弹一次同样的提示 */
+export function clearAuthCallbackParams(): void {
+  try {
+    if (!window.location.search && !window.location.hash) return;
+    window.history.replaceState({}, window.document.title, window.location.pathname);
+  } catch {
+    /* 忽略 */
+  }
+}
 
 export const getCurrentAuthUser = (): AppUser | null => {
   return cachedSupabaseUser;
