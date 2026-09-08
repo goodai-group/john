@@ -102,9 +102,13 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
               PROJECTS & CLOUD HUB
             </span>
           </div>
-          <h2 className="text-xl font-black text-neutral-900 tracking-tight">我的申报项目与历史评估</h2>
+          <h2 className="text-xl font-black text-neutral-900 tracking-tight">
+            {language === 'en' ? 'My Projects & Assessments' : '我的申报项目与历史评估'}
+          </h2>
           <p className="text-xs text-neutral-500 font-medium mt-0.5">
-            数据已接入云端数据库；登录账号（支持 Google 或邮箱密码）后可跨设备随时找回所有历史评估与多版本报告。
+            {language === 'en'
+              ? 'Data backed up locally and on cloud database. Sign in to access your assessments across devices.'
+              : '数据已接入云端数据库；登录账号（支持 Google 或邮箱密码）后可跨设备随时找回所有历史评估与多版本报告。'}
           </p>
         </div>
 
@@ -114,7 +118,7 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
             className="flex items-center space-x-1.5 px-4 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-2xl text-xs font-bold shadow-md shadow-neutral-900/10 border-2 border-neutral-800 transition-all cursor-pointer hover:scale-102"
           >
             <Plus className="w-4 h-4 text-emerald-400" />
-            <span>新建商业自测项目</span>
+            <span>{language === 'en' ? 'New Assessment' : '新建商业自测项目'}</span>
           </button>
         </div>
       </div>
@@ -195,13 +199,13 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {projects.map((proj) => {
+          {projects.map((proj, idx) => {
             const projectReports = reports.filter((r) => r.projectId === proj.id);
             const latestReport = projectReports[0];
 
             return (
               <div
-                key={proj.id}
+                key={`${proj.id}-${idx}`}
                 className="bg-white rounded-3xl p-6 border-2 border-neutral-200 shadow-xs hover:border-neutral-300 transition-all flex flex-col justify-between space-y-4"
               >
                 <div>
