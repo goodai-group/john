@@ -176,7 +176,7 @@ export const signInWithGoogle = async (): Promise<AppUser | null> => {
       }
       return appUser;
     }
-    await sleep(600);
+    await sleep(300);
   }
 
   // 超时 / 取消：关掉弹窗，返回 null（本次未登录成功）
