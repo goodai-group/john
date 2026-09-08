@@ -136,6 +136,9 @@ export const AssessmentForm: React.FC<FormProps> = ({
   const [currentStep, setCurrentStep] = useState(1);
   const [isSimulatingOcr, setIsSimulatingOcr] = useState(false);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [valueWarnings, setValueWarnings] = useState<Record<string, string>>({});
   // 折叠区：STEP 1 高级设置（币种/行业/汇率/安全模式）、STEP 2 更多设置（资金证明/经营时长/员工）
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showMore, setShowMore] = useState(false);
@@ -450,6 +453,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
 
   const handleProjectNameChange = (value: string) => {
     updateField('projectName', value);
+    if (value.trim()) setNameError(null);
     if (inferTimer.current) clearTimeout(inferTimer.current);
     const name = value.trim();
     if (name.length < 2) {
@@ -520,8 +524,21 @@ export const AssessmentForm: React.FC<FormProps> = ({
     currency?: CurrencyCode
   ) => {
     if (fieldKey === 'monthlyRevenue') setRevenueTouched(true);
+
+    let warning = '';
+    if (amount < 0) {
+      warning = language === 'en' ? 'Amount cannot be negative' : '金额不可为负';
+    } else if (amount > 1e9) {
+      warning = language === 'en' ? 'Value exceeds maximum limit (1,000,000,000)' : '数值超出 10 亿上限，请检查单位';
+    }
+
+    setValueWarnings((prev) => ({
+      ...prev,
+      [fieldKey]: warning
+    }));
+
     setFormData((prev) => {
-      const sanitized = Math.max(0, isNaN(amount) ? 0 : amount);
+      const sanitized = Math.min(1e9, Math.max(0, isNaN(amount) ? 0 : amount));
       const patch: Record<string, unknown> = {
         [fieldKey]: {
           amount: sanitized,
@@ -595,6 +612,21 @@ export const AssessmentForm: React.FC<FormProps> = ({
   };
 
   const handleFinalSubmit = () => {
+    const hasRevenue = (formData.monthlyRevenue.amount || 0) > 0 || (formData.monthlyRealOperatingRevenue.amount || 0) > 0;
+    const hasCogs = (formData.cogsCost.amount || 0) > 0 || (formData.dynamicCogsItems || []).some((i) => i.value > 0);
+    const hasOpex = (formData.rentCost.amount || 0) > 0 || (formData.laborCost.amount || 0) > 0 || (formData.dynamicOpexItems || []).some((i) => i.value > 0);
+    const hasCash = (formData.cashAndLiquidAssets.amount || 0) > 0;
+
+    if (!hasRevenue && !hasCogs && !hasOpex && !hasCash) {
+      setSubmitError(
+        language === 'en'
+          ? 'Please enter at least monthly revenue, expenses, or liquid cash before generating the report.'
+          : '请至少填写经营月均总流水、任意开支或现金备用金，以便系统生成有效体检诊断。'
+      );
+      return;
+    }
+    setSubmitError(null);
+
     const finalized: BusinessFormData = {
       ...formData,
       isSubmitted: true,
@@ -684,15 +716,22 @@ export const AssessmentForm: React.FC<FormProps> = ({
             {/* 唯一主输入：项目名称 */}
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                项目 / 店铺名称 <span className="text-rose-500">*</span>
+                {language === 'en' ? 'Project / Business Name' : '项目 / 店铺名称'} <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
-                placeholder="例如：阳光工坊社区烘焙店"
+                placeholder={language === 'en' ? 'e.g. Sunshine Bakery Cafe' : '例如：阳光工坊社区烘焙店'}
                 value={formData.projectName}
                 onChange={(e) => handleProjectNameChange(e.target.value)}
-                className="w-full p-4 border-2 border-indigo-200 focus:border-indigo-600 rounded-2xl text-base font-bold text-slate-900 shadow-2xs focus:ring-1 focus:ring-indigo-500"
+                className={`w-full p-4 border-2 rounded-2xl text-base font-bold text-slate-900 shadow-2xs focus:ring-1 focus:ring-indigo-500 ${
+                  nameError ? 'border-rose-400 focus:border-rose-600' : 'border-indigo-200 focus:border-indigo-600'
+                }`}
               />
+              {nameError && (
+                <p className="text-xs text-rose-600 font-bold mt-1.5 animate-in fade-in">
+                  ⚠️ {nameError}
+                </p>
+              )}
               <div className="mt-2 text-[11px] space-y-1">
                 {inferState === 'loading' && (
                   <span className="text-indigo-500 font-semibold animate-pulse">AI 正在推算行业、币种与成本结构…</span>
@@ -925,12 +964,23 @@ export const AssessmentForm: React.FC<FormProps> = ({
             </div>
           </div>
 
-          <div className="flex justify-end">
+          <div className="flex justify-end flex-col items-end gap-2">
             <button
-              onClick={() => setCurrentStep(2)}
+              onClick={() => {
+                if (!formData.projectName.trim()) {
+                  setNameError(
+                    language === 'en'
+                      ? 'Please enter project / business name'
+                      : '请输入项目/店铺名称'
+                  );
+                  return;
+                }
+                setNameError(null);
+                setCurrentStep(2);
+              }}
               className="flex items-center gap-1.5 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/20 transition-all cursor-pointer"
             >
-              <span>下一步：赚多少、花多少</span>
+              <span>{language === 'en' ? 'Next: Revenue & Expenses' : '下一步：赚多少、花多少'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -1695,20 +1745,27 @@ export const AssessmentForm: React.FC<FormProps> = ({
             </div>
           </div>
 
+          {submitError && (
+            <div className="p-3.5 rounded-2xl bg-rose-50 border-2 border-rose-300 text-rose-900 text-xs font-bold flex items-center gap-2 animate-in fade-in">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>{submitError}</span>
+            </div>
+          )}
+
           <div className="flex justify-between">
             <button
               onClick={() => setCurrentStep(1)}
               className="flex items-center gap-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold cursor-pointer"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              <span>上一步</span>
+              <span>{language === 'en' ? 'Back' : '上一步'}</span>
             </button>
             <button
               onClick={handleFinalSubmit}
               className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-neutral-950 rounded-xl text-sm font-black shadow-lg shadow-amber-500/30 transition-all cursor-pointer"
             >
               <Sparkles className="w-4 h-4" />
-              <span>出报告 · 生成财务测算与评估报告</span>
+              <span>{language === 'en' ? 'Generate Health Report' : '出报告 · 生成财务测算与评估报告'}</span>
             </button>
           </div>
         </div>

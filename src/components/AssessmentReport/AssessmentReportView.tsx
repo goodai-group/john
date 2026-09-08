@@ -121,8 +121,9 @@ export const AssessmentReportView: React.FC<ReportViewProps> = ({
 
   // Copy plain language executive summary
   const handleCopySummary = () => {
+    const reportGrade = report.tier || (report as any).letterGrade || 'A';
     const summaryText = `【${report.projectName} · 商宣商业模式检验报告 v${report.version}】
-综合健康得分：${report.totalScore}分 (${report.tier})
+综合健康得分：${report.totalScore}分 (${reportGrade})
 红线合规：${report.gatePassed ? '全部通过 (4/4)' : `未通过 (${(report.failedGates || report.gates.filter((g) => g.status !== 'PASS')).length} 项触发警示)`}
 
 核心经营与服事数据概览：

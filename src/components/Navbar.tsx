@@ -45,6 +45,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onLanguageChange,
   onOpenFeeModal,
   onOpenAppGuide,
+  onOpenAccessibility,
   onOpenAiHelper,
   largeFont,
   currentUser,
@@ -131,7 +132,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 }`}
               >
                 <MoreHorizontal className="w-3.5 h-3.5" />
-                <span>更多</span>
+                <span>{language === 'zh' ? '更多' : 'More'}</span>
               </button>
               {isMoreMenuOpen && (
                 <div className="absolute left-0 mt-1.5 w-44 rounded-2xl bg-white border border-neutral-200 shadow-xl p-1.5 z-50 animate-in fade-in">
@@ -181,6 +182,17 @@ export const Navbar: React.FC<NavbarProps> = ({
               <MessageCircle className="w-3.5 h-3.5" />
               <span>{language === 'zh' ? 'AI 答疑' : 'Ask AI'}</span>
             </button>
+
+            {/* 无障碍辅助按钮 (D-04) */}
+            {onOpenAccessibility && (
+              <button
+                onClick={onOpenAccessibility}
+                className="p-2 rounded-lg hover:bg-neutral-100 text-neutral-500 transition-colors cursor-pointer"
+                title={language === 'zh' ? '无障碍 / 大字模式' : 'Accessibility / Large Font'}
+              >
+                <Globe className="w-4 h-4 text-indigo-600" />
+              </button>
+            )}
 
             {onOpenAppGuide && (
               <button
@@ -247,7 +259,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-neutral-100 text-neutral-700 text-xs font-semibold"
                     >
                       <FolderKanban className="w-4 h-4 text-indigo-600" />
-                      <span>查看我的所有项目</span>
+                      <span>{language === 'zh' ? '查看我的所有项目' : 'View all my projects'}</span>
                     </button>
                     <button
                       onClick={() => {
@@ -257,7 +269,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-rose-50 text-rose-700 text-xs font-semibold mt-1"
                     >
                       <LogOut className="w-4 h-4" />
-                      <span>退出登录</span>
+                      <span>{language === 'zh' ? '退出登录' : 'Sign out'}</span>
                     </button>
                   </div>
                 )}
