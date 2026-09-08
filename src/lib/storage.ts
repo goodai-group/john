@@ -377,22 +377,82 @@ export function getProjectReports(projectId: string): AssessmentReport[] {
   return all.filter((r) => r.projectId === projectId).sort((a, b) => b.version - a.version);
 }
 
-export function getActiveDraft(): BusinessFormData | null {
+// 草稿按项目 id 分组保存：切换项目再切回时，各自的未提交内容都能恢复
+const DRAFT_MAX_ENTRIES = 12;
+const STORAGE_KEY_TAB = 'bam_active_tab_v1';
+
+type DraftMap = Record<string, BusinessFormData>;
+
+function readDraftMap(): DraftMap {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_DRAFT);
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return {};
+    // 兼容旧版本：单条草稿对象（含 id 字段）
+    if (typeof (parsed as any).id === 'string') {
+      return { [(parsed as any).id]: parsed as BusinessFormData };
+    }
+    return parsed as DraftMap;
   } catch {
-    return null;
+    return {};
   }
 }
 
-export function saveActiveDraft(draft: BusinessFormData): void {
-  localStorage.setItem(STORAGE_KEY_DRAFT, JSON.stringify(draft));
+function writeDraftMap(map: DraftMap): void {
+  try {
+    localStorage.setItem(STORAGE_KEY_DRAFT, JSON.stringify(map));
+  } catch (e) {
+    console.warn('Failed to persist draft:', e);
+  }
 }
 
-export function clearActiveDraft(): void {
-  localStorage.removeItem(STORAGE_KEY_DRAFT);
+export function getActiveDraft(id?: string): BusinessFormData | null {
+  const map = readDraftMap();
+  if (id) return map[id] || null;
+  const keys = Object.keys(map);
+  return keys.length > 0 ? map[keys[keys.length - 1]] : null;
 }
+
+export function saveActiveDraft(draft: BusinessFormData): void {
+  if (!draft?.id) return;
+  const map = readDraftMap();
+  map[draft.id] = draft;
+  // 只保留最近若干条，避免 localStorage 无限膨胀
+  const keys = Object.keys(map);
+  if (keys.length > DRAFT_MAX_ENTRIES) {
+    keys.slice(0, keys.length - DRAFT_MAX_ENTRIES).forEach((k) => delete map[k]);
+  }
+  writeDraftMap(map);
+}
+
+export function clearActiveDraft(id?: string): void {
+  if (!id) {
+    localStorage.removeItem(STORAGE_KEY_DRAFT);
+    return;
+  }
+  const map = readDraftMap();
+  if (!(id in map)) return;
+  delete map[id];
+  writeDraftMap(map);
+}
+
+// 当前所在页面（tab）：刷新后仍能停在原页面，不再被强制拉回首页
+export const loadStoredTab = (): string | null => {
+  try {
+    return localStorage.getItem(STORAGE_KEY_TAB);
+  } catch {
+    return null;
+  }
+};
+
+export const saveStoredTab = (tab: string): void => {
+  try {
+    localStorage.setItem(STORAGE_KEY_TAB, tab);
+  } catch {
+    /* 隐私模式下忽略 */
+  }
+};
 
 export function getEscalatedQuestions(): EscalatedQuestion[] {
   try {

@@ -34,7 +34,7 @@ import {
 } from '../../types';
 import { SUPPORTED_CURRENCIES, formatMoney, CUSTOM_CURRENCY_VALUE } from '../../lib/currencies';
 import { INDUSTRY_BENCHMARKS } from '../../lib/industryBenchmarks';
-import { saveActiveDraft, clearActiveDraft } from '../../lib/storage';
+import { saveActiveDraft, clearActiveDraft, getActiveDraft } from '../../lib/storage';
 import {
   inferBusinessStructureLocally,
   normalizeIndustryKey,
@@ -126,11 +126,20 @@ export const AssessmentForm: React.FC<FormProps> = ({
   onOpenAiHelper,
   largeFont
 }) => {
-  const [formData, setFormData] = useState<BusinessFormData>(() => ({
-    ...DEFAULT_FORM_DATA,
-    ...initialData,
-    id: initialData?.id || `proj-${Date.now()}`
-  }));
+  // 初始化时优先恢复本机未提交的草稿：
+  // 切换导航 / 从外部链接回跳后组件会重新挂载，只取同一项目 id 的草稿，避免串项目
+  const [formData, setFormData] = useState<BusinessFormData>(() => {
+    const id = initialData?.id || `proj-${Date.now()}`;
+    const base: BusinessFormData = {
+      ...DEFAULT_FORM_DATA,
+      ...initialData,
+      id
+    };
+    const draft = getActiveDraft(id);
+    return draft ? { ...base, ...draft, id } : base;
+  });
+  // 本次挂载是否恢复了草稿（用于提示"已恢复未提交的填写"）
+  const restoredDraftRef = React.useRef(Boolean(initialData?.id && getActiveDraft(initialData.id)));
 
   // 两步流程：STEP 1 生意叫什么 → STEP 2 你的数字 → 出报告
   const [currentStep, setCurrentStep] = useState(1);
@@ -161,7 +170,13 @@ export const AssessmentForm: React.FC<FormProps> = ({
   // Auto-save local draft on any change
   useEffect(() => {
     saveActiveDraft(formData);
-    setSaveStatus('草稿已自动暂存至本地');
+    if (restoredDraftRef.current) {
+      // 本次挂载恢复了草稿：先告诉用户内容还在，避免"我填的怎么还在/怎么变了"的困惑
+      restoredDraftRef.current = false;
+      setSaveStatus('已恢复上次未提交的填写');
+    } else {
+      setSaveStatus('草稿已自动暂存至本地');
+    }
     const timer = setTimeout(() => setSaveStatus(null), 2500);
     return () => clearTimeout(timer);
   }, [formData]);
@@ -601,7 +616,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
       isDraft: false,
       submittedAt: new Date().toISOString()
     };
-    clearActiveDraft();
+    clearActiveDraft(finalized.id);
     onSubmit(finalized);
   };
 
@@ -1190,18 +1205,18 @@ export const AssessmentForm: React.FC<FormProps> = ({
                             type="text"
                             value={it.label}
                             onChange={(e) => updateDynamicCogsItem(it.id, { label: e.target.value })}
-                            className="flex-1 p-1.5 border border-rose-200 rounded-lg font-semibold text-slate-800"
+                            className="flex-1 min-w-0 p-1.5 border border-rose-200 rounded-lg font-semibold text-slate-800"
                           />
                           <input
                             type="number"
                             value={it.value || ''}
                             onChange={(e) => updateDynamicCogsItem(it.id, { value: Number(e.target.value) })}
-                            className="w-24 p-1.5 border border-rose-200 rounded-lg font-mono font-semibold"
+                            className="w-24 shrink-0 p-1.5 border border-rose-200 rounded-lg font-mono font-semibold text-right"
                             placeholder={it.suggestedAmount ? `AI建议 ${it.suggestedAmount}` : '金额'}
                             title={it.suggestedAmount ? `AI 建议参考金额：${it.suggestedAmount}（仅供参考，请填你的真实数字）` : '请填你的真实月度金额'}
                           />
-                          <span className="text-[10px] text-rose-700 w-12">{formData.baseCurrency}/月</span>
-                          <button type="button" onClick={() => removeDynamicCogsItem(it.id)} className="p-1 text-rose-500 hover:text-rose-700 cursor-pointer">
+                          <span className="text-[10px] text-rose-700 whitespace-nowrap shrink-0 pl-0.5">{formData.baseCurrency}/月</span>
+                          <button type="button" onClick={() => removeDynamicCogsItem(it.id)} className="p-1 text-rose-500 hover:text-rose-700 cursor-pointer shrink-0">
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
@@ -1331,19 +1346,19 @@ export const AssessmentForm: React.FC<FormProps> = ({
                           type="text"
                           value={it.label}
                           onChange={(e) => updateDynamicOpexItem(it.id, { label: e.target.value })}
-                          className="flex-1 p-1.5 border border-indigo-200 rounded-lg font-semibold text-slate-800"
+                          className="flex-1 min-w-0 p-1.5 border border-indigo-200 rounded-lg font-semibold text-slate-800"
                         />
                         <input
                           type="number"
                           min="0"
                           value={it.value || ''}
                           onChange={(e) => updateDynamicOpexItem(it.id, { value: Math.max(0, isNaN(Number(e.target.value)) ? 0 : Number(e.target.value)) })}
-                          className="w-24 p-1.5 border border-indigo-200 rounded-lg font-mono font-semibold"
+                          className="w-24 shrink-0 p-1.5 border border-indigo-200 rounded-lg font-mono font-semibold text-right"
                           placeholder={it.suggestedAmount ? `AI建议 ${it.suggestedAmount}` : '金额'}
                           title={it.suggestedAmount ? `AI 建议参考金额：${it.suggestedAmount}（仅供参考，请填你的真实数字）` : '请填你的真实月度金额'}
                         />
-                        <span className="text-[10px] text-indigo-700 w-12">{formData.baseCurrency}/月</span>
-                        <button type="button" onClick={() => removeDynamicOpexItem(it.id)} className="p-1 text-indigo-500 hover:text-indigo-700 cursor-pointer">
+                        <span className="text-[10px] text-indigo-700 whitespace-nowrap shrink-0 pl-0.5">{formData.baseCurrency}/月</span>
+                        <button type="button" onClick={() => removeDynamicOpexItem(it.id)} className="p-1 text-indigo-500 hover:text-indigo-700 cursor-pointer shrink-0">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>

@@ -38,7 +38,7 @@ export const FeeTransparencyModal: React.FC<FeeModalProps> = ({ isOpen, onClose,
         <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-5">
           <div className="flex items-center gap-2 text-emerald-800 font-semibold text-sm mb-1">
             <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>100% 永久免费使用承诺（零隐形收费 · 无强制捆绑）</span>
+            <span>零隐形收费 · 无强制捆绑</span>
           </div>
           <p className="text-xs text-emerald-700 leading-relaxed">
             为了支持海外小微经营者自主开展商业模式自测与自我提升，本平台的核心功能全部开放免费使用，无任何后续追溯收费。
