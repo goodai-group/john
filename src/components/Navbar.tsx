@@ -73,16 +73,13 @@ export const Navbar: React.FC<NavbarProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // 主导航只保留核心主线：填数据 → 看报告 → 管项目
-  const primaryNav: { id: ActiveTab; label: string; icon: any }[] = [
+  // 全部 5 大核心功能标签直接平铺展示在主导航栏
+  const navItems: { id: ActiveTab; label: string; icon: any }[] = [
     { id: 'form', label: language === 'zh' ? '快速体检' : 'Assessment', icon: FileText },
     { id: 'report', label: language === 'zh' ? '体检报告' : 'Report', icon: Sparkles },
-    { id: 'projects', label: language === 'zh' ? '我的项目' : 'Projects', icon: FolderKanban }
-  ];
-  // 次级功能降级为「更多」菜单，避免主界面入口过杂
-  const secondaryNav: { id: ActiveTab; label: string; icon: any }[] = [
     { id: 'simulator', label: language === 'zh' ? '沙盒试算' : 'Simulator', icon: Calculator },
-    { id: 'standards', label: language === 'zh' ? '评分规则' : 'Rules', icon: BookOpen }
+    { id: 'standards', label: language === 'zh' ? '评分规则' : 'Rules', icon: BookOpen },
+    { id: 'projects', label: language === 'zh' ? '我的项目' : 'Projects', icon: FolderKanban }
   ];
 
   return (
@@ -104,7 +101,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Desktop Nav Tabs */}
           <nav className="hidden md:flex items-center gap-0.5">
-            {primaryNav.map((item) => {
+            {navItems.map((item) => {
               const isActive = activeTab === item.id;
               return (
                 <button
@@ -120,45 +117,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </button>
               );
             })}
-
-            {/* 更多：次级功能收纳入口 */}
-            <div className="relative" ref={moreMenuRef}>
-              <button
-                onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
-                className={`px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1 ${
-                  secondaryNav.some((s) => s.id === activeTab)
-                    ? 'text-indigo-700 bg-indigo-50 font-bold'
-                    : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
-                }`}
-              >
-                <MoreHorizontal className="w-3.5 h-3.5" />
-                <span>{language === 'zh' ? '更多' : 'More'}</span>
-              </button>
-              {isMoreMenuOpen && (
-                <div className="absolute left-0 mt-1.5 w-44 rounded-2xl bg-white border border-neutral-200 shadow-xl p-1.5 z-50 animate-in fade-in">
-                  {secondaryNav.map((item) => {
-                    const isActive = activeTab === item.id;
-                    return (
-                      <button
-                        key={item.id}
-                        onClick={() => {
-                          onTabChange(item.id);
-                          setIsMoreMenuOpen(false);
-                        }}
-                        className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
-                          isActive
-                            ? 'bg-indigo-50 text-indigo-700'
-                            : 'text-neutral-700 hover:bg-neutral-100'
-                        }`}
-                      >
-                        <item.icon className="w-3.5 h-3.5 text-indigo-500" />
-                        {item.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
           </nav>
 
           {/* Right Area */}
@@ -295,60 +253,22 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Mobile Tab Row */}
         <div className="md:hidden flex overflow-x-auto pt-2 gap-1 scrollbar-none">
-          {primaryNav.map((item) => {
-          const isActive = activeTab === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => onTabChange(item.id)}
-              className={`px-3 py-2 rounded-lg text-xs whitespace-nowrap font-medium transition-all min-h-[32px] ${
-                isActive
-                  ? 'bg-indigo-600 text-white font-bold'
-                  : 'bg-neutral-100 text-neutral-600'
-              }`}
-            >
-              {item.label}
-            </button>
-          );
+          {navItems.map((item) => {
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => onTabChange(item.id)}
+                className={`px-3 py-2 rounded-lg text-xs whitespace-nowrap font-medium transition-all min-h-[32px] ${
+                  isActive
+                    ? 'bg-indigo-600 text-white font-bold'
+                    : 'bg-neutral-100 text-neutral-600'
+                }`}
+              >
+                {item.label}
+              </button>
+            );
           })}
-          {/* 更多：移动端次级功能收纳入口 */}
-          <div className="relative" ref={moreMenuRef}>
-            <button
-              onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
-              className={`px-3 py-2 rounded-lg text-xs whitespace-nowrap font-bold min-h-[32px] flex items-center gap-1 ${
-                secondaryNav.some((s) => s.id === activeTab)
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-neutral-100 text-neutral-600'
-              }`}
-            >
-              <MoreHorizontal className="w-3.5 h-3.5" />
-              更多
-            </button>
-            {isMoreMenuOpen && (
-              <div className="absolute left-0 mt-1.5 w-44 rounded-2xl bg-white border border-neutral-200 shadow-xl p-1.5 z-50 animate-in fade-in">
-                {secondaryNav.map((item) => {
-                  const isActive = activeTab === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => {
-                        onTabChange(item.id);
-                        setIsMoreMenuOpen(false);
-                      }}
-                      className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
-                        isActive
-                          ? 'bg-indigo-50 text-indigo-700'
-                          : 'text-neutral-700 hover:bg-neutral-100'
-                      }`}
-                    >
-                      <item.icon className="w-3.5 h-3.5 text-indigo-500" />
-                      {item.label}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
           {/* AI 答疑移动端入口 */}
           <button
             onClick={() => onOpenAiHelper()}
@@ -359,7 +279,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               AI 答疑
             </span>
           </button>
-          </div>
+        </div>
       </div>
     </header>
   );
