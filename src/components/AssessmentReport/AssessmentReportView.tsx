@@ -122,7 +122,7 @@ export const AssessmentReportView: React.FC<ReportViewProps> = ({
   // Copy plain language executive summary
   const handleCopySummary = () => {
     const summaryText = `【${report.projectName} · 商宣商业模式检验报告 v${report.version}】
-综合健康得分：${report.totalScore}分 (${report.letterGrade})
+综合健康得分：${report.totalScore}分 (${report.tier})
 红线合规：${report.gatePassed ? '全部通过 (4/4)' : `未通过 (${(report.failedGates || report.gates.filter((g) => g.status !== 'PASS')).length} 项触发警示)`}
 
 核心经营与服事数据概览：
@@ -484,7 +484,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                   </div>
                 </div>
                 <div className="w-12 h-12 rounded-xl bg-neutral-900 text-white flex items-center justify-center font-mono font-black text-xl shadow-xs">
-                  {report.letterGrade}
+                  {report.tier}
                 </div>
                 {/* 大白话档位：让不懂财务的人一眼看懂安全与否 */}
                 <div className={`flex-1 px-3 py-2 rounded-xl border-2 ${health.badgeColor}`}>
@@ -908,24 +908,24 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
 
               {/* Status Pills */}
               <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-neutral-100">
-                {report.isDataMinimizationMode && (
+                {report.dataMinimizationNotice && (
                   <span className="text-xs bg-amber-50 text-amber-800 font-semibold px-3 py-1 rounded-xl border border-amber-200 flex items-center space-x-1.5">
                     <ShieldCheck className="w-3.5 h-3.5 text-amber-600 shrink-0" />
                     <span>敏感安全脱敏模式</span>
                   </span>
                 )}
 
-                {report.isCustomExchangeRate && (
+                {report.customRateNotice && (
                   <span className="text-xs bg-indigo-50 text-indigo-800 font-semibold px-3 py-1 rounded-xl border border-indigo-200 flex items-center space-x-1.5">
                     <DollarSign className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                    <span>自报平行汇率折算 (1 {report.baseCurrency} = {report.customRateValue})</span>
+                    <span>{report.customRateNotice}</span>
                   </span>
                 )}
 
-                {report.hasEstimatedMonths && (
+                {report.estimatedMonthsCount > 0 && (
                   <span className="text-xs bg-cyan-50 text-cyan-800 font-semibold px-3 py-1 rounded-xl border border-cyan-200 flex items-center space-x-1.5">
                     <Sparkles className="w-3.5 h-3.5 text-cyan-600 shrink-0" />
-                    <span>流水断点平滑估算已确认</span>
+                    <span>流水断点平滑估算已确认 ({report.estimatedMonthsCount} 个月)</span>
                   </span>
                 )}
               </div>
@@ -938,7 +938,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                   SCORE & GRADE
                 </span>
                 <span className="text-xs bg-neutral-800 text-emerald-400 px-3 py-1 rounded-full font-bold border border-neutral-700">
-                  {report.letterGrade} 等级
+                  {report.tier} 等级
                 </span>
               </div>
 
@@ -997,13 +997,13 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                 <div
                   key={g.code}
                   className={`p-4 rounded-2xl border-2 flex items-start space-x-3 ${
-                    g.passed
+                    g.status === 'PASS'
                       ? 'bg-emerald-50/50 border-emerald-200 text-emerald-950'
                       : 'bg-rose-50/70 border-rose-200 text-rose-950'
                   }`}
                 >
                   <div className="mt-0.5 shrink-0">
-                    {g.passed ? (
+                    {g.status === 'PASS' ? (
                       <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs">
                         <Check className="w-3.5 h-3.5" />
                       </div>
@@ -1016,10 +1016,10 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                   <div className="space-y-1">
                     <div className="flex items-center space-x-2">
                       <span className="font-mono text-xs font-bold uppercase">{g.code}</span>
-                      <h4 className="text-xs font-bold text-neutral-900">{g.name}</h4>
+                      <h4 className="text-xs font-bold text-neutral-900">{g.plainName || g.name}</h4>
                     </div>
                     <p className="text-xs text-neutral-600 leading-relaxed font-medium">
-                      {g.description}
+                      {g.plainDescription}
                     </p>
                   </div>
                 </div>
@@ -1154,7 +1154,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                       ></div>
                     </div>
                     <div className="flex items-center justify-between text-[11px] text-neutral-500">
-                      <span>{dim.description}</span>
+                      <span>{dim.dimension}</span>
                       <span>行业标杆: {dim.benchmark}/100</span>
                     </div>
                   </div>

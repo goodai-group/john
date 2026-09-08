@@ -9,3 +9,16 @@ coverage/
 .vercel/
 _diff.txt
 .vercel
+
+# Test artifacts, Playwright profiles, screenshots & dev scripts
+.playwright/
+.playwright-cli/
+.pw-profile-firebase/
+_tmp-verify/
+_vercel-test/
+report-assets/
+test-scripts/
+*.png
+*.yml
+*.yaml
+*.bat
