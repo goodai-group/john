@@ -1,5 +1,0 @@
-{
-  "headless": false,
-  "logLevel": "error",
-  "device": "Desktop Chrome"
-}

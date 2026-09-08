@@ -12,3 +12,17 @@ _vercel-test
 .pw-profile-firebase
 *.log
 *.png
+*.yml
+*.yaml
+*.bat
+assets
+agent-browser.json
+playwright-cli.json
+playwright-headed.json
+firestore.rules
+firebase-blueprint.json
+supabase-schema.sql
+step02-check.md
+BAM商宣商业模式检验系统-测试用例报告.md
+report1.md
+report-bottom.md
