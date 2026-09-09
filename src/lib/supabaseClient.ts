@@ -25,6 +25,11 @@ const supabaseAnonKey = (
 // Google 登录弹窗的固定窗口名：window.open 时与本文件下方的弹窗自识别逻辑共用同一个值。
 const GOOGLE_OAUTH_POPUP_NAME = 'supabase_google_oauth';
 
+// 弹窗跳回时若带有 error 参数（如 redirect_uri_mismatch、provider 未开启等），
+// 弹窗与主窗口之间因 Google 的 COOP 隔离已无法用 window.opener 互相通信，
+// 但两者仍是同源页面，localStorage 按源共享、不受 COOP 影响，可用它把真实错误传回主窗口。
+const GOOGLE_OAUTH_ERROR_STORAGE_KEY = 'google_oauth_popup_error';
+
 export let supabase: SupabaseClient | null = null;
 
 if (supabaseUrl && supabaseAnonKey && supabaseUrl.startsWith('http')) {
@@ -72,6 +77,22 @@ if (typeof window !== 'undefined' && window.name === GOOGLE_OAUTH_POPUP_NAME) {
 
   const hasCallbackError =
     window.location.search.includes('error=') || window.location.hash.includes('error=');
+
+  // 把回跳链接上的真实错误（provider 未开启 / redirect_uri_mismatch / 用户拒绝授权等）
+  // 写入 localStorage，供主窗口轮询读取后展示给用户，而不是只显示"已取消或被拦截"的模糊提示。
+  if (hasCallbackError) {
+    const cbErr = readAuthCallbackError();
+    if (cbErr) {
+      try {
+        window.localStorage.setItem(
+          GOOGLE_OAUTH_ERROR_STORAGE_KEY,
+          JSON.stringify({ ...cbErr, ts: Date.now() })
+        );
+      } catch {
+        /* 忽略 */
+      }
+    }
+  }
 
   const tryClosePopup = async () => {
     try {
@@ -154,6 +175,21 @@ export const subscribeToAuthChanges = (
 };
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+// 读取并清空弹窗写入的真实 OAuth 错误（见上方 GOOGLE_OAUTH_ERROR_STORAGE_KEY 注释）。
+// 忽略超过 2 分钟的残留错误，避免上一次失败的登录尝试串到本次弹出的新窗口上。
+function readPopupOAuthError(): { code: string; description: string } | null {
+  try {
+    const raw = window.localStorage.getItem(GOOGLE_OAUTH_ERROR_STORAGE_KEY);
+    if (!raw) return null;
+    window.localStorage.removeItem(GOOGLE_OAUTH_ERROR_STORAGE_KEY);
+    const parsed = JSON.parse(raw);
+    if (typeof parsed?.ts === 'number' && Date.now() - parsed.ts > 120_000) return null;
+    return { code: parsed?.code || 'unknown', description: parsed?.description || '' };
+  } catch {
+    return null;
+  }
+}
 
 // 读取当前会话中的用户（本地 localStorage 读取，无网络请求）
 async function readSessionUser(): Promise<AppUser | null> {
@@ -249,6 +285,17 @@ export const signInWithGoogle = async (): Promise<AppUser | null> => {
         }
         return appUser;
       }
+      // 弹窗已把真实的授权错误（provider 未开启 / redirect_uri_mismatch 等）写回本地存储：
+      // 直接把它抛出去，而不是继续空等到超时后才给一个模糊的"已取消或被拦截"提示。
+      const popupError = readPopupOAuthError();
+      if (popupError) {
+        try {
+          popup.close();
+        } catch {
+          /* 忽略 */
+        }
+        throw new Error(popupError.description || popupError.code);
+      }
       // 本窗口重新获得焦点（用户手动关闭了弹窗，或切回了本标签页）已超过 1.5 秒，
       // 期间仍读不到会话 → 视为用户取消，不再死等到 3 分钟超时。
       if (regainedFocusAt !== null && Date.now() - regainedFocusAt > 1500) break;
@@ -256,6 +303,17 @@ export const signInWithGoogle = async (): Promise<AppUser | null> => {
     }
   } finally {
     window.removeEventListener('focus', onWindowFocus);
+  }
+
+  // 兜底：跳出循环那一刻弹窗刚好还没来得及写完 localStorage，再读一次。
+  const popupError = readPopupOAuthError();
+  if (popupError) {
+    try {
+      popup.close();
+    } catch {
+      /* 忽略 */
+    }
+    throw new Error(popupError.description || popupError.code);
   }
 
   // 取消 / 超时：尝试关掉弹窗（若已关闭或跨域不可操作则静默忽略），返回 null
