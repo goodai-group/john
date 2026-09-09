@@ -123,7 +123,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <p className="text-xs font-bold text-neutral-900 truncate">
                   {currentUser.displayName || 'Google 用户'}
                 </p>
-                <p className="text-[11px] text-neutral-500 truncate mb-2">
+                <p className="text-[13px] text-neutral-500 truncate mb-2">
                   {currentUser.email}
                 </p>
                 <button
@@ -202,7 +202,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 key={item.id}
                 onClick={() => onTabChange(item.id)}
-                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-colors cursor-pointer text-left ${
+                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[14px] font-medium transition-colors cursor-pointer text-left ${
                   isActive
                     ? 'bg-white text-teal-900 font-bold shadow-sm'
                     : 'text-teal-100 hover:bg-white/10'
@@ -320,7 +320,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               key={item.id}
               onClick={() => onTabChange(item.id)}
-              className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-medium transition-colors cursor-pointer ${
+              className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2 text-[12px] font-medium transition-colors cursor-pointer ${
                 isActive ? 'text-teal-600' : 'text-neutral-500'
               }`}
             >

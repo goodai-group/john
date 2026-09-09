@@ -34,7 +34,7 @@ export const PublicScoringStandards: React.FC<StandardsProps> = ({ language }) =
           <div>
             <div className="flex items-center space-x-2">
               <h2 className="text-xl font-black tracking-tight text-white">公开评分标准与行业基准库</h2>
-              <span className="text-[10px] font-mono font-bold bg-teal-500/20 text-teal-300 border border-teal-500/30 px-2.5 py-0.5 rounded-full">
+              <span className="text-[12px] font-mono font-bold bg-teal-500/20 text-teal-300 border border-teal-500/30 px-2.5 py-0.5 rounded-full">
                 STANDARDS HUB
               </span>
             </div>
@@ -165,7 +165,7 @@ export const PublicScoringStandards: React.FC<StandardsProps> = ({ language }) =
               <tr className="bg-neutral-100 text-neutral-800 border-b-2 border-neutral-200">
                 <th className="p-3.5 font-bold rounded-l-2xl">
                   <div>指标专业名称</div>
-                  <div className="text-[11px] font-normal text-neutral-500">大白话通俗说明</div>
+                  <div className="text-[13px] font-normal text-neutral-500">大白话通俗说明</div>
                 </th>
                 <th className="p-3.5 font-bold">权重</th>
                 <th className="p-3.5 font-bold">健康基准区间</th>
@@ -276,25 +276,25 @@ export const PublicScoringStandards: React.FC<StandardsProps> = ({ language }) =
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
             <div className="bg-white p-3.5 rounded-2xl border-2 border-neutral-200 shadow-2xs">
-              <span className="text-neutral-400 block text-[10px] uppercase font-bold mb-0.5">典型毛利率区间</span>
+              <span className="text-neutral-400 block text-[12px] uppercase font-bold mb-0.5">典型毛利率区间</span>
               <span className="font-mono font-bold text-neutral-900 text-sm">
                 {activeBenchmark.typicalGrossMargin}
               </span>
             </div>
             <div className="bg-white p-3.5 rounded-2xl border-2 border-neutral-200 shadow-2xs">
-              <span className="text-neutral-400 block text-[10px] uppercase font-bold mb-0.5">典型固定开销比</span>
+              <span className="text-neutral-400 block text-[12px] uppercase font-bold mb-0.5">典型固定开销比</span>
               <span className="font-mono font-bold text-neutral-900 text-sm">
                 {activeBenchmark.typicalOpexRatio}
               </span>
             </div>
             <div className="bg-white p-3.5 rounded-2xl border-2 border-neutral-200 shadow-2xs">
-              <span className="text-neutral-400 block text-[10px] uppercase font-bold mb-0.5">典型到手纯利</span>
+              <span className="text-neutral-400 block text-[12px] uppercase font-bold mb-0.5">典型到手纯利</span>
               <span className="font-mono font-bold text-emerald-600 text-sm">
                 {activeBenchmark.typicalNetMargin}
               </span>
             </div>
             <div className="bg-white p-3.5 rounded-2xl border-2 border-neutral-200 shadow-2xs">
-              <span className="text-neutral-400 block text-[10px] uppercase font-bold mb-0.5">抗风险备用金</span>
+              <span className="text-neutral-400 block text-[12px] uppercase font-bold mb-0.5">抗风险备用金</span>
               <span className="font-mono font-bold text-teal-600 text-sm">
                 {activeBenchmark.typicalCashRunway}
               </span>
@@ -310,7 +310,7 @@ export const PublicScoringStandards: React.FC<StandardsProps> = ({ language }) =
             <p className="text-xs text-neutral-700 leading-relaxed font-medium">
               “{activeBenchmark.naturalLanguageSummaryZh}”
             </p>
-            <div className="pt-2 border-t border-neutral-100 text-[11px] text-neutral-500 font-medium">
+            <div className="pt-2 border-t border-neutral-100 text-[13px] text-neutral-500 font-medium">
               <span className="font-bold text-neutral-800">关键经营诀窍：</span>
               <span>{activeBenchmark.keyAdviceZh}</span>
             </div>

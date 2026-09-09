@@ -124,8 +124,8 @@ const FAQ_PRESETS = [
 const markdownComponents: Components = {
   p: ({ children }) => <p className="mb-1.5 leading-relaxed last:mb-0">{children}</p>,
   strong: ({ children }) => <strong className="font-bold text-slate-900">{children}</strong>,
-  h1: ({ children }) => <h1 className="text-[13px] font-bold text-slate-900 mt-2 mb-1 first:mt-0">{children}</h1>,
-  h2: ({ children }) => <h2 className="text-[13px] font-bold text-teal-800 mt-2 mb-1 first:mt-0">{children}</h2>,
+  h1: ({ children }) => <h1 className="text-[14px] font-bold text-slate-900 mt-2 mb-1 first:mt-0">{children}</h1>,
+  h2: ({ children }) => <h2 className="text-[14px] font-bold text-teal-800 mt-2 mb-1 first:mt-0">{children}</h2>,
   h3: ({ children }) => <h3 className="text-xs font-bold text-slate-900 mt-1.5 mb-0.5 first:mt-0">{children}</h3>,
   h4: ({ children }) => <h4 className="text-xs font-bold text-slate-800 mt-1.5 mb-0.5 first:mt-0">{children}</h4>,
   ul: ({ children }) => <ul className="list-disc pl-4 mb-1.5 space-y-0.5 last:mb-0">{children}</ul>,
@@ -141,7 +141,7 @@ const markdownComponents: Components = {
   ),
   hr: () => <hr className="my-2 border-slate-200" />,
   pre: ({ children }) => (
-    <pre className="bg-slate-900 text-slate-100 rounded-lg p-2.5 overflow-x-auto my-1.5 text-[11px] leading-relaxed">
+    <pre className="bg-slate-900 text-slate-100 rounded-lg p-2.5 overflow-x-auto my-1.5 text-[13px] leading-relaxed">
       {children}
     </pre>
   ),
@@ -156,7 +156,7 @@ const markdownComponents: Components = {
       );
     }
     return (
-      <code className="px-1 py-px rounded bg-slate-100 text-rose-600 font-mono text-[11px]" {...rest}>
+      <code className="px-1 py-px rounded bg-slate-100 text-rose-600 font-mono text-[13px]" {...rest}>
         {children}
       </code>
     );
@@ -574,16 +574,16 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
                   AI 智能答疑 · 任何问题都能问
                 </h2>
                 {aiConfigured === false ? (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                  <span className="text-[12px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
                     本地规则库
                   </span>
                 ) : geminiHealthy === false ? (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 flex items-center gap-1">
+                  <span className="text-[12px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 flex items-center gap-1">
                     <AlertTriangle className="w-3 h-3" />
                     AI 暂不可用
                   </span>
                 ) : (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                  <span className="text-[12px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
                     AI 智能驱动
                   </span>
                 )}
@@ -603,7 +603,7 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
 
         {/* AI 未配置提示：引导配置 GEMINI_API_KEY 以启用真正的 AI 智能问答 */}
         {aiConfigured === false && (
-          <div className="bg-amber-50 border-b border-amber-100 px-5 py-1.5 text-[11px] text-amber-900 font-medium">
+          <div className="bg-amber-50 border-b border-amber-100 px-5 py-1.5 text-[13px] text-amber-900 font-medium">
             当前为本地规则库模式，可解答平台填报与评分问题；如需通用 AI，请在 .env 配置 GEMINI_API_KEY 后重启。
           </div>
         )}
@@ -641,7 +641,7 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
             <div className="space-y-4">
               {chatHistory.length === 0 ? (
                 <div className="space-y-3">
-                  <p className="text-[13px] leading-relaxed text-slate-700">
+                  <p className="text-[14px] leading-relaxed text-slate-700">
                     您好！我是 AI 助手，<b>经营问题都能用大白话讲清</b>——直接输入提问，或点下方高频问题试一试：
                   </p>
                   <div className="space-y-2">
@@ -670,7 +670,7 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
                           <span>问：{item.question}</span>
                         </div>
                         {item.aiMode === 'gemini' && (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 shrink-0">
+                          <span className="text-[12px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 shrink-0">
                             AI 智能回答
                           </span>
                         )}
@@ -685,7 +685,7 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
                           </div>
                           <button
                             onClick={() => handleCopy(item.id, item.aiResponse)}
-                            className="text-[11px] text-slate-500 hover:text-teal-600 flex items-center gap-1 cursor-pointer"
+                            className="text-[13px] text-slate-500 hover:text-teal-600 flex items-center gap-1 cursor-pointer"
                           >
                             {copiedId === item.id ? (
                               <>
@@ -706,7 +706,7 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
 
                         {/* Suggested action pill */}
                         {item.suggestedAction && (
-                          <div className="mt-2.5 pt-2 border-t border-slate-200/70 flex items-center gap-1.5 text-[11px] text-teal-900 bg-teal-50/60 px-2.5 py-1.5 rounded-lg font-medium">
+                          <div className="mt-2.5 pt-2 border-t border-slate-200/70 flex items-center gap-1.5 text-[13px] text-teal-900 bg-teal-50/60 px-2.5 py-1.5 rounded-lg font-medium">
                             <Lightbulb className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                             <span><b>填报指引：</b>{item.suggestedAction}</span>
                           </div>
@@ -715,7 +715,7 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
                         {/* AI 降级提示：仅在 Gemini 不可用时显示 */}
                         {item.aiMode !== 'gemini' && item.geminiUnavailable && (
                           <div
-                            className="mt-2 pt-1.5 border-t border-rose-100 flex items-center justify-between gap-2 text-[11px] text-rose-800"
+                            className="mt-2 pt-1.5 border-t border-rose-100 flex items-center justify-between gap-2 text-[13px] text-rose-800"
                             title="本次回答由内置本地规则库提供，提问与回答均不影响任何评分"
                           >
                             <span className="flex items-center gap-1 min-w-0">
@@ -744,7 +744,7 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
                         {/* Conservative Paths if Edge Case */}
                         {item.conservativePaths && item.conservativePaths.length > 0 && (
                           <div className="mt-3 pt-3 border-t border-amber-200 space-y-2">
-                            <div className="flex items-center gap-1 text-amber-800 font-bold text-[11px]">
+                            <div className="flex items-center gap-1 text-amber-800 font-bold text-[13px]">
                               <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
                               <span>规则未决情况下的保守填报路径指引：</span>
                             </div>
@@ -757,8 +757,8 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
                                   <span>{path.pathName}</span>
                                   <span className="text-teal-600">{path.estimatedScore}</span>
                                 </div>
-                                <p className="text-slate-600 text-[11px]">{path.assumption}</p>
-                                <p className="text-[10px] text-amber-800 font-medium">
+                                <p className="text-slate-600 text-[13px]">{path.assumption}</p>
+                                <p className="text-[12px] text-amber-800 font-medium">
                                   影响说明：{path.consequence}
                                 </p>
                               </div>
@@ -768,7 +768,7 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
                       </div>
 
                       {/* Feedback buttons */}
-                      <div className="flex items-center justify-end gap-1 pt-1 text-[11px] text-slate-400">
+                      <div className="flex items-center justify-end gap-1 pt-1 text-[13px] text-slate-400">
                         <button
                           onClick={() => handleFeedback(item.id, 'helpful')}
                           className={`flex items-center gap-1 px-2 py-1 rounded-lg transition-colors cursor-pointer ${
@@ -807,7 +807,7 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
                   <TrendingUp className="w-4 h-4" />
                   <span>全球小微商业真实样本大数据分布（分行业 P50 中位数）</span>
                 </div>
-                <p className="text-slate-300 text-[11px]">
+                <p className="text-slate-300 text-[13px]">
                   汇集全球数万家无财务背景小微企业经营指标，为您自查毛利空间与开销结构提供精准对标。
                 </p>
               </div>
@@ -822,35 +822,35 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-slate-900 text-sm">{ind.name}</span>
                       </div>
-                      <span className="text-[11px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md">
+                      <span className="text-[13px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md">
                         {ind.avgRevenue}
                       </span>
                     </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                       <div className="p-2 bg-slate-50 rounded-lg border border-slate-100">
-                        <span className="text-[10px] text-slate-400 block font-medium">典型毛利率</span>
+                        <span className="text-[12px] text-slate-400 block font-medium">典型毛利率</span>
                         <span className="font-bold text-slate-900 text-xs sm:text-sm">{ind.grossMargin}</span>
-                        <span className="text-[9px] text-slate-500 block truncate">{ind.grossMarginLabel}</span>
+                        <span className="text-[11px] text-slate-500 block truncate">{ind.grossMarginLabel}</span>
                       </div>
                       <div className="p-2 bg-slate-50 rounded-lg border border-slate-100">
-                        <span className="text-[10px] text-slate-400 block font-medium">房租人工占比</span>
+                        <span className="text-[12px] text-slate-400 block font-medium">房租人工占比</span>
                         <span className="font-bold text-slate-900 text-xs sm:text-sm">{ind.opexRatio}</span>
-                        <span className="text-[9px] text-slate-500 block truncate">雷打不动开销</span>
+                        <span className="text-[11px] text-slate-500 block truncate">雷打不动开销</span>
                       </div>
                       <div className="p-2 bg-slate-50 rounded-lg border border-slate-100">
-                        <span className="text-[10px] text-slate-400 block font-medium">备用金安全线</span>
+                        <span className="text-[12px] text-slate-400 block font-medium">备用金安全线</span>
                         <span className="font-bold text-emerald-700 text-xs sm:text-sm">{ind.runwaySafety}</span>
-                        <span className="text-[9px] text-slate-500 block truncate">抗断流月数</span>
+                        <span className="text-[11px] text-slate-500 block truncate">抗断流月数</span>
                       </div>
                       <div className="p-2 bg-slate-50 rounded-lg border border-slate-100">
-                        <span className="text-[10px] text-slate-400 block font-medium">到手净利润率</span>
+                        <span className="text-[12px] text-slate-400 block font-medium">到手净利润率</span>
                         <span className="font-bold text-teal-700 text-xs sm:text-sm">{ind.netProfitMargin}</span>
-                        <span className="text-[9px] text-slate-500 block truncate">实际进口袋</span>
+                        <span className="text-[11px] text-slate-500 block truncate">实际进口袋</span>
                       </div>
                     </div>
 
-                    <div className="p-2.5 bg-amber-50/60 rounded-xl border border-amber-200/70 text-[11px] text-amber-900 leading-relaxed flex items-start gap-2">
+                    <div className="p-2.5 bg-amber-50/60 rounded-xl border border-amber-200/70 text-[13px] text-amber-900 leading-relaxed flex items-start gap-2">
                       <Lightbulb className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
                       <span><b>老手生存准则：</b>{ind.keySurvivalRule}</span>
                     </div>

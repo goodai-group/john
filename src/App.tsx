@@ -682,7 +682,7 @@ export default function App() {
                   href={banner.action.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 mt-2 px-3 py-1.5 rounded-lg bg-rose-600 text-white font-bold text-[11px] sm:text-xs hover:bg-rose-700 transition-colors"
+                  className="inline-flex items-center gap-1 mt-2 px-3 py-1.5 rounded-lg bg-rose-600 text-white font-bold text-[13px] sm:text-xs hover:bg-rose-700 transition-colors"
                 >
                   {banner.action.label}
                   <ExternalLink className="w-3 h-3" />
