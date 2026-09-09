@@ -55,12 +55,12 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
 
         {/* Modal Header */}
         <div className="flex items-center space-x-3 mb-4 pb-3 border-b border-neutral-100">
-          <div className="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-md shadow-indigo-200 shrink-0">
+          <div className="w-10 h-10 rounded-2xl bg-teal-600 text-white flex items-center justify-center shadow-md shadow-teal-200 shrink-0">
             <Compass className="w-5 h-5" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-100">
                 USER GUIDE & APP OVERVIEW
               </span>
               <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
@@ -79,7 +79,7 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
             onClick={() => setActiveTab('intro')}
             className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'intro'
-                ? 'bg-white text-indigo-950 shadow-xs'
+                ? 'bg-white text-teal-950 shadow-xs'
                 : 'text-neutral-500 hover:text-neutral-900'
             }`}
           >
@@ -89,7 +89,7 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
             onClick={() => setActiveTab('steps')}
             className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'steps'
-                ? 'bg-white text-indigo-950 shadow-xs'
+                ? 'bg-white text-teal-950 shadow-xs'
                 : 'text-neutral-500 hover:text-neutral-900'
             }`}
           >
@@ -99,7 +99,7 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
             onClick={() => setActiveTab('glossary')}
             className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'glossary'
-                ? 'bg-white text-indigo-950 shadow-xs'
+                ? 'bg-white text-teal-950 shadow-xs'
                 : 'text-neutral-500 hover:text-neutral-900'
             }`}
           >
@@ -109,7 +109,7 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
             onClick={() => setActiveTab('faq')}
             className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'faq'
-                ? 'bg-white text-indigo-950 shadow-xs'
+                ? 'bg-white text-teal-950 shadow-xs'
                 : 'text-neutral-500 hover:text-neutral-900'
             }`}
           >
@@ -122,9 +122,9 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
           {/* TAB 1: INTRO */}
           {activeTab === 'intro' && (
             <div className="space-y-4">
-              <div className="p-4 rounded-2xl bg-indigo-50/70 border-2 border-indigo-100 text-indigo-950 space-y-2">
-                <h3 className="text-sm font-bold flex items-center gap-1.5 text-indigo-900">
-                  <Sparkles className="w-4 h-4 text-indigo-600" />
+              <div className="p-4 rounded-2xl bg-teal-50/70 border-2 border-teal-100 text-teal-950 space-y-2">
+                <h3 className="text-sm font-bold flex items-center gap-1.5 text-teal-900">
+                  <Sparkles className="w-4 h-4 text-teal-600" />
                   <span>给宣教同工与工场爱心服事的「全自动财务健康体检仪」</span>
                 </h3>
                 <p className="text-neutral-700 leading-relaxed">
@@ -173,8 +173,8 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
           {/* TAB 2: STEPS */}
           {activeTab === 'steps' && (
             <div className="space-y-3">
-              <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white border-2 border-neutral-200 hover:border-indigo-300 transition-colors">
-                <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-sm shrink-0">
+              <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white border-2 border-neutral-200 hover:border-teal-300 transition-colors">
+                <div className="w-8 h-8 rounded-xl bg-teal-600 text-white flex items-center justify-center font-bold text-sm shrink-0">
                   1
                 </div>
                 <div className="flex-1">
@@ -187,8 +187,8 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
                 </div>
               </div>
 
-              <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white border-2 border-neutral-200 hover:border-indigo-300 transition-colors">
-                <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-sm shrink-0">
+              <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white border-2 border-neutral-200 hover:border-teal-300 transition-colors">
+                <div className="w-8 h-8 rounded-xl bg-teal-600 text-white flex items-center justify-center font-bold text-sm shrink-0">
                   2
                 </div>
                 <div className="flex-1">
@@ -201,8 +201,8 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
                 </div>
               </div>
 
-              <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white border-2 border-neutral-200 hover:border-indigo-300 transition-colors">
-                <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-sm shrink-0">
+              <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white border-2 border-neutral-200 hover:border-teal-300 transition-colors">
+                <div className="w-8 h-8 rounded-xl bg-teal-600 text-white flex items-center justify-center font-bold text-sm shrink-0">
                   3
                 </div>
                 <div className="flex-1">
@@ -226,7 +226,7 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <div className="p-3 rounded-2xl bg-neutral-50 border border-neutral-200">
                   <div className="flex items-center gap-1.5 font-bold text-neutral-900 mb-1">
-                    <span className="px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 text-[10px]">门诊/学费进账</span>
+                    <span className="px-1.5 py-0.5 rounded bg-teal-100 text-teal-700 text-[10px]">门诊/学费进账</span>
                     <span>= 当月看诊费与服务收入</span>
                   </div>
                   <p className="text-neutral-600 text-[11px]">
@@ -314,7 +314,7 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={onClose}
-              className="px-5 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md shadow-indigo-200 transition-all cursor-pointer hover:scale-102 flex items-center gap-1.5"
+              className="px-5 py-2.5 rounded-2xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold shadow-md shadow-teal-200 transition-all cursor-pointer hover:scale-102 flex items-center gap-1.5"
             >
               <span>我明白了，开始自测</span>
               <ArrowRight className="w-3.5 h-3.5" />

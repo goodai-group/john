@@ -55,7 +55,7 @@ export const FeeTransparencyModal: React.FC<FeeModalProps> = ({ isOpen, onClose,
           </div>
 
           <div className="flex items-start gap-3 p-2.5 rounded-lg bg-slate-50 border border-slate-100">
-            <Download className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+            <Download className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
             <div>
               <span className="font-semibold text-slate-900">无门槛报告打印与导出：</span>
               <span> 生成的诊断报告、雷达图与逐项明细表支持一键免费打印、保存为 PDF 或 JSON 备份，不设"按份收费"门槛。</span>

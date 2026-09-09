@@ -115,16 +115,16 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
   }
 
   return (
-    <div className="bg-white rounded-3xl p-6 sm:p-7 border-2 border-indigo-200 shadow-sm space-y-6">
+    <div className="bg-white rounded-3xl p-6 sm:p-7 border-2 border-teal-200 shadow-sm space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-neutral-100">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-sm">
+          <div className="w-10 h-10 rounded-2xl bg-teal-600 text-white flex items-center justify-center shadow-sm">
             <Activity className="w-5 h-5" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-mono font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-100">
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-100">
                 实时晴雨表
               </span>
               <span className="text-xs text-neutral-500 font-bold">100% 自动计算</span>
@@ -137,7 +137,7 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
         <div className="flex items-center space-x-3">
           <div className="text-right">
             <span className="text-xs text-neutral-400 font-medium block">预估健康分</span>
-            <span className="text-2xl font-black text-indigo-900 font-mono">
+            <span className="text-2xl font-black text-teal-900 font-mono">
               {report.totalScore} <span className="text-sm text-neutral-400">/ 100</span>
             </span>
           </div>
@@ -205,7 +205,7 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
         <div className="p-5 rounded-2xl bg-neutral-50 border-2 border-neutral-200 space-y-3 text-sm">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2 font-bold text-neutral-900">
-              <PieChart className="w-5 h-5 text-indigo-600" />
+              <PieChart className="w-5 h-5 text-teal-600" />
               <span className="text-sm sm:text-base">每进账 100 块钱怎么分的？</span>
             </div>
             <span className="text-xs text-neutral-500 font-bold">大白话收支构成</span>

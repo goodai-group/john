@@ -108,7 +108,7 @@ export const AccessibilityToolbar: React.FC<AccessibilityProps> = ({
           {/* Large Font Setting */}
           <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
+              <div className="w-8 h-8 rounded-lg bg-teal-100 text-teal-700 flex items-center justify-center font-bold">
                 <Type className="w-4 h-4" />
               </div>
               <div>
@@ -120,7 +120,7 @@ export const AccessibilityToolbar: React.FC<AccessibilityProps> = ({
               onClick={onToggleLargeFont}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 largeFont
-                  ? 'bg-indigo-600 text-white shadow-xs'
+                  ? 'bg-teal-600 text-white shadow-xs'
                   : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
               }`}
             >

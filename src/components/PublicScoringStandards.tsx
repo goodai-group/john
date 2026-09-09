@@ -28,13 +28,13 @@ export const PublicScoringStandards: React.FC<StandardsProps> = ({ language }) =
       {/* Header Bento Card */}
       <div className="bg-neutral-900 text-white rounded-3xl p-6 sm:p-7 border-2 border-neutral-800 shadow-xl">
         <div className="flex items-center space-x-3.5 mb-2">
-          <div className="w-12 h-12 rounded-2xl bg-indigo-600 border border-indigo-400/40 flex items-center justify-center text-white shadow-lg">
+          <div className="w-12 h-12 rounded-2xl bg-teal-600 border border-teal-400/40 flex items-center justify-center text-white shadow-lg">
             <BookOpen className="w-6 h-6" />
           </div>
           <div>
             <div className="flex items-center space-x-2">
               <h2 className="text-xl font-black tracking-tight text-white">公开评分标准与行业基准库</h2>
-              <span className="text-[10px] font-mono font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2.5 py-0.5 rounded-full">
+              <span className="text-[10px] font-mono font-bold bg-teal-500/20 text-teal-300 border border-teal-500/30 px-2.5 py-0.5 rounded-full">
                 STANDARDS HUB
               </span>
             </div>
@@ -80,7 +80,7 @@ export const PublicScoringStandards: React.FC<StandardsProps> = ({ language }) =
             <p className="text-neutral-600 font-medium">
               大白话：排除借款和外部赠款后，客户买单付给你的钱要占总进账的 60% 以上。
             </p>
-            <p className="text-indigo-900 bg-indigo-50/80 p-2.5 rounded-xl border border-indigo-100 font-medium">
+            <p className="text-teal-900 bg-teal-50/80 p-2.5 rounded-xl border border-teal-100 font-medium">
               改善方向提示：专注提升核心主营商品或服务的销售复购，逐步降低对一次性救济款的依赖。
             </p>
           </div>
@@ -95,7 +95,7 @@ export const PublicScoringStandards: React.FC<StandardsProps> = ({ language }) =
             <p className="text-neutral-600 font-medium">
               大白话：每卖出 100 块钱东西，扣除直接进货和原材料成本后，至少要剩下 20 块钱毛利。
             </p>
-            <p className="text-indigo-900 bg-indigo-50/80 p-2.5 rounded-xl border border-indigo-100 font-medium">
+            <p className="text-teal-900 bg-teal-50/80 p-2.5 rounded-xl border border-teal-100 font-medium">
               改善方向提示：与上游批发商谈判争取批量折扣，或精简损耗严重的低毛利进货品种。
             </p>
           </div>
@@ -110,7 +110,7 @@ export const PublicScoringStandards: React.FC<StandardsProps> = ({ language }) =
             <p className="text-neutral-600 font-medium">
               大白话：每月赚出来的毛利润，必须能够全额包住房租、工人工资与水电网络等固定支出。
             </p>
-            <p className="text-indigo-900 bg-indigo-50/80 p-2.5 rounded-xl border border-indigo-100 font-medium">
+            <p className="text-teal-900 bg-teal-50/80 p-2.5 rounded-xl border border-teal-100 font-medium">
               改善方向提示：OPEX 超标时，通常可以从工时弹性排班、转租分摊部分场地或削减杂费入手。
             </p>
           </div>
@@ -125,8 +125,23 @@ export const PublicScoringStandards: React.FC<StandardsProps> = ({ language }) =
             <p className="text-neutral-600 font-medium">
               大白话：扣掉所有成本、开销和税金后，每月到手必须是正数，不能处于持续倒贴亏损状态。
             </p>
-            <p className="text-indigo-900 bg-indigo-50/80 p-2.5 rounded-xl border border-indigo-100 font-medium">
+            <p className="text-teal-900 bg-teal-50/80 p-2.5 rounded-xl border border-teal-100 font-medium">
               改善方向提示：梳理非生产性杂费支出，提升单客消费客单价以拉正月度利润。
+            </p>
+          </div>
+
+          <div className="p-4 sm:p-5 rounded-2xl bg-neutral-50 border-2 border-neutral-100 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-neutral-900 text-sm">Gate-5: 债务偿付安全边际 (Debt Service Ratio)</span>
+              <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 font-mono font-bold">
+                无负债 或 DSCR ≥ 1.25x
+              </span>
+            </div>
+            <p className="text-neutral-600 font-medium">
+              大白话：如果有外部还贷，每月利润至少要是还款额的 1.25 倍以上，否则一旦经营波动就可能断供。
+            </p>
+            <p className="text-teal-900 bg-teal-50/80 p-2.5 rounded-xl border border-teal-100 font-medium">
+              改善方向提示：尝试协商延长贷款还款周期以降低月供，或暂停非必要杠杆扩张。
             </p>
           </div>
         </div>
@@ -136,7 +151,7 @@ export const PublicScoringStandards: React.FC<StandardsProps> = ({ language }) =
       <div className="bg-white rounded-3xl p-6 sm:p-7 border-2 border-neutral-200 shadow-xs space-y-4">
         <div className="border-b border-neutral-100 pb-3">
           <h3 className="text-base font-black text-neutral-900 flex items-center space-x-2">
-            <Percent className="w-5 h-5 text-indigo-600" />
+            <Percent className="w-5 h-5 text-teal-600" />
             <span>梯度评分指标双行标准表 (板块 B-G)</span>
           </h3>
           <p className="text-xs text-neutral-500 font-medium mt-0.5">
@@ -163,7 +178,7 @@ export const PublicScoringStandards: React.FC<StandardsProps> = ({ language }) =
                   <div className="text-neutral-900 font-bold">COGS Ratio / 原材料与直接成本占比</div>
                   <div className="text-neutral-400">进货原料花了多少钱</div>
                 </td>
-                <td className="p-3.5 font-mono font-bold text-indigo-600">20%</td>
+                <td className="p-3.5 font-mono font-bold text-teal-600">20%</td>
                 <td className="p-3.5 font-mono">35% - 60%</td>
                 <td className="p-3.5 text-neutral-700">寻找就近源头供货商，减少中间商加价；优化配方或包装成本。</td>
               </tr>
@@ -173,7 +188,7 @@ export const PublicScoringStandards: React.FC<StandardsProps> = ({ language }) =
                   <div className="text-neutral-900 font-bold">OPEX Overhead / 运营固定开支占比</div>
                   <div className="text-neutral-400">每月房租、工人工资与日常杂费</div>
                 </td>
-                <td className="p-3.5 font-mono font-bold text-indigo-600">15%</td>
+                <td className="p-3.5 font-mono font-bold text-teal-600">15%</td>
                 <td className="p-3.5 font-mono">≤ 45%</td>
                 <td className="p-3.5 text-neutral-700">精简人工冗余工时、协商按月分段付租或分租部分场地以降低固定负担。</td>
               </tr>
@@ -183,7 +198,7 @@ export const PublicScoringStandards: React.FC<StandardsProps> = ({ language }) =
                   <div className="text-neutral-900 font-bold">Net Profit Margin (PAT) / 到手纯利润率</div>
                   <div className="text-neutral-400">最终揣进兜里的纯利润比例</div>
                 </td>
-                <td className="p-3.5 font-mono font-bold text-indigo-600">20%</td>
+                <td className="p-3.5 font-mono font-bold text-teal-600">20%</td>
                 <td className="p-3.5 font-mono">≥ 15%</td>
                 <td className="p-3.5 text-neutral-700">通过老客户会员复购或组合套餐提高客单价，严格压缩零碎损耗。</td>
               </tr>
@@ -193,7 +208,7 @@ export const PublicScoringStandards: React.FC<StandardsProps> = ({ language }) =
                   <div className="text-neutral-900 font-bold">Cash Runway / 现金储备可支撑月数</div>
                   <div className="text-neutral-400">即使不进账，账上备用金能维持几个月</div>
                 </td>
-                <td className="p-3.5 font-mono font-bold text-indigo-600">15%</td>
+                <td className="p-3.5 font-mono font-bold text-teal-600">15%</td>
                 <td className="p-3.5 font-mono">≥ 3.0 个月</td>
                 <td className="p-3.5 text-neutral-700">每月坚持将 10%-15% 净利润提取到独立应急资金池，防范突发事件。</td>
               </tr>
@@ -203,7 +218,7 @@ export const PublicScoringStandards: React.FC<StandardsProps> = ({ language }) =
                   <div className="text-neutral-900 font-bold">DSCR / 债务偿付保障倍数</div>
                   <div className="text-neutral-400">还债抗压能力（赚的钱够不够还贷）</div>
                 </td>
-                <td className="p-3.5 font-mono font-bold text-indigo-600">15%</td>
+                <td className="p-3.5 font-mono font-bold text-teal-600">15%</td>
                 <td className="p-3.5 font-mono">≥ 1.25x 或 无债</td>
                 <td className="p-3.5 text-neutral-700">协商延长贷款还款年限以降低月供，避免过度举债扩大规模。</td>
               </tr>
@@ -213,7 +228,7 @@ export const PublicScoringStandards: React.FC<StandardsProps> = ({ language }) =
                   <div className="text-neutral-900 font-bold">Continuity / 稳定经营时间与团队</div>
                   <div className="text-neutral-400">开了多少个月，团队规模是否平稳</div>
                 </td>
-                <td className="p-3.5 font-mono font-bold text-indigo-600">15%</td>
+                <td className="p-3.5 font-mono font-bold text-teal-600">15%</td>
                 <td className="p-3.5 font-mono">≥ 12 个月</td>
                 <td className="p-3.5 text-neutral-700">建立清晰的经营台账，与核心员工签订互信分成机制以稳住团队。</td>
               </tr>
@@ -227,7 +242,7 @@ export const PublicScoringStandards: React.FC<StandardsProps> = ({ language }) =
         <div className="border-b border-neutral-100 pb-3 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="text-base font-black text-neutral-900 flex items-center space-x-2">
-              <Building2 className="w-5 h-5 text-indigo-600" />
+              <Building2 className="w-5 h-5 text-teal-600" />
               <span>行业基准对照表与通俗自然语言总结 (板块 H)</span>
             </h3>
             <p className="text-xs text-neutral-500 font-medium mt-0.5">
@@ -280,7 +295,7 @@ export const PublicScoringStandards: React.FC<StandardsProps> = ({ language }) =
             </div>
             <div className="bg-white p-3.5 rounded-2xl border-2 border-neutral-200 shadow-2xs">
               <span className="text-neutral-400 block text-[10px] uppercase font-bold mb-0.5">抗风险备用金</span>
-              <span className="font-mono font-bold text-indigo-600 text-sm">
+              <span className="font-mono font-bold text-teal-600 text-sm">
                 {activeBenchmark.typicalCashRunway}
               </span>
             </div>

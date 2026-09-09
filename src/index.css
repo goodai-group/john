@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* 新设计稿的暖米白页面底色（区别于默认 neutral-50 的冷灰调），供 bg-warm 类使用 */
+@theme {
+  --color-warm: #f7f3ec;
+}
+
 @layer base {
   html {
     font-size: 16px;
@@ -15,7 +20,8 @@
 
   body {
     color: #1e293b;
-    background-color: #f8fafc;
+    /* 新设计稿采用暖米白背景（而非冷灰蓝），与深青色侧边栏+橙色点缀的整体配色呼应 */
+    background-color: #f7f3ec;
     line-height: 1.6;
   }
 

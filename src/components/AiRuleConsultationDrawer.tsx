@@ -125,19 +125,19 @@ const markdownComponents: Components = {
   p: ({ children }) => <p className="mb-1.5 leading-relaxed last:mb-0">{children}</p>,
   strong: ({ children }) => <strong className="font-bold text-slate-900">{children}</strong>,
   h1: ({ children }) => <h1 className="text-[13px] font-bold text-slate-900 mt-2 mb-1 first:mt-0">{children}</h1>,
-  h2: ({ children }) => <h2 className="text-[13px] font-bold text-indigo-800 mt-2 mb-1 first:mt-0">{children}</h2>,
+  h2: ({ children }) => <h2 className="text-[13px] font-bold text-teal-800 mt-2 mb-1 first:mt-0">{children}</h2>,
   h3: ({ children }) => <h3 className="text-xs font-bold text-slate-900 mt-1.5 mb-0.5 first:mt-0">{children}</h3>,
   h4: ({ children }) => <h4 className="text-xs font-bold text-slate-800 mt-1.5 mb-0.5 first:mt-0">{children}</h4>,
   ul: ({ children }) => <ul className="list-disc pl-4 mb-1.5 space-y-0.5 last:mb-0">{children}</ul>,
   ol: ({ children }) => <ol className="list-decimal pl-5 mb-1.5 space-y-0.5 last:mb-0">{children}</ol>,
   li: ({ children }) => <li className="leading-relaxed">{children}</li>,
   a: ({ href, children }) => (
-    <a href={href} target="_blank" rel="noopener noreferrer" className="text-indigo-600 underline underline-offset-2 break-all">
+    <a href={href} target="_blank" rel="noopener noreferrer" className="text-teal-600 underline underline-offset-2 break-all">
       {children}
     </a>
   ),
   blockquote: ({ children }) => (
-    <blockquote className="border-l-2 border-indigo-200 pl-2.5 my-1.5 text-slate-600">{children}</blockquote>
+    <blockquote className="border-l-2 border-teal-200 pl-2.5 my-1.5 text-slate-600">{children}</blockquote>
   ),
   hr: () => <hr className="my-2 border-slate-200" />,
   pre: ({ children }) => (
@@ -565,7 +565,7 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
         {/* Drawer Header */}
         <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+            <div className="w-10 h-10 rounded-xl bg-teal-600 text-white flex items-center justify-center shadow-xs">
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
@@ -614,7 +614,7 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
             onClick={() => setActiveTab('chat')}
             className={`flex-1 py-2.5 text-center border-b-2 transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
               activeTab === 'chat'
-                ? 'border-indigo-600 text-indigo-600 bg-indigo-50/20'
+                ? 'border-teal-600 text-teal-600 bg-teal-50/20'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
@@ -625,7 +625,7 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
             onClick={() => setActiveTab('benchmarks')}
             className={`flex-1 py-2.5 text-center border-b-2 transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
               activeTab === 'benchmarks'
-                ? 'border-indigo-600 text-indigo-600 bg-indigo-50/20'
+                ? 'border-teal-600 text-teal-600 bg-teal-50/20'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
@@ -649,7 +649,7 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
                       <button
                         key={idx}
                         onClick={() => handleAskQuestion(q)}
-                        className="w-full text-left px-3 py-2.5 rounded-xl border border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/50 bg-white text-xs font-medium text-slate-800 transition-all cursor-pointer"
+                        className="w-full text-left px-3 py-2.5 rounded-xl border border-slate-200 hover:border-teal-400 hover:bg-teal-50/50 bg-white text-xs font-medium text-slate-800 transition-all cursor-pointer"
                       >
                         {q}
                       </button>
@@ -666,7 +666,7 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
                       {/* Question */}
                       <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-2.5">
                         <div className="flex items-start gap-2 text-slate-900 font-bold text-xs sm:text-sm">
-                          <HelpCircle className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                          <HelpCircle className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
                           <span>问：{item.question}</span>
                         </div>
                         {item.aiMode === 'gemini' && (
@@ -678,14 +678,14 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
 
                       {/* AI Answer formatted */}
                       <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-slate-800 leading-relaxed space-y-2">
-                        <div className="flex items-center justify-between text-indigo-700 font-bold text-xs pb-1 border-b border-slate-200/60">
+                        <div className="flex items-center justify-between text-teal-700 font-bold text-xs pb-1 border-b border-slate-200/60">
                           <div className="flex items-center gap-1.5">
-                            <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                            <Sparkles className="w-3.5 h-3.5 text-teal-600" />
                             <span>{item.aiMode === 'gemini' ? 'AI 解答：' : '大白话解答：'}</span>
                           </div>
                           <button
                             onClick={() => handleCopy(item.id, item.aiResponse)}
-                            className="text-[11px] text-slate-500 hover:text-indigo-600 flex items-center gap-1 cursor-pointer"
+                            className="text-[11px] text-slate-500 hover:text-teal-600 flex items-center gap-1 cursor-pointer"
                           >
                             {copiedId === item.id ? (
                               <>
@@ -706,7 +706,7 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
 
                         {/* Suggested action pill */}
                         {item.suggestedAction && (
-                          <div className="mt-2.5 pt-2 border-t border-slate-200/70 flex items-center gap-1.5 text-[11px] text-indigo-900 bg-indigo-50/60 px-2.5 py-1.5 rounded-lg font-medium">
+                          <div className="mt-2.5 pt-2 border-t border-slate-200/70 flex items-center gap-1.5 text-[11px] text-teal-900 bg-teal-50/60 px-2.5 py-1.5 rounded-lg font-medium">
                             <Lightbulb className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                             <span><b>填报指引：</b>{item.suggestedAction}</span>
                           </div>
@@ -755,7 +755,7 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
                               >
                                 <div className="flex justify-between font-bold text-slate-900">
                                   <span>{path.pathName}</span>
-                                  <span className="text-indigo-600">{path.estimatedScore}</span>
+                                  <span className="text-teal-600">{path.estimatedScore}</span>
                                 </div>
                                 <p className="text-slate-600 text-[11px]">{path.assumption}</p>
                                 <p className="text-[10px] text-amber-800 font-medium">
@@ -803,7 +803,7 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
           {activeTab === 'benchmarks' && (
             <div className="space-y-4">
               <div className="p-3.5 rounded-xl bg-slate-900 text-white text-xs space-y-1">
-                <div className="flex items-center gap-2 text-indigo-300 font-bold">
+                <div className="flex items-center gap-2 text-teal-300 font-bold">
                   <TrendingUp className="w-4 h-4" />
                   <span>全球小微商业真实样本大数据分布（分行业 P50 中位数）</span>
                 </div>
@@ -822,7 +822,7 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-slate-900 text-sm">{ind.name}</span>
                       </div>
-                      <span className="text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md">
+                      <span className="text-[11px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md">
                         {ind.avgRevenue}
                       </span>
                     </div>
@@ -845,7 +845,7 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
                       </div>
                       <div className="p-2 bg-slate-50 rounded-lg border border-slate-100">
                         <span className="text-[10px] text-slate-400 block font-medium">到手净利润率</span>
-                        <span className="font-bold text-indigo-700 text-xs sm:text-sm">{ind.netProfitMargin}</span>
+                        <span className="font-bold text-teal-700 text-xs sm:text-sm">{ind.netProfitMargin}</span>
                         <span className="text-[9px] text-slate-500 block truncate">实际进口袋</span>
                       </div>
                     </div>
@@ -875,12 +875,12 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
                   handleAskQuestion(questionInput);
                 }
               }}
-              className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-indigo-500 focus:bg-white transition-all"
+              className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-teal-500 focus:bg-white transition-all"
             />
             <button
               onClick={() => handleAskQuestion(questionInput)}
               disabled={isLoading || !questionInput.trim()}
-              className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer shrink-0"
+              className="px-4 py-2.5 bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer shrink-0"
             >
               <Send className="w-3.5 h-3.5" />
               <span>{isLoading ? '解答中...' : '提问'}</span>

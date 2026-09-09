@@ -58,6 +58,9 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
   currentUser,
   onOpenAuth
 }) => {
+  // 英文模式下报告正文/表单/项目卡片此前完全没翻译；这里补齐本页所有面向用户的文案。
+  const t = (zh: string, en: string) => (language === 'en' ? en : zh);
+
   // —— 协作者管理（原表单第 5 步，体检后挪到项目管理界面）——
   const [collabOpenId, setCollabOpenId] = useState<string | null>(null);
   const [collabEmail, setCollabEmail] = useState('');
@@ -66,13 +69,13 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
   const handleAddCollab = (projId: string) => {
     const email = collabEmail.trim();
     if (!email || !email.includes('@')) {
-      setCollabError('请输入有效邮箱（例如 partner@example.com）');
+      setCollabError(t('请输入有效邮箱（例如 partner@example.com）', 'Please enter a valid email (e.g. partner@example.com)'));
       return;
     }
     const proj = projects.find((p) => p.id === projId);
     const existing = proj?.collaborators || [];
     if (existing.some((c) => c.email.toLowerCase() === email.toLowerCase())) {
-      setCollabError('该邮箱已在协作者列表中');
+      setCollabError(t('该邮箱已在协作者列表中', 'This email is already a collaborator'));
       return;
     }
     onUpdateProject?.(projId, {
@@ -98,7 +101,7 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
       <div className="bg-white rounded-3xl p-6 sm:p-7 border-2 border-neutral-200 shadow-xs flex flex-wrap items-center justify-between gap-4">
         <div>
           <div className="flex items-center space-x-2 mb-1">
-            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-100">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-100">
               PROJECTS & CLOUD HUB
             </span>
           </div>
@@ -127,7 +130,7 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
       <div className={`p-4 sm:p-5 rounded-3xl border-2 flex flex-wrap items-center justify-between gap-3 text-xs ${
         currentUser
           ? 'bg-emerald-50/60 border-emerald-200 text-emerald-950'
-          : 'bg-indigo-50/60 border-indigo-200 text-indigo-950'
+          : 'bg-teal-50/60 border-teal-200 text-teal-950'
       }`}>
         <div className="flex items-center space-x-3">
           {currentUser ? (
@@ -135,23 +138,27 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
               <UserCheck className="w-4 h-4" />
             </div>
           ) : (
-            <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
+            <div className="w-8 h-8 rounded-full bg-teal-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
               <Database className="w-4 h-4" />
             </div>
           )}
           <div>
             <div className="font-bold flex items-center gap-2">
-              <span>{currentUser ? `已登录账号：${currentUser.displayName || currentUser.email}` : '未登录账号（数据暂存本地浏览器）'}</span>
+              <span>
+                {currentUser
+                  ? t(`已登录账号：${currentUser.displayName || currentUser.email}`, `Signed in as: ${currentUser.displayName || currentUser.email}`)
+                  : t('未登录账号（数据暂存本地浏览器）', 'Not signed in (data stored locally only)')}
+              </span>
               {currentUser && (
                 <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold border border-emerald-200">
-                  下次登录随时找回
+                  {t('下次登录随时找回', 'Recoverable on next sign-in')}
                 </span>
               )}
             </div>
             <p className="text-[11px] opacity-80 mt-0.5">
               {currentUser
-                ? '您的所有商业自测表单与 5 维雷达体检报告已与您的账号自动双向同步。'
-                : '注册账号（支持 Google 或邮箱密码），将当前报告永久关联至您的专属云端空间，换手机或电脑随时查看。'}
+                ? t('您的所有商业自测表单与 5 维雷达体检报告已与您的账号自动双向同步。', 'All your assessment forms and 5-dimension radar reports are auto-synced to your account.')
+                : t('注册账号（支持 Google 或邮箱密码），将当前报告永久关联至您的专属云端空间，换手机或电脑随时查看。', 'Sign up (Google or email) to permanently link this report to your cloud space and access it from any device.')}
             </p>
           </div>
         </div>
@@ -160,10 +167,10 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
           {!currentUser && onOpenAuth && (
             <button
               onClick={onOpenAuth}
-              className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold shadow-md shadow-indigo-600/20 transition-all cursor-pointer hover:scale-102"
+              className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold shadow-md shadow-teal-600/20 transition-all cursor-pointer hover:scale-102"
             >
               <UserCheck className="w-4 h-4 shrink-0" />
-              <span>登录 / 注册账号</span>
+              <span>{t('登录 / 注册账号', 'Sign in / Sign up')}</span>
             </button>
           )}
 
@@ -171,8 +178,8 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
             onClick={onTriggerSync}
             className="flex items-center space-x-1 px-3.5 py-2 rounded-xl bg-white border-2 border-neutral-200 hover:bg-neutral-50 text-neutral-800 font-bold shadow-xs transition-colors cursor-pointer"
           >
-            <RotateCcw className="w-3.5 h-3.5 text-indigo-600" />
-            <span>云端双向同步</span>
+            <RotateCcw className="w-3.5 h-3.5 text-teal-600" />
+            <span>{t('云端双向同步', 'Sync with cloud')}</span>
           </button>
         </div>
       </div>
@@ -180,21 +187,21 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
       {/* Projects List Grid */}
       {projects.length === 0 ? (
         <div className="bg-white rounded-3xl p-12 text-center border-2 border-neutral-200 shadow-xs space-y-4">
-          <div className="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto border border-indigo-100 shadow-xs">
+          <div className="w-16 h-16 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center mx-auto border border-teal-100 shadow-xs">
             <FileText className="w-8 h-8" />
           </div>
           <div>
-            <h3 className="text-base font-black text-neutral-900">暂无申报项目</h3>
+            <h3 className="text-base font-black text-neutral-900">{t('暂无申报项目', 'No projects yet')}</h3>
             <p className="text-xs text-neutral-500 font-medium max-w-md mx-auto mt-1">
-              点击下方按钮开始您的第一次商业模型自测，AI 将在 10 秒内为您生成客观体检报告。
+              {t('点击下方按钮开始您的第一次商业模型自测，AI 将在 10 秒内为您生成客观体检报告。', 'Click below to start your first business assessment — AI generates an objective report in under 10 seconds.')}
             </p>
           </div>
           <button
             onClick={onNewProject}
-            className="inline-flex items-center space-x-1.5 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl text-xs font-bold shadow-md shadow-indigo-600/20 transition-all cursor-pointer"
+            className="inline-flex items-center space-x-1.5 px-6 py-2.5 bg-teal-600 hover:bg-teal-500 text-white rounded-2xl text-xs font-bold shadow-md shadow-teal-600/20 transition-all cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            <span>立即创建自测</span>
+            <span>{t('立即创建自测', 'Start assessment')}</span>
           </button>
         </div>
       ) : (
@@ -221,11 +228,11 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
                         {proj.isSensitiveRegion ? (
                           <span className="text-[10px] bg-amber-50 text-amber-800 font-bold px-2.5 py-0.5 rounded-full border border-amber-200 flex items-center space-x-1">
                             <ShieldAlert className="w-3 h-3 text-amber-600" />
-                            <span>敏感脱敏</span>
+                            <span>{t('敏感脱敏', 'Sensitive/Redacted')}</span>
                           </span>
                         ) : (
-                          <span className="text-[10px] bg-indigo-50 text-indigo-700 font-bold px-2.5 py-0.5 rounded-full border border-indigo-100">
-                            常规模式
+                          <span className="text-[10px] bg-teal-50 text-teal-700 font-bold px-2.5 py-0.5 rounded-full border border-teal-100">
+                            {t('常规模式', 'Standard Mode')}
                           </span>
                         )}
                         <span className="text-[10px] text-neutral-400 font-medium">
@@ -234,10 +241,10 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
                       </div>
 
                       <h3 className="text-base font-black text-neutral-900 leading-snug">
-                        {proj.projectName || '未命名自测项目'}
+                        {proj.projectName || t('未命名自测项目', 'Untitled Project')}
                       </h3>
                       <p className="text-xs text-neutral-500 font-medium mt-0.5">
-                        {proj.businessType || '海外小微经营'} ｜ 币种：{proj.baseCurrency}
+                        {proj.businessType || t('海外小微经营', 'Overseas Micro-Business')} ｜ {t('币种', 'Currency')}：{proj.baseCurrency}
                       </p>
                     </div>
 
@@ -252,20 +259,20 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
                       </div>
                     ) : (
                       <span className="text-xs bg-neutral-100 text-neutral-600 px-3 py-1 rounded-xl font-bold border border-neutral-200">
-                        草稿待评
+                        {t('草稿待评', 'Draft, not assessed')}
                       </span>
                     )}
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 text-xs text-neutral-700 bg-neutral-50 p-3 rounded-2xl border border-neutral-100">
                     <div>
-                      <span className="text-neutral-400 block text-[10px] font-bold uppercase mb-0.5">月均总流水:</span>
+                      <span className="text-neutral-400 block text-[10px] font-bold uppercase mb-0.5">{t('月均总流水', 'Avg. Monthly Revenue')}:</span>
                       <span className="font-mono font-bold text-neutral-900">
                         {formatMoney(proj.monthlyRevenue.amount, proj.monthlyRevenue.currency)}
                       </span>
                     </div>
                     <div>
-                      <span className="text-neutral-400 block text-[10px] font-bold uppercase mb-0.5">凭证方式:</span>
+                      <span className="text-neutral-400 block text-[10px] font-bold uppercase mb-0.5">{t('凭证方式', 'Proof Type')}:</span>
                       <span className="font-bold text-neutral-800">
                         {proofTypeLabel(proj.proofType, language)}
                       </span>
@@ -279,39 +286,39 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
                         setCollabOpenId(collabOpenId === proj.id ? null : proj.id);
                         setCollabError(null);
                       }}
-                      className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-700 hover:text-indigo-900 transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-teal-700 hover:text-teal-900 transition-colors cursor-pointer"
                     >
-                      <Users className="w-3.5 h-3.5 text-indigo-500" />
+                      <Users className="w-3.5 h-3.5 text-teal-500" />
                       {proj.collaborators.length > 0
-                        ? `协作者 ${proj.collaborators.length} 人`
-                        : '添加协作者'}
+                        ? t(`协作者 ${proj.collaborators.length} 人`, `${proj.collaborators.length} Collaborator${proj.collaborators.length > 1 ? 's' : ''}`)
+                        : t('添加协作者', 'Add Collaborator')}
                       <span className="text-[10px] text-neutral-400 font-medium">
-                        {collabOpenId === proj.id ? '收起' : '管理'}
+                        {collabOpenId === proj.id ? t('收起', 'Collapse') : t('管理', 'Manage')}
                       </span>
                     </button>
 
                     {collabOpenId === proj.id && (
-                      <div className="mt-2 p-3 rounded-xl bg-indigo-50/60 border border-indigo-100 space-y-2.5">
+                      <div className="mt-2 p-3 rounded-xl bg-teal-50/60 border border-teal-100 space-y-2.5">
                         {proj.collaborators.length > 0 ? (
                           <div className="space-y-1.5">
                             {proj.collaborators.map((c) => (
                               <div
                                 key={c.email}
-                                className="flex items-center justify-between p-2 rounded-lg bg-white border border-indigo-100"
+                                className="flex items-center justify-between p-2 rounded-lg bg-white border border-teal-100"
                               >
                                 <div className="flex items-center gap-2 min-w-0">
-                                  <Mail className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                                  <Mail className="w-3.5 h-3.5 text-teal-600 shrink-0" />
                                   <span className="font-medium text-slate-800 text-xs truncate">
                                     {c.email}
                                   </span>
-                                  <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded shrink-0">
-                                    协作者 · 可编辑
+                                  <span className="text-[10px] bg-teal-100 text-teal-700 px-1.5 py-0.5 rounded shrink-0">
+                                    {t('协作者 · 可编辑', 'Collaborator · Editor')}
                                   </span>
                                 </div>
                                 <button
                                   onClick={() => handleRemoveCollab(proj.id, c.email)}
                                   className="text-slate-400 hover:text-rose-500 p-1 shrink-0 cursor-pointer"
-                                  title="移除协作者"
+                                  title={t('移除协作者', 'Remove collaborator')}
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
                                 </button>
@@ -319,15 +326,15 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
                             ))}
                           </div>
                         ) : (
-                          <p className="text-[11px] text-indigo-700 font-medium">
-                            暂无协作者。可邀请配偶、当地同工一起核对数据。
+                          <p className="text-[11px] text-teal-700 font-medium">
+                            {t('暂无协作者。可邀请配偶、当地同工一起核对数据。', 'No collaborators yet. Invite a spouse or local teammate to review the data together.')}
                           </p>
                         )}
 
                         <div className="flex gap-2">
                           <input
                             type="email"
-                            placeholder="输入协作者邮箱 (如 partner@example.com)"
+                            placeholder={t('输入协作者邮箱 (如 partner@example.com)', "Collaborator's email (e.g. partner@example.com)")}
                             value={collabEmail}
                             onChange={(e) => {
                               setCollabEmail(e.target.value);
@@ -340,10 +347,10 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
                           />
                           <button
                             onClick={() => handleAddCollab(proj.id)}
-                            className="inline-flex items-center gap-1 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-lg shadow-2xs transition-colors text-xs cursor-pointer"
+                            className="inline-flex items-center gap-1 px-3 py-2 bg-teal-600 hover:bg-teal-500 text-white font-semibold rounded-lg shadow-2xs transition-colors text-xs cursor-pointer"
                           >
                             <UserPlus className="w-3.5 h-3.5" />
-                            添加
+                            {t('添加', 'Add')}
                           </button>
                         </div>
                         {collabError && (
@@ -358,7 +365,7 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
                   <button
                     onClick={() => onDeleteProject(proj.id)}
                     className="text-neutral-400 hover:text-rose-600 p-2 rounded-xl hover:bg-rose-50 transition-colors cursor-pointer"
-                    title="删除此项目"
+                    title={t('删除此项目', 'Delete this project')}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -368,15 +375,15 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
                       onClick={() => onSelectProject(proj.id)}
                       className="px-3.5 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 font-bold rounded-xl border border-neutral-200 transition-colors cursor-pointer"
                     >
-                      编辑申报
+                      {t('编辑申报', 'Edit')}
                     </button>
 
                     {latestReport && (
                       <button
                         onClick={() => onSelectReport(latestReport.id)}
-                        className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-xs transition-colors cursor-pointer flex items-center space-x-1"
+                        className="px-3.5 py-1.5 bg-teal-600 hover:bg-teal-500 text-white font-bold rounded-xl shadow-xs transition-colors cursor-pointer flex items-center space-x-1"
                       >
-                        <span>查看诊断报告</span>
+                        <span>{t('查看诊断报告', 'View Report')}</span>
                         <ExternalLink className="w-3 h-3" />
                       </button>
                     )}
