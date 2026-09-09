@@ -2,6 +2,9 @@ node_modules/
 build/
 dist/
 coverage/
+# 部署以 npm install（见 vercel.json installCommand）为准，仓库内只保留 package-lock.json，
+# 避免 bun.lock 与 npm 的 package-lock.json 两套锁文件互相漂移导致依赖版本不一致
+bun.lock
 .DS_Store
 *.log
 .env*

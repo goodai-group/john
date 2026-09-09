@@ -43,29 +43,52 @@ if (supabaseUrl && supabaseAnonKey && supabaseUrl.startsWith('http')) {
   console.log('ℹ️ Supabase credentials not configured. Operating in Offline-First Local Storage mode.');
 }
 
-// 当应用运行在 OAuth 登录弹窗中时（window.opener 存在），授权完成后自动关闭弹窗
+// 当应用运行在 OAuth 登录弹窗中时（window.opener 存在），授权完成后自动关闭弹窗。
+// 只有在真正确认 session 已写入（或明确收到 error 回跳参数）后才关闭，
+// 避免旧版固定延时关闭导致的"session 还没换取完成，弹窗已经被关掉"竞态问题；
+// 同时设置一个较长的兜底超时，防止极端情况下（网络挂起、SDK 异常）弹窗永远关不掉。
 if (typeof window !== 'undefined' && window.opener && window.opener !== window) {
+  let popupClosed = false;
+  const closePopup = () => {
+    if (popupClosed) return;
+    popupClosed = true;
+    try {
+      window.close();
+    } catch (e) {
+      console.warn('OAuth popup auto-close prevented:', e);
+    }
+  };
+
+  const hasCallbackError =
+    window.location.search.includes('error=') || window.location.hash.includes('error=');
+
   const tryClosePopup = async () => {
     try {
       if (supabase) {
         const { data } = await supabase.auth.getSession();
         if (data?.session) {
-          window.close();
+          closePopup();
           return;
         }
       }
     } catch {
-      /* 忽略 */
+      /* 忽略，交给下方兜底超时处理 */
     }
+    // 回跳链接本身带 error 参数（用户拒绝授权/Provider 报错），无需再等 session，直接关闭
+    if (hasCallbackError) closePopup();
   };
   tryClosePopup();
+
   if (supabase) {
     supabase.auth.onAuthStateChange((event, session) => {
       if (session || event === 'SIGNED_IN') {
-        window.close();
+        closePopup();
       }
     });
   }
+
+  // 兜底：10 秒内 session 仍未确认写入，也强制关闭，避免弹窗卡死挡住用户
+  setTimeout(closePopup, 10000);
 }
 
 export const isCloudDatabaseAvailable = (): boolean => {

@@ -201,7 +201,13 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {projects.map((proj, idx) => {
             const projectReports = reports.filter((r) => r.projectId === proj.id);
-            const latestReport = projectReports[0];
+            // 修复：不能直接取数组第 0 项当"最新报告"——云端合并后数组顺序不保证按版本排序，
+            // 必须显式按 version 取最大值，否则角标可能展示旧版本分数（与 App.tsx 中
+            // 其他地方统一按 version 排序的做法保持一致）。
+            const latestReport = projectReports.reduce<typeof projectReports[number] | undefined>(
+              (latest, r) => (!latest || r.version > latest.version ? r : latest),
+              undefined
+            );
 
             return (
               <div

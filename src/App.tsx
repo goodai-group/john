@@ -37,7 +37,8 @@ import {
   hasAnyStoredProjects,
   hasAnyStoredReports,
   loadStoredTab,
-  saveStoredTab
+  saveStoredTab,
+  clearAllLocalUserData
 } from './lib/storage';
 import {
   isCloudDatabaseAvailable,
@@ -402,13 +403,32 @@ export default function App() {
 
   // Logout Action
   const handleLogout = async () => {
+    let remoteLogoutFailed = false;
     try {
       await logoutGoogleUser();
-      setCurrentUser(null);
-      pushBanner({ kind: 'info', text: '已安全退出 Google 登录。' }, 3000);
     } catch (err) {
+      // 远端登出失败不应让用户卡在"以为已退出、实际仍是登录态"——
+      // 本地登录态与本地数据依然要清空，只是提示用户远端会话可能未彻底失效。
       console.warn('Logout error:', err);
+      remoteLogoutFailed = true;
     }
+
+    // 清空本地登录态与本地存储的项目/报告数据：
+    // 云端同步是"合并"逻辑，若退出登录后不清本地存储，共享设备上下一位使用者
+    // 打开浏览器仍能直接看到上一个已登录用户的项目与财务数据。
+    setCurrentUser(null);
+    setProjects([]);
+    setReports([]);
+    setActiveProjectId('');
+    setActiveReportId('');
+    clearAllLocalUserData();
+
+    pushBanner(
+      remoteLogoutFailed
+        ? { kind: 'info', text: '已在本机退出登录（远端会话状态未能确认，如仍显示已登录请重新刷新页面）。' }
+        : { kind: 'info', text: '已安全退出 Google 登录。' },
+      3000
+    );
   };
 
   // Submit form handler
@@ -844,7 +864,13 @@ export default function App() {
       {/* 账号登录 / 注册弹窗（Google + 邮箱密码双通道） */}
       <AuthModal
         isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
+        onClose={() => {
+          setIsAuthModalOpen(false);
+          // 修复：关闭弹窗时必须重置 authInitialMode——否则用户在"设置新密码"模式下
+          // 直接关闭弹窗而不提交，下次点击登录会因为 initialMode 仍是 'newpass'
+          // 而被重新锁死在设置新密码界面，进不了正常登录/注册。
+          setAuthInitialMode(undefined);
+        }}
         language={language}
         isGoogleLoading={isSigningIn}
         onGoogleLogin={handleLoginWithGoogle}

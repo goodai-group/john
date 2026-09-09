@@ -127,6 +127,26 @@ export function inferBusinessStructureLocally(
       { id: 'opex_maintenance', name: '商用设备日常保养与耗损', amount: 80 }
     ];
     result.advice = '餐饮烘焙行业直接食材成本通常占 35%-45%，毛利率宜保持在 55% 以上，注意控制旺铺租金比重。';
+  } else if (/技能|维修|汽修|木工|手工|实训|工坊|workshop|repair|vocational/i.test(pLower)) {
+    // 注意：该分支必须排在"教育培训"分支之前——"维修培训""工坊培训"这类店铺名
+    // 同时含有职业技能类关键词（维修/工坊/技能）与泛化的"培训"二字，
+    // 但更准确的行业应是职业实训/手工工坊而非语言教育，故让更具体的关键词优先匹配。
+    result.key = 'vocational_training';
+    result.displayName = '职业实训 / 手工工坊';
+    result.customName = '青年职业技能实训与手艺工坊';
+    result.revTip = '手作产品销售、维修服务收费与实训学员学费';
+    result.rev = 2200;
+    result.cogs = [
+      { id: 'cogs_materials', name: '实训原料、木料/皮革/布料耗材', amount: 500 },
+      { id: 'cogs_tools', name: '易损刀具、焊锡/五金零配件与损耗', amount: 160 }
+    ];
+    result.opex = [
+      { id: 'opex_rent', name: '实训车间/工坊场地租金', amount: 400 },
+      { id: 'opex_master', name: '带教技师与工匠师傅津贴', amount: 700 },
+      { id: 'opex_power', name: '动力工业用电、水费与安全保险', amount: 150 },
+      { id: 'opex_maintain', name: '机械设备定期检修与润滑耗损', amount: 90 }
+    ];
+    result.advice = '职业实训与工坊需兼顾产品质量与技能传授，建议储备 3 个月以上资金支持设备升级换代。';
   } else if (/教育|学校|培训|辅导|语言|英语|文化|课后|school|education|language|tutoring/i.test(pLower)) {
     result.key = 'education_training';
     result.displayName = '语言教育 / 辅导中心';
@@ -144,23 +164,6 @@ export function inferBusinessStructureLocally(
       { id: 'opex_activity', name: '学员文化交流与家长日活动杂费', amount: 80 }
     ];
     result.advice = '教育培训属于轻资产服务，直接教材成本低（<15%），核心支出在老师薪资与场地，保持 25% 结余即可稳健运营。';
-  } else if (/技能|维修|it|汽修|木工|手工|实训|工坊|workshop|tech|repair|vocational/i.test(pLower)) {
-    result.key = 'vocational_training';
-    result.displayName = '职业实训 / 手工工坊';
-    result.customName = '青年职业技能实训与手艺工坊';
-    result.revTip = '手作产品销售、维修服务收费与实训学员学费';
-    result.rev = 2200;
-    result.cogs = [
-      { id: 'cogs_materials', name: '实训原料、木料/皮革/布料耗材', amount: 500 },
-      { id: 'cogs_tools', name: '易损刀具、焊锡/五金零配件与损耗', amount: 160 }
-    ];
-    result.opex = [
-      { id: 'opex_rent', name: '实训车间/工坊场地租金', amount: 400 },
-      { id: 'opex_master', name: '带教技师与工匠师傅津贴', amount: 700 },
-      { id: 'opex_power', name: '动力工业用电、水费与安全保险', amount: 150 },
-      { id: 'opex_maintain', name: '机械设备定期检修与润滑耗损', amount: 90 }
-    ];
-    result.advice = '职业实训与工坊需兼顾产品质量与技能传授，建议储备 3 个月以上资金支持设备升级换代。';
   } else if (
     /超市|商超|便利|杂货|零售|批发|档口|百货|服装|服饰|衣帽|鞋店|箱包|手机|数码|电脑|电器|家电|五金|建材|文具|store|shop|market|retail|clothing|garment|tailor|shoe|phone|electronics|hardware/i.test(pLower)
   ) {
