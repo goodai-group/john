@@ -484,7 +484,14 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                     <span className="text-xs font-normal text-neutral-400">/100</span>
                   </div>
                 </div>
-                <div className="w-12 h-12 rounded-xl bg-neutral-900 text-white flex items-center justify-center font-mono font-black text-xl shadow-xs">
+                {/* 修复：原先固定 w-12 h-12 的方形徽章，装不下 "REJECT" 这类较长的档位文案，
+                    溢出的文字会被右侧相邻色块盖住，视觉上显示成乱码（如 "EJEC"）。
+                    改为 min-w + 横向内边距的胶囊形状，并按文案长度自适应字号，保证任意档位都能完整显示。 */}
+                <div
+                  className={`h-12 min-w-12 px-2 rounded-xl bg-neutral-900 text-white flex items-center justify-center font-mono font-black shadow-xs whitespace-nowrap ${
+                    report.tier.length > 3 ? 'text-sm' : 'text-xl'
+                  }`}
+                >
                   {report.tier}
                 </div>
                 {/* 大白话档位：让不懂财务的人一眼看懂安全与否 */}

@@ -13,7 +13,10 @@ const CUSTOM_INDUSTRY_VALUE = '__CUSTOM__';
 export function runBusinessAssessment(formData: BusinessFormData): AssessmentReport {
   const baseCurrency = formData.baseCurrency === CUSTOM_CURRENCY_VALUE && formData.customCurrencyCode ? formData.customCurrencyCode : (formData.baseCurrency || 'USD');
   const customRateVal = formData.hasMultipleRates ? formData.customExchangeRateValue : undefined;
-  const customRateCode = formData.hasMultipleRates ? formData.baseCurrency : undefined;
+  // 修复：必须用解析后的真实币种代码（baseCurrency），而不是原始表单字段 formData.baseCurrency——
+  // 当用户选择"自定义币种"时，formData.baseCurrency 仍是占位符 CUSTOM_CURRENCY_VALUE('__CUSTOM__')，
+  // 永远不会等于任何真实金额字段的 currency 代码，导致自报汇率被 convertToTargetCurrency 静默忽略。
+  const customRateCode = formData.hasMultipleRates ? baseCurrency : undefined;
 
   // 1. 统一折算所有金额字段至主报告币种
   const conv = (field: typeof formData.monthlyRevenue) =>

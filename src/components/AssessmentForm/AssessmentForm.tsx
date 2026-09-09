@@ -578,28 +578,51 @@ export const AssessmentForm: React.FC<FormProps> = ({
   };
 
   const updateMonthlyBreakdown = (index: number, amount: number) => {
-    const updated = [...formData.monthlyBreakdowns];
-    if (updated[index]) {
-      updated[index].revenue.amount = Math.max(0, isNaN(amount) ? 0 : amount);
-      updated[index].isEstimated = false; // 用户手动编辑后解除估算标识
-      setFormData((prev) => ({ ...prev, monthlyBreakdowns: updated }));
-    }
+    // 修复：改为纯函数式更新，不再对 formData.monthlyBreakdowns[index] 原地修改——
+    // 原实现虽然 slice 出了新数组，但数组里的元素对象引用未变，直接改写其字段属于
+    // 隐式 mutation，与文件内其他 handler 统一的不可变更新模式不一致，存在更新丢失风险。
+    setFormData((prev) => {
+      if (!prev.monthlyBreakdowns[index]) return prev;
+      const updated = prev.monthlyBreakdowns.map((b, i) =>
+        i === index
+          ? {
+              ...b,
+              revenue: { ...b.revenue, amount: Math.max(0, isNaN(amount) ? 0 : amount) },
+              isEstimated: false // 用户手动编辑后解除估算标识
+            }
+          : b
+      );
+      return { ...prev, monthlyBreakdowns: updated };
+    });
   };
 
   // AI Broken stream auto fill
   const handleInterpolateMissingMonths = () => {
     setIsSimulatingOcr(true);
     setTimeout(() => {
-      const updated = formData.monthlyBreakdowns.map((b, idx, arr) => {
+      const arr = formData.monthlyBreakdowns;
+      // 修复：缺失月份改为参照"最近的真实（非估算）数据"插值，而不是简单取相邻月份的值——
+      // 原实现在两个及以上连续月份缺失时，会让这些缺失月份互相以 0 求平均，
+      // 导致估算结果被严重拉低（如 [1000,0,0,1000] 会把中间两月都估成 500 而非接近 1000）。
+      const findNearestKnown = (fromIdx: number, step: 1 | -1): number | null => {
+        for (let i = fromIdx; i >= 0 && i < arr.length; i += step) {
+          if (arr[i].revenue.amount > 0) return arr[i].revenue.amount;
+        }
+        return null;
+      };
+      const updated = arr.map((b, idx) => {
         if (b.revenue.amount > 0) return b;
-        const prev = arr[idx - 1]?.revenue.amount || 3500;
-        const next = arr[idx + 1]?.revenue.amount || 3500;
-        const avg = Math.round((prev + next) / 2);
+        const prevKnown = findNearestKnown(idx - 1, -1);
+        const nextKnown = findNearestKnown(idx + 1, 1);
+        const avg =
+          prevKnown !== null && nextKnown !== null
+            ? Math.round((prevKnown + nextKnown) / 2)
+            : Math.round(prevKnown ?? nextKnown ?? 3500);
         return {
           ...b,
           revenue: { amount: avg, currency: formData.baseCurrency },
           isEstimated: true,
-          note: 'AI识别流水缺口，按前后相邻月份平均值自动估算'
+          note: 'AI识别流水缺口，按最近的真实月份数据自动估算'
         };
       });
       setFormData((prev) => ({ ...prev, monthlyBreakdowns: updated }));

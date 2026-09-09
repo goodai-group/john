@@ -9,8 +9,9 @@ import {
   Sparkles,
   Info
 } from 'lucide-react';
-import { CurrencyCode, Language } from '../types';
+import { BusinessFormData, CurrencyCode, Language } from '../types';
 import { SUPPORTED_CURRENCIES, formatMoney } from '../lib/currencies';
+import { calculateAssessmentReport } from '../lib/scoringEngine';
 
 interface SimulatorProps {
   language: Language;
@@ -31,44 +32,75 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
   const [liquidCash, setLiquidCash] = useState(0);
   const [operatingMonths, setOperatingMonths] = useState(12);
 
-  // Instant Mathematical calculations
+  // 修复：不再手写一套独立的打分/红线公式（会与正式报告引擎的加权算法长期跑偏，
+  // 同样的输入曾出现试算器与正式报告分数、评级档位都不一致的问题）。
+  // 改为把试算器的滑块参数拼装成一份最小可用的 BusinessFormData，
+  // 直接复用 runBusinessAssessment（正式评分引擎）来计算，确保结果与正式提交完全一致。
   const realRevenue = (monthlyRevenue * realRevenueRatio) / 100;
   const externalGrants = monthlyRevenue - realRevenue;
   const cogsAmount = (realRevenue * cogsRatio) / 100;
-  const totalOpex = rent + labor + utilities + otherOpex;
-  const grossProfit = Math.max(0, realRevenue - cogsAmount);
-  const grossMargin = realRevenue > 0 ? (grossProfit / realRevenue) * 100 : 0;
-  const operatingProfitPBT = grossProfit - totalOpex;
-  const netProfitPAT = operatingProfitPBT - taxes;
-  const netMargin = realRevenue > 0 ? (netProfitPAT / realRevenue) * 100 : 0;
-  const opexRatio = realRevenue > 0 ? (totalOpex / realRevenue) * 100 : 0;
-  const monthlyBurn = cogsAmount + totalOpex + debtPayment;
-  const cashRunway = monthlyBurn > 0 ? liquidCash / monthlyBurn : 12;
-  const dscr = debtPayment > 0 ? Math.max(0, operatingProfitPBT) / debtPayment : 99;
 
-  // Gate checks
-  const gate1 = realRevenueRatio >= 60;
-  const gate2 = grossMargin >= 20;
-  const gate3 = grossProfit >= totalOpex;
-  const gate4 = netProfitPAT >= 0;
-  const gate5 = debtPayment === 0 || dscr >= 1.25;
-  const allGatesPassed = gate1 && gate2 && gate3 && gate4 && gate5;
+  const simulatedFormData: BusinessFormData = {
+    id: 'sim-preview',
+    version: 1,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    projectName: '试算预览',
+    industry: 'other',
+    businessType: '',
+    isSensitiveRegion: false,
+    regionCountry: '',
+    regionDetail: '',
+    contactChannel: '',
+    anonymousOwnerName: '',
+    baseCurrency: currency,
+    hasMultipleRates: false,
+    proofType: 'none',
+    proofFiles: [],
+    monthlyBreakdowns: [],
+    monthlyRevenue: { amount: monthlyRevenue, currency },
+    monthlyRealOperatingRevenue: { amount: realRevenue, currency },
+    monthlyExternalGrants: { amount: externalGrants, currency },
+    cogsCost: { amount: cogsAmount, currency },
+    rentCost: { amount: rent, currency },
+    laborCost: { amount: labor, currency },
+    utilityCost: { amount: utilities, currency },
+    taxCost: { amount: taxes, currency },
+    otherOpex: { amount: otherOpex, currency },
+    existingDebtMonthlyPayment: { amount: debtPayment, currency },
+    cashAndLiquidAssets: { amount: liquidCash, currency },
+    inventoryValue: { amount: 0, currency },
+    operatingMonthsCount: operatingMonths,
+    fullTimeEmployeesCount: 0,
+    ownerEmail: '',
+    collaborators: [],
+    isSubmitted: false,
+    isDraft: true
+  };
 
-  // Score estimation
-  let score = Math.round(
-    Math.min(100, realRevenueRatio * 0.15 + grossMargin * 0.35 + (100 - opexRatio) * 0.2 + netMargin * 0.8 + Math.min(15, cashRunway * 3))
-  );
-  if (!allGatesPassed) {
-    score = Math.min(54, score);
-  }
+  const simulatedReport = calculateAssessmentReport(simulatedFormData);
+  const { normalizedFinancials: fin } = simulatedReport;
 
-  let tier = 'BBB';
-  if (!allGatesPassed) tier = 'REJECT';
-  else if (score >= 88) tier = 'AAA';
-  else if (score >= 80) tier = 'AA';
-  else if (score >= 70) tier = 'A';
-  else if (score >= 60) tier = 'BBB';
-  else tier = 'BB';
+  const totalOpex = fin.monthlyOpex;
+  const grossProfit = fin.grossProfit;
+  const grossMargin = fin.grossMarginPercent;
+  const operatingProfitPBT = fin.operatingProfit;
+  const netProfitPAT = fin.netProfit;
+  const opexRatio = fin.opexRatioPercent;
+  const cashRunway = fin.cashRunwayMonths;
+  const dscr = fin.debtServiceCoverageRatio;
+
+  // Gate checks（直接取自正式引擎的判定结果，与上方数值口径完全一致）
+  const gateByCode = (code: string) => simulatedReport.gates.find((g) => g.code === code)?.status === 'PASS';
+  const gate1 = gateByCode('GATE-1');
+  const gate2 = gateByCode('GATE-2');
+  const gate3 = gateByCode('GATE-3');
+  const gate4 = gateByCode('GATE-4');
+  const gate5 = gateByCode('GATE-5');
+  const allGatesPassed = simulatedReport.gatePassed;
+
+  const score = simulatedReport.totalScore;
+  const tier = simulatedReport.tier;
 
   const resetDefaults = () => {
     setMonthlyRevenue(0);
@@ -322,8 +354,11 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
                 <div className="text-xs font-semibold text-neutral-400 mt-1">/ 100 分 · 客观推演</div>
               </div>
 
-              <div className="w-16 h-16 rounded-2xl bg-neutral-800 border border-neutral-700 flex flex-col items-center justify-center">
-                <span className="text-xl font-black text-amber-400">{tier}</span>
+              {/* 同 AssessmentReportView 的修复：固定宽度装不下 "REJECT" 会被裁切，改为 min-w + 自适应字号 */}
+              <div className="h-16 min-w-16 px-2 rounded-2xl bg-neutral-800 border border-neutral-700 flex flex-col items-center justify-center">
+                <span className={`font-black text-amber-400 whitespace-nowrap ${tier.length > 3 ? 'text-sm' : 'text-xl'}`}>
+                  {tier}
+                </span>
                 <span className="text-[9px] font-bold text-neutral-400 tracking-wider">TIER</span>
               </div>
             </div>

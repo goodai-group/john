@@ -142,9 +142,11 @@ export function deleteProjectAndReports(projectId: string, explicitReportIds?: s
   const allReports = getAllReports();
   const targetReports = allReports.filter((r) => r.projectId === projectId);
   const targetReportIds = targetReports.map((r) => r.id);
-  const allDeletedReportIds = Array.from(
-    new Set([...getDeletedReportIds(), ...targetReportIds, ...(explicitReportIds || [])])
-  );
+  // 修复：云端删除必须覆盖 explicitReportIds——调用方可能已提前清空本地报告存储，
+  // 此时 getAllReports() 读不到任何该项目的报告，targetReportIds 会是空数组，
+  // 若只用 targetReportIds 去删云端，会导致云端报告一条都没被真正删除。
+  const reportIdsToDelete = Array.from(new Set([...targetReportIds, ...(explicitReportIds || [])]));
+  const allDeletedReportIds = Array.from(new Set([...getDeletedReportIds(), ...reportIdsToDelete]));
 
   const projects = getStoredProjects().filter((p) => p.id !== projectId);
   localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(projects));
@@ -163,7 +165,7 @@ export function deleteProjectAndReports(projectId: string, explicitReportIds?: s
   }
   return Promise.all([
     deleteAssessmentFromCloud(projectId),
-    ...targetReports.map((r) => deleteReportFromCloud(r.id))
+    ...reportIdsToDelete.map((id) => deleteReportFromCloud(id))
   ])
     .then((results) => results.every(Boolean))
     .catch((err) => {
@@ -266,6 +268,22 @@ export function clearActiveDraft(id?: string): void {
   if (!(id in map)) return;
   delete map[id];
   writeDraftMap(map);
+}
+
+// 退出登录时清空本机所有用户数据（项目/报告/草稿/删除墓碑）：
+// 云端同步是"合并"逻辑，若退出登录后不清本地存储，共享设备上下一位使用者
+// 打开浏览器仍能直接看到上一个已登录用户的项目与财务数据，属于数据泄露风险。
+export function clearAllLocalUserData(): void {
+  try {
+    localStorage.removeItem(STORAGE_KEY_PROJECTS);
+    localStorage.removeItem(STORAGE_KEY_REPORTS);
+    localStorage.removeItem(STORAGE_KEY_DRAFT);
+    localStorage.removeItem(STORAGE_KEY_DELETED_PROJECTS);
+    localStorage.removeItem(STORAGE_KEY_DELETED_REPORTS);
+    localStorage.removeItem(STORAGE_KEY_INITIAL_SEEDED);
+  } catch (e) {
+    console.warn('Failed to clear local user data on logout:', e);
+  }
 }
 
 // 当前所在页面（tab）：刷新后仍能停在原页面，不再被强制拉回首页

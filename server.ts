@@ -995,31 +995,59 @@ app.post('/api/ai/deep-diagnosis', async (req, res) => {
 });
 
 // 3. AI Broken-Stream Gap Detection & Completion
+// 修复：原实现把月份数组写死为 ['2026-01'..'2026-06']，任何不落在这个固定窗口内的
+// 真实月份（如 2025 年数据、或超出 6 月的月份）都会被当成"完全缺失"，
+// 并且相邻月份也只会在这个写死数组里查找，实际上永远查不到匹配、只会用兜底值 30000 估算。
+// 现在改为：月份列表直接取自用户传入 rawRecords 自身携带的月份（按字符串排序），
+// 缺失/为 0 的记录按"最近的真实数据"插值（找不到近邻时才退回默认参考值）。
 app.post('/api/ai/ocr-estimate', async (req, res) => {
   try {
-    const { rawRecords, currency = 'USD' } = req.body;
-    // Compute adjacent month averages for missing months
-    const months = ['2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06'];
-    const result = months.map((m, idx) => {
-      const existing = (rawRecords || []).find((r: any) => r.month === m);
-      if (existing && existing.amount > 0) {
-        return {
-          month: m,
-          revenue: { amount: existing.amount, currency },
-          isEstimated: false
-        };
+    const body: any = (req.body && typeof req.body === 'object' ? req.body : {}) || {};
+    const rawRecords: Array<{ month?: string; amount?: number }> = Array.isArray(body.rawRecords)
+      ? body.rawRecords
+      : [];
+    const currency = body.currency || 'USD';
+
+    const months = Array.from(
+      new Set(rawRecords.map((r) => r?.month).filter((m): m is string => typeof m === 'string' && m.length > 0))
+    ).sort();
+
+    if (months.length === 0) {
+      return res.json({
+        success: true,
+        data: [],
+        estimatedCount: 0,
+        notice: '未提供任何月份数据，无法进行断点估算。'
+      });
+    }
+
+    const amounts = months.map((m) => {
+      const rec = rawRecords.find((r) => r.month === m);
+      return typeof rec?.amount === 'number' && rec.amount > 0 ? rec.amount : 0;
+    });
+
+    const findNearestKnown = (fromIdx: number, step: 1 | -1): number | null => {
+      for (let i = fromIdx; i >= 0 && i < amounts.length; i += step) {
+        if (amounts[i] > 0) return amounts[i];
       }
-      // AI interpolate adjacent months
-      const prev = (rawRecords || []).find((r: any) => r.month === months[idx - 1]);
-      const next = (rawRecords || []).find((r: any) => r.month === months[idx + 1]);
-      const estimatedVal = Math.round(
-        ((prev ? prev.amount : 30000) + (next ? next.amount : 30000)) / 2
-      );
+      return null;
+    };
+
+    const result = months.map((m, idx) => {
+      if (amounts[idx] > 0) {
+        return { month: m, revenue: { amount: amounts[idx], currency }, isEstimated: false };
+      }
+      const prevKnown = findNearestKnown(idx - 1, -1);
+      const nextKnown = findNearestKnown(idx + 1, 1);
+      const estimatedVal =
+        prevKnown !== null && nextKnown !== null
+          ? Math.round((prevKnown + nextKnown) / 2)
+          : Math.round(prevKnown ?? nextKnown ?? 30000);
       return {
         month: m,
         revenue: { amount: estimatedVal, currency },
         isEstimated: true,
-        note: 'AI识别流水断点，按前后相邻月份平均值自动估算，请核对确认'
+        note: 'AI识别流水断点，按最近的真实月份数据自动估算，请核对确认'
       };
     });
 
