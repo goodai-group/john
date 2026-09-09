@@ -43,6 +43,31 @@ if (supabaseUrl && supabaseAnonKey && supabaseUrl.startsWith('http')) {
   console.log('ℹ️ Supabase credentials not configured. Operating in Offline-First Local Storage mode.');
 }
 
+// 当应用运行在 OAuth 登录弹窗中时（window.opener 存在），授权完成后自动关闭弹窗
+if (typeof window !== 'undefined' && window.opener && window.opener !== window) {
+  const tryClosePopup = async () => {
+    try {
+      if (supabase) {
+        const { data } = await supabase.auth.getSession();
+        if (data?.session) {
+          window.close();
+          return;
+        }
+      }
+    } catch {
+      /* 忽略 */
+    }
+  };
+  tryClosePopup();
+  if (supabase) {
+    supabase.auth.onAuthStateChange((event, session) => {
+      if (session || event === 'SIGNED_IN') {
+        window.close();
+      }
+    });
+  }
+}
+
 export const isCloudDatabaseAvailable = (): boolean => {
   return Boolean(supabase !== null);
 };

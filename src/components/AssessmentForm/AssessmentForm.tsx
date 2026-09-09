@@ -436,8 +436,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
       isFixed: false
     }));
 
-    // —— 用 AI 估算同步营收与进货总额，清除旧 demo/seed 残留值 ——
-    // 否则表单里会残留 INITIAL_PRESET（如 330000 KES / 132000 KES），与 AI 推断的
+    // —— 用 AI 估算同步营收与进货总额，清除旧草稿残留值 ——
     // 明细项完全脱节，导致进货占比算出 100% 或畸形比例。
     // 仅当用户尚未手动改过对应字段时才覆盖（避免覆盖用户真实数据）。
     const aiRev = Number(result.estimatedMonthlyRevenue) || 0;

@@ -20,7 +20,7 @@ interface AuthModalProps {
   onClose: () => void;
   language: Language;
   isGoogleLoading?: boolean;
-  onGoogleLogin: () => void;
+  onGoogleLogin: () => Promise<void> | void;
   // 邮箱密码登录：成功后由调用方同步用户并返回，此组件随后关闭
   onEmailLogin: (email: string, password: string) => Promise<void>;
   // 邮箱注册：返回 true = 已自动登录成功（可关闭）；false = 需要先去邮箱验证
@@ -272,7 +272,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <>
             <button
               type="button"
-              onClick={onGoogleLogin}
+              onClick={async () => {
+                setErrMsg(null);
+                setInfoMsg(null);
+                try {
+                  await onGoogleLogin();
+                } catch (err: any) {
+                  setErrMsg(translateAuthError(err?.message || String(err)));
+                }
+              }}
               disabled={isGoogleLoading}
               className="w-full flex items-center justify-center gap-2.5 px-4 py-3 rounded-xl bg-white border-2 border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-800 text-sm font-bold shadow-xs transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
             >

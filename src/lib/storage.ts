@@ -58,168 +58,7 @@ function unmarkDeleted(list: string[], id: string): string[] {
   return list.filter((x) => x !== id);
 }
 
-export const INITIAL_PRESET_PROJECTS: BusinessFormData[] = [
-  {
-    id: 'proj-demo-1',
-    version: 1,
-    createdAt: '2026-08-10T08:30:00Z',
-    updatedAt: '2026-08-10T09:15:00Z',
-    projectName: '阳光工坊社区烘焙店 (Sunny Bakehouse)',
-    industry: 'food_beverage',
-    businessType: '社区烘焙与熟食',
-    isSensitiveRegion: false,
-    regionCountry: '肯尼亚 (Kenya)',
-    regionDetail: '内罗毕东区 (Nairobi East)',
-    contactChannel: '+254 712 345 678',
-    anonymousOwnerName: 'Grace M.',
-    baseCurrency: 'KES',
-    hasMultipleRates: false,
-    proofType: 'mobile_payment',
-    proofFiles: [
-      {
-        id: 'file-1',
-        name: 'M-Pesa_2026_Till_Statement.pdf',
-        type: 'application/pdf',
-        size: 1420000,
-        uploadTime: '2026-08-10T08:45:00Z',
-        retainedAfterOcr: true
-      }
-    ],
-    monthlyBreakdowns: [
-      { month: '2026-01', revenue: { amount: 320000, currency: 'KES' }, isEstimated: false },
-      { month: '2026-02', revenue: { amount: 310000, currency: 'KES' }, isEstimated: false },
-      { month: '2026-03', revenue: { amount: 345000, currency: 'KES' }, isEstimated: false },
-      { month: '2026-04', revenue: { amount: 330000, currency: 'KES' }, isEstimated: false },
-      { month: '2026-05', revenue: { amount: 325000, currency: 'KES' }, isEstimated: true, note: 'AI依据前后月均值自动估算补充' },
-      { month: '2026-06', revenue: { amount: 350000, currency: 'KES' }, isEstimated: false }
-    ],
-    monthlyRevenue: { amount: 330000, currency: 'KES' },
-    monthlyRealOperatingRevenue: { amount: 330000, currency: 'KES' },
-    monthlyExternalGrants: { amount: 0, currency: 'KES' },
-    cogsCost: { amount: 132000, currency: 'KES' }, // 40%
-    rentCost: { amount: 35000, currency: 'KES' },
-    laborCost: { amount: 48000, currency: 'KES' },
-    utilityCost: { amount: 18000, currency: 'KES' },
-    taxCost: { amount: 9000, currency: 'KES' },
-    otherOpex: { amount: 12000, currency: 'KES' },
-    existingDebtMonthlyPayment: { amount: 15000, currency: 'KES' },
-    cashAndLiquidAssets: { amount: 450000, currency: 'KES' },
-    inventoryValue: { amount: 200000, currency: 'KES' },
-    operatingMonthsCount: 18,
-    fullTimeEmployeesCount: 3,
-    ownerEmail: 'grace@sunnybake.africa',
-    collaborators: [
-      {
-        email: 'john.accountant@sunnybake.africa',
-        role: 'editor',
-        invitedAt: '2026-08-10T08:35:00Z',
-        sectionAccess: ['costs', 'revenues']
-      }
-    ],
-    isSubmitted: true,
-    submittedAt: '2026-08-10T09:15:00Z',
-    isDraft: false
-  },
-  {
-    id: 'proj-demo-2',
-    version: 1,
-    createdAt: '2026-08-18T14:20:00Z',
-    updatedAt: '2026-08-18T15:00:00Z',
-    projectName: '高原传统手工编织合作社 (Highland Artisan)',
-    industry: 'artisan_handicraft',
-    businessType: '特色民族手工艺出口与内销',
-    // 敏感地区模式
-    isSensitiveRegion: true,
-    regionCountry: '中东/北非地区 (MENA Region)',
-    regionDetail: '（已脱敏：仅保留大区）',
-    contactChannel: 'Telegram ID: @highland_craft',
-    anonymousOwnerName: '合作社联络代表 #A09',
-    baseCurrency: 'EGP',
-    hasMultipleRates: true,
-    customExchangeRateType: '当地民间商会日常兑换价',
-    customExchangeRateValue: 52.5,
-    customExchangeRateSource: '开罗商会手工业者联盟周报',
-    // 替代凭证与手写账本
-    proofType: 'handwritten_book',
-    proofFiles: [
-      {
-        id: 'file-2',
-        name: 'handwritten_ledger_2026_spring.jpg',
-        type: 'image/jpeg',
-        size: 890000,
-        uploadTime: '2026-08-18T14:30:00Z',
-        retainedAfterOcr: false // 敏感地区脱敏后不保留原图
-      }
-    ],
-    monthlyBreakdowns: [
-      { month: '2026-01', revenue: { amount: 48000, currency: 'EGP' }, isEstimated: false },
-      { month: '2026-02', revenue: { amount: 52000, currency: 'EGP' }, isEstimated: false },
-      { month: '2026-03', revenue: { amount: 49000, currency: 'EGP' }, isEstimated: false },
-      { month: '2026-04', revenue: { amount: 55000, currency: 'EGP' }, isEstimated: false }
-    ],
-    monthlyRevenue: { amount: 52000, currency: 'EGP' },
-    monthlyRealOperatingRevenue: { amount: 46000, currency: 'EGP' },
-    monthlyExternalGrants: { amount: 6000, currency: 'EGP', isExternalSupport: true },
-    cogsCost: { amount: 15000, currency: 'EGP' },
-    rentCost: { amount: 4000, currency: 'EGP' },
-    laborCost: { amount: 14000, currency: 'EGP' },
-    utilityCost: { amount: 2500, currency: 'EGP' },
-    taxCost: { amount: 1500, currency: 'EGP' },
-    otherOpex: { amount: 2000, currency: 'EGP' },
-    existingDebtMonthlyPayment: { amount: 0, currency: 'EGP' },
-    cashAndLiquidAssets: { amount: 95000, currency: 'EGP' },
-    inventoryValue: { amount: 60000, currency: 'EGP' },
-    operatingMonthsCount: 24,
-    fullTimeEmployeesCount: 4,
-    ownerEmail: 'secure-box-9912@protonmail.com',
-    collaborators: [],
-    isSubmitted: true,
-    submittedAt: '2026-08-18T15:00:00Z',
-    isDraft: false
-  },
-  {
-    id: 'proj-demo-3',
-    version: 1,
-    createdAt: '2026-08-22T10:00:00Z',
-    updatedAt: '2026-08-22T10:30:00Z',
-    projectName: '诚信微型快修与换胎服务 (Quick Auto Service)',
-    industry: 'personal_services',
-    businessType: '社区摩托与汽车快修',
-    isSensitiveRegion: false,
-    regionCountry: '尼日利亚 (Nigeria)',
-    regionDetail: '拉各斯市 (Lagos)',
-    contactChannel: '+234 802 112 3344',
-    anonymousOwnerName: 'Tunde O.',
-    baseCurrency: 'NGN',
-    hasMultipleRates: true,
-    customExchangeRateType: '拉各斯街区日常现金兑换参考价',
-    customExchangeRateValue: 1580.0,
-    customExchangeRateSource: '本地商户联合会公告',
-    // 纯手动无凭证填写
-    proofType: 'none',
-    proofFiles: [],
-    monthlyBreakdowns: [],
-    monthlyRevenue: { amount: 1850000, currency: 'NGN' },
-    monthlyRealOperatingRevenue: { amount: 1850000, currency: 'NGN' },
-    monthlyExternalGrants: { amount: 0, currency: 'NGN' },
-    cogsCost: { amount: 550000, currency: 'NGN' },
-    rentCost: { amount: 180000, currency: 'NGN' },
-    laborCost: { amount: 350000, currency: 'NGN' },
-    utilityCost: { amount: 90000, currency: 'NGN' },
-    taxCost: { amount: 45000, currency: 'NGN' },
-    otherOpex: { amount: 80000, currency: 'NGN' },
-    existingDebtMonthlyPayment: { amount: 120000, currency: 'NGN' },
-    cashAndLiquidAssets: { amount: 2400000, currency: 'NGN' },
-    inventoryValue: { amount: 1500000, currency: 'NGN' },
-    operatingMonthsCount: 14,
-    fullTimeEmployeesCount: 2,
-    ownerEmail: 'tunde.auto@gmail.com',
-    collaborators: [],
-    isSubmitted: true,
-    submittedAt: '2026-08-22T10:30:00Z',
-    isDraft: false
-  }
-];
+export const INITIAL_PRESET_PROJECTS: BusinessFormData[] = [];
 
 export const INITIAL_ESCALATED_QUESTIONS: EscalatedQuestion[] = [
   {
@@ -268,14 +107,11 @@ export const INITIAL_ESCALATED_QUESTIONS: EscalatedQuestion[] = [
 export function getStoredProjects(): BusinessFormData[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_PROJECTS);
-    if (!raw) {
-      localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(INITIAL_PRESET_PROJECTS));
-      return INITIAL_PRESET_PROJECTS;
-    }
+    if (!raw) return [];
     return JSON.parse(raw);
   } catch (e) {
     console.error('Failed to load projects from storage', e);
-    return INITIAL_PRESET_PROJECTS;
+    return [];
   }
 }
 
@@ -339,12 +175,7 @@ export function deleteProjectAndReports(projectId: string, explicitReportIds?: s
 export function getAllReports(): AssessmentReport[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_REPORTS);
-    if (!raw) {
-      // 为初始项目生成初始评估报告
-      const initialReports = INITIAL_PRESET_PROJECTS.map((p) => runBusinessAssessment(p));
-      localStorage.setItem(STORAGE_KEY_REPORTS, JSON.stringify(initialReports));
-      return initialReports;
-    }
+    if (!raw) return [];
     return JSON.parse(raw);
   } catch (e) {
     console.error('Failed to load reports from storage', e);
