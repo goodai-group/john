@@ -13,7 +13,8 @@ import {
   User as UserIcon,
   Loader2,
   MoreHorizontal,
-  CheckCircle2
+  CheckCircle2,
+  MessageCircle
 } from 'lucide-react';
 import { Language, ActiveTab, AppUser } from '../types';
 
