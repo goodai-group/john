@@ -6,6 +6,7 @@ import {
   ProofType
 } from '../types';
 import { convertToTargetCurrency, CUSTOM_CURRENCY_VALUE } from './currencies';
+import { aggregateMonthlyCosts } from './costAggregation';
 
 /** 与 AssessmentForm 中 CUSTOM_INDUSTRY_VALUE 保持一致的占位常量 */
 const CUSTOM_INDUSTRY_VALUE = '__CUSTOM__';
@@ -25,49 +26,19 @@ export function runBusinessAssessment(formData: BusinessFormData): AssessmentRep
   const monthlyGrossRev = conv(formData.monthlyRevenue);
   const monthlyRealRev = conv(formData.monthlyRealOperatingRevenue) || monthlyGrossRev;
   const monthlyGrants = conv(formData.monthlyExternalGrants);
-  // 动态物料成本明细（AI 按行业推断，用户可增删改）按主币种金额直接并入 COGS
-  const dynamicCogsTotal = (formData.dynamicCogsItems || []).reduce(
-    (sum, it) => sum + (Number(it.value) || 0),
-    0
-  );
-  // 若用户使用了 AI 按行业生成的动态物料成本明细，则以其合计为准（避免与 cogsCost 总额重复计入）
-  const cogs = dynamicCogsTotal > 0 ? dynamicCogsTotal : conv(formData.cogsCost);
-  const rent = conv(formData.rentCost);
-  const labor = conv(formData.laborCost);
-  const utility = conv(formData.utilityCost);
-  const tax = conv(formData.taxCost);
-  const otherOpex = conv(formData.otherOpex);
-  const debtPayment = conv(formData.existingDebtMonthlyPayment);
-
-  // —— 全球化经营成本补充项：公司注册/执照、签证与工作许可、设备折旧 ——
-  // 注册与签证费用通常是一次性或按年缴纳，需按用户填写的分摊月数折算为月度等效成本，
-  // 与房租/工资一样计入每月固定开销与"每月烧钱额"，确保成本核算完整、不遗漏。
-  const amortizeMonthly = (totalAmount: number, months: number | undefined) => {
-    const safeMonths = Math.max(1, Math.round(Number(months) || 12));
-    return totalAmount / safeMonths;
-  };
-  const registrationMonthly = amortizeMonthly(
-    conv(formData.companyRegistrationCost),
-    formData.companyRegistrationAmortizationMonths
-  );
-  const visaMonthly = amortizeMonthly(conv(formData.visaFeeCost), formData.visaFeeAmortizationMonths);
-  const depreciationMonthly = conv(formData.equipmentDepreciationCost);
-  const monthlyRegulatoryCosts = registrationMonthly + visaMonthly + depreciationMonthly;
   const liquidCash = conv(formData.cashAndLiquidAssets);
   const inventory = conv(formData.inventoryValue);
 
-  // 动态运营开支明细（AI 按行业推断，用户可增删改）按主币种金额直接并入 OPEX
-  const dynamicOpexTotal = (formData.dynamicOpexItems || []).reduce(
-    (sum, it) => sum + (Number(it.value) || 0),
-    0
-  );
-  // 运营费用总和 (OPEX)
-  // 修复：动态运营开支明细（AI 按行业生成的房租/薪资/水电等细分项）与上方固定字段同义，
-  // 若用户填写了动态项则以其合计为准（避免与固定字段重复计入），否则回退到固定字段合计。
-  // 其他开销 (otherOpex) 为独立类别，两种模式均计入。
-  const fixedOpex = rent + labor + utility;
-  const totalOpex =
-    (dynamicOpexTotal > 0 ? dynamicOpexTotal : fixedOpex) + otherOpex + monthlyRegulatoryCosts;
+  // 成本聚合（COGS/OPEX/税金/还贷/注册·签证·折旧的月度等效额）统一走 aggregateMonthlyCosts，
+  // 避免与保本计算器、异常检测各自重复实现一遍、逐字段币种折算规则跑偏。
+  const {
+    cogs,
+    otherOpex,
+    tax,
+    debtPayment,
+    regulatoryCosts: monthlyRegulatoryCosts,
+    totalOpex
+  } = aggregateMonthlyCosts(formData, baseCurrency, customRateVal, customRateCode);
 
   // 毛利 (Gross Profit) = 真实主营收入 - COGS
   const grossProfit = Math.max(0, monthlyRealRev - cogs);

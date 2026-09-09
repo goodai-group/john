@@ -185,9 +185,13 @@ export const AssessmentForm: React.FC<FormProps> = ({
   const inferReqId = React.useRef(0);
 
   // —— 第5点：属地税收/公司注册/签证成本 AI 预估（可核实修改，不直接参与计算）——
+  // 注意：优先用项目名（与行业/币种推断同一信号源），不用 regionCountry——
+  // regionCountry 只在"敏感地区安全模式"开启时才会展示给用户填写，未开启时它要么是空字符串、
+  // 要么（首次进入、尚无任何项目时）取到表单默认值"肯尼亚 (Kenya)"，会让几乎所有新用户
+  // 在还没填任何信息前就被误判成肯尼亚，与实际所在国家/所选币种无关。
   const regulatoryEstimate = React.useMemo(
-    () => inferRegulatoryCosts(formData.regionCountry || formData.projectName, formData.baseCurrency),
-    [formData.regionCountry, formData.projectName, formData.baseCurrency]
+    () => inferRegulatoryCosts(formData.projectName, formData.baseCurrency),
+    [formData.projectName, formData.baseCurrency]
   );
 
   // —— 第3点：根据已填成本自动算出保本收入（每天/每月至少赚多少才不亏钱）——
@@ -205,7 +209,11 @@ export const AssessmentForm: React.FC<FormProps> = ({
     formData.companyRegistrationAmortizationMonths,
     formData.visaFeeCost,
     formData.visaFeeAmortizationMonths,
-    formData.equipmentDepreciationCost
+    formData.equipmentDepreciationCost,
+    formData.baseCurrency,
+    formData.customCurrencyCode,
+    formData.hasMultipleRates,
+    formData.customExchangeRateValue
   ]);
 
   // —— 第2点：AI 自动识别用户填错的数值及类目并提醒（本地规则化，仅提醒不阻断）——

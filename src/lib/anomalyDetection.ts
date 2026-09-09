@@ -1,27 +1,44 @@
 import { BusinessFormData, FormAnomalyWarning } from '../types';
+import { convertToTargetCurrency, CUSTOM_CURRENCY_VALUE } from './currencies';
+import { aggregateMonthlyCosts } from './costAggregation';
 
 /**
  * 第2点：AI 自动识别用户填错的数值及类目并提醒。
  * 全部为本地规则化启发式检测（不调用 AI 接口，零延迟、零隐私风险），
  * 覆盖最常见的"填反单位/填反类目/数量级搞错"等新手易错场景。
  * 仅做提醒，不阻断提交——与产品"评分规则100%透明、AI只做助手不做裁判"的原则一致。
+ *
+ * 所有金额字段各自可单独选择币种，因此这里和评分引擎一样，先统一折算到主报告币种
+ * 再比较大小/占比，避免不同币种的数字被直接相加或相除得出错误结论。
  */
 export function detectFormAnomalies(formData: BusinessFormData): FormAnomalyWarning[] {
   const warnings: FormAnomalyWarning[] = [];
 
-  const revenue = formData.monthlyRevenue?.amount || 0;
-  const realRevenue = formData.monthlyRealOperatingRevenue?.amount || 0;
-  const grants = formData.monthlyExternalGrants?.amount || 0;
-  const dynamicCogsTotal = (formData.dynamicCogsItems || []).reduce((s, it) => s + (Number(it.value) || 0), 0);
-  const cogs = dynamicCogsTotal > 0 ? dynamicCogsTotal : formData.cogsCost?.amount || 0;
-  const rent = formData.rentCost?.amount || 0;
-  const labor = formData.laborCost?.amount || 0;
-  const utility = formData.utilityCost?.amount || 0;
-  const dynamicOpexTotal = (formData.dynamicOpexItems || []).reduce((s, it) => s + (Number(it.value) || 0), 0);
-  const fixedOpex = dynamicOpexTotal > 0 ? dynamicOpexTotal : rent + labor + utility;
-  const tax = formData.taxCost?.amount || 0;
-  const debt = formData.existingDebtMonthlyPayment?.amount || 0;
-  const cash = formData.cashAndLiquidAssets?.amount || 0;
+  const baseCurrency =
+    formData.baseCurrency === CUSTOM_CURRENCY_VALUE && formData.customCurrencyCode
+      ? formData.customCurrencyCode
+      : formData.baseCurrency || 'USD';
+  const customRateValue = formData.hasMultipleRates ? formData.customExchangeRateValue : undefined;
+  const customRateCode = formData.hasMultipleRates ? baseCurrency : undefined;
+  const conv = (field: typeof formData.monthlyRevenue) =>
+    convertToTargetCurrency(field, baseCurrency, customRateValue, customRateCode);
+
+  const revenue = conv(formData.monthlyRevenue);
+  const realRevenue = conv(formData.monthlyRealOperatingRevenue);
+  const grants = conv(formData.monthlyExternalGrants);
+  const cash = conv(formData.cashAndLiquidAssets);
+
+  const { cogs, fixedOpex, tax, debtPayment: debt } = aggregateMonthlyCosts(
+    formData,
+    baseCurrency,
+    customRateValue,
+    customRateCode
+  );
+  const labor = conv(formData.laborCost);
+  const dynamicOpexTotal = (formData.dynamicOpexItems || []).reduce(
+    (s, it) => s + (Number(it.value) || 0),
+    0
+  );
 
   // 1) 进货成本占比异常：COGS 超过总流水，通常是把"年成本"填成"月成本"或类目填反
   if (revenue > 0 && cogs > revenue) {
@@ -101,7 +118,9 @@ export function detectFormAnomalies(formData: BusinessFormData): FormAnomalyWarn
   }
 
   // 8) 税金及规费为 0 但已填其他大额开销：提醒别漏了这一项（呼应第1点，成本要算全）
-  if (revenue > 500 && tax === 0 && (rent > 0 || labor > 0)) {
+  // 注意：不用"总流水 > 某个绝对数值"做前置条件——不同币种下同样的业务规模数值差几个数量级
+  // （如 VND/IDR 动辄六位数、KWD 却不到 1），只要已经有真实的房租或人工开销，就值得提醒核实。
+  if (tax === 0 && (fixedOpex > 0 || labor > 0)) {
     warnings.push({
       field: 'taxCost',
       severity: 'warning',
