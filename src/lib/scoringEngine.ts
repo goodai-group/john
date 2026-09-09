@@ -38,6 +38,21 @@ export function runBusinessAssessment(formData: BusinessFormData): AssessmentRep
   const tax = conv(formData.taxCost);
   const otherOpex = conv(formData.otherOpex);
   const debtPayment = conv(formData.existingDebtMonthlyPayment);
+
+  // —— 全球化经营成本补充项：公司注册/执照、签证与工作许可、设备折旧 ——
+  // 注册与签证费用通常是一次性或按年缴纳，需按用户填写的分摊月数折算为月度等效成本，
+  // 与房租/工资一样计入每月固定开销与"每月烧钱额"，确保成本核算完整、不遗漏。
+  const amortizeMonthly = (totalAmount: number, months: number | undefined) => {
+    const safeMonths = Math.max(1, Math.round(Number(months) || 12));
+    return totalAmount / safeMonths;
+  };
+  const registrationMonthly = amortizeMonthly(
+    conv(formData.companyRegistrationCost),
+    formData.companyRegistrationAmortizationMonths
+  );
+  const visaMonthly = amortizeMonthly(conv(formData.visaFeeCost), formData.visaFeeAmortizationMonths);
+  const depreciationMonthly = conv(formData.equipmentDepreciationCost);
+  const monthlyRegulatoryCosts = registrationMonthly + visaMonthly + depreciationMonthly;
   const liquidCash = conv(formData.cashAndLiquidAssets);
   const inventory = conv(formData.inventoryValue);
 
@@ -51,7 +66,8 @@ export function runBusinessAssessment(formData: BusinessFormData): AssessmentRep
   // 若用户填写了动态项则以其合计为准（避免与固定字段重复计入），否则回退到固定字段合计。
   // 其他开销 (otherOpex) 为独立类别，两种模式均计入。
   const fixedOpex = rent + labor + utility;
-  const totalOpex = dynamicOpexTotal > 0 ? dynamicOpexTotal + otherOpex : fixedOpex + otherOpex;
+  const totalOpex =
+    (dynamicOpexTotal > 0 ? dynamicOpexTotal : fixedOpex) + otherOpex + monthlyRegulatoryCosts;
 
   // 毛利 (Gross Profit) = 真实主营收入 - COGS
   const grossProfit = Math.max(0, monthlyRealRev - cogs);
@@ -381,6 +397,7 @@ export function runBusinessAssessment(formData: BusinessFormData): AssessmentRep
       monthlyExternalGrants: monthlyGrants,
       monthlyCogs: cogs,
       monthlyOpex: totalOpex,
+      monthlyRegulatoryCosts,
       monthlyBurn,
       grossProfit,
       grossMarginPercent,

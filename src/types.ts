@@ -1,6 +1,6 @@
 export type Language = 'zh' | 'en';
 
-export type ActiveTab = 'form' | 'report' | 'simulator' | 'standards' | 'projects';
+export type ActiveTab = 'form' | 'report' | 'simulator' | 'standards' | 'projects' | 'learning';
 
 export type CurrencyCode = string;
 
@@ -60,6 +60,8 @@ export interface MoneyField {
   note?: string;
   lastEditedBy?: string;
   lastEditedAt?: string;
+  suggestedAmount?: number; // AI 按属地/行业给出的参考金额（仅占位提示，不参与计算，用户可核实修改）
+  aiSourceNote?: string; // AI 给出该参考金额时的依据说明（如"肯尼亚小微企业营业执照年费区间"）
 }
 
 export interface MonthlyBreakdown {
@@ -121,6 +123,12 @@ export interface BusinessFormData {
   utilityCost: MoneyField; // F13 水电网络杂费
   taxCost: MoneyField; // F16 税金及规费
   otherOpex: MoneyField; // 其他日常经营费用
+  // —— 全球化经营成本补充项（税收/签证/折旧/注册费用全部纳入成本）——
+  companyRegistrationCost: MoneyField; // 公司注册/年检/执照一次性或年度费用总额
+  companyRegistrationAmortizationMonths: number; // 该笔费用分摊到经营的月数（默认 12 个月）
+  visaFeeCost: MoneyField; // 经营者/员工签证与工作许可费用总额
+  visaFeeAmortizationMonths: number; // 签证费用分摊月数（默认 12 个月）
+  equipmentDepreciationCost: MoneyField; // 设备月度折旧费（直接按月计入成本）
   existingDebtMonthlyPayment: MoneyField; // 现有债务月还本付息额
   cashAndLiquidAssets: MoneyField; // 当前现金与高流动资产
   inventoryValue: MoneyField; // 库存及固定资产估值
@@ -213,6 +221,7 @@ export interface AssessmentReport {
     monthlyExternalGrants: number;
     monthlyCogs: number;
     monthlyOpex: number;
+    monthlyRegulatoryCosts: number; // 税收/签证/设备折旧/公司注册费用的月度等效合计
     monthlyBurn: number; // 每月现金消耗 = COGS + OPEX + 还贷（不含税），用于统一"能撑多久"口径
     grossProfit: number;
     grossMarginPercent: number;
@@ -257,5 +266,43 @@ export interface AppUser {
   email: string | null;
   displayName: string | null;
   photoURL: string | null;
+}
+
+// —— AI 数值/类目异常提醒（第2点：自动识别用户填错的数值及类目）——
+export interface FormAnomalyWarning {
+  field: string; // 关联字段 key，便于定位到具体输入框
+  severity: 'error' | 'warning';
+  messageZh: string;
+  messageEn: string;
+}
+
+// —— AI 属地经营合规成本预估（第5点：税收/注册成本给出具体情况，用户可核实修改）——
+export interface RegulatoryCostEstimate {
+  countryLabel: string;
+  corporateTaxRateHint: string; // 大致企业/个体经营税率区间说明
+  companyRegistrationCostEstimateUsd: number; // 注册/执照费用估值（USD）
+  visaFeeCostEstimateUsd: number; // 签证/工作许可估值（USD，若无需签证则为 0）
+  sourceNote: string; // 数据依据与免责说明，提示用户核实
+}
+
+// —— 商业知识学习中心（第4点）——
+export type LearningVideoSource = 'internal' | 'youtube';
+
+export interface LearningVideo {
+  id: string;
+  titleZh: string;
+  titleEn: string;
+  descriptionZh: string;
+  descriptionEn: string;
+  category: string; // 分类，如"成本核算"/"签证与合规"/"现金流管理"
+  source: LearningVideoSource;
+  url: string; // internal: /public 下的视频地址; youtube: 完整播放或搜索链接
+  durationMinutes: number;
+}
+
+export interface LearningProgressEntry {
+  videoId: string;
+  watched: boolean;
+  lastWatchedAt: string;
 }
 

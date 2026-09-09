@@ -14,7 +14,8 @@ import {
   Loader2,
   MoreHorizontal,
   CheckCircle2,
-  MessageCircle
+  MessageCircle,
+  GraduationCap
 } from 'lucide-react';
 import { Language, ActiveTab, AppUser } from '../types';
 
@@ -86,6 +87,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'report', label: language === 'zh' ? '体检报告' : 'Report', icon: Sparkles },
     { id: 'simulator', label: language === 'zh' ? '沙盒试算' : 'Simulator', icon: Calculator },
     { id: 'standards', label: language === 'zh' ? '评分规则' : 'Rules', icon: BookOpen },
+    { id: 'learning', label: language === 'zh' ? '商业学习' : 'Learn', icon: GraduationCap },
     { id: 'projects', label: language === 'zh' ? '我的项目' : 'Projects', icon: FolderKanban }
   ];
 

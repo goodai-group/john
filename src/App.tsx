@@ -18,6 +18,7 @@ import { AssessmentForm } from './components/AssessmentForm/AssessmentForm';
 import { AssessmentReportView } from './components/AssessmentReport/AssessmentReportView';
 import { AuthModal, AuthMode } from './components/AuthModal';
 import { ProjectsListPage } from './pages/ProjectsListPage';
+import { LearningCenterPage } from './pages/LearningCenterPage';
 import {
   IntroVideoGate,
   hasSeenIntroVideo,
@@ -561,6 +562,11 @@ export default function App() {
       utilityCost: { amount: 0, currency: 'USD' },
       taxCost: { amount: 0, currency: 'USD' },
       otherOpex: { amount: 0, currency: 'USD' },
+      companyRegistrationCost: { amount: 0, currency: 'USD' },
+      companyRegistrationAmortizationMonths: 12,
+      visaFeeCost: { amount: 0, currency: 'USD' },
+      visaFeeAmortizationMonths: 12,
+      equipmentDepreciationCost: { amount: 0, currency: 'USD' },
       existingDebtMonthlyPayment: { amount: 0, currency: 'USD' },
       cashAndLiquidAssets: { amount: 0, currency: 'USD' },
       inventoryValue: { amount: 0, currency: 'USD' },
@@ -781,6 +787,8 @@ export default function App() {
         {activeTab === 'standards' && (
           <PublicScoringStandards language={language} />
         )}
+
+        {activeTab === 'learning' && <LearningCenterPage language={language} />}
 
         {activeTab === 'projects' && (
           <ProjectsListPage
