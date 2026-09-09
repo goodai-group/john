@@ -220,43 +220,47 @@ export const signInWithGoogle = async (): Promise<AppUser | null> => {
   }
 
   // 轮询等待：用户在弹窗内完成 Google 授权、会话写入本地后即可立即返回。
-  // 最长等待 3 分钟（给用户挑选账号/输密码留足时间），中途关闭弹窗视为取消。
+  // 最长等待 3 分钟（给用户挑选账号/输密码留足时间）。
   //
-  // 注意：弹窗跳转到 Google 授权页后，Google 的 Cross-Origin-Opener-Policy 响应头会让浏览器
-  // 把弹窗换入一个与本窗口隔离的浏览上下文组，此后每次读 popup.closed 都会触发浏览器的
-  // "Cross-Origin-Opener-Policy policy would block the window.closed call" 警告刷屏。
-  // 这里把该检查降频到约每 1.2 秒一次（而不是每 300ms 一次），成功登录主要还是靠下面的
-  // readSessionUser() 轮询判定（不受 COOP 影响），.closed 只作为"用户手动关闭弹窗"的辅助兜底。
-  const startedAt = Date.now();
-  const MAX_WAIT_MS = 180_000;
-  let closedCheckTick = 0;
-  while (Date.now() - startedAt < MAX_WAIT_MS) {
-    closedCheckTick++;
-    if (closedCheckTick % 4 === 0) {
-      let isClosed = false;
-      try {
-        isClosed = popup.closed;
-      } catch {
-        /* COOP 隔离后属性不可读，忽略即可，交给下方 readSessionUser 与超时兜底 */
+  // 注意：完全不再读取 popup.closed 来判断"用户是否手动关闭了弹窗"——弹窗跳转到 Google
+  // 授权页后，Google 的 Cross-Origin-Opener-Policy 响应头会让浏览器把弹窗换入一个与本窗口
+  // 隔离的浏览上下文组，此后任何一次读 popup.closed 都会触发浏览器的
+  // "Cross-Origin-Opener-Policy policy would block the window.closed call" 控制台警告
+  // （哪怕包一层 try/catch 也拦不住，这是浏览器内部打的日志，不是我们代码里能捕获的异常）。
+  // 改用 window 的 focus 事件判断：弹窗关闭或跳转完成后浏览器会把焦点还给本窗口，
+  // 这个事件只发生在本窗口自己身上，不涉及读取弹窗的任何跨域属性，完全不受 COOP 影响。
+  let regainedFocusAt: number | null = null;
+  const onWindowFocus = () => {
+    regainedFocusAt = Date.now();
+  };
+  window.addEventListener('focus', onWindowFocus);
+
+  try {
+    const startedAt = Date.now();
+    const MAX_WAIT_MS = 180_000;
+    while (Date.now() - startedAt < MAX_WAIT_MS) {
+      const appUser = await readSessionUser();
+      if (appUser) {
+        cachedSupabaseUser = appUser;
+        try {
+          popup.close(); // 登录成功，自动收起弹窗（若弹窗已自行关闭或已不可操作则静默忽略）
+        } catch {
+          /* 忽略 */
+        }
+        return appUser;
       }
-      if (isClosed) break; // 用户主动关闭了授权窗口 → 视为取消
+      // 本窗口重新获得焦点（用户手动关闭了弹窗，或切回了本标签页）已超过 1.5 秒，
+      // 期间仍读不到会话 → 视为用户取消，不再死等到 3 分钟超时。
+      if (regainedFocusAt !== null && Date.now() - regainedFocusAt > 1500) break;
+      await sleep(300);
     }
-    const appUser = await readSessionUser();
-    if (appUser) {
-      cachedSupabaseUser = appUser;
-      try {
-        popup.close(); // 登录成功，自动收起弹窗（若弹窗已自行关闭则静默忽略）
-      } catch {
-        /* 弹窗可能已被关闭，忽略 */
-      }
-      return appUser;
-    }
-    await sleep(300);
+  } finally {
+    window.removeEventListener('focus', onWindowFocus);
   }
 
-  // 超时 / 取消：关掉弹窗，返回 null（本次未登录成功）
+  // 取消 / 超时：尝试关掉弹窗（若已关闭或跨域不可操作则静默忽略），返回 null
   try {
-    if (!popup.closed) popup.close();
+    popup.close();
   } catch {
     /* 忽略 */
   }
