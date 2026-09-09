@@ -21,7 +21,13 @@ import {
   Wallet,
   TrendingUp,
   SlidersHorizontal,
-  Briefcase
+  Briefcase,
+  Building2,
+  Landmark,
+  Plane,
+  Wrench,
+  Target,
+  AlertOctagon
 } from 'lucide-react';
 import {
   BusinessFormData,
@@ -39,8 +45,11 @@ import {
   inferBusinessStructureLocally,
   normalizeIndustryKey,
   getIndustryTemplateByKey,
+  inferRegulatoryCosts,
   InferredStructure
 } from '../../lib/inferBusinessStructure';
+import { calculateBreakEvenRevenue } from '../../lib/breakEvenCalculator';
+import { detectFormAnomalies } from '../../lib/anomalyDetection';
 
 /** 行业枚举值集合，用于在 AI 返回值与可选项之间做映射 */
 const INDUSTRY_KEYS = INDUSTRY_BENCHMARKS.map((b) => b.id) as string[];
@@ -108,6 +117,11 @@ const DEFAULT_FORM_DATA: BusinessFormData = {
   utilityCost: { amount: 0, currency: 'USD' },
   taxCost: { amount: 0, currency: 'USD' },
   otherOpex: { amount: 0, currency: 'USD' },
+  companyRegistrationCost: { amount: 0, currency: 'USD' },
+  companyRegistrationAmortizationMonths: 12,
+  visaFeeCost: { amount: 0, currency: 'USD' },
+  visaFeeAmortizationMonths: 12,
+  equipmentDepreciationCost: { amount: 0, currency: 'USD' },
   existingDebtMonthlyPayment: { amount: 0, currency: 'USD' },
   cashAndLiquidAssets: { amount: 0, currency: 'USD' },
   inventoryValue: { amount: 0, currency: 'USD' },
@@ -169,6 +183,41 @@ export const AssessmentForm: React.FC<FormProps> = ({
   const [revenueTouched, setRevenueTouched] = useState(false);
   const inferTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const inferReqId = React.useRef(0);
+
+  // —— 第5点：属地税收/公司注册/签证成本 AI 预估（可核实修改，不直接参与计算）——
+  // 注意：优先用项目名（与行业/币种推断同一信号源），不用 regionCountry——
+  // regionCountry 只在"敏感地区安全模式"开启时才会展示给用户填写，未开启时它要么是空字符串、
+  // 要么（首次进入、尚无任何项目时）取到表单默认值"肯尼亚 (Kenya)"，会让几乎所有新用户
+  // 在还没填任何信息前就被误判成肯尼亚，与实际所在国家/所选币种无关。
+  const regulatoryEstimate = React.useMemo(
+    () => inferRegulatoryCosts(formData.projectName, formData.baseCurrency),
+    [formData.projectName, formData.baseCurrency]
+  );
+
+  // —— 第3点：根据已填成本自动算出保本收入（每天/每月至少赚多少才不亏钱）——
+  const breakEven = React.useMemo(() => calculateBreakEvenRevenue(formData), [
+    formData.cogsCost,
+    formData.dynamicCogsItems,
+    formData.rentCost,
+    formData.laborCost,
+    formData.utilityCost,
+    formData.otherOpex,
+    formData.dynamicOpexItems,
+    formData.taxCost,
+    formData.existingDebtMonthlyPayment,
+    formData.companyRegistrationCost,
+    formData.companyRegistrationAmortizationMonths,
+    formData.visaFeeCost,
+    formData.visaFeeAmortizationMonths,
+    formData.equipmentDepreciationCost,
+    formData.baseCurrency,
+    formData.customCurrencyCode,
+    formData.hasMultipleRates,
+    formData.customExchangeRateValue
+  ]);
+
+  // —— 第2点：AI 自动识别用户填错的数值及类目并提醒（本地规则化，仅提醒不阻断）——
+  const anomalyWarnings = React.useMemo(() => detectFormAnomalies(formData), [formData]);
 
   // Auto-save local draft on any change
   useEffect(() => {
@@ -531,6 +580,9 @@ export const AssessmentForm: React.FC<FormProps> = ({
       | 'utilityCost'
       | 'taxCost'
       | 'otherOpex'
+      | 'companyRegistrationCost'
+      | 'visaFeeCost'
+      | 'equipmentDepreciationCost'
       | 'existingDebtMonthlyPayment'
       | 'cashAndLiquidAssets'
       | 'inventoryValue',
@@ -1047,6 +1099,28 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   赚多少（每月收入）
                 </h4>
 
+                {/* 第3点：根据右边已填成本自动算出的保本收入，帮助没经验的用户先有参照锚点再填收入 */}
+                {breakEven.hasEnoughData && (
+                  <div className="p-4 rounded-2xl bg-amber-50/70 border-2 border-amber-300 space-y-1.5 text-xs">
+                    <div className="flex items-center gap-2">
+                      <Target className="w-4 h-4 text-amber-600" />
+                      <span className="font-black text-amber-950">AI 算出的保本收入（不亏钱的最低线）</span>
+                    </div>
+                    <p className="text-amber-800 leading-relaxed">
+                      根据你右边已填的进货、房租人工、税金、还贷与注册/签证/折旧成本合计
+                      <b> {formatMoney(breakEven.monthlyCostTotal, formData.baseCurrency)} / 月</b>，
+                      你每天至少要卖到
+                      <span className="text-base font-black text-amber-900 mx-1">
+                        {formatMoney(breakEven.dailyBreakEvenRevenue, formData.baseCurrency)}
+                      </span>
+                      （每月至少 {formatMoney(breakEven.monthlyBreakEvenRevenue, formData.baseCurrency)}）才不亏钱。
+                    </p>
+                    <p className="text-[10px] text-amber-600">
+                      按每月经营 {breakEven.operatingDaysPerMonth} 天估算，仅供填收入前参考，不代表最终评分结果。
+                    </p>
+                  </div>
+                )}
+
                 {/* F8 经营月均总流水 */}
                 <div className="p-4 rounded-2xl bg-indigo-50/40 border-2 border-indigo-200 space-y-2.5 text-xs">
                   <div className="flex items-center justify-between flex-wrap gap-2">
@@ -1440,8 +1514,150 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     </button>
                   </div>
                 )}
+
+                {/* 第1点+第5点：全球化经营成本——税收/签证/设备折旧/公司注册费用全部纳入成本，AI 给出属地参考估值可核实修改 */}
+                <div className="p-4 rounded-2xl bg-violet-50/50 border border-violet-200 space-y-3 text-xs">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="w-4 h-4 text-violet-600" />
+                    <span className="font-black text-violet-950">全球化经营成本（注册/签证/折旧）</span>
+                    <span className="text-[10px] bg-violet-200 text-violet-900 font-bold px-1.5 py-0.5 rounded">
+                      AI 已给出 {regulatoryEstimate.countryLabel} 参考值
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-violet-700 leading-relaxed">
+                    {regulatoryEstimate.corporateTaxRateHint}。以下为 AI 参考估值，请核实当地实际情况后修改为你的真实数字——
+                    <span className="italic">{regulatoryEstimate.sourceNote}</span>
+                  </p>
+
+                  {/* 公司注册/执照费用 */}
+                  <div className="p-3 rounded-xl bg-white border border-violet-200 space-y-1.5">
+                    <div className="flex items-center justify-between flex-wrap gap-1.5">
+                      <label className="font-bold text-slate-800 flex items-center gap-1.5">
+                        <Landmark className="w-3.5 h-3.5 text-violet-500" />
+                        公司注册 / 执照 / 年检费用（一次性或年度总额）
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateMoney('companyRegistrationCost', regulatoryEstimate.registrationLocal)
+                        }
+                        className="text-[10px] px-2 py-0.5 rounded bg-violet-100 text-violet-700 font-bold hover:bg-violet-200 cursor-pointer whitespace-nowrap"
+                      >
+                        使用 AI 建议（约 {formatMoney(regulatoryEstimate.registrationLocal, formData.baseCurrency)}）
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min={0}
+                        placeholder={`AI 参考约 ${regulatoryEstimate.registrationLocal}`}
+                        value={formData.companyRegistrationCost.amount || ''}
+                        onChange={(e) => updateMoney('companyRegistrationCost', Number(e.target.value))}
+                        className="flex-1 p-2 border border-violet-200 rounded-lg font-semibold text-slate-900"
+                      />
+                      <span className="text-[10px] text-slate-500 whitespace-nowrap">分摊</span>
+                      <input
+                        type="number"
+                        min={1}
+                        title="分摊到经营的月数"
+                        value={formData.companyRegistrationAmortizationMonths || 12}
+                        onChange={(e) =>
+                          updateField(
+                            'companyRegistrationAmortizationMonths',
+                            Math.max(1, Number(e.target.value) || 12)
+                          )
+                        }
+                        className="w-16 p-2 border border-violet-200 rounded-lg font-semibold text-center"
+                      />
+                      <span className="text-[10px] text-slate-500 whitespace-nowrap">个月</span>
+                    </div>
+                  </div>
+
+                  {/* 签证与工作许可费用 */}
+                  <div className="p-3 rounded-xl bg-white border border-violet-200 space-y-1.5">
+                    <div className="flex items-center justify-between flex-wrap gap-1.5">
+                      <label className="font-bold text-slate-800 flex items-center gap-1.5">
+                        <Plane className="w-3.5 h-3.5 text-violet-500" />
+                        经营者/员工签证与工作许可费用（总额）
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => updateMoney('visaFeeCost', regulatoryEstimate.visaLocal)}
+                        className="text-[10px] px-2 py-0.5 rounded bg-violet-100 text-violet-700 font-bold hover:bg-violet-200 cursor-pointer whitespace-nowrap"
+                      >
+                        使用 AI 建议（约 {formatMoney(regulatoryEstimate.visaLocal, formData.baseCurrency)}）
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min={0}
+                        placeholder={`无需签证填 0，AI 参考约 ${regulatoryEstimate.visaLocal}`}
+                        value={formData.visaFeeCost.amount || ''}
+                        onChange={(e) => updateMoney('visaFeeCost', Number(e.target.value))}
+                        className="flex-1 p-2 border border-violet-200 rounded-lg font-semibold text-slate-900"
+                      />
+                      <span className="text-[10px] text-slate-500 whitespace-nowrap">分摊</span>
+                      <input
+                        type="number"
+                        min={1}
+                        title="分摊到经营的月数"
+                        value={formData.visaFeeAmortizationMonths || 12}
+                        onChange={(e) =>
+                          updateField('visaFeeAmortizationMonths', Math.max(1, Number(e.target.value) || 12))
+                        }
+                        className="w-16 p-2 border border-violet-200 rounded-lg font-semibold text-center"
+                      />
+                      <span className="text-[10px] text-slate-500 whitespace-nowrap">个月</span>
+                    </div>
+                  </div>
+
+                  {/* 设备折旧费 */}
+                  <div className="p-3 rounded-xl bg-white border border-violet-200 space-y-1.5">
+                    <label className="font-bold text-slate-800 flex items-center gap-1.5">
+                      <Wrench className="w-3.5 h-3.5 text-violet-500" />
+                      设备月度折旧费（按月直接计入成本）
+                    </label>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      placeholder="例如：设备总值 ÷ 预计使用月数"
+                      value={formData.equipmentDepreciationCost.amount || ''}
+                      onChange={(e) => updateMoney('equipmentDepreciationCost', Number(e.target.value))}
+                      className="w-full p-2 border border-violet-200 rounded-lg font-semibold text-slate-900"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
+
+            {/* 第2点：AI 自动识别用户填错的数值及类目并提醒（仅提醒，不阻断提交） */}
+            {anomalyWarnings.length > 0 && (
+              <div className="p-4 rounded-2xl bg-rose-50/70 border-2 border-rose-300 space-y-2 text-xs">
+                <div className="flex items-center gap-2 font-black text-rose-950">
+                  <AlertOctagon className="w-4 h-4 text-rose-600" />
+                  <span>AI 发现 {anomalyWarnings.length} 处可能填错的数值或类目，建议核对</span>
+                </div>
+                <ul className="space-y-1.5">
+                  {anomalyWarnings.map((w, idx) => (
+                    <li
+                      key={`${w.field}-${idx}`}
+                      className={`p-2 rounded-lg border flex items-start gap-1.5 ${
+                        w.severity === 'error'
+                          ? 'bg-rose-100/70 border-rose-300 text-rose-900'
+                          : 'bg-amber-50/70 border-amber-300 text-amber-900'
+                      }`}
+                    >
+                      <span className="font-bold shrink-0">{w.severity === 'error' ? '⚠️' : '💡'}</span>
+                      <span>{language === 'en' ? w.messageEn : w.messageZh}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {/* 更多设置（月度流水 / 资金证明 / 经营时长 / 员工）——藏起来 */}
             <div className="border border-slate-200 rounded-2xl overflow-hidden">

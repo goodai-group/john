@@ -1,5 +1,5 @@
 import { SUPPORTED_CURRENCIES } from './currencies.js';
-import type { CurrencyCode } from '../types.js';
+import type { CurrencyCode, RegulatoryCostEstimate } from '../types.js';
 
 export interface InferredStructure {
   inferredIndustryKey?: string;
@@ -38,14 +38,9 @@ interface IndustryTemplate {
 /** 前端本地兜底推断：不依赖后端 AI 接口，仅凭项目/店铺名称推断行业、币种与成本结构。
  *  用于后端不可用时提供无缝体验，避免"无法自动推算"。
  */
-export function inferBusinessStructureLocally(
-  projectName: string,
-  baseCurrency: CurrencyCode = 'USD'
-): InferredStructure {
-  const pLower = projectName.toLowerCase();
-
-  // 1. 币种推断：尽量覆盖常见 BAM 地区与通用币种代码
-  let curr: CurrencyCode = baseCurrency;
+/** 根据店名/地区关键词推断所在国家的币种代码，供行业推断与合规成本预估共用。 */
+function detectCountryCurrency(pLower: string, fallback: CurrencyCode): CurrencyCode {
+  let curr: CurrencyCode = fallback;
   if (/肯尼亚|内罗毕|nairobi|kenya|kes/i.test(pLower)) curr = 'KES';
   else if (/泰国|清迈|曼谷|thailand|chiang mai|bangkok|thb/i.test(pLower)) curr = 'THB';
   else if (/越南|河内|胡志明|vietnam|ho chi minh|hanoi|vnd/i.test(pLower)) curr = 'VND';
@@ -63,6 +58,17 @@ export function inferBusinessStructureLocally(
   else if (/美国|纽约|洛杉矶|usa|united states|usd/i.test(pLower)) curr = 'USD';
   else if (/欧盟|德国|法国|意大利|西班牙|荷兰|eur/i.test(pLower)) curr = 'EUR';
   else if (/英国|伦敦|uk|united kingdom|gbp/i.test(pLower)) curr = 'GBP';
+  return curr;
+}
+
+export function inferBusinessStructureLocally(
+  projectName: string,
+  baseCurrency: CurrencyCode = 'USD'
+): InferredStructure {
+  const pLower = projectName.toLowerCase();
+
+  // 1. 币种推断：尽量覆盖常见 BAM 地区与通用币种代码
+  const curr: CurrencyCode = detectCountryCurrency(pLower, baseCurrency);
 
   const rate = SUPPORTED_CURRENCIES.find((c) => c.code === curr)?.rateToUsd || 1;
   const toLocal = (usd: number) => Math.round(usd * rate);
@@ -287,4 +293,168 @@ export function getIndustryTemplateByKey(
   };
   const forced = inferBusinessStructureLocally(aliasName[industryKey] || aliasName.custom, baseCurrency);
   return { ...forced, key: forced.inferredIndustryKey || industryKey };
+}
+
+/**
+ * 属地经营合规成本参考库（第5点：AI 给出税收/公司注册/签证成本的具体情况）。
+ * 数值均为粗略区间估值（USD），仅供小微经营者填报前参考，实际以当地税务与移民主管部门为准，
+ * 用户在表单中核实后可自由修改覆盖，不作为最终计算依据。
+ */
+const REGULATORY_COST_TABLE: Record<
+  string,
+  { countryLabel: string; taxHint: string; registrationUsd: number; visaUsd: number; sourceNote: string }
+> = {
+  KES: {
+    countryLabel: '肯尼亚 (Kenya)',
+    taxHint: '小微个体户 Turnover Tax 约 1%-3%；有限公司企业所得税约 30%',
+    registrationUsd: 60,
+    visaUsd: 250,
+    sourceNote: '参考肯尼亚 KRA 小微税制与 eCitizen 商业登记年费公开区间，实际以当年公告为准'
+  },
+  NGN: {
+    countryLabel: '尼日利亚 (Nigeria)',
+    taxHint: '小微企业（年营业额 < 2500万奈拉）通常免征企业所得税；否则约 20%-30%',
+    registrationUsd: 80,
+    visaUsd: 200,
+    sourceNote: '参考尼日利亚 CAC 公司注册费与联邦税务局小微企业优惠区间'
+  },
+  EGP: {
+    countryLabel: '埃及 (Egypt)',
+    taxHint: '个体经营/中小企业所得税约 22.5%，另有增值税约 14%',
+    registrationUsd: 150,
+    visaUsd: 25,
+    sourceNote: '参考埃及税务局及商业登记处公开费率区间'
+  },
+  ETB: {
+    countryLabel: '埃塞俄比亚 (Ethiopia)',
+    taxHint: '小微营业执照分级定额税，或按利润征收 10%-35% 累进税',
+    registrationUsd: 40,
+    visaUsd: 82,
+    sourceNote: '参考埃塞俄比亚税务局小微分级定额税表'
+  },
+  THB: {
+    countryLabel: '泰国 (Thailand)',
+    taxHint: '中小企业所得税分级约 0%-20%（净利前 30 万泰铢免税）',
+    registrationUsd: 120,
+    visaUsd: 220,
+    sourceNote: '参考泰国商业发展厅注册费与非移民签证/工作许可公开费率'
+  },
+  VND: {
+    countryLabel: '越南 (Vietnam)',
+    taxHint: '个体经营户定额税或企业所得税 20%，视经营形式而定',
+    registrationUsd: 45,
+    visaUsd: 135,
+    sourceNote: '参考越南计划投资部注册费与劳动许可证公开费率区间'
+  },
+  IDR: {
+    countryLabel: '印度尼西亚 (Indonesia)',
+    taxHint: '小微企业（年营业额 < 48 亿印尼盾）最终所得税约 0.5%',
+    registrationUsd: 100,
+    visaUsd: 350,
+    sourceNote: '参考印尼 OSS 单一窗口注册与 KITAS 工作许可公开费率区间'
+  },
+  PHP: {
+    countryLabel: '菲律宾 (Philippines)',
+    taxHint: '小微企业（年营业额 < 300 万比索）可选 8% 简易所得税',
+    registrationUsd: 90,
+    visaUsd: 250,
+    sourceNote: '参考菲律宾 DTI/BIR 注册费与 9(g) 工作签证公开费率区间'
+  },
+  MMK: {
+    countryLabel: '缅甸 (Myanmar)',
+    taxHint: '小微商业执照定额税或利得税约 22%-25%',
+    registrationUsd: 50,
+    visaUsd: 36,
+    sourceNote: '参考缅甸投资与公司管理局公开注册与签证费率区间'
+  },
+  KHR: {
+    countryLabel: '柬埔寨 (Cambodia)',
+    taxHint: '小微纳税人定额税，或年利润税 20%',
+    registrationUsd: 100,
+    visaUsd: 300,
+    sourceNote: '参考柬埔寨商业部注册费与商务签证/工作许可公开费率区间'
+  },
+  LAK: {
+    countryLabel: '老挝 (Laos)',
+    taxHint: '小微企业利润税约 3%-7%（分级），一般企业所得税 20%',
+    registrationUsd: 60,
+    visaUsd: 100,
+    sourceNote: '参考老挝工贸部注册费与商务签证公开费率区间'
+  },
+  BDT: {
+    countryLabel: '孟加拉国 (Bangladesh)',
+    taxHint: '小微企业所得税约 15%-25%（分级）',
+    registrationUsd: 80,
+    visaUsd: 51,
+    sourceNote: '参考孟加拉 RJSC 商业注册费与商务签证公开费率区间'
+  },
+  LKR: {
+    countryLabel: '斯里兰卡 (Sri Lanka)',
+    taxHint: '小微企业（利润 < 一定门槛）所得税 0%，超过部分 15%-30%',
+    registrationUsd: 30,
+    visaUsd: 50,
+    sourceNote: '参考斯里兰卡公司注册处费用与商务签证公开费率区间'
+  },
+  CNY: {
+    countryLabel: '中国大陆',
+    taxHint: '小规模纳税人增值税优惠期内较低，企业所得税小微企业实际税负约 5%-20%',
+    registrationUsd: 0,
+    visaUsd: 0,
+    sourceNote: '参考中国大陆小微企业普惠性税收减免政策（工商注册本身通常免费）'
+  },
+  USD: {
+    countryLabel: '美国 (United States)',
+    taxHint: '联邦企业所得税 21%，另有州税与自雇税，视州与经营形式而定',
+    registrationUsd: 100,
+    visaUsd: 460,
+    sourceNote: '参考美国各州公司注册规费与常见工作签证申请费公开区间'
+  },
+  EUR: {
+    countryLabel: '欧盟地区',
+    taxHint: '企业所得税各国不同，欧盟平均约 21.3%，中小企业常有优惠税率',
+    registrationUsd: 150,
+    visaUsd: 90,
+    sourceNote: '参考欧盟多国商业登记处注册费与申根长期签证公开费率区间'
+  },
+  GBP: {
+    countryLabel: '英国 (United Kingdom)',
+    taxHint: '小型企业企业所得税约 19%（利润 < 5 万英镑）',
+    registrationUsd: 15,
+    visaUsd: 610,
+    sourceNote: '参考英国 Companies House 注册费与创新者/技术人才签证公开费率区间'
+  }
+};
+
+const DEFAULT_REGULATORY_ESTIMATE = {
+  countryLabel: '通用/未识别地区',
+  taxHint: '多数国家小微企业所得税区间约 10%-30%，具体请核对当地税务主管部门规定',
+  registrationUsd: 100,
+  visaUsd: 200,
+  sourceNote: '未能从店名识别具体国家，以下为跨地区小微企业通用参考区间，请务必核实修改'
+};
+
+/**
+ * 属地税收/公司注册/签证成本 AI 预估（第5点）：根据店名/地区关键词与当前主币种，
+ * 给出该地区大致企业税率区间说明 + 注册费用与签证费用的估值（已折算为主币种），
+ * 供用户在表单中核实、并可自由修改覆盖，不直接参与最终打分计算。
+ */
+export function inferRegulatoryCosts(
+  projectNameOrCountry: string,
+  baseCurrency: CurrencyCode = 'USD'
+): RegulatoryCostEstimate & { registrationLocal: number; visaLocal: number } {
+  const pLower = (projectNameOrCountry || '').toLowerCase();
+  const detectedCurrency = detectCountryCurrency(pLower, baseCurrency);
+  const table = REGULATORY_COST_TABLE[detectedCurrency] || DEFAULT_REGULATORY_ESTIMATE;
+  const rate = SUPPORTED_CURRENCIES.find((c) => c.code === baseCurrency)?.rateToUsd || 1;
+  const toLocal = (usd: number) => Math.round(usd * rate);
+
+  return {
+    countryLabel: table.countryLabel,
+    corporateTaxRateHint: table.taxHint,
+    companyRegistrationCostEstimateUsd: table.registrationUsd,
+    visaFeeCostEstimateUsd: table.visaUsd,
+    sourceNote: table.sourceNote,
+    registrationLocal: toLocal(table.registrationUsd),
+    visaLocal: toLocal(table.visaUsd)
+  };
 }

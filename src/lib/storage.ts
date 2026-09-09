@@ -2,7 +2,8 @@ import {
   AssessmentReport,
   BusinessFormData,
   EscalatedQuestion,
-  AppUser
+  AppUser,
+  LearningProgressEntry
 } from '../types';
 import { runBusinessAssessment } from './scoringEngine';
 import {
@@ -25,6 +26,8 @@ const STORAGE_KEY_INITIAL_SEEDED = 'bam_cloud_seeded_v14';
 // 删除墓碑：记录用户已删除的云端数据 id，防止同步合并时被云端旧数据"复活"
 const STORAGE_KEY_DELETED_PROJECTS = 'bam_deleted_projects_v1';
 const STORAGE_KEY_DELETED_REPORTS = 'bam_deleted_reports_v1';
+// 商业知识学习中心：本地记录每个视频的观看进度（第4点）
+const STORAGE_KEY_LEARNING_PROGRESS = 'bam_learning_progress_v1';
 
 // ========================
 // 删除墓碑（Tombstone）工具
@@ -461,3 +464,29 @@ export const hasAnyStoredReports = (): boolean => {
     return false;
   }
 };
+
+// ========================
+// 商业知识学习中心：观看进度（第4点，纯本地浏览器记录，不上传云端）
+// ========================
+export function getLearningProgress(): Record<string, LearningProgressEntry> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_LEARNING_PROGRESS);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function setVideoWatched(videoId: string, watched: boolean): Record<string, LearningProgressEntry> {
+  const current = getLearningProgress();
+  const updated: Record<string, LearningProgressEntry> = {
+    ...current,
+    [videoId]: { videoId, watched, lastWatchedAt: new Date().toISOString() }
+  };
+  try {
+    localStorage.setItem(STORAGE_KEY_LEARNING_PROGRESS, JSON.stringify(updated));
+  } catch {
+    /* 存储空间不可用时静默忽略，不影响页面正常浏览 */
+  }
+  return updated;
+}
