@@ -794,7 +794,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
           <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
             <div className="text-center space-y-1.5">
               <h3 className="text-xl sm:text-2xl font-black text-slate-900 flex items-center justify-center gap-2">
-                <FileText className="w-5 h-5 text-indigo-600" />
+                <FileText className="w-5 h-5 text-teal-600" />
                 <span>1. 生意叫什么？</span>
               </h3>
               <p className="text-xs text-slate-500 font-medium">
@@ -812,8 +812,8 @@ export const AssessmentForm: React.FC<FormProps> = ({
                 placeholder={language === 'en' ? 'e.g. Sunshine Bakery Cafe' : '例如：阳光工坊社区烘焙店'}
                 value={formData.projectName}
                 onChange={(e) => handleProjectNameChange(e.target.value)}
-                className={`w-full p-4 border-2 rounded-2xl text-base font-bold text-slate-900 shadow-2xs focus:ring-1 focus:ring-indigo-500 ${
-                  nameError ? 'border-rose-400 focus:border-rose-600' : 'border-indigo-200 focus:border-indigo-600'
+                className={`w-full p-4 border-2 rounded-2xl text-base font-bold text-slate-900 shadow-2xs focus:ring-1 focus:ring-teal-500 ${
+                  nameError ? 'border-rose-400 focus:border-rose-600' : 'border-teal-200 focus:border-teal-600'
                 }`}
               />
               {nameError && (
@@ -823,7 +823,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
               )}
               <div className="mt-2 text-[11px] space-y-1">
                 {inferState === 'loading' && (
-                  <span className="text-indigo-500 font-semibold animate-pulse">AI 正在推算行业、币种与成本结构…</span>
+                  <span className="text-teal-500 font-semibold animate-pulse">AI 正在推算行业、币种与成本结构…</span>
                 )}
                 {inferState === 'done' && (
                   <span className="text-emerald-600 font-semibold">✓ AI 已自动预填，可修改或点「恢复 AI 建议」</span>
@@ -874,7 +874,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                 className="w-full flex items-center justify-between px-4 py-3.5 bg-slate-50/80 hover:bg-slate-100 text-xs font-bold text-slate-800 transition-colors cursor-pointer"
               >
                 <span className="flex items-center gap-2">
-                  <Settings2 className="w-4 h-4 text-indigo-600" />
+                  <Settings2 className="w-4 h-4 text-teal-600" />
                   高级设置（币种 / 行业 / 汇率 / 安全模式）
                 </span>
                 <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
@@ -905,7 +905,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                           placeholder="请输入所属行业领域"
                           value={customIndustry}
                           onChange={(e) => handleCustomIndustryInput(e.target.value)}
-                          className="mt-2 w-full p-2.5 border-2 border-indigo-300 rounded-xl font-medium text-slate-800"
+                          className="mt-2 w-full p-2.5 border-2 border-teal-300 rounded-xl font-medium text-slate-800"
                         />
                       )}
                     </div>
@@ -931,7 +931,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                           placeholder="请输入 3 字母币种代码，例如：SLE / MVR / PGK"
                           value={customCurrencyCode}
                           onChange={(e) => handleCustomCurrencyInput(e.target.value)}
-                          className="mt-2 w-full p-2.5 border-2 border-indigo-300 rounded-xl font-bold text-slate-800"
+                          className="mt-2 w-full p-2.5 border-2 border-teal-300 rounded-xl font-bold text-slate-800"
                         />
                       )}
                       <p className="text-[11px] text-slate-400 mt-1">
@@ -947,7 +947,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                         type="checkbox"
                         checked={formData.hasMultipleRates}
                         onChange={(e) => updateField('hasMultipleRates', e.target.checked)}
-                        className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
+                        className="w-4 h-4 rounded text-teal-600 focus:ring-teal-500"
                       />
                       <span>本国存在多重汇率（官方汇率与民间/实际兑换汇率差距悬殊）</span>
                     </label>
@@ -1067,7 +1067,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                 setNameError(null);
                 setCurrentStep(2);
               }}
-              className="flex items-center gap-1.5 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/20 transition-all cursor-pointer"
+              className="flex items-center gap-1.5 px-6 py-2.5 bg-teal-600 hover:bg-teal-500 text-white rounded-xl text-xs font-bold shadow-md shadow-teal-600/20 transition-all cursor-pointer"
             >
               <span>{language === 'en' ? 'Next: Revenue & Expenses' : '下一步：赚多少、花多少'}</span>
               <ArrowRight className="w-4 h-4" />
@@ -1082,7 +1082,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
           <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
             <div className="border-b border-slate-100 pb-3">
               <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
-                <Wallet className="w-5 h-5 text-indigo-600" />
+                <Wallet className="w-5 h-5 text-teal-600" />
                 <span>2. 赚多少、花多少、兜里有多少现金</span>
               </h3>
               <p className="text-xs text-slate-500">
@@ -1122,16 +1122,16 @@ export const AssessmentForm: React.FC<FormProps> = ({
                 )}
 
                 {/* F8 经营月均总流水 */}
-                <div className="p-4 rounded-2xl bg-indigo-50/40 border-2 border-indigo-200 space-y-2.5 text-xs">
+                <div className="p-4 rounded-2xl bg-teal-50/40 border-2 border-teal-200 space-y-2.5 text-xs">
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <div>
                       <label className="font-black text-slate-900 text-sm flex items-center gap-1.5">
                         <span>经营月均总流水</span>
-                        <span className="text-[10px] bg-indigo-600 text-white font-bold px-2 py-0.5 rounded-full">
+                        <span className="text-[10px] bg-teal-600 text-white font-bold px-2 py-0.5 rounded-full">
                           总营业额
                         </span>
                       </label>
-                      <p className="text-[11px] text-indigo-900 font-medium mt-0.5">
+                      <p className="text-[11px] text-teal-900 font-medium mt-0.5">
                         <b>大白话：</b>客人买单进你口袋的全部毛钱，尚未扣除进货、房租与人工！
                       </p>
                     </div>
@@ -1139,9 +1139,9 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       <button
                         type="button"
                         onClick={() => onOpenAiHelper?.('经营月均总流水是收入还是什么？')}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-100 hover:bg-indigo-200 text-indigo-800 text-[11px] font-bold transition-colors cursor-pointer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-teal-100 hover:bg-teal-200 text-teal-800 text-[11px] font-bold transition-colors cursor-pointer"
                       >
-                        <Sparkles className="w-3 h-3 text-indigo-600" />
+                        <Sparkles className="w-3 h-3 text-teal-600" />
                         <span>AI解答</span>
                       </button>
                       <button
@@ -1178,10 +1178,10 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     placeholder="例如 50000"
                     value={formData.monthlyRevenue.amount || ''}
                     onChange={(e) => updateMoney('monthlyRevenue', Number(e.target.value))}
-                    className="w-full p-3 border-2 border-indigo-200 focus:border-indigo-600 rounded-xl font-black text-slate-900 text-base bg-white shadow-2xs"
+                    className="w-full p-3 border-2 border-teal-200 focus:border-teal-600 rounded-xl font-black text-slate-900 text-base bg-white shadow-2xs"
                   />
                   {formData.monthlyRevenue.amount > 0 && (
-                    <p className="text-[11px] text-indigo-700 font-semibold">
+                    <p className="text-[11px] text-teal-700 font-semibold">
                       真实经营收入已自动同步为 {formatMoney(formData.monthlyRealOperatingRevenue.amount, formData.monthlyRealOperatingRevenue.currency)}（总流水 − 外部赠款）
                     </p>
                   )}
@@ -1296,9 +1296,9 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       <button
                         type="button"
                         onClick={() => onOpenAiHelper?.('进货成本（COGS）怎么算？包含运费吗？')}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-bold transition-colors cursor-pointer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-700 text-[11px] font-bold transition-colors cursor-pointer"
                       >
-                        <Sparkles className="w-3 h-3 text-indigo-600" />
+                        <Sparkles className="w-3 h-3 text-teal-600" />
                         <span>AI咨询</span>
                       </button>
                       <select
@@ -1470,9 +1470,9 @@ export const AssessmentForm: React.FC<FormProps> = ({
 
                 {/* AI 推断的动态运营开支明细 */}
                 {(formData.dynamicOpexItems || []).length > 0 && (
-                  <div className="p-3 rounded-xl bg-indigo-50/50 border border-dashed border-indigo-300 space-y-2 text-xs">
+                  <div className="p-3 rounded-xl bg-teal-50/50 border border-dashed border-teal-300 space-y-2 text-xs">
                     <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <span className="text-[11px] font-black text-indigo-900">
+                      <span className="text-[11px] font-black text-teal-900">
                         按行业细分的运营开支明细（可增删改）
                         {opexTouched && (
                           <span className="ml-1.5 inline-block text-[9px] px-1 py-0.5 rounded bg-amber-100 text-amber-700 font-bold align-middle">已手动调整</span>
@@ -1481,7 +1481,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       <button
                         type="button"
                         onClick={restoreAiSuggestion}
-                        className="text-[10px] px-2 py-0.5 rounded bg-indigo-100 text-indigo-700 font-bold hover:bg-indigo-200 cursor-pointer"
+                        className="text-[10px] px-2 py-0.5 rounded bg-teal-100 text-teal-700 font-bold hover:bg-teal-200 cursor-pointer"
                       >
                         <RefreshCw className="inline w-3 h-3 mr-0.5" />恢复 AI 建议
                       </button>
@@ -1492,24 +1492,24 @@ export const AssessmentForm: React.FC<FormProps> = ({
                           type="text"
                           value={it.label}
                           onChange={(e) => updateDynamicOpexItem(it.id, { label: e.target.value })}
-                          className="flex-1 min-w-0 p-1.5 border border-indigo-200 rounded-lg font-semibold text-slate-800"
+                          className="flex-1 min-w-0 p-1.5 border border-teal-200 rounded-lg font-semibold text-slate-800"
                         />
                         <input
                           type="number"
                           min="0"
                           value={it.value || ''}
                           onChange={(e) => updateDynamicOpexItem(it.id, { value: Math.max(0, isNaN(Number(e.target.value)) ? 0 : Number(e.target.value)) })}
-                          className="w-24 shrink-0 p-1.5 border border-indigo-200 rounded-lg font-mono font-semibold text-right"
+                          className="w-24 shrink-0 p-1.5 border border-teal-200 rounded-lg font-mono font-semibold text-right"
                           placeholder={it.suggestedAmount ? `AI建议 ${it.suggestedAmount}` : '金额'}
                           title={it.suggestedAmount ? `AI 建议参考金额：${it.suggestedAmount}（仅供参考，请填你的真实数字）` : '请填你的真实月度金额'}
                         />
-                        <span className="text-[10px] text-indigo-700 whitespace-nowrap shrink-0 pl-0.5">{formData.baseCurrency}/月</span>
-                        <button type="button" onClick={() => removeDynamicOpexItem(it.id)} className="p-1 text-indigo-500 hover:text-indigo-700 cursor-pointer shrink-0">
+                        <span className="text-[10px] text-teal-700 whitespace-nowrap shrink-0 pl-0.5">{formData.baseCurrency}/月</span>
+                        <button type="button" onClick={() => removeDynamicOpexItem(it.id)} className="p-1 text-teal-500 hover:text-teal-700 cursor-pointer shrink-0">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     ))}
-                    <button type="button" onClick={addDynamicOpexItem} className="text-[10px] px-2 py-1 rounded border border-indigo-300 text-indigo-700 font-bold hover:bg-indigo-100 cursor-pointer">
+                    <button type="button" onClick={addDynamicOpexItem} className="text-[10px] px-2 py-1 rounded border border-teal-300 text-teal-700 font-bold hover:bg-teal-100 cursor-pointer">
                       ＋ 添加运营开支项
                     </button>
                   </div>
@@ -1667,7 +1667,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                 className="w-full flex items-center justify-between px-4 py-3.5 bg-slate-50/80 hover:bg-slate-100 text-xs font-bold text-slate-800 transition-colors cursor-pointer"
               >
                 <span className="flex items-center gap-2">
-                  <SlidersHorizontal className="w-4 h-4 text-indigo-600" />
+                  <SlidersHorizontal className="w-4 h-4 text-teal-600" />
                   更多设置（月度流水 / 资金证明 / 经营时长 / 员工人数）
                 </span>
                 <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${showMore ? 'rotate-180' : ''}`} />
@@ -1690,7 +1690,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                         <button
                           onClick={handleInterpolateMissingMonths}
                           disabled={isSimulatingOcr}
-                          className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-2xs transition-all cursor-pointer"
+                          className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-xs font-semibold shadow-2xs transition-all cursor-pointer"
                         >
                           <RefreshCw className={`w-3.5 h-3.5 ${isSimulatingOcr ? 'animate-spin' : ''}`} />
                           <span>{isSimulatingOcr ? 'AI 计算中...' : 'AI 智能补全缺口'}</span>
@@ -1746,7 +1746,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       <label
                         className={`p-3 rounded-xl border cursor-pointer transition-all ${
                           formData.proofType === 'none'
-                            ? 'border-indigo-600 bg-indigo-50/80 ring-1 ring-indigo-600'
+                            ? 'border-teal-600 bg-teal-50/80 ring-1 ring-teal-600'
                             : 'border-slate-200 hover:bg-slate-50'
                         }`}
                       >
@@ -1757,7 +1757,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                             name="proofType"
                             checked={formData.proofType === 'none'}
                             onChange={() => updateField('proofType', 'none' as ProofType)}
-                            className="text-indigo-600"
+                            className="text-teal-600"
                           />
                         </div>
                         <p className="text-slate-500 mt-1.5 text-[11px]">
@@ -1768,7 +1768,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       <label
                         className={`p-3 rounded-xl border cursor-pointer transition-all ${
                           formData.proofType === 'mobile_payment'
-                            ? 'border-indigo-600 bg-indigo-50/80 ring-1 ring-indigo-600'
+                            ? 'border-teal-600 bg-teal-50/80 ring-1 ring-teal-600'
                             : 'border-slate-200 hover:bg-slate-50'
                         }`}
                       >
@@ -1779,7 +1779,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                             name="proofType"
                             checked={formData.proofType === 'mobile_payment'}
                             onChange={() => updateField('proofType', 'mobile_payment' as ProofType)}
-                            className="text-indigo-600"
+                            className="text-teal-600"
                           />
                         </div>
                         <p className="text-slate-500 mt-1.5 text-[11px]">
@@ -1790,7 +1790,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       <label
                         className={`p-3 rounded-xl border cursor-pointer transition-all ${
                           formData.proofType === 'handwritten_book'
-                            ? 'border-indigo-600 bg-indigo-50/80 ring-1 ring-indigo-600'
+                            ? 'border-teal-600 bg-teal-50/80 ring-1 ring-teal-600'
                             : 'border-slate-200 hover:bg-slate-50'
                         }`}
                       >
@@ -1801,7 +1801,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                             name="proofType"
                             checked={formData.proofType === 'handwritten_book'}
                             onChange={() => updateField('proofType', 'handwritten_book' as ProofType)}
-                            className="text-indigo-600"
+                            className="text-teal-600"
                           />
                         </div>
                         <p className="text-slate-500 mt-1.5 text-[11px]">
@@ -1812,7 +1812,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       <label
                         className={`p-3 rounded-xl border cursor-pointer transition-all ${
                           formData.proofType === 'institution_record'
-                            ? 'border-indigo-600 bg-indigo-50/80 ring-1 ring-indigo-600'
+                            ? 'border-teal-600 bg-teal-50/80 ring-1 ring-teal-600'
                             : 'border-slate-200 hover:bg-slate-50'
                         }`}
                       >
@@ -1823,7 +1823,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                             name="proofType"
                             checked={formData.proofType === 'institution_record'}
                             onChange={() => updateField('proofType', 'institution_record' as ProofType)}
-                            className="text-indigo-600"
+                            className="text-teal-600"
                           />
                         </div>
                         <p className="text-slate-500 mt-1.5 text-[11px]">
@@ -1834,7 +1834,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       <label
                         className={`p-3 rounded-xl border cursor-pointer transition-all ${
                           formData.proofType === 'bank_statement'
-                            ? 'border-indigo-600 bg-indigo-50/80 ring-1 ring-indigo-600'
+                            ? 'border-teal-600 bg-teal-50/80 ring-1 ring-teal-600'
                             : 'border-slate-200 hover:bg-slate-50'
                         }`}
                       >
@@ -1845,7 +1845,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                             name="proofType"
                             checked={formData.proofType === 'bank_statement'}
                             onChange={() => updateField('proofType', 'bank_statement' as ProofType)}
-                            className="text-indigo-600"
+                            className="text-teal-600"
                           />
                         </div>
                         <p className="text-slate-500 mt-1.5 text-[11px]">
@@ -1861,8 +1861,8 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       <label className="block text-xs font-bold text-slate-800">
                         上传佐证凭证文件（选填 / 敏感地区模式下识别后立即销毁原图）
                       </label>
-                      <div className="border-2 border-dashed border-slate-300 rounded-2xl p-6 text-center bg-slate-50 hover:bg-indigo-50/40 transition-colors">
-                        <UploadCloud className="w-8 h-8 text-indigo-500 mx-auto mb-2" />
+                      <div className="border-2 border-dashed border-slate-300 rounded-2xl p-6 text-center bg-slate-50 hover:bg-teal-50/40 transition-colors">
+                        <UploadCloud className="w-8 h-8 text-teal-500 mx-auto mb-2" />
                         <p className="text-xs font-semibold text-slate-700">
                           点击选择图片或 PDF 文件，或直接拖拽到此处
                         </p>
@@ -1892,7 +1892,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                               className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs"
                             >
                               <div className="flex items-center gap-2">
-                                <FileSpreadsheet className="w-4 h-4 text-indigo-600" />
+                                <FileSpreadsheet className="w-4 h-4 text-teal-600" />
                                 <span className="font-medium text-slate-800">{file.name}</span>
                                 <span className="text-[10px] text-slate-400">
                                   ({(file.size / 1024).toFixed(0)} KB)
@@ -1957,9 +1957,9 @@ export const AssessmentForm: React.FC<FormProps> = ({
             </div>
 
             {/* 提交前信息核对速览 */}
-            <div className="p-4 rounded-xl bg-indigo-50/60 border border-indigo-100 text-xs space-y-3">
-              <div className="flex items-center gap-2 text-indigo-950 font-bold">
-                <Briefcase className="w-4 h-4 text-indigo-600" />
+            <div className="p-4 rounded-xl bg-teal-50/60 border border-teal-100 text-xs space-y-3">
+              <div className="flex items-center gap-2 text-teal-950 font-bold">
+                <Briefcase className="w-4 h-4 text-teal-600" />
                 <span>提交前信息核对速览</span>
               </div>
 

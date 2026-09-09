@@ -181,7 +181,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
         {/* 品牌标题 */}
         <div className="flex items-center gap-3 mb-5 pr-8">
-          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 text-white flex items-center justify-center shadow-md shadow-indigo-600/20 shrink-0">
+          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-teal-600 to-violet-600 text-white flex items-center justify-center shadow-md shadow-teal-600/20 shrink-0">
             {mode === 'signup' ? (
               <UserPlus className="w-5 h-5" />
             ) : mode === 'forgot' || mode === 'newpass' ? (
@@ -231,7 +231,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 disabled={submitting}
                 className={`py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   mode === m
-                    ? 'bg-white text-indigo-700 shadow-sm border border-slate-200'
+                    ? 'bg-white text-teal-700 shadow-sm border border-slate-200'
                     : 'text-slate-500 hover:text-slate-700'
                 }`}
               >
@@ -246,7 +246,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <button
             type="button"
             onClick={() => switchMode('signin')}
-            className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800 mb-3 cursor-pointer"
+            className="inline-flex items-center gap-1 text-xs font-semibold text-teal-600 hover:text-teal-800 mb-3 cursor-pointer"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             {zh ? '返回登录' : 'Back to sign in'}
@@ -285,7 +285,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               className="w-full flex items-center justify-center gap-2.5 px-4 py-3 rounded-xl bg-white border-2 border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-800 text-sm font-bold shadow-xs transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isGoogleLoading ? (
-                <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" />
+                <Loader2 className="w-4 h-4 text-teal-600 animate-spin" />
               ) : (
                 <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -326,7 +326,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 onChange={(e) => setDisplayName(e.target.value)}
                 disabled={submitting}
                 placeholder={zh ? '昵称（选填，如：恩典烘焙坊主理人）' : 'Display name (optional)'}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-sm transition-all disabled:bg-slate-50"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none text-sm transition-all disabled:bg-slate-50"
               />
             </div>
           )}
@@ -344,7 +344,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               disabled={submitting}
               placeholder={zh ? '邮箱地址' : 'Email address'}
               autoComplete="email"
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-sm transition-all disabled:bg-slate-50"
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none text-sm transition-all disabled:bg-slate-50"
             />
           </div>
           )}
@@ -374,7 +374,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                         : 'Password'
                 }
                 autoComplete={mode === 'signup' || mode === 'newpass' ? 'new-password' : 'current-password'}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-sm transition-all disabled:bg-slate-50"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none text-sm transition-all disabled:bg-slate-50"
               />
             </div>
           )}
@@ -385,7 +385,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 type="button"
                 onClick={() => switchMode('forgot')}
                 disabled={submitting}
-                className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 cursor-pointer"
+                className="text-[11px] font-semibold text-teal-600 hover:text-teal-800 cursor-pointer"
               >
                 {zh ? '忘记密码？' : 'Forgot password?'}
               </button>
@@ -395,7 +395,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <button
             type="submit"
             disabled={submitting}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-sm font-bold shadow-md shadow-indigo-600/20 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-teal-600 to-violet-600 hover:from-teal-500 hover:to-violet-500 text-white text-sm font-bold shadow-md shadow-teal-600/20 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {loading && <Loader2 className="w-4 h-4 animate-spin" />}
             {mode === 'signin'

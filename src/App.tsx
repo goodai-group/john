@@ -633,7 +633,7 @@ export default function App() {
 
   return (
     <div
-      className={`min-h-screen bg-neutral-50 text-neutral-900 transition-all font-sans ${
+      className={`min-h-screen bg-warm text-neutral-900 transition-all font-sans ${
         largeFont ? 'text-base leading-relaxed font-medium' : 'text-sm'
       } ${highContrast ? 'contrast-125 saturate-110' : ''}`}
     >
@@ -657,6 +657,9 @@ export default function App() {
         isSigningIn={isSigningIn}
         justSignedIn={justSignedIn}
       />
+
+      {/* 桌面端为固定左侧边栏留出空间；移动端侧边栏隐藏，无需内边距 */}
+      <div className="md:pl-56">
 
       {/* Sync Status Banner */}
       {banner && (
@@ -734,7 +737,7 @@ export default function App() {
           ) : (
             <div className="max-w-4xl mx-auto px-4 py-16 text-center">
               <div className="bg-white rounded-3xl p-8 sm:p-12 border-2 border-neutral-200 shadow-xs space-y-4">
-                <div className="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto border border-indigo-100 shadow-xs">
+                <div className="w-16 h-16 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center mx-auto border border-teal-100 shadow-xs">
                   <Heart className="w-8 h-8" />
                 </div>
                 <div>
@@ -749,7 +752,7 @@ export default function App() {
                 </div>
                 <button
                   onClick={() => navigateTo('form')}
-                  className="inline-flex items-center space-x-1.5 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl text-xs font-bold shadow-md shadow-indigo-600/20 transition-all cursor-pointer"
+                  className="inline-flex items-center space-x-1.5 px-6 py-2.5 bg-teal-600 hover:bg-teal-500 text-white rounded-2xl text-xs font-bold shadow-md shadow-teal-600/20 transition-all cursor-pointer"
                 >
                   <span>{language === 'zh' ? '前往快速体检' : 'Start New Assessment'}</span>
                 </button>
@@ -798,6 +801,8 @@ export default function App() {
         )}
       </main>
 
+      </div>
+
       {/* 全局 AI 答疑悬浮入口：任何页面随时提问 */}
       {!isAiDrawerOpen && (
         <button
@@ -807,7 +812,7 @@ export default function App() {
           }}
           aria-label="打开 AI 答疑"
           title="AI 答疑：任何不懂的地方都能问"
-          className="fixed bottom-20 md:bottom-6 right-5 sm:right-6 z-40 flex items-center gap-2 pl-4 pr-5 py-3 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-sm font-bold shadow-xl hover:shadow-2xl hover:from-violet-500 hover:to-indigo-500 active:scale-95 transition-all cursor-pointer animate-in fade-in"
+          className="fixed bottom-20 md:bottom-6 right-5 sm:right-6 z-40 flex items-center gap-2 pl-4 pr-5 py-3 rounded-full bg-gradient-to-r from-violet-600 to-teal-600 text-white text-sm font-bold shadow-xl hover:shadow-2xl hover:from-violet-500 hover:to-teal-500 active:scale-95 transition-all cursor-pointer animate-in fade-in"
         >
           <MessageCircle className="w-5 h-5" />
           <span className="hidden sm:inline">AI 答疑</span>

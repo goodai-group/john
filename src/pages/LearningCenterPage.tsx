@@ -45,7 +45,7 @@ export const LearningCenterPage: React.FC<LearningCenterPageProps> = ({ language
         <div className="flex items-start justify-between flex-wrap gap-4">
           <div className="space-y-1.5">
             <h2 className="text-xl sm:text-2xl font-black text-slate-900 flex items-center gap-2">
-              <GraduationCap className="w-6 h-6 text-indigo-600" />
+              <GraduationCap className="w-6 h-6 text-teal-600" />
               {language === 'zh' ? '商业知识学习中心' : 'Business Knowledge Learning Center'}
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 font-medium max-w-2xl">
@@ -55,7 +55,7 @@ export const LearningCenterPage: React.FC<LearningCenterPageProps> = ({ language
             </p>
           </div>
           <div className="shrink-0 text-right">
-            <div className="text-3xl font-black text-indigo-600">
+            <div className="text-3xl font-black text-teal-600">
               {watchedCount}/{totalCount}
             </div>
             <div className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
@@ -67,7 +67,7 @@ export const LearningCenterPage: React.FC<LearningCenterPageProps> = ({ language
         <div className="space-y-1.5">
           <div className="w-full h-2.5 rounded-full bg-slate-100 overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-indigo-500 to-emerald-500 transition-all duration-500"
+              className="h-full bg-gradient-to-r from-teal-500 to-emerald-500 transition-all duration-500"
               style={{ width: `${progressPercent}%` }}
             />
           </div>
@@ -85,7 +85,7 @@ export const LearningCenterPage: React.FC<LearningCenterPageProps> = ({ language
               onClick={() => setActiveCategory(cat)}
               className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors cursor-pointer ${
                 activeCategory === cat
-                  ? 'bg-indigo-600 text-white shadow-sm'
+                  ? 'bg-teal-600 text-white shadow-sm'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
@@ -110,14 +110,14 @@ export const LearningCenterPage: React.FC<LearningCenterPageProps> = ({ language
               }`}
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-100 text-teal-700">
                   {video.category}
                 </span>
                 <span className="inline-flex items-center gap-1 text-[10px] text-slate-400 font-semibold">
                   {video.source === 'youtube' ? (
                     <Youtube className="w-3 h-3 text-rose-500" />
                   ) : (
-                    <Film className="w-3 h-3 text-indigo-500" />
+                    <Film className="w-3 h-3 text-teal-500" />
                   )}
                   {video.source === 'youtube'
                     ? 'YouTube'
@@ -140,7 +140,7 @@ export const LearningCenterPage: React.FC<LearningCenterPageProps> = ({ language
                   <button
                     type="button"
                     onClick={() => handlePlay(video.id, video.url)}
-                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-[11px] font-bold transition-colors cursor-pointer"
                   >
                     <PlayCircle className="w-3.5 h-3.5" />
                     {language === 'zh' ? '观看' : 'Watch'}

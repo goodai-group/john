@@ -145,7 +145,7 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
       <div className="bg-white rounded-3xl p-6 sm:p-7 border-2 border-neutral-200 shadow-xs">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center space-x-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-100">
+            <div className="w-12 h-12 rounded-2xl bg-teal-600 flex items-center justify-center text-white shadow-lg shadow-teal-100">
               <Calculator className="w-6 h-6" />
             </div>
             <div>
@@ -186,7 +186,7 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
           <div className="bg-white rounded-3xl p-6 sm:p-7 border-2 border-neutral-200 shadow-xs space-y-5">
             <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
               <h3 className="text-sm font-bold text-neutral-900 flex items-center space-x-2">
-                <Sparkles className="w-4 h-4 text-indigo-600" />
+                <Sparkles className="w-4 h-4 text-teal-600" />
                 <span>1. 收入与毛利参数调校</span>
               </h3>
               <div className="flex items-center space-x-2">
@@ -209,7 +209,7 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
             <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
               <div className="flex justify-between text-xs font-bold text-neutral-800 mb-2">
                 <span>月均总流水 (Gross Revenue)</span>
-                <span className="text-indigo-600 font-mono text-sm">
+                <span className="text-teal-600 font-mono text-sm">
                   {formatMoney(monthlyRevenue, currency)}
                 </span>
               </div>
@@ -220,7 +220,7 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
                 step="100"
                 value={monthlyRevenue}
                 onChange={(e) => setMonthlyRevenue(Number(e.target.value))}
-                className="w-full h-2 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                className="w-full h-2 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-teal-600"
               />
             </div>
 
@@ -398,7 +398,7 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
           {/* Gate Verification Checklist Bento */}
           <div className="bg-white rounded-3xl p-6 sm:p-7 border-2 border-neutral-200 shadow-xs space-y-3">
             <h4 className="text-sm font-bold text-neutral-900 flex items-center space-x-2 pb-2 border-b border-neutral-100">
-              <ShieldCheck className="w-4 h-4 text-indigo-600" />
+              <ShieldCheck className="w-4 h-4 text-teal-600" />
               <span>5 项 Gate 红线底线检查状态</span>
             </h4>
 
@@ -475,7 +475,7 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
             </div>
 
             <div className="pt-2 text-[11px] text-neutral-400 font-medium flex items-start space-x-1.5">
-              <Info className="w-3.5 h-3.5 text-indigo-500 shrink-0 mt-0.5" />
+              <Info className="w-3.5 h-3.5 text-teal-500 shrink-0 mt-0.5" />
               <span>试算仅供自我推演，如需生成带有雷达图与行业对比的正式诊断报告，可点击上方“带入正式申报表”一键填报。</span>
             </div>
           </div>

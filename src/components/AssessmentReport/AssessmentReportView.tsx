@@ -265,7 +265,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
         badge: hasCriticalWeakness ? '利润稳健 · 但有薄弱维度待补强' : '基本面良好 · 利润空间稳健',
         badgeColor: hasCriticalWeakness
           ? 'bg-amber-50 text-amber-800 border-amber-200'
-          : 'bg-indigo-50 text-indigo-800 border-indigo-200',
+          : 'bg-teal-50 text-teal-800 border-teal-200',
         verdictTitle: '生意能正常盈利，建议适度增强现金储备与控成本。',
         verdictDesc: `每月净利润为 ${formatMoney(netProfit, baseCurr)} (利润率 ${netProfitMarginPercent}%)，整体处于良性循环，注意别盲目扩大固定负债。${weaknessNotice}`,
         trafficIcon: hasCriticalWeakness ? '🟡' : '🟢'
@@ -281,6 +281,9 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
   };
 
   const health = getHealthSummary();
+  // 得分环形进度条的颜色跟随健康档位的红绿灯图标，保持语义一致
+  const scoreRingColor =
+    health.trafficIcon === '🟢' ? '#10b981' : health.trafficIcon === '🔴' ? '#f43f5e' : '#f59e0b';
 
   // 给完全不懂财务的宣教同工一句大白话结论
   const getPlainVerdict = () => {
@@ -352,7 +355,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
               <select
                 value={report.version}
                 onChange={(e) => onSelectVersion?.(Number(e.target.value))}
-                className="font-bold bg-transparent text-indigo-600 focus:outline-hidden"
+                className="font-bold bg-transparent text-teal-600 focus:outline-hidden"
               >
                 {allVersions.map((v) => (
                   <option key={`${v.id}-v${v.version}`} value={v.version}>
@@ -364,7 +367,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
               <button
                 onClick={() => setShowVersionDiff(!showVersionDiff)}
                 className={`p-1 rounded-lg border text-[11px] font-bold flex items-center gap-1 cursor-pointer ${
-                  showVersionDiff ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-neutral-600 border-neutral-200'
+                  showVersionDiff ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-neutral-600 border-neutral-200'
                 }`}
                 title="查看与上一版本的得分变化对比"
               >
@@ -381,7 +384,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-2xl border text-xs font-bold transition-colors cursor-pointer ${
               copiedSummary
                 ? 'bg-emerald-100 border-emerald-300 text-emerald-700'
-                : 'bg-neutral-100 hover:bg-neutral-200/80 border-neutral-200 text-neutral-700'
+                : 'bg-white hover:bg-neutral-50 border-neutral-300 text-neutral-700 shadow-xs'
             }`}
           >
             {copiedSummary ? (
@@ -399,7 +402,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
 
           <button
             onClick={onReAssess}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-neutral-100 hover:bg-neutral-200/80 border border-neutral-200 text-neutral-700 text-xs font-bold transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-white hover:bg-neutral-50 border border-neutral-300 text-neutral-700 text-xs font-bold transition-colors cursor-pointer shadow-xs"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             <span>{t('重新测算', 'Re-assess')}</span>
@@ -407,18 +410,18 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
 
           <button
             onClick={handlePrint}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-indigo-600 hover:bg-indigo-500 border border-indigo-600 text-white text-xs font-bold transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-teal-900 hover:bg-teal-800 border border-teal-900 text-white text-xs font-bold transition-colors cursor-pointer shadow-sm"
           >
             <Printer className="w-3.5 h-3.5" />
             <span className="sm:hidden">{t('导出 PDF', 'Export PDF')}</span>
-            <span className="hidden sm:inline">{t('保存体检卡（打印/另存 PDF）', 'Save Report (Print / Export PDF)')}</span>
+            <span className="hidden sm:inline">{t('导出体检卡 PDF', 'Export Report PDF')}</span>
           </button>
 
           {/* 次要/危险操作收进"更多"菜单，与上面的日常操作按钮分开，避免误触彻底删除 */}
           <div className="relative" ref={moreActionsRef}>
             <button
               onClick={() => setShowMoreActions((v) => !v)}
-              className="flex items-center gap-1 px-2.5 py-2 rounded-2xl bg-neutral-100 hover:bg-neutral-200/80 border border-neutral-200 text-neutral-700 text-xs font-bold transition-colors cursor-pointer"
+              className="flex items-center gap-1 px-2.5 py-2 rounded-2xl bg-white hover:bg-neutral-50 border border-neutral-300 text-neutral-700 text-xs font-bold transition-colors cursor-pointer shadow-xs"
               title={t('更多操作', 'More actions')}
               aria-haspopup="true"
               aria-expanded={showMoreActions}
@@ -458,9 +461,9 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
 
       {/* Version Diff Banner when enabled */}
       {showVersionDiff && prevVersion && (
-        <div className="bg-indigo-50 border-2 border-indigo-200 rounded-3xl p-5 shadow-xs flex flex-wrap items-center justify-between gap-4 animate-in fade-in">
+        <div className="bg-teal-50 border-2 border-teal-200 rounded-3xl p-5 shadow-xs flex flex-wrap items-center justify-between gap-4 animate-in fade-in">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-bold">
+            <div className="w-10 h-10 rounded-2xl bg-teal-600 text-white flex items-center justify-center font-bold">
               <GitCompare className="w-5 h-5" />
             </div>
             <div>
@@ -474,21 +477,21 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
           </div>
 
           <div className="flex items-center gap-4 text-xs font-bold">
-            <div className="bg-white px-3 py-1.5 rounded-xl border border-indigo-100 flex items-center space-x-1.5">
+            <div className="bg-white px-3 py-1.5 rounded-xl border border-teal-100 flex items-center space-x-1.5">
               <span className="text-neutral-500">得分变化:</span>
               <span className={scoreDiff >= 0 ? 'text-emerald-600 font-mono' : 'text-rose-600 font-mono'}>
                 {scoreDiff >= 0 ? `+${scoreDiff}` : scoreDiff} 分
               </span>
             </div>
 
-            <div className="bg-white px-3 py-1.5 rounded-xl border border-indigo-100 flex items-center space-x-1.5">
+            <div className="bg-white px-3 py-1.5 rounded-xl border border-teal-100 flex items-center space-x-1.5">
               <span className="text-neutral-500">利润率变化:</span>
               <span className={marginDiff >= 0 ? 'text-emerald-600 font-mono' : 'text-rose-600 font-mono'}>
                 {marginDiff >= 0 ? `+${marginDiff}%` : `${marginDiff}%`}
               </span>
             </div>
 
-            <div className="bg-white px-3 py-1.5 rounded-xl border border-indigo-100 flex items-center space-x-1.5">
+            <div className="bg-white px-3 py-1.5 rounded-xl border border-teal-100 flex items-center space-x-1.5">
               <span className="text-neutral-500">备用金支撑:</span>
               <span className={runwayDiff >= 0 ? 'text-emerald-600 font-mono' : 'text-rose-600 font-mono'}>
                 {runwayDiff >= 0 ? `+${runwayDiff}月` : `${runwayDiff}月`}
@@ -505,16 +508,57 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
         <div className="space-y-6 animate-in fade-in duration-200">
           {/* Card 1: Health Headline & Verdict */}
           <div className="bg-white border-2 border-neutral-200 rounded-3xl p-6 sm:p-8 shadow-xs space-y-4">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <div className="flex items-center space-x-2 mb-2">
+            <div className="flex flex-wrap items-start gap-5">
+              {/* Score Ring：用环形进度条直观呈现综合得分，替代原先单独的方块得分卡 */}
+              <div className="relative w-20 h-20 sm:w-24 sm:h-24 shrink-0">
+                <svg viewBox="0 0 100 100" className="w-20 h-20 sm:w-24 sm:h-24 -rotate-90">
+                  <circle cx="50" cy="50" r="44" fill="none" stroke="#eae4d6" strokeWidth="9" />
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="44"
+                    fill="none"
+                    stroke={scoreRingColor}
+                    strokeWidth="9"
+                    strokeLinecap="round"
+                    strokeDasharray={`${(Math.max(0, Math.min(100, report.totalScore)) / 100) * 2 * Math.PI * 44} ${2 * Math.PI * 44}`}
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-2xl sm:text-3xl font-mono font-black text-neutral-900 leading-none">
+                    {report.totalScore}
+                  </span>
+                  <span className="text-[10px] text-neutral-400 font-bold mt-0.5">/ 100 {t('分', '')}</span>
+                </div>
+              </div>
+
+              <div className="flex-1 min-w-[220px]">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
                   <span className={`text-xs font-bold px-3 py-1 rounded-full border ${health.badgeColor} flex items-center space-x-1.5`}>
                     <span>{health.trafficIcon}</span>
-                    <span>{health.badge}</span>
+                    <span>{report.tier} {t('等级', 'Tier')} · {health.badge}</span>
                   </span>
-                  <span className="text-xs text-neutral-400 font-medium">
-                    项目名称：<strong className="text-neutral-800 font-bold">{report.projectName}</strong>
+                  <span
+                    className={`text-xs font-bold px-3 py-1 rounded-full border flex items-center space-x-1.5 ${
+                      !report.gatePassed
+                        ? 'bg-rose-50 border-rose-200 text-rose-800'
+                        : hasCriticalWeakness
+                        ? 'bg-amber-50 border-amber-200 text-amber-800'
+                        : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                    }`}
+                  >
+                    {report.gatePassed ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertOctagon className="w-3.5 h-3.5" />}
+                    <span>
+                      {report.gatePassed
+                        ? t('红线全部通过', 'All gates passed')
+                        : t('红线未全部通过', 'Gates not all passed')}
+                      {' · '}
+                      {report.gates.length - (report.failedGates?.length || 0)}/{report.gates.length}
+                    </span>
                   </span>
+                </div>
+                <div className="text-xs text-neutral-400 font-medium mb-1">
+                  {t('项目名称', 'Project')}：<strong className="text-neutral-800 font-bold">{report.projectName}</strong>
                 </div>
                 <h2 className="text-xl sm:text-2xl font-black text-neutral-900 tracking-tight leading-snug">
                   {health.verdictTitle}
@@ -573,34 +617,6 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                   )}
                 </div>
               </div>
-
-              {/* Total Score & Grade Badge */}
-              <div className="flex items-center space-x-3 bg-neutral-50 border-2 border-neutral-200 p-3 sm:p-4 rounded-2xl">
-                <div className="text-right">
-                  <div className="text-[10px] font-mono uppercase text-neutral-400 font-bold">综合体检得分</div>
-                  <div className="text-3xl font-mono font-black text-neutral-900">
-                    {report.totalScore}
-                    <span className="text-xs font-normal text-neutral-400">/100</span>
-                  </div>
-                </div>
-                {/* 修复：原先固定 w-12 h-12 的方形徽章，装不下 "REJECT" 这类较长的档位文案，
-                    溢出的文字会被右侧相邻色块盖住，视觉上显示成乱码（如 "EJEC"）。
-                    改为 min-w + 横向内边距的胶囊形状，并按文案长度自适应字号，保证任意档位都能完整显示。 */}
-                <div
-                  className={`h-12 min-w-12 px-2 rounded-xl bg-neutral-900 text-white flex items-center justify-center font-mono font-black shadow-xs whitespace-nowrap ${
-                    report.tier.length > 3 ? 'text-sm' : 'text-xl'
-                  }`}
-                >
-                  {report.tier}
-                </div>
-                {/* 大白话档位：让不懂财务的人一眼看懂安全与否 */}
-                <div className={`flex-1 px-3 py-2 rounded-xl border-2 ${health.badgeColor}`}>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-lg leading-none">{health.trafficIcon}</span>
-                    <span className="text-sm font-black">{health.badge}</span>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -637,7 +653,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                   <div
                     key="breakdown-opex"
                     style={{ width: `${opexPct}%` }}
-                    className="bg-indigo-500 text-white flex items-center justify-center text-xs font-mono font-bold transition-all relative group"
+                    className="bg-teal-500 text-white flex items-center justify-center text-xs font-mono font-bold transition-all relative group"
                     title={`房租与工人工资: ${opexPct}% (${formatMoney(monthlyOpex, baseCurr)})`}
                   >
                     {opexPct >= 10 && <span>房租人工 {opexPct}元</span>}
@@ -683,9 +699,9 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                   </div>
                 </div>
 
-                <div className="bg-indigo-50/70 border border-indigo-200 p-3 rounded-2xl">
-                  <div className="flex items-center space-x-1.5 text-xs text-indigo-800 font-bold mb-1">
-                    <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 shrink-0"></span>
+                <div className="bg-teal-50/70 border border-teal-200 p-3 rounded-2xl">
+                  <div className="flex items-center space-x-1.5 text-xs text-teal-800 font-bold mb-1">
+                    <span className="w-2.5 h-2.5 rounded-full bg-teal-500 shrink-0"></span>
                     <span>2. 房租工人工资</span>
                   </div>
                   <div className="text-base font-mono font-black text-neutral-900">
@@ -732,7 +748,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
           <div className="bg-white border-2 border-neutral-200 rounded-3xl p-6 sm:p-8 shadow-xs space-y-4">
             <div>
               <div className="flex items-center space-x-2">
-                <Store className="w-4 h-4 text-indigo-600" />
+                <Store className="w-4 h-4 text-teal-600" />
                 <h3 className="text-base font-black text-neutral-900">
                   {t('日常经营 4 大核心关键指标体检', '4 Core Health Checks for Daily Operations')}
                 </h3>
@@ -1003,7 +1019,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
             <div className="lg:col-span-8 bg-white border-2 border-neutral-200 rounded-3xl p-6 sm:p-8 shadow-xs flex flex-col justify-between space-y-4">
               <div>
                 <div className="flex items-center space-x-2 mb-3">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-teal-700 bg-teal-50 px-3 py-1 rounded-full border border-teal-100">
                     工场服事标准体检评估报告
                   </span>
                   <span className="text-[10px] text-neutral-400 font-medium">
@@ -1029,8 +1045,8 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                 )}
 
                 {report.customRateNotice && (
-                  <span className="text-xs bg-indigo-50 text-indigo-800 font-semibold px-3 py-1 rounded-xl border border-indigo-200 flex items-center space-x-1.5">
-                    <DollarSign className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                  <span className="text-xs bg-teal-50 text-teal-800 font-semibold px-3 py-1 rounded-xl border border-teal-200 flex items-center space-x-1.5">
+                    <DollarSign className="w-3.5 h-3.5 text-teal-600 shrink-0" />
                     <span>{report.customRateNotice}</span>
                   </span>
                 )}
@@ -1089,7 +1105,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-base font-black text-neutral-900 flex items-center space-x-2">
-                  <ShieldCheck className="w-5 h-5 text-indigo-600" />
+                  <ShieldCheck className="w-5 h-5 text-teal-600" />
                   <span>{report.gates.length} 项一票否决门槛红线 (Gate Checks)</span>
                 </h3>
                 <p className="text-xs text-neutral-500 font-medium mt-0.5">
@@ -1194,9 +1210,9 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                   {/* Benchmark Polygon */}
                   <polygon
                     points={benchmarkPoints}
-                    fill="#e0e7ff"
+                    fill="#ccfbf1"
                     fillOpacity="0.4"
-                    stroke="#818cf8"
+                    stroke="#5eead4"
                     strokeWidth="1.5"
                     strokeDasharray="4 2"
                   />
@@ -1204,9 +1220,9 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                   {/* Actual Score Polygon */}
                   <polygon
                     points={radarPoints}
-                    fill="#4f46e5"
+                    fill="#0d9488"
                     fillOpacity="0.35"
-                    stroke="#4338ca"
+                    stroke="#115e59"
                     strokeWidth="2.5"
                   />
 
@@ -1232,12 +1248,12 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
               </div>
 
               <div className="flex items-center justify-center space-x-6 text-xs font-medium pt-2 border-t border-neutral-100">
-                <div className="flex items-center space-x-1.5 text-indigo-700">
-                  <span className="w-3 h-3 rounded bg-indigo-600 inline-block"></span>
+                <div className="flex items-center space-x-1.5 text-teal-700">
+                  <span className="w-3 h-3 rounded bg-teal-600 inline-block"></span>
                   <span className="font-bold">本项目得分</span>
                 </div>
                 <div className="flex items-center space-x-1.5 text-neutral-500">
-                  <span className="w-3 h-3 rounded bg-indigo-200 inline-block border border-indigo-400"></span>
+                  <span className="w-3 h-3 rounded bg-teal-200 inline-block border border-teal-400"></span>
                   <span>行业标杆线</span>
                 </div>
               </div>
@@ -1255,7 +1271,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                   <div key={`dim-${dim.dimensionPlain || dim.dimension}-${i}`} className="p-3 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-1.5">
                     <div className="flex items-center justify-between text-xs font-bold text-neutral-900">
                       <span>{dim.dimensionPlain || dim.dimension}</span>
-                      <span className="font-mono text-indigo-700 text-sm">
+                      <span className="font-mono text-teal-700 text-sm">
                         {dim.score} <span className="text-neutral-400 font-normal text-xs">/ 100</span>
                       </span>
                     </div>
@@ -1263,7 +1279,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                     <div className="h-2 w-full bg-neutral-200 rounded-full overflow-hidden flex">
                       <div
                         style={{ width: `${Math.min(100, dim.score)}%` }}
-                        className="bg-indigo-600 rounded-full transition-all"
+                        className="bg-teal-600 rounded-full transition-all"
                       ></div>
                     </div>
                     <div className="flex items-center justify-between text-[11px] text-neutral-500">

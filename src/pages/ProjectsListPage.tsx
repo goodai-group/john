@@ -101,7 +101,7 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
       <div className="bg-white rounded-3xl p-6 sm:p-7 border-2 border-neutral-200 shadow-xs flex flex-wrap items-center justify-between gap-4">
         <div>
           <div className="flex items-center space-x-2 mb-1">
-            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-100">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-100">
               PROJECTS & CLOUD HUB
             </span>
           </div>
@@ -130,7 +130,7 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
       <div className={`p-4 sm:p-5 rounded-3xl border-2 flex flex-wrap items-center justify-between gap-3 text-xs ${
         currentUser
           ? 'bg-emerald-50/60 border-emerald-200 text-emerald-950'
-          : 'bg-indigo-50/60 border-indigo-200 text-indigo-950'
+          : 'bg-teal-50/60 border-teal-200 text-teal-950'
       }`}>
         <div className="flex items-center space-x-3">
           {currentUser ? (
@@ -138,7 +138,7 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
               <UserCheck className="w-4 h-4" />
             </div>
           ) : (
-            <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
+            <div className="w-8 h-8 rounded-full bg-teal-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
               <Database className="w-4 h-4" />
             </div>
           )}
@@ -167,7 +167,7 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
           {!currentUser && onOpenAuth && (
             <button
               onClick={onOpenAuth}
-              className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold shadow-md shadow-indigo-600/20 transition-all cursor-pointer hover:scale-102"
+              className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold shadow-md shadow-teal-600/20 transition-all cursor-pointer hover:scale-102"
             >
               <UserCheck className="w-4 h-4 shrink-0" />
               <span>{t('登录 / 注册账号', 'Sign in / Sign up')}</span>
@@ -178,7 +178,7 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
             onClick={onTriggerSync}
             className="flex items-center space-x-1 px-3.5 py-2 rounded-xl bg-white border-2 border-neutral-200 hover:bg-neutral-50 text-neutral-800 font-bold shadow-xs transition-colors cursor-pointer"
           >
-            <RotateCcw className="w-3.5 h-3.5 text-indigo-600" />
+            <RotateCcw className="w-3.5 h-3.5 text-teal-600" />
             <span>{t('云端双向同步', 'Sync with cloud')}</span>
           </button>
         </div>
@@ -187,7 +187,7 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
       {/* Projects List Grid */}
       {projects.length === 0 ? (
         <div className="bg-white rounded-3xl p-12 text-center border-2 border-neutral-200 shadow-xs space-y-4">
-          <div className="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto border border-indigo-100 shadow-xs">
+          <div className="w-16 h-16 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center mx-auto border border-teal-100 shadow-xs">
             <FileText className="w-8 h-8" />
           </div>
           <div>
@@ -198,7 +198,7 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
           </div>
           <button
             onClick={onNewProject}
-            className="inline-flex items-center space-x-1.5 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl text-xs font-bold shadow-md shadow-indigo-600/20 transition-all cursor-pointer"
+            className="inline-flex items-center space-x-1.5 px-6 py-2.5 bg-teal-600 hover:bg-teal-500 text-white rounded-2xl text-xs font-bold shadow-md shadow-teal-600/20 transition-all cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>{t('立即创建自测', 'Start assessment')}</span>
@@ -231,7 +231,7 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
                             <span>{t('敏感脱敏', 'Sensitive/Redacted')}</span>
                           </span>
                         ) : (
-                          <span className="text-[10px] bg-indigo-50 text-indigo-700 font-bold px-2.5 py-0.5 rounded-full border border-indigo-100">
+                          <span className="text-[10px] bg-teal-50 text-teal-700 font-bold px-2.5 py-0.5 rounded-full border border-teal-100">
                             {t('常规模式', 'Standard Mode')}
                           </span>
                         )}
@@ -286,9 +286,9 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
                         setCollabOpenId(collabOpenId === proj.id ? null : proj.id);
                         setCollabError(null);
                       }}
-                      className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-700 hover:text-indigo-900 transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-teal-700 hover:text-teal-900 transition-colors cursor-pointer"
                     >
-                      <Users className="w-3.5 h-3.5 text-indigo-500" />
+                      <Users className="w-3.5 h-3.5 text-teal-500" />
                       {proj.collaborators.length > 0
                         ? t(`协作者 ${proj.collaborators.length} 人`, `${proj.collaborators.length} Collaborator${proj.collaborators.length > 1 ? 's' : ''}`)
                         : t('添加协作者', 'Add Collaborator')}
@@ -298,20 +298,20 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
                     </button>
 
                     {collabOpenId === proj.id && (
-                      <div className="mt-2 p-3 rounded-xl bg-indigo-50/60 border border-indigo-100 space-y-2.5">
+                      <div className="mt-2 p-3 rounded-xl bg-teal-50/60 border border-teal-100 space-y-2.5">
                         {proj.collaborators.length > 0 ? (
                           <div className="space-y-1.5">
                             {proj.collaborators.map((c) => (
                               <div
                                 key={c.email}
-                                className="flex items-center justify-between p-2 rounded-lg bg-white border border-indigo-100"
+                                className="flex items-center justify-between p-2 rounded-lg bg-white border border-teal-100"
                               >
                                 <div className="flex items-center gap-2 min-w-0">
-                                  <Mail className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                                  <Mail className="w-3.5 h-3.5 text-teal-600 shrink-0" />
                                   <span className="font-medium text-slate-800 text-xs truncate">
                                     {c.email}
                                   </span>
-                                  <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded shrink-0">
+                                  <span className="text-[10px] bg-teal-100 text-teal-700 px-1.5 py-0.5 rounded shrink-0">
                                     {t('协作者 · 可编辑', 'Collaborator · Editor')}
                                   </span>
                                 </div>
@@ -326,7 +326,7 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
                             ))}
                           </div>
                         ) : (
-                          <p className="text-[11px] text-indigo-700 font-medium">
+                          <p className="text-[11px] text-teal-700 font-medium">
                             {t('暂无协作者。可邀请配偶、当地同工一起核对数据。', 'No collaborators yet. Invite a spouse or local teammate to review the data together.')}
                           </p>
                         )}
@@ -347,7 +347,7 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
                           />
                           <button
                             onClick={() => handleAddCollab(proj.id)}
-                            className="inline-flex items-center gap-1 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-lg shadow-2xs transition-colors text-xs cursor-pointer"
+                            className="inline-flex items-center gap-1 px-3 py-2 bg-teal-600 hover:bg-teal-500 text-white font-semibold rounded-lg shadow-2xs transition-colors text-xs cursor-pointer"
                           >
                             <UserPlus className="w-3.5 h-3.5" />
                             {t('添加', 'Add')}
@@ -381,7 +381,7 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
                     {latestReport && (
                       <button
                         onClick={() => onSelectReport(latestReport.id)}
-                        className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-xs transition-colors cursor-pointer flex items-center space-x-1"
+                        className="px-3.5 py-1.5 bg-teal-600 hover:bg-teal-500 text-white font-bold rounded-xl shadow-xs transition-colors cursor-pointer flex items-center space-x-1"
                       >
                         <span>{t('查看诊断报告', 'View Report')}</span>
                         <ExternalLink className="w-3 h-3" />
