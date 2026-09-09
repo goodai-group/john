@@ -20,12 +20,6 @@ import { AuthModal, AuthMode } from './components/AuthModal';
 import { ProjectsListPage } from './pages/ProjectsListPage';
 import { LearningCenterPage } from './pages/LearningCenterPage';
 import {
-  IntroVideoGate,
-  hasSeenIntroVideo,
-  markIntroVideoSeen,
-  isAuthCallbackUrl
-} from './components/IntroVideoGate';
-import {
   loadStoredProjects,
   saveStoredProjects,
   loadStoredReports,
@@ -103,16 +97,6 @@ export default function App() {
     return () => window.removeEventListener('popstate', onPopState);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // 开场视频门禁：同一浏览器会话（标签页）内只看一次，刷新不再重复打扰；
-  // 从 Google 登录 / 邮箱验证 / 找回密码链接回跳时直接放行，避免挡住登录结果
-  const [introDone, setIntroDone] = useState<boolean>(
-    () => hasSeenIntroVideo() || isAuthCallbackUrl()
-  );
-  const handleIntroFinish = () => {
-    markIntroVideoSeen();
-    setIntroDone(true);
-  };
 
   // User Authentication State
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
@@ -248,9 +232,6 @@ export default function App() {
       pushBanner({ kind: 'error', text });
       // 清掉 URL 上的错误参数，避免刷新后又弹一次
       clearAuthCallbackParams();
-    } else if (isAuthCallbackUrl()) {
-      // 回跳成功：标记为已看过开场视频，避免刷新 / 再次进入时被视频挡住登录结果
-      markIntroVideoSeen();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -888,11 +869,6 @@ export default function App() {
         onSetNewPassword={handleSetNewPassword}
         initialMode={authInitialMode}
       />
-
-      {/* 开场视频：看完或跳到片尾后才能使用网站 */}
-      {!introDone && (
-        <IntroVideoGate language={language} onFinish={handleIntroFinish} />
-      )}
 
       {/* 生成报告过场：让"算完了"有仪式感 */}
       {isGenerating && (
