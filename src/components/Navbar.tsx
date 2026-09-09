@@ -14,7 +14,6 @@ import {
   Loader2,
   MoreHorizontal,
   CheckCircle2,
-  MessageCircle,
   GraduationCap
 } from 'lucide-react';
 import { Language, ActiveTab, AppUser } from '../types';
@@ -81,7 +80,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // 全部 5 大核心功能标签直接平铺展示在主导航栏
+  // 全部 6 大核心功能标签平铺展示在桌面端主导航栏
   const navItems: { id: ActiveTab; label: string; icon: any }[] = [
     { id: 'form', label: language === 'zh' ? '快速体检' : 'Assessment', icon: FileText },
     { id: 'report', label: language === 'zh' ? '体检报告' : 'Report', icon: Sparkles },
@@ -91,7 +90,13 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'projects', label: language === 'zh' ? '我的项目' : 'Projects', icon: FolderKanban }
   ];
 
+  // 移动端屏幕宽度装不下全部 6 个标签（原先横向滚动但没有滚动提示，
+  // "我的项目"会被裁切到看不见也点不到）。改为固定底部 5 个高频标签，
+  // "评分规则"通过头部图标按钮单独触达，不占用底部空间。
+  const mobileBottomNavItems = navItems.filter((item) => item.id !== 'standards');
+
   return (
+    <>
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-neutral-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2.5">
         <div className="flex items-center justify-between gap-3">
@@ -152,6 +157,17 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <HelpCircle className="w-4 h-4" />
               </button>
             )}
+
+            {/* "评分规则" 不在移动端底部导航中，改由此图标入口触达，避免底部标签超过 5 个 */}
+            <button
+              onClick={() => onTabChange('standards')}
+              className={`md:hidden p-2 rounded-lg hover:bg-neutral-100 transition-colors cursor-pointer ${
+                activeTab === 'standards' ? 'text-indigo-600 bg-indigo-50' : 'text-neutral-500'
+              }`}
+              title={language === 'zh' ? '评分规则' : 'Scoring Rules'}
+            >
+              <BookOpen className="w-4 h-4" />
+            </button>
 
             <button
               onClick={() => onLanguageChange(language === 'zh' ? 'en' : 'zh')}
@@ -242,36 +258,34 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
 
-        {/* Mobile Tab Row */}
-        <div className="md:hidden flex overflow-x-auto pt-2 gap-1 scrollbar-none">
-          {navItems.map((item) => {
-            const isActive = activeTab === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => onTabChange(item.id)}
-                className={`px-3 py-2 rounded-lg text-xs whitespace-nowrap font-medium transition-all min-h-[32px] ${
-                  isActive
-                    ? 'bg-indigo-600 text-white font-bold'
-                    : 'bg-neutral-100 text-neutral-600'
-                }`}
-              >
-                {item.label}
-              </button>
-            );
-          })}
-          {/* AI 答疑移动端入口 */}
-          <button
-            onClick={() => onOpenAiHelper()}
-            className="px-3 py-2 rounded-lg text-xs whitespace-nowrap font-bold min-h-[32px] bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-sm hover:from-violet-500 hover:to-indigo-500 transition-all cursor-pointer"
-          >
-            <span className="inline-flex items-center gap-1">
-              <MessageCircle className="w-3.5 h-3.5" />
-              AI 答疑
-            </span>
-          </button>
-        </div>
       </div>
     </header>
+
+    {/* Mobile Fixed Bottom Tab Bar：固定 5 个高频标签，永远全部可见可点，
+        不再依赖会被裁切、且没有滚动提示的横向滚动条。
+        AI 答疑已有全局右下角悬浮入口（见 App.tsx），此处不再重复放置，
+        避免与其余标签抢位导致溢出。 */}
+    <nav
+      className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-neutral-200 flex items-stretch"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+    >
+      {mobileBottomNavItems.map((item) => {
+        const isActive = activeTab === item.id;
+        const Icon = item.icon;
+        return (
+          <button
+            key={item.id}
+            onClick={() => onTabChange(item.id)}
+            className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-medium transition-colors cursor-pointer ${
+              isActive ? 'text-indigo-600' : 'text-neutral-500'
+            }`}
+          >
+            <Icon className={`w-4.5 h-4.5 ${isActive ? 'text-indigo-600' : 'text-neutral-400'}`} />
+            <span className={isActive ? 'font-bold' : ''}>{item.label}</span>
+          </button>
+        );
+      })}
+    </nav>
+    </>
   );
 };

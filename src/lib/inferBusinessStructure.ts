@@ -38,27 +38,29 @@ interface IndustryTemplate {
 /** 前端本地兜底推断：不依赖后端 AI 接口，仅凭项目/店铺名称推断行业、币种与成本结构。
  *  用于后端不可用时提供无缝体验，避免"无法自动推算"。
  */
-/** 根据店名/地区关键词推断所在国家的币种代码，供行业推断与合规成本预估共用。 */
-function detectCountryCurrency(pLower: string, fallback: CurrencyCode): CurrencyCode {
-  let curr: CurrencyCode = fallback;
-  if (/肯尼亚|内罗毕|nairobi|kenya|kes/i.test(pLower)) curr = 'KES';
-  else if (/泰国|清迈|曼谷|thailand|chiang mai|bangkok|thb/i.test(pLower)) curr = 'THB';
-  else if (/越南|河内|胡志明|vietnam|ho chi minh|hanoi|vnd/i.test(pLower)) curr = 'VND';
-  else if (/印尼|雅加达|indonesia|jakarta|idr/i.test(pLower)) curr = 'IDR';
-  else if (/菲律宾|马尼拉|philippines|manila|php/i.test(pLower)) curr = 'PHP';
-  else if (/尼日利亚|拉各斯|nigeria|lagos|ngn/i.test(pLower)) curr = 'NGN';
-  else if (/埃及|开罗|egypt|cairo|egp/i.test(pLower)) curr = 'EGP';
-  else if (/埃塞俄比亚|ethiopia|addis ababa|etb/i.test(pLower)) curr = 'ETB';
-  else if (/缅甸|仰光|曼德勒|内比都|myanmar|yangon|mandalay|mmk/i.test(pLower)) curr = 'MMK';
-  else if (/柬埔寨|金边|cambodia|phnom penh|khr/i.test(pLower)) curr = 'KHR';
-  else if (/老挝|万象|laos|vientiane|lak/i.test(pLower)) curr = 'LAK';
-  else if (/孟加拉|达卡|bangladesh|dhaka|bdt/i.test(pLower)) curr = 'BDT';
-  else if (/斯里兰卡|科伦坡|sri lanka|colombo|lkr/i.test(pLower)) curr = 'LKR';
-  else if (/中国|上海|北京|深圳|广州|杭州|成都|台北|香港|cny|rmb/i.test(pLower)) curr = 'CNY';
-  else if (/美国|纽约|洛杉矶|usa|united states|usd/i.test(pLower)) curr = 'USD';
-  else if (/欧盟|德国|法国|意大利|西班牙|荷兰|eur/i.test(pLower)) curr = 'EUR';
-  else if (/英国|伦敦|uk|united kingdom|gbp/i.test(pLower)) curr = 'GBP';
-  return curr;
+/** 根据店名/地区关键词推断所在国家的币种代码，供行业推断与合规成本预估共用。
+ *  未命中任何地区关键词时返回 undefined——调用方不应把"没有任何线索"当成"推断出 USD"，
+ *  否则会把美国的税率/注册费/签证费标准错误地套用到一个完全没提及地区的项目名上
+ *  （例如"阳光社区烘焙店"这类不含地名的中文店名，多数目标用户实际并不在美国）。 */
+function detectCountryCurrency(pLower: string): CurrencyCode | undefined {
+  if (/肯尼亚|内罗毕|nairobi|kenya|kes/i.test(pLower)) return 'KES';
+  if (/泰国|清迈|曼谷|thailand|chiang mai|bangkok|thb/i.test(pLower)) return 'THB';
+  if (/越南|河内|胡志明|vietnam|ho chi minh|hanoi|vnd/i.test(pLower)) return 'VND';
+  if (/印尼|雅加达|indonesia|jakarta|idr/i.test(pLower)) return 'IDR';
+  if (/菲律宾|马尼拉|philippines|manila|php/i.test(pLower)) return 'PHP';
+  if (/尼日利亚|拉各斯|nigeria|lagos|ngn/i.test(pLower)) return 'NGN';
+  if (/埃及|开罗|egypt|cairo|egp/i.test(pLower)) return 'EGP';
+  if (/埃塞俄比亚|ethiopia|addis ababa|etb/i.test(pLower)) return 'ETB';
+  if (/缅甸|仰光|曼德勒|内比都|myanmar|yangon|mandalay|mmk/i.test(pLower)) return 'MMK';
+  if (/柬埔寨|金边|cambodia|phnom penh|khr/i.test(pLower)) return 'KHR';
+  if (/老挝|万象|laos|vientiane|lak/i.test(pLower)) return 'LAK';
+  if (/孟加拉|达卡|bangladesh|dhaka|bdt/i.test(pLower)) return 'BDT';
+  if (/斯里兰卡|科伦坡|sri lanka|colombo|lkr/i.test(pLower)) return 'LKR';
+  if (/中国|上海|北京|深圳|广州|杭州|成都|台北|香港|cny|rmb/i.test(pLower)) return 'CNY';
+  if (/美国|纽约|洛杉矶|加州|usa|united states|california|usd/i.test(pLower)) return 'USD';
+  if (/欧盟|德国|法国|意大利|西班牙|荷兰|eur/i.test(pLower)) return 'EUR';
+  if (/英国|伦敦|uk|united kingdom|gbp/i.test(pLower)) return 'GBP';
+  return undefined;
 }
 
 export function inferBusinessStructureLocally(
@@ -67,8 +69,11 @@ export function inferBusinessStructureLocally(
 ): InferredStructure {
   const pLower = projectName.toLowerCase();
 
-  // 1. 币种推断：尽量覆盖常见 BAM 地区与通用币种代码
-  const curr: CurrencyCode = detectCountryCurrency(pLower, baseCurrency);
+  // 1. 币种推断：尽量覆盖常见 BAM 地区与通用币种代码。
+  // 未命中任何地区关键词时，沿用当前表单已选币种做金额换算，但不把它当作"AI 推断结果"
+  // 回传给前端（detectedCurrency 为 undefined），避免覆盖用户的真实选择。
+  const detectedCurrency = detectCountryCurrency(pLower);
+  const curr: CurrencyCode = detectedCurrency || baseCurrency;
 
   const rate = SUPPORTED_CURRENCIES.find((c) => c.code === curr)?.rateToUsd || 1;
   const toLocal = (usd: number) => Math.round(usd * rate);
@@ -246,7 +251,7 @@ export function inferBusinessStructureLocally(
     inferredIndustryKey: result.key,
     industryDisplayName: result.displayName,
     customIndustryName: result.customName,
-    suggestedCurrency: curr,
+    suggestedCurrency: detectedCurrency,
     revenueTip: result.revTip,
     estimatedMonthlyRevenue: toLocal(result.rev),
     cogsItems: toLocalItems(result.cogs),
@@ -443,8 +448,11 @@ export function inferRegulatoryCosts(
   baseCurrency: CurrencyCode = 'USD'
 ): RegulatoryCostEstimate & { registrationLocal: number; visaLocal: number } {
   const pLower = (projectNameOrCountry || '').toLowerCase();
-  const detectedCurrency = detectCountryCurrency(pLower, baseCurrency);
-  const table = REGULATORY_COST_TABLE[detectedCurrency] || DEFAULT_REGULATORY_ESTIMATE;
+  // 只有当店名/地区文本里真的出现了可识别的地区关键词时，才使用该国的税率/注册/签证成本表；
+  // 否则一律回退到"通用/未识别地区"参考值，不能因为当前主币种恰好是 USD
+  // 就把美国的属地合规成本标准套到一个完全没提及地区的项目上。
+  const detectedCurrency = detectCountryCurrency(pLower);
+  const table = detectedCurrency ? REGULATORY_COST_TABLE[detectedCurrency] || DEFAULT_REGULATORY_ESTIMATE : DEFAULT_REGULATORY_ESTIMATE;
   const rate = SUPPORTED_CURRENCIES.find((c) => c.code === baseCurrency)?.rateToUsd || 1;
   const toLocal = (usd: number) => Math.round(usd * rate);
 

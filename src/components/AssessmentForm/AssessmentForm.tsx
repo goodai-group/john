@@ -246,49 +246,49 @@ export const AssessmentForm: React.FC<FormProps> = ({
     switch (formData.industry) {
       case 'food_beverage':
         return {
-          label: 'F10. 食材与饮品原料成本 (COGS)',
+          label: '食材与饮品原料成本 (COGS)',
           badge: '咖啡/烘焙/餐食原料',
           tip: '咖啡豆、鲜奶、面粉、肉类蔬菜、酱料及一次性环保餐具等直接食材成本（不含房租人工）。'
         };
       case 'medical_health':
         return {
-          label: 'F10. 药品与医用耗材成本 (COGS)',
+          label: '药品与医用耗材成本 (COGS)',
           badge: '药品与耗材',
           tip: '中西药品、注射器、敷料纱布、消毒用品等直接采购成本（不含房租人工）。'
         };
       case 'retail_store':
         return {
-          label: 'F10. 商品进货与采购成本 (COGS)',
+          label: '商品进货与采购成本 (COGS)',
           badge: '进货本钱',
           tip: '向批发商采购的日用百货、食品调料、数码家电等商品成本（含长途运费，不含房租人工）。'
         };
       case 'education_training':
         return {
-          label: 'F10. 教材与教学耗材成本 (COGS)',
+          label: '教材与教学耗材成本 (COGS)',
           badge: '教学资料',
           tip: '教材讲义、练习册、文具教具、在线平台等直接教学耗材（不含房租人工）。'
         };
       case 'vocational_training':
         return {
-          label: 'F10. 实训原料与工具耗材 (COGS)',
+          label: '实训原料与工具耗材 (COGS)',
           badge: '材料与工具',
           tip: '实训用的木料、皮革、布料、焊锡零配件、五金耗材等（不含房租人工）。'
         };
       case 'agriculture':
         return {
-          label: 'F10. 种苗肥料与农资成本 (COGS)',
+          label: '种苗肥料与农资成本 (COGS)',
           badge: '农业生产资料',
           tip: '种子种苗、有机肥料、生物农药、保鲜包装等直接农业投入（不含房租人工）。'
         };
       case 'child_care':
         return {
-          label: 'F10. 儿童膳食与教具耗材 (COGS)',
+          label: '儿童膳食与教具耗材 (COGS)',
           badge: '餐食与用品',
           tip: '儿童每日营养食材、牛奶、益智教具、绘画文具、卫生纸品等（不含房租人工）。'
         };
       default:
         return {
-          label: 'F10. 原材料与直接采购成本 (COGS)',
+          label: '原材料与直接采购成本 (COGS)',
           badge: '进货本钱',
           tip: '进货货款、生鲜食材原料等直接买货成本（包含长途运费，不含房租和员工工资）。'
         };
@@ -1126,7 +1126,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <div>
                       <label className="font-black text-slate-900 text-sm flex items-center gap-1.5">
-                        <span>F8. 经营月均总流水</span>
+                        <span>经营月均总流水</span>
                         <span className="text-[10px] bg-indigo-600 text-white font-bold px-2 py-0.5 rounded-full">
                           总营业额
                         </span>
@@ -1378,7 +1378,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                   <div className="p-3.5 rounded-xl border border-slate-200 bg-white">
                     <div className="flex justify-between mb-1">
-                      <label className="font-bold text-slate-800">F11. 场地租金与物业</label>
+                      <label className="font-bold text-slate-800">场地租金与物业</label>
                       <span className="text-[11px] text-slate-400">{formData.rentCost.currency}</span>
                     </div>
                     <input
@@ -1393,7 +1393,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
 
                   <div className="p-3.5 rounded-xl border border-slate-200 bg-white">
                     <div className="flex justify-between mb-1">
-                      <label className="font-bold text-slate-800">F12. 员工工资与人工支出</label>
+                      <label className="font-bold text-slate-800">员工工资与人工支出</label>
                       <span className="text-[11px] text-slate-400">{formData.laborCost.currency}</span>
                     </div>
                     <input
@@ -1408,7 +1408,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
 
                   <div className="p-3.5 rounded-xl border border-slate-200 bg-white">
                     <div className="flex justify-between mb-1">
-                      <label className="font-bold text-slate-800">F13. 水电网络杂费</label>
+                      <label className="font-bold text-slate-800">水电网络杂费</label>
                       <span className="text-[11px] text-slate-400">{formData.utilityCost.currency}</span>
                     </div>
                     <input
@@ -1423,7 +1423,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
 
                   <div className="p-3.5 rounded-xl border border-slate-200 bg-white">
                     <div className="flex justify-between mb-1">
-                      <label className="font-bold text-slate-800">F16. 税金及规费</label>
+                      <label className="font-bold text-slate-800">税金及规费</label>
                       <span className="text-[11px] text-slate-400">{formData.taxCost.currency}</span>
                     </div>
                     <input

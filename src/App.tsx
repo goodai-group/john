@@ -703,7 +703,7 @@ export default function App() {
       )}
 
       {/* Main Content Area based on activeTab */}
-      <main className="pb-16">
+      <main className="pb-24 md:pb-16">
         {activeTab === 'form' && (
           <AssessmentForm
             key={activeProject?.id || 'new'}
@@ -807,7 +807,7 @@ export default function App() {
           }}
           aria-label="打开 AI 答疑"
           title="AI 答疑：任何不懂的地方都能问"
-          className="fixed bottom-6 right-5 sm:right-6 z-40 flex items-center gap-2 pl-4 pr-5 py-3 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-sm font-bold shadow-xl hover:shadow-2xl hover:from-violet-500 hover:to-indigo-500 active:scale-95 transition-all cursor-pointer animate-in fade-in"
+          className="fixed bottom-20 md:bottom-6 right-5 sm:right-6 z-40 flex items-center gap-2 pl-4 pr-5 py-3 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-sm font-bold shadow-xl hover:shadow-2xl hover:from-violet-500 hover:to-indigo-500 active:scale-95 transition-all cursor-pointer animate-in fade-in"
         >
           <MessageCircle className="w-5 h-5" />
           <span className="hidden sm:inline">AI 答疑</span>
