@@ -52,7 +52,6 @@ import {
   clearAuthCallbackParams
 } from './lib/supabaseClient';
 import { calculateAssessmentReport } from './lib/scoringEngine';
-import { SAMPLE_PROJECT, INITIAL_SAMPLE_REPORT } from './lib/seedData';
 
 export default function App() {
   // 记住上次所在页面：刷新后仍停在原处，不再被拉回首页
@@ -146,31 +145,18 @@ export default function App() {
   const [highContrast, setHighContrast] = useState(false);
   const [lowBandwidth, setLowBandwidth] = useState(false);
 
-  // Projects and Reports state with seed fallback
-  // ⚠️ 修复：仅在"全新安装"（存储键完全不存在）时播种示例数据；
-  // 用户主动删除全部项目后刷新，不应再被示例数据"复活"
-  const [projects, setProjects] = useState<BusinessFormData[]>(() => {
-    const local = loadStoredProjects();
-    if (local.length > 0) return local;
-    if (!hasAnyStoredProjects()) {
-      saveStoredProjects([SAMPLE_PROJECT]);
-      return [SAMPLE_PROJECT];
-    }
-    return [];
-  });
+  // Projects and Reports state (100% user data, no fake/seed data fallback)
+  const [projects, setProjects] = useState<BusinessFormData[]>(() => loadStoredProjects());
+  const [reports, setReports] = useState<AssessmentReport[]>(() => loadStoredReports());
 
-  const [reports, setReports] = useState<AssessmentReport[]>(() => {
-    const local = loadStoredReports();
-    if (local.length > 0) return local;
-    if (!hasAnyStoredReports()) {
-      saveStoredReports([INITIAL_SAMPLE_REPORT]);
-      return [INITIAL_SAMPLE_REPORT];
-    }
-    return [];
+  const [activeProjectId, setActiveProjectId] = useState<string>(() => {
+    const stored = loadStoredProjects();
+    return stored[0]?.id || '';
   });
-
-  const [activeProjectId, setActiveProjectId] = useState<string>(SAMPLE_PROJECT.id);
-  const [activeReportId, setActiveReportId] = useState<string>(INITIAL_SAMPLE_REPORT.id);
+  const [activeReportId, setActiveReportId] = useState<string>(() => {
+    const stored = loadStoredReports();
+    return stored[0]?.id || '';
+  });
 
   // 顶部的状态横幅
   // kind: 'info' 普通提示（4 秒后自动消失），'error' 错误（不会自动消失，需手动关闭）
@@ -321,6 +307,8 @@ export default function App() {
     } catch (err: any) {
       const code = err?.code || '';
       const msg = err?.message || '';
+      let displayMsg = `登录失败：${msg || '无法连接 Google 登录服务'}`;
+
       if (
         code === 'auth/popup-closed-by-user' ||
         code === 'auth/cancelled-popup-request' ||
@@ -329,31 +317,20 @@ export default function App() {
         msg.includes('Popup closed by user') ||
         msg.includes('user closed')
       ) {
-        // 用户主动关闭了登录窗口，显示温和的引导提示（普通信息，4s 自动消失）
-        pushBanner(
-          {
-            kind: 'info',
-            text: '您已关闭 Google 登录窗口。仍可正常使用本地保存，或随时再次点击登录。'
-          },
-          4000
-        );
+        displayMsg = '您已关闭 Google 登录窗口。仍可正常使用本地保存，或随时再次点击登录。';
+        pushBanner({ kind: 'info', text: displayMsg }, 4000);
       } else if (
         msg.includes('popup') ||
         msg.includes('window.open') ||
         msg.includes('blocked')
       ) {
-        pushBanner(
-          {
-            kind: 'info',
-            text: '浏览器阻止了登录弹出窗口，请在地址栏允许弹窗后重试。'
-          },
-          5000
-        );
+        displayMsg = '浏览器阻止了登录弹出窗口，请在地址栏允许弹窗后重试。';
+        pushBanner({ kind: 'info', text: displayMsg }, 5000);
       } else if (msg.includes('not configured') || msg.includes('Supabase Auth is not configured')) {
+        displayMsg = 'Supabase 云端尚未配置：请在项目根目录 .env 中填写 VITE_SUPABASE_URL 与 VITE_SUPABASE_ANON_KEY。';
         pushBanner({
           kind: 'error',
-          text:
-            'Supabase 云端尚未配置：请在项目根目录 .env 中填写 VITE_SUPABASE_URL 与 VITE_SUPABASE_ANON_KEY（已为您创建好 .env 模板），然后在 Supabase 控制台 → Authentication → Providers 中启用 Google 登录，最后重启开发服务器。',
+          text: displayMsg,
           action: { href: supabaseAuthUrl, label: '打开 Supabase 设置' }
         });
       } else if (
@@ -361,29 +338,16 @@ export default function App() {
         msg.includes('provider is not enabled') ||
         code === 'auth/operation-not-allowed'
       ) {
+        displayMsg = 'Google 登录方式尚未在 Supabase 中开启，请在 Supabase 控制台 Enable Google Provider。';
         pushBanner({
           kind: 'error',
-          text:
-            'Google 登录方式尚未在 Supabase 中开启：请在 Supabase 控制台 → Authentication → Providers 中启用 Google（填入 Google OAuth Client ID 与 Secret），保存后重试。',
+          text: displayMsg,
           action: { href: supabaseAuthUrl, label: '打开登录方式设置' }
         });
-      } else if (
-        msg.includes('redirect') ||
-        msg.includes('Redirect URL') ||
-        msg.includes('redirectTo')
-      ) {
-        pushBanner({
-          kind: 'error',
-          text:
-            '登录被拦截：请在 Supabase 控制台 → Authentication → URL Configuration 中，把本站地址（如 http://localhost:3000）加入 Redirect URLs 白名单，保存后重试。',
-          action: { href: supabaseAuthSettingsUrl, label: '打开 URL 设置' }
-        });
       } else {
-        pushBanner({
-          kind: 'error',
-          text: `登录失败：${msg || '无法连接 Google 登录服务，已自动使用本地保存模式'}`
-        });
+        pushBanner({ kind: 'error', text: displayMsg });
       }
+      throw new Error(displayMsg);
     } finally {
       setIsSigningIn(false);
     }
@@ -747,18 +711,44 @@ export default function App() {
           />
         )}
 
-        {activeTab === 'report' && activeReport && (
-          <AssessmentReportView
-            report={activeReport}
-            allVersions={projectVersions}
-            onSelectVersion={(v) => {
-              const target = projectVersions.find((pv) => pv.version === v);
-              if (target) setActiveReportId(target.id);
-            }}
-            onReAssess={handleReAssess}
-            onDeleteAndRecall={() => handleDeleteProject(activeReport.projectId)}
-            language={language}
-          />
+        {activeTab === 'report' && (
+          activeReport ? (
+            <AssessmentReportView
+              report={activeReport}
+              allVersions={projectVersions}
+              onSelectVersion={(v) => {
+                const target = projectVersions.find((pv) => pv.version === v);
+                if (target) setActiveReportId(target.id);
+              }}
+              onReAssess={handleReAssess}
+              onDeleteAndRecall={() => handleDeleteProject(activeReport.projectId)}
+              language={language}
+            />
+          ) : (
+            <div className="max-w-4xl mx-auto px-4 py-16 text-center">
+              <div className="bg-white rounded-3xl p-8 sm:p-12 border-2 border-neutral-200 shadow-xs space-y-4">
+                <div className="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto border border-indigo-100 shadow-xs">
+                  <Heart className="w-8 h-8" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-neutral-900">
+                    {language === 'zh' ? '暂无体检报告' : 'No Assessment Report Yet'}
+                  </h3>
+                  <p className="text-xs text-neutral-500 font-medium max-w-md mx-auto mt-1 leading-relaxed">
+                    {language === 'zh'
+                      ? '请先在「快速体检」中填写并提交您的第一个商业自测项目，系统将自动生成体检诊断与 5 维能力透视报告。'
+                      : 'Please complete an assessment first. Your diagnostic health report will appear here.'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => navigateTo('form')}
+                  className="inline-flex items-center space-x-1.5 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl text-xs font-bold shadow-md shadow-indigo-600/20 transition-all cursor-pointer"
+                >
+                  <span>{language === 'zh' ? '前往快速体检' : 'Start New Assessment'}</span>
+                </button>
+              </div>
+            </div>
+          )
         )}
 
         {activeTab === 'simulator' && (

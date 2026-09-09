@@ -185,7 +185,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       {(currentUser.displayName || currentUser.email || 'U').charAt(0).toUpperCase()}
                     </div>
                   )}
-                  <span className="text-xs font-bold text-indigo-950 hidden lg:inline max-w-[100px] truncate">
+                  <span className="text-xs font-bold text-indigo-950 hidden sm:inline max-w-[120px] truncate">
                     {currentUser.displayName || currentUser.email?.split('@')[0]}
                   </span>
                 </button>

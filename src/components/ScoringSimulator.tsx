@@ -19,17 +19,17 @@ interface SimulatorProps {
 
 export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyToForm }) => {
   const [currency, setCurrency] = useState<CurrencyCode>('USD');
-  const [monthlyRevenue, setMonthlyRevenue] = useState(5000);
-  const [realRevenueRatio, setRealRevenueRatio] = useState(90); // 90% real revenue
-  const [cogsRatio, setCogsRatio] = useState(40); // 40% COGS
-  const [rent, setRent] = useState(600);
-  const [labor, setLabor] = useState(1200);
-  const [utilities, setUtilities] = useState(250);
-  const [taxes, setTaxes] = useState(150);
-  const [otherOpex, setOtherOpex] = useState(200);
-  const [debtPayment, setDebtPayment] = useState(200);
-  const [liquidCash, setLiquidCash] = useState(8000);
-  const [operatingMonths, setOperatingMonths] = useState(14);
+  const [monthlyRevenue, setMonthlyRevenue] = useState(0);
+  const [realRevenueRatio, setRealRevenueRatio] = useState(100);
+  const [cogsRatio, setCogsRatio] = useState(0);
+  const [rent, setRent] = useState(0);
+  const [labor, setLabor] = useState(0);
+  const [utilities, setUtilities] = useState(0);
+  const [taxes, setTaxes] = useState(0);
+  const [otherOpex, setOtherOpex] = useState(0);
+  const [debtPayment, setDebtPayment] = useState(0);
+  const [liquidCash, setLiquidCash] = useState(0);
+  const [operatingMonths, setOperatingMonths] = useState(12);
 
   // Instant Mathematical calculations
   const realRevenue = (monthlyRevenue * realRevenueRatio) / 100;
@@ -71,17 +71,17 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
   else tier = 'BB';
 
   const resetDefaults = () => {
-    setMonthlyRevenue(5000);
-    setRealRevenueRatio(90);
-    setCogsRatio(40);
-    setRent(600);
-    setLabor(1200);
-    setUtilities(250);
-    setTaxes(150);
-    setOtherOpex(200);
-    setDebtPayment(200);
-    setLiquidCash(8000);
-    setOperatingMonths(14);
+    setMonthlyRevenue(0);
+    setRealRevenueRatio(100);
+    setCogsRatio(0);
+    setRent(0);
+    setLabor(0);
+    setUtilities(0);
+    setTaxes(0);
+    setOtherOpex(0);
+    setDebtPayment(0);
+    setLiquidCash(0);
+    setOperatingMonths(12);
   };
 
   const handleApply = () => {
