@@ -22,6 +22,9 @@ const supabaseAnonKey = (
   ''
 ).trim();
 
+// Google 登录弹窗的固定窗口名：window.open 时与本文件下方的弹窗自识别逻辑共用同一个值。
+const GOOGLE_OAUTH_POPUP_NAME = 'supabase_google_oauth';
+
 export let supabase: SupabaseClient | null = null;
 
 if (supabaseUrl && supabaseAnonKey && supabaseUrl.startsWith('http')) {
@@ -43,11 +46,19 @@ if (supabaseUrl && supabaseAnonKey && supabaseUrl.startsWith('http')) {
   console.log('ℹ️ Supabase credentials not configured. Operating in Offline-First Local Storage mode.');
 }
 
-// 当应用运行在 OAuth 登录弹窗中时（window.opener 存在），授权完成后自动关闭弹窗。
+// 当应用运行在 OAuth 登录弹窗中时，授权完成后自动关闭弹窗。
 // 只有在真正确认 session 已写入（或明确收到 error 回跳参数）后才关闭，
 // 避免旧版固定延时关闭导致的"session 还没换取完成，弹窗已经被关掉"竞态问题；
 // 同时设置一个较长的兜底超时，防止极端情况下（网络挂起、SDK 异常）弹窗永远关不掉。
-if (typeof window !== 'undefined' && window.opener && window.opener !== window) {
+//
+// 修复：不能再用 window.opener 判断"我是不是登录弹窗"——弹窗跳转到 Google 授权页时，
+// Google 自己的页面带有 Cross-Origin-Opener-Policy 响应头，浏览器会把弹窗换到一个全新的、
+// 与主窗口完全隔离的浏览上下文组，此后弹窗跳回本站时 window.opener 会永久变成 null
+// （即使跳回的是同源页面也不会恢复）。原先 `window.opener && ...` 的判断因此再也不会成立，
+// 导致这段自动关闭弹窗的逻辑整段被跳过——弹窗登录成功后不会自动收起，只能用户手动关掉。
+// 改用 window.name 判断（`signInWithGoogle` 里 window.open 时指定的固定窗口名，
+// 属于弹窗自身的内部属性，不受 COOP 影响，跨域跳转后依然可读）。
+if (typeof window !== 'undefined' && window.name === GOOGLE_OAUTH_POPUP_NAME) {
   let popupClosed = false;
   const closePopup = () => {
     if (popupClosed) return;
@@ -191,7 +202,7 @@ export const signInWithGoogle = async (): Promise<AppUser | null> => {
   try {
     popup = window.open(
       authUrl,
-      'supabase_google_oauth',
+      GOOGLE_OAUTH_POPUP_NAME,
       `width=${popupWidth},height=${popupHeight},left=${left},top=${top},resizable=yes,scrollbars=yes`
     );
   } catch {
@@ -210,15 +221,31 @@ export const signInWithGoogle = async (): Promise<AppUser | null> => {
 
   // 轮询等待：用户在弹窗内完成 Google 授权、会话写入本地后即可立即返回。
   // 最长等待 3 分钟（给用户挑选账号/输密码留足时间），中途关闭弹窗视为取消。
+  //
+  // 注意：弹窗跳转到 Google 授权页后，Google 的 Cross-Origin-Opener-Policy 响应头会让浏览器
+  // 把弹窗换入一个与本窗口隔离的浏览上下文组，此后每次读 popup.closed 都会触发浏览器的
+  // "Cross-Origin-Opener-Policy policy would block the window.closed call" 警告刷屏。
+  // 这里把该检查降频到约每 1.2 秒一次（而不是每 300ms 一次），成功登录主要还是靠下面的
+  // readSessionUser() 轮询判定（不受 COOP 影响），.closed 只作为"用户手动关闭弹窗"的辅助兜底。
   const startedAt = Date.now();
   const MAX_WAIT_MS = 180_000;
+  let closedCheckTick = 0;
   while (Date.now() - startedAt < MAX_WAIT_MS) {
-    if (popup.closed) break; // 用户主动关闭了授权窗口 → 视为取消
+    closedCheckTick++;
+    if (closedCheckTick % 4 === 0) {
+      let isClosed = false;
+      try {
+        isClosed = popup.closed;
+      } catch {
+        /* COOP 隔离后属性不可读，忽略即可，交给下方 readSessionUser 与超时兜底 */
+      }
+      if (isClosed) break; // 用户主动关闭了授权窗口 → 视为取消
+    }
     const appUser = await readSessionUser();
     if (appUser) {
       cachedSupabaseUser = appUser;
       try {
-        popup.close(); // 登录成功，自动收起弹窗
+        popup.close(); // 登录成功，自动收起弹窗（若弹窗已自行关闭则静默忽略）
       } catch {
         /* 弹窗可能已被关闭，忽略 */
       }
