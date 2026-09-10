@@ -1,5 +1,5 @@
 import { SUPPORTED_CURRENCIES } from './currencies.js';
-import type { CurrencyCode, RegulatoryCostEstimate } from '../types.js';
+import type { CurrencyCode, Language, RegulatoryCostEstimate } from '../types.js';
 
 export interface InferredStructure {
   inferredIndustryKey?: string;
@@ -307,135 +307,198 @@ export function getIndustryTemplateByKey(
  */
 const REGULATORY_COST_TABLE: Record<
   string,
-  { countryLabel: string; taxHint: string; registrationUsd: number; visaUsd: number; sourceNote: string }
+  {
+    countryLabel: string;
+    countryLabelEn: string;
+    taxHint: string;
+    taxHintEn: string;
+    registrationUsd: number;
+    visaUsd: number;
+    sourceNote: string;
+    sourceNoteEn: string;
+  }
 > = {
   KES: {
     countryLabel: '肯尼亚 (Kenya)',
+    countryLabelEn: 'Kenya',
     taxHint: '小微个体户 Turnover Tax 约 1%-3%；有限公司企业所得税约 30%',
+    taxHintEn: 'Micro sole-proprietor Turnover Tax approx. 1%-3%; limited company corporate tax approx. 30%',
     registrationUsd: 60,
     visaUsd: 250,
-    sourceNote: '参考肯尼亚 KRA 小微税制与 eCitizen 商业登记年费公开区间，实际以当年公告为准'
+    sourceNote: '参考肯尼亚 KRA 小微税制与 eCitizen 商业登记年费公开区间，实际以当年公告为准',
+    sourceNoteEn: 'Based on Kenya KRA micro-business tax rules and published eCitizen business registration fee ranges; verify against the current year\'s notices'
   },
   NGN: {
     countryLabel: '尼日利亚 (Nigeria)',
+    countryLabelEn: 'Nigeria',
     taxHint: '小微企业（年营业额 < 2500万奈拉）通常免征企业所得税；否则约 20%-30%',
+    taxHintEn: 'Small businesses (annual turnover < NGN 25M) are typically exempt from corporate tax; otherwise approx. 20%-30%',
     registrationUsd: 80,
     visaUsd: 200,
-    sourceNote: '参考尼日利亚 CAC 公司注册费与联邦税务局小微企业优惠区间'
+    sourceNote: '参考尼日利亚 CAC 公司注册费与联邦税务局小微企业优惠区间',
+    sourceNoteEn: 'Based on Nigeria CAC company registration fees and Federal Inland Revenue small-business incentive ranges'
   },
   EGP: {
     countryLabel: '埃及 (Egypt)',
+    countryLabelEn: 'Egypt',
     taxHint: '个体经营/中小企业所得税约 22.5%，另有增值税约 14%',
+    taxHintEn: 'Sole trader/SME income tax approx. 22.5%, plus VAT approx. 14%',
     registrationUsd: 150,
     visaUsd: 25,
-    sourceNote: '参考埃及税务局及商业登记处公开费率区间'
+    sourceNote: '参考埃及税务局及商业登记处公开费率区间',
+    sourceNoteEn: 'Based on published fee ranges from the Egyptian Tax Authority and commercial registry'
   },
   ETB: {
     countryLabel: '埃塞俄比亚 (Ethiopia)',
+    countryLabelEn: 'Ethiopia',
     taxHint: '小微营业执照分级定额税，或按利润征收 10%-35% 累进税',
+    taxHintEn: 'Tiered flat tax for micro business licenses, or a progressive 10%-35% tax on profit',
     registrationUsd: 40,
     visaUsd: 82,
-    sourceNote: '参考埃塞俄比亚税务局小微分级定额税表'
+    sourceNote: '参考埃塞俄比亚税务局小微分级定额税表',
+    sourceNoteEn: 'Based on the Ethiopian tax authority\'s tiered flat-tax schedule for micro businesses'
   },
   THB: {
     countryLabel: '泰国 (Thailand)',
+    countryLabelEn: 'Thailand',
     taxHint: '中小企业所得税分级约 0%-20%（净利前 30 万泰铢免税）',
+    taxHintEn: 'SME income tax tiers approx. 0%-20% (first THB 300,000 net profit is tax-exempt)',
     registrationUsd: 120,
     visaUsd: 220,
-    sourceNote: '参考泰国商业发展厅注册费与非移民签证/工作许可公开费率'
+    sourceNote: '参考泰国商业发展厅注册费与非移民签证/工作许可公开费率',
+    sourceNoteEn: 'Based on Thailand Department of Business Development registration fees and published Non-Immigrant visa/work permit rates'
   },
   VND: {
     countryLabel: '越南 (Vietnam)',
+    countryLabelEn: 'Vietnam',
     taxHint: '个体经营户定额税或企业所得税 20%，视经营形式而定',
+    taxHintEn: 'Household business flat tax, or 20% corporate income tax, depending on business form',
     registrationUsd: 45,
     visaUsd: 135,
-    sourceNote: '参考越南计划投资部注册费与劳动许可证公开费率区间'
+    sourceNote: '参考越南计划投资部注册费与劳动许可证公开费率区间',
+    sourceNoteEn: 'Based on Vietnam Ministry of Planning and Investment registration fees and published work permit fee ranges'
   },
   IDR: {
     countryLabel: '印度尼西亚 (Indonesia)',
+    countryLabelEn: 'Indonesia',
     taxHint: '小微企业（年营业额 < 48 亿印尼盾）最终所得税约 0.5%',
+    taxHintEn: 'Small businesses (annual turnover < IDR 4.8B) final income tax approx. 0.5%',
     registrationUsd: 100,
     visaUsd: 350,
-    sourceNote: '参考印尼 OSS 单一窗口注册与 KITAS 工作许可公开费率区间'
+    sourceNote: '参考印尼 OSS 单一窗口注册与 KITAS 工作许可公开费率区间',
+    sourceNoteEn: 'Based on Indonesia OSS single-window registration and published KITAS work permit fee ranges'
   },
   PHP: {
     countryLabel: '菲律宾 (Philippines)',
+    countryLabelEn: 'Philippines',
     taxHint: '小微企业（年营业额 < 300 万比索）可选 8% 简易所得税',
+    taxHintEn: 'Small businesses (annual turnover < PHP 3M) may opt into a simplified 8% income tax',
     registrationUsd: 90,
     visaUsd: 250,
-    sourceNote: '参考菲律宾 DTI/BIR 注册费与 9(g) 工作签证公开费率区间'
+    sourceNote: '参考菲律宾 DTI/BIR 注册费与 9(g) 工作签证公开费率区间',
+    sourceNoteEn: 'Based on Philippines DTI/BIR registration fees and published 9(g) work visa fee ranges'
   },
   MMK: {
     countryLabel: '缅甸 (Myanmar)',
+    countryLabelEn: 'Myanmar',
     taxHint: '小微商业执照定额税或利得税约 22%-25%',
+    taxHintEn: 'Flat tax for micro business licenses, or profit tax approx. 22%-25%',
     registrationUsd: 50,
     visaUsd: 36,
-    sourceNote: '参考缅甸投资与公司管理局公开注册与签证费率区间'
+    sourceNote: '参考缅甸投资与公司管理局公开注册与签证费率区间',
+    sourceNoteEn: 'Based on published registration and visa fee ranges from Myanmar\'s Directorate of Investment and Company Administration'
   },
   KHR: {
     countryLabel: '柬埔寨 (Cambodia)',
+    countryLabelEn: 'Cambodia',
     taxHint: '小微纳税人定额税，或年利润税 20%',
+    taxHintEn: 'Flat tax for small taxpayers, or 20% annual profit tax',
     registrationUsd: 100,
     visaUsd: 300,
-    sourceNote: '参考柬埔寨商业部注册费与商务签证/工作许可公开费率区间'
+    sourceNote: '参考柬埔寨商业部注册费与商务签证/工作许可公开费率区间',
+    sourceNoteEn: 'Based on Cambodia Ministry of Commerce registration fees and published business visa/work permit fee ranges'
   },
   LAK: {
     countryLabel: '老挝 (Laos)',
+    countryLabelEn: 'Laos',
     taxHint: '小微企业利润税约 3%-7%（分级），一般企业所得税 20%',
+    taxHintEn: 'Small business profit tax approx. 3%-7% (tiered); standard corporate income tax 20%',
     registrationUsd: 60,
     visaUsd: 100,
-    sourceNote: '参考老挝工贸部注册费与商务签证公开费率区间'
+    sourceNote: '参考老挝工贸部注册费与商务签证公开费率区间',
+    sourceNoteEn: 'Based on Laos Ministry of Industry and Commerce registration fees and published business visa fee ranges'
   },
   BDT: {
     countryLabel: '孟加拉国 (Bangladesh)',
+    countryLabelEn: 'Bangladesh',
     taxHint: '小微企业所得税约 15%-25%（分级）',
+    taxHintEn: 'Small business income tax approx. 15%-25% (tiered)',
     registrationUsd: 80,
     visaUsd: 51,
-    sourceNote: '参考孟加拉 RJSC 商业注册费与商务签证公开费率区间'
+    sourceNote: '参考孟加拉 RJSC 商业注册费与商务签证公开费率区间',
+    sourceNoteEn: 'Based on Bangladesh RJSC business registration fees and published business visa fee ranges'
   },
   LKR: {
     countryLabel: '斯里兰卡 (Sri Lanka)',
+    countryLabelEn: 'Sri Lanka',
     taxHint: '小微企业（利润 < 一定门槛）所得税 0%，超过部分 15%-30%',
+    taxHintEn: 'Small businesses (profit below a threshold) pay 0% income tax; amounts above it are taxed at 15%-30%',
     registrationUsd: 30,
     visaUsd: 50,
-    sourceNote: '参考斯里兰卡公司注册处费用与商务签证公开费率区间'
+    sourceNote: '参考斯里兰卡公司注册处费用与商务签证公开费率区间',
+    sourceNoteEn: 'Based on Sri Lanka Registrar of Companies fees and published business visa fee ranges'
   },
   CNY: {
     countryLabel: '中国大陆',
+    countryLabelEn: 'Mainland China',
     taxHint: '小规模纳税人增值税优惠期内较低，企业所得税小微企业实际税负约 5%-20%',
+    taxHintEn: 'Small-scale VAT taxpayers enjoy reduced rates during incentive periods; effective corporate tax burden for small/micro businesses approx. 5%-20%',
     registrationUsd: 0,
     visaUsd: 0,
-    sourceNote: '参考中国大陆小微企业普惠性税收减免政策（工商注册本身通常免费）'
+    sourceNote: '参考中国大陆小微企业普惠性税收减免政策（工商注册本身通常免费）',
+    sourceNoteEn: 'Based on mainland China\'s inclusive tax relief policies for small/micro businesses (business registration itself is usually free)'
   },
   USD: {
     countryLabel: '美国 (United States)',
+    countryLabelEn: 'United States',
     taxHint: '联邦企业所得税 21%，另有州税与自雇税，视州与经营形式而定',
+    taxHintEn: 'Federal corporate income tax 21%, plus state tax and self-employment tax depending on state and business form',
     registrationUsd: 100,
     visaUsd: 460,
-    sourceNote: '参考美国各州公司注册规费与常见工作签证申请费公开区间'
+    sourceNote: '参考美国各州公司注册规费与常见工作签证申请费公开区间',
+    sourceNoteEn: 'Based on published U.S. state company registration fees and common work visa application fee ranges'
   },
   EUR: {
     countryLabel: '欧盟地区',
+    countryLabelEn: 'European Union',
     taxHint: '企业所得税各国不同，欧盟平均约 21.3%，中小企业常有优惠税率',
+    taxHintEn: 'Corporate tax rates vary by country; EU average approx. 21.3%, with SMEs often eligible for reduced rates',
     registrationUsd: 150,
     visaUsd: 90,
-    sourceNote: '参考欧盟多国商业登记处注册费与申根长期签证公开费率区间'
+    sourceNote: '参考欧盟多国商业登记处注册费与申根长期签证公开费率区间',
+    sourceNoteEn: 'Based on published business registry fees across EU member states and long-stay Schengen visa fee ranges'
   },
   GBP: {
     countryLabel: '英国 (United Kingdom)',
+    countryLabelEn: 'United Kingdom',
     taxHint: '小型企业企业所得税约 19%（利润 < 5 万英镑）',
+    taxHintEn: 'Small business corporate tax approx. 19% (profit < GBP 50,000)',
     registrationUsd: 15,
     visaUsd: 610,
-    sourceNote: '参考英国 Companies House 注册费与创新者/技术人才签证公开费率区间'
+    sourceNote: '参考英国 Companies House 注册费与创新者/技术人才签证公开费率区间',
+    sourceNoteEn: 'Based on UK Companies House registration fees and published Innovator/Skilled Worker visa fee ranges'
   }
 };
 
 const DEFAULT_REGULATORY_ESTIMATE = {
   countryLabel: '通用/未识别地区',
+  countryLabelEn: 'General / Unidentified Region',
   taxHint: '多数国家小微企业所得税区间约 10%-30%，具体请核对当地税务主管部门规定',
+  taxHintEn: 'Most countries\' small-business income tax ranges from approx. 10%-30% — please verify with your local tax authority',
   registrationUsd: 100,
   visaUsd: 200,
-  sourceNote: '未能从店名识别具体国家，以下为跨地区小微企业通用参考区间，请务必核实修改'
+  sourceNote: '未能从店名识别具体国家，以下为跨地区小微企业通用参考区间，请务必核实修改',
+  sourceNoteEn: 'Could not identify a specific country from the business name — the figures below are a general cross-region reference; please verify and adjust'
 };
 
 /**
@@ -445,7 +508,8 @@ const DEFAULT_REGULATORY_ESTIMATE = {
  */
 export function inferRegulatoryCosts(
   projectNameOrCountry: string,
-  baseCurrency: CurrencyCode = 'USD'
+  baseCurrency: CurrencyCode = 'USD',
+  language: Language = 'zh'
 ): RegulatoryCostEstimate & { registrationLocal: number; visaLocal: number } {
   const pLower = (projectNameOrCountry || '').toLowerCase();
   // 只有当店名/地区文本里真的出现了可识别的地区关键词时，才使用该国的税率/注册/签证成本表；
@@ -455,13 +519,14 @@ export function inferRegulatoryCosts(
   const table = detectedCurrency ? REGULATORY_COST_TABLE[detectedCurrency] || DEFAULT_REGULATORY_ESTIMATE : DEFAULT_REGULATORY_ESTIMATE;
   const rate = SUPPORTED_CURRENCIES.find((c) => c.code === baseCurrency)?.rateToUsd || 1;
   const toLocal = (usd: number) => Math.round(usd * rate);
+  const isEn = language === 'en';
 
   return {
-    countryLabel: table.countryLabel,
-    corporateTaxRateHint: table.taxHint,
+    countryLabel: isEn ? table.countryLabelEn : table.countryLabel,
+    corporateTaxRateHint: isEn ? table.taxHintEn : table.taxHint,
     companyRegistrationCostEstimateUsd: table.registrationUsd,
     visaFeeCostEstimateUsd: table.visaUsd,
-    sourceNote: table.sourceNote,
+    sourceNote: isEn ? table.sourceNoteEn : table.sourceNote,
     registrationLocal: toLocal(table.registrationUsd),
     visaLocal: toLocal(table.visaUsd)
   };

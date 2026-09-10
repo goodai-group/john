@@ -227,8 +227,8 @@ export const AssessmentForm: React.FC<FormProps> = ({
   // 要么（首次进入、尚无任何项目时）取到表单默认值"肯尼亚 (Kenya)"，会让几乎所有新用户
   // 在还没填任何信息前就被误判成肯尼亚，与实际所在国家/所选币种无关。
   const regulatoryEstimate = React.useMemo(
-    () => inferRegulatoryCosts(formData.projectName, formData.baseCurrency),
-    [formData.projectName, formData.baseCurrency]
+    () => inferRegulatoryCosts(formData.projectName, formData.baseCurrency, language),
+    [formData.projectName, formData.baseCurrency, language]
   );
 
   // —— 第3点：根据已填成本自动算出保本收入（每天/每月至少赚多少才不亏钱）——
