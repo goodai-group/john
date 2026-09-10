@@ -37,6 +37,15 @@ export const proofTypeLabel = (type: string | undefined, lang: Language): string
   return lang === 'en' ? entry.en : entry.zh;
 };
 
+// 佐证凭证文件经 AI 识别后转出的结构化数据（多文件/多格式统一落到同一结构，便于核对与展示）
+export interface ProofExtractedData {
+  detectedAmount?: number; // 识别出的金额
+  currency?: CurrencyCode;
+  transactionCount?: number; // 识别出的交易/流水笔数
+  periodLabel?: string; // 识别出的时间范围说明
+  note?: string;
+}
+
 export interface DynamicCostItem {
   id: string;
   label: string;
@@ -122,6 +131,8 @@ export interface BusinessFormData {
     size: number;
     uploadTime: string;
     retainedAfterOcr: boolean; // 敏感地区下 OCR 后不保留原图
+    status?: 'processing' | 'done'; // 支持多文件并行上传后的 AI 识别状态
+    extractedData?: ProofExtractedData; // AI 识别后转换出的结构化数据
   }[];
   monthlyBreakdowns: MonthlyBreakdown[]; // 12个月流水明细
 

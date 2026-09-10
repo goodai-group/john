@@ -37,7 +37,8 @@ import {
   MoneyField,
   MonthlyBreakdown,
   ProofType,
-  proofTypeLabel
+  proofTypeLabel,
+  ProofExtractedData
 } from '../../types';
 import { SUPPORTED_CURRENCIES, formatMoney, CUSTOM_CURRENCY_VALUE } from '../../lib/currencies';
 import { INDUSTRY_BENCHMARKS } from '../../lib/industryBenchmarks';
@@ -72,6 +73,36 @@ async function callInferBusinessStructure(projectName: string): Promise<Inferred
   } catch {
     return null;
   }
+}
+
+/** 标题旁的说明图标：默认只显示一个"?"，鼠标悬停/点击后才展开解释文字，避免正文里堆砌大段叙事 */
+function InfoTooltip({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="relative inline-flex align-middle">
+      <button
+        type="button"
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        onClick={(e) => {
+          e.preventDefault();
+          setOpen((o) => !o);
+        }}
+        className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-300/80 hover:bg-slate-400 text-white text-[10px] font-black leading-none shrink-0"
+        aria-label="说明"
+      >
+        ?
+      </button>
+      {open && (
+        <span
+          role="tooltip"
+          className="absolute z-30 top-5 left-0 w-64 p-2.5 rounded-lg bg-slate-900 text-white text-[12px] leading-relaxed shadow-xl"
+        >
+          {text}
+        </span>
+      )}
+    </span>
+  );
 }
 
 interface FormProps {
@@ -804,22 +835,45 @@ export const AssessmentForm: React.FC<FormProps> = ({
     }, 800);
   };
 
-  // Fake upload attachment
+  // 支持一次选择多个文件、多种格式上传；每个文件独立进入"AI 识别中" → 识别完成并落成结构化数据
   const handleUploadFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
-    const file = e.target.files[0];
-    const newProof = {
-      id: `file-${Date.now()}`,
+    const files = Array.from(e.target.files);
+    const uploadTime = new Date().toISOString();
+    const newProofs = files.map((file) => ({
+      id: `file-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       name: file.name,
-      type: file.type || 'image/jpeg',
+      type: file.type || 'application/octet-stream',
       size: file.size,
-      uploadTime: new Date().toISOString(),
-      retainedAfterOcr: !formData.isSensitiveRegion // 敏感地区下 OCR 后不留原图
-    };
+      uploadTime,
+      retainedAfterOcr: !formData.isSensitiveRegion, // 敏感地区下 OCR 后不留原图
+      status: 'processing' as const
+    }));
     setFormData((prev) => ({
       ...prev,
-      proofFiles: [...prev.proofFiles, newProof]
+      proofFiles: [...prev.proofFiles, ...newProofs]
     }));
+    e.target.value = '';
+
+    // 模拟 AI 逐个识别凭证并转成结构化数据（各文件独立完成，互不阻塞）
+    newProofs.forEach((proof, idx) => {
+      setTimeout(() => {
+        const seed = proof.size + proof.name.length;
+        const extractedData: ProofExtractedData = {
+          detectedAmount: Math.round((seed % 4000) + 800),
+          currency: formData.baseCurrency,
+          transactionCount: Math.max(3, seed % 40),
+          periodLabel: '本次凭证覆盖周期（AI 自动提取）',
+          note: 'AI 已从凭证中识别出以下结构化数据，可核对后手动修改上方金额'
+        };
+        setFormData((prev) => ({
+          ...prev,
+          proofFiles: prev.proofFiles.map((f) =>
+            f.id === proof.id ? { ...f, status: 'done', extractedData } : f
+          )
+        }));
+      }, 700 + idx * 300);
+    });
   };
 
   const handleFinalSubmit = () => {
@@ -1263,18 +1317,16 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     <div className="flex items-center gap-2">
                       <Target className="w-4 h-4 text-amber-600" />
                       <span className="font-black text-amber-950">AI 算出的保本收入（不亏钱的最低线）</span>
+                      <InfoTooltip
+                        text={`根据你右边已填的进货、房租人工、税金、还贷与注册/签证/折旧成本合计 ${formatMoney(breakEven.monthlyCostTotal, formData.baseCurrency)} / 月，按每月经营 ${breakEven.operatingDaysPerMonth} 天估算得出。仅供填收入前参考，不代表最终评分结果。`}
+                      />
                     </div>
                     <p className="text-amber-800 leading-relaxed">
-                      根据你右边已填的进货、房租人工、税金、还贷与注册/签证/折旧成本合计
-                      <b> {formatMoney(breakEven.monthlyCostTotal, formData.baseCurrency)} / 月</b>，
                       你每天至少要卖到
                       <span className="text-base font-black text-amber-900 mx-1">
                         {formatMoney(breakEven.dailyBreakEvenRevenue, formData.baseCurrency)}
                       </span>
                       （每月至少 {formatMoney(breakEven.monthlyBreakEvenRevenue, formData.baseCurrency)}）才不亏钱。
-                    </p>
-                    <p className="text-[12px] text-amber-600">
-                      按每月经营 {breakEven.operatingDaysPerMonth} 天估算，仅供填收入前参考，不代表最终评分结果。
                     </p>
                   </div>
                 )}
@@ -1288,10 +1340,8 @@ export const AssessmentForm: React.FC<FormProps> = ({
                         <span className="text-[12px] bg-teal-600 text-white font-bold px-2 py-0.5 rounded-full">
                           总营业额
                         </span>
+                        <InfoTooltip text="大白话：客人买单进你口袋的全部毛钱，尚未扣除进货、房租与人工！若有教会补助、慈善捐赠或救济资金，请在下方单独列出，不会被误计入真实经营占比。" />
                       </label>
-                      <p className="text-[13px] text-teal-900 font-medium mt-0.5">
-                        <b>大白话：</b>客人买单进你口袋的全部毛钱，尚未扣除进货、房租与人工！
-                      </p>
                     </div>
                     <div className="flex items-center gap-2">
                       <button
@@ -1349,12 +1399,10 @@ export const AssessmentForm: React.FC<FormProps> = ({
                 <div className="p-4 rounded-xl bg-emerald-50/70 border border-emerald-200 space-y-2 text-xs">
                   <div className="flex items-center justify-between">
                     <div>
-                      <label className="font-bold text-emerald-950">
-                        其中：真实客户主营销售收入
+                      <label className="font-bold text-emerald-950 flex items-center gap-1.5">
+                        <span>其中：真实客户主营销售收入</span>
+                        <InfoTooltip text="排除任何亲友借款、救济补贴后，真正由客户买单带来的生意收入。" />
                       </label>
-                      <p className="text-[13px] text-emerald-700">
-                        排除任何亲友借款、救济补贴后，真正由客户买单带来的生意收入。
-                      </p>
                     </div>
                     <select
                       value={formData.monthlyRealOperatingRevenue.currency}
@@ -2124,22 +2172,24 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     </div>
                   </div>
 
-                  {/* File Upload Zone */}
+                  {/* File Upload Zone：支持一次多选、多种格式 */}
                   {formData.proofType !== 'none' && (
                     <div className="space-y-3">
                       <label className="block text-xs font-bold text-slate-800">
-                        上传佐证凭证文件（选填 / 敏感地区模式下识别后立即销毁原图）
+                        上传佐证凭证文件（选填，可一次多选多个文件 / 敏感地区模式下识别后立即销毁原图）
                       </label>
                       <div className="border-2 border-dashed border-slate-300 rounded-2xl p-6 text-center bg-slate-50 hover:bg-teal-50/40 transition-colors">
                         <UploadCloud className="w-8 h-8 text-teal-500 mx-auto mb-2" />
                         <p className="text-xs font-semibold text-slate-700">
-                          点击选择图片或 PDF 文件，或直接拖拽到此处
+                          点击选择一个或多个文件，或直接拖拽到此处
                         </p>
                         <p className="text-[13px] text-slate-400 mt-1">
-                          支持 JPG、PNG、PDF（单文件不超过 10MB）
+                          支持 JPG、PNG、HEIC、PDF、XLSX、CSV 等多种格式混合上传（单文件不超过 10MB）
                         </p>
                         <input
                           type="file"
+                          multiple
+                          accept="image/*,application/pdf,.pdf,.heic,.csv,.xlsx,.xls,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                           onChange={handleUploadFile}
                           className="hidden"
                           id="proof-upload-input"
@@ -2149,7 +2199,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                           className="mt-3 inline-flex items-center gap-1.5 px-4 py-1.5 bg-white border border-slate-300 rounded-xl text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-100 cursor-pointer"
                         >
                           <Camera className="w-3.5 h-3.5" />
-                          <span>选择凭证附件</span>
+                          <span>选择凭证附件（可多选）</span>
                         </label>
                       </div>
 
@@ -2158,37 +2208,76 @@ export const AssessmentForm: React.FC<FormProps> = ({
                           {formData.proofFiles.map((file) => (
                             <div
                               key={file.id}
-                              className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs"
+                              className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-2"
                             >
-                              <div className="flex items-center gap-2">
-                                <FileSpreadsheet className="w-4 h-4 text-teal-600" />
-                                <span className="font-medium text-slate-800">{file.name}</span>
-                                <span className="text-[12px] text-slate-400">
-                                  ({(file.size / 1024).toFixed(0)} KB)
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                {formData.isSensitiveRegion ? (
-                                  <span className="text-[12px] bg-amber-100 text-amber-800 font-medium px-2 py-0.5 rounded">
-                                    脱敏模式：原图不入库
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <FileSpreadsheet className="w-4 h-4 text-teal-600 shrink-0" />
+                                  <span className="font-medium text-slate-800 truncate">{file.name}</span>
+                                  <span className="text-[12px] text-slate-400 shrink-0">
+                                    ({(file.size / 1024).toFixed(0)} KB)
                                   </span>
-                                ) : (
-                                  <span className="text-[12px] bg-emerald-100 text-emerald-800 font-medium px-2 py-0.5 rounded">
-                                    已识别提取
-                                  </span>
-                                )}
-                                <button
-                                  onClick={() =>
-                                    setFormData((prev) => ({
-                                      ...prev,
-                                      proofFiles: prev.proofFiles.filter((f) => f.id !== file.id)
-                                    }))
-                                  }
-                                  className="text-slate-400 hover:text-rose-500 p-1"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  {file.status === 'processing' ? (
+                                    <span className="inline-flex items-center gap-1 text-[12px] bg-slate-200 text-slate-700 font-medium px-2 py-0.5 rounded">
+                                      <RefreshCw className="w-3 h-3 animate-spin" />
+                                      AI 识别中...
+                                    </span>
+                                  ) : formData.isSensitiveRegion ? (
+                                    <span className="text-[12px] bg-amber-100 text-amber-800 font-medium px-2 py-0.5 rounded">
+                                      脱敏模式：原图不入库
+                                    </span>
+                                  ) : (
+                                    <span className="text-[12px] bg-emerald-100 text-emerald-800 font-medium px-2 py-0.5 rounded">
+                                      已识别提取
+                                    </span>
+                                  )}
+                                  <button
+                                    onClick={() =>
+                                      setFormData((prev) => ({
+                                        ...prev,
+                                        proofFiles: prev.proofFiles.filter((f) => f.id !== file.id)
+                                      }))
+                                    }
+                                    className="text-slate-400 hover:text-rose-500 p-1"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
                               </div>
+
+                              {file.status === 'done' && file.extractedData && (
+                                <div className="ml-6 p-2 rounded-lg bg-white border border-teal-200 grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-1 text-[12px]">
+                                  {file.extractedData.detectedAmount !== undefined && (
+                                    <div>
+                                      <span className="text-slate-400">识别金额：</span>
+                                      <span className="font-bold text-teal-800">
+                                        {formatMoney(
+                                          file.extractedData.detectedAmount,
+                                          file.extractedData.currency || formData.baseCurrency
+                                        )}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {file.extractedData.transactionCount !== undefined && (
+                                    <div>
+                                      <span className="text-slate-400">识别笔数：</span>
+                                      <span className="font-bold text-slate-700">
+                                        {file.extractedData.transactionCount} 笔
+                                      </span>
+                                    </div>
+                                  )}
+                                  {file.extractedData.periodLabel && (
+                                    <div className="col-span-2 sm:col-span-1">
+                                      <span className="text-slate-400">覆盖周期：</span>
+                                      <span className="font-medium text-slate-700">
+                                        {file.extractedData.periodLabel}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>
