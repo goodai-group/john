@@ -17,6 +17,7 @@ import { PublicScoringStandards } from './components/PublicScoringStandards';
 import { AssessmentForm } from './components/AssessmentForm/AssessmentForm';
 import { AssessmentReportView } from './components/AssessmentReport/AssessmentReportView';
 import { AuthModal, AuthMode } from './components/AuthModal';
+import { LoginRequiredGate } from './components/LoginRequiredGate';
 import { ProjectsListPage } from './pages/ProjectsListPage';
 import { LearningCenterPage } from './pages/LearningCenterPage';
 import {
@@ -816,6 +817,14 @@ export default function App() {
 
       {/* Main Content Area based on activeTab */}
       <main className="pb-24 md:pb-16">
+        {!currentUser ? (
+          <LoginRequiredGate
+            language={language}
+            onOpenAuth={() => setIsAuthModalOpen(true)}
+            isSigningIn={isSigningIn}
+          />
+        ) : (
+        <>
         {activeTab === 'form' && (
           <AssessmentForm
             key={activeProject?.id || 'new'}
@@ -908,6 +917,8 @@ export default function App() {
             onOpenAuth={() => setIsAuthModalOpen(true)}
           />
         )}
+        </>
+        )}
       </main>
 
       </div>
@@ -916,6 +927,10 @@ export default function App() {
       {!isAiDrawerOpen && (
         <button
           onClick={() => {
+            if (!currentUser) {
+              setIsAuthModalOpen(true);
+              return;
+            }
             setAiInitialTopic(undefined);
             setIsAiDrawerOpen(true);
           }}
@@ -940,6 +955,11 @@ export default function App() {
         onClose={() => setIsAppGuideOpen(false)}
         language={language}
         onOpenAiHelper={(topic) => {
+          if (!currentUser) {
+            setIsAppGuideOpen(false);
+            setIsAuthModalOpen(true);
+            return;
+          }
           setAiInitialTopic(topic);
           setIsAiDrawerOpen(true);
         }}
@@ -958,10 +978,14 @@ export default function App() {
       />
 
       <AiRuleConsultationDrawer
-        isOpen={isAiDrawerOpen}
+        isOpen={isAiDrawerOpen && !!currentUser}
         onClose={() => setIsAiDrawerOpen(false)}
         language={language}
         initialTopic={aiInitialTopic}
+        onNavigateToLearning={() => {
+          setIsAiDrawerOpen(false);
+          navigateTo('learning');
+        }}
       />
 
       {/* 账号登录 / 注册弹窗（Google + 邮箱密码双通道） */}

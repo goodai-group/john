@@ -11,13 +11,16 @@ import {
   TrendingUp,
   BarChart3,
   Copy,
-  Check
+  Check,
+  GraduationCap,
+  PlayCircle
 } from 'lucide-react';
-import { EscalatedQuestion, Language } from '../types';
+import { EscalatedQuestion, Language, LearningVideo } from '../types';
 import {
   addEscalatedQuestion,
   updateEscalatedQuestionFeedback
 } from '../lib/storage';
+import { LEARNING_VIDEOS } from '../lib/learningVideos';
 import ReactMarkdown from 'react-markdown';
 import type { Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -28,7 +31,14 @@ interface AiDrawerProps {
   onClose: () => void;
   language: Language;
   initialTopic?: string;
+  /** 点击"推荐视频"卡片时跳转到商业学习中心页面 */
+  onNavigateToLearning?: () => void;
 }
+
+type RecommendedVideo = Pick<
+  LearningVideo,
+  'id' | 'titleZh' | 'titleEn' | 'category' | 'categoryEn' | 'url' | 'source' | 'durationMinutes'
+>;
 
 interface ChatRecord extends EscalatedQuestion {
   aiMode?: 'gemini' | 'rules';
@@ -38,6 +48,34 @@ interface ChatRecord extends EscalatedQuestion {
   geminiError?: string | null;
   // 后端返回的降级原因分类：quota=免费额度用尽 / auth=密钥无效 / model=模型不可用 / timeout=超时 / network=网络错误
   geminiErrorKind?: string | null;
+  // 回答文本仍在流式接收中（打字机效果）
+  isStreaming?: boolean;
+  // 与本次提问相关的商业学习中心视频推荐
+  recommendedVideos?: RecommendedVideo[];
+}
+
+// 关键词 -> 学习中心视频 id：与 server.ts 的 VIDEO_KEYWORD_RULES 保持一致，
+// 供前端本地规则库兜底（Gemini/流式接口均不可用时）也能给出视频推荐
+const VIDEO_KEYWORD_RULES: { pattern: RegExp; videoIds: string[] }[] = [
+  { pattern: /保本|不亏|盈亏平衡|breakeven|break-even/i, videoIds: ['yt-break-even-point'] },
+  { pattern: /毛利|进货|成本|cogs|原材料|采购|定价/i, videoIds: ['yt-cost-accounting-basics', 'yt-gross-margin-pricing'] },
+  { pattern: /备用金|跑道|runway|现金储备|存款|应急资金|撑几个月|现金流/i, videoIds: ['yt-cashflow-runway'] },
+  { pattern: /凭证|记账本|手写|发票|截图|记账/i, videoIds: ['yt-record-keeping-basics'] },
+  { pattern: /签证|工作许可|work permit|visa/i, videoIds: ['yt-visa-work-permit-costs'] },
+  { pattern: /注册|执照|无执照|公司注册|registration/i, videoIds: ['yt-company-registration-guide'] },
+  { pattern: /启动资金|开店要多少钱|前期投入|初始投入|多少钱能开|startup/i, videoIds: ['yt-visa-work-permit-costs', 'yt-cost-accounting-basics'] },
+  { pattern: /房租|工资|人工|opex|固定开销|水电|租金/i, videoIds: ['yt-cost-accounting-basics'] }
+];
+
+function matchLocalRecommendedVideos(text: string, category: string): RecommendedVideo[] {
+  const matchedIds = new Set<string>();
+  for (const rule of VIDEO_KEYWORD_RULES) {
+    if (rule.pattern.test(text) || rule.pattern.test(category)) {
+      rule.videoIds.forEach((id) => matchedIds.add(id));
+    }
+  }
+  if (matchedIds.size === 0) return [];
+  return LEARNING_VIDEOS.filter((v) => matchedIds.has(v.id)).slice(0, 3);
 }
 
 // Industry Big Data Benchmarks Dataset
@@ -223,7 +261,8 @@ export const AiRuleConsultationDrawer: React.FC<AiDrawerProps> = ({
   isOpen,
   onClose,
   language,
-  initialTopic
+  initialTopic,
+  onNavigateToLearning
 }) => {
   const [questionInput, setQuestionInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -518,18 +557,14 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
       isEdgeCase: isEdge,
       suggestedAction,
       archivedAt: new Date().toISOString(),
-      aiMode: 'rules'
+      aiMode: 'rules',
+      recommendedVideos: matchLocalRecommendedVideos(text, category)
     };
   };
 
-  const handleAskQuestion = async (queryText: string) => {
-    const text = (queryText || questionInput).trim();
-    if (!text) return;
-
-    setIsLoading(true);
-    setQuestionInput('');
-    setActiveTab('chat');
-
+  // 非流式兜底：流式接口不可用（浏览器不支持 ReadableStream / 网络异常等）时使用，
+  // 内部仍会在服务端失败时进一步回落到本地规则库
+  const askQuestionNonStreaming = async (text: string) => {
     try {
       // 20 秒熔断：给真 AI 更充足的时间，云端 AI 不可用时再快速回落本地规则库
       const controller = new AbortController();
@@ -563,10 +598,11 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
           isEdgeCase: data.isEdgeCase || false,
           suggestedAction: data.suggestedAction || '',
           archivedAt: new Date().toISOString(),
-          aiMode: data.aiMode === 'gemini' ? 'gemini' : 'rules',
+          aiMode: usedGemini ? 'gemini' : 'rules',
           geminiUnavailable: data.geminiUnavailable === true,
           geminiError: data.geminiError || null,
-          geminiErrorKind: data.geminiErrorKind || null
+          geminiErrorKind: data.geminiErrorKind || null,
+          recommendedVideos: data.recommendedVideos && data.recommendedVideos.length > 0 ? data.recommendedVideos : undefined
         };
 
         setChatHistory((prev) => [newRecord, ...prev]);
@@ -579,6 +615,126 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
       const fallbackRecord = resolveLocalKnowledge(text);
       setChatHistory((prev) => [fallbackRecord, ...prev]);
       addEscalatedQuestion(fallbackRecord);
+    }
+  };
+
+  const handleAskQuestion = async (queryText: string) => {
+    const text = (queryText || questionInput).trim();
+    if (!text) return;
+
+    setIsLoading(true);
+    setQuestionInput('');
+    setActiveTab('chat');
+
+    // 流式接口不可用时（老旧浏览器 / SSR 等）直接走非流式兜底
+    if (typeof ReadableStream === 'undefined' || typeof fetch === 'undefined') {
+      await askQuestionNonStreaming(text);
+      setIsLoading(false);
+      return;
+    }
+
+    const recordId = `esc-${Date.now()}`;
+    // 立即插入一条"正在解答"的占位记录，让文字像打字机一样边生成边显示，
+    // 而不是等云端 AI 生成完整回答后才一次性展示——这是本次改造的核心：把体感速度提上来。
+    const placeholder: ChatRecord = {
+      id: recordId,
+      question: text,
+      category: '',
+      confidence: 'HIGH',
+      aiResponse: '',
+      isEdgeCase: false,
+      suggestedAction: '',
+      archivedAt: new Date().toISOString(),
+      aiMode: 'gemini',
+      isStreaming: true
+    };
+    setChatHistory((prev) => [placeholder, ...prev]);
+
+    const patchRecord = (patch: Partial<ChatRecord>) => {
+      setChatHistory((prev) => prev.map((item) => (item.id === recordId ? { ...item, ...patch } : item)));
+    };
+
+    let finalized = false;
+    try {
+      const controller = new AbortController();
+      // 流式场景给更充足的时间：即使生成较慢，用户也能持续看到文字增量，不会像非流式那样干等
+      const timeoutId = setTimeout(() => controller.abort(), 45000);
+      const res = await fetch('/api/ai-consultation/stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: text, language }),
+        signal: controller.signal
+      });
+
+      if (!res.ok || !res.body) {
+        throw new Error('Streaming API request failed');
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let accumulated = '';
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        clearTimeout(timeoutId);
+        buffer += decoder.decode(value, { stream: true });
+        const events = buffer.split('\n\n');
+        buffer = events.pop() || '';
+
+        for (const rawEvent of events) {
+          const line = rawEvent.trim();
+          if (!line.startsWith('data:')) continue;
+          const jsonStr = line.slice('data:'.length).trim();
+          if (!jsonStr) continue;
+
+          let payload: any;
+          try {
+            payload = JSON.parse(jsonStr);
+          } catch {
+            continue;
+          }
+
+          if (payload.type === 'chunk' && typeof payload.text === 'string') {
+            accumulated += payload.text;
+            patchRecord({ aiResponse: accumulated });
+          } else if (payload.type === 'done') {
+            finalized = true;
+            if (!accumulated.trim()) {
+              throw new Error('AI returned empty answer');
+            }
+            const usedGemini = payload.aiMode === 'gemini';
+            setGeminiHealthy(usedGemini);
+
+            const finalPatch: Partial<ChatRecord> = {
+              aiResponse: accumulated,
+              category: payload.category || 'AI 智能答疑',
+              confidence: payload.isEdgeCase ? 'LOW_EDGE_CASE' : 'HIGH',
+              conservativePaths:
+                payload.conservativePaths && payload.conservativePaths.length > 0 ? payload.conservativePaths : undefined,
+              isEdgeCase: payload.isEdgeCase || false,
+              suggestedAction: payload.suggestedAction || '',
+              aiMode: usedGemini ? 'gemini' : 'rules',
+              geminiUnavailable: payload.geminiUnavailable === true,
+              geminiError: payload.geminiError || null,
+              geminiErrorKind: payload.geminiErrorKind || null,
+              recommendedVideos: payload.recommendedVideos && payload.recommendedVideos.length > 0 ? payload.recommendedVideos : undefined,
+              isStreaming: false
+            };
+            patchRecord(finalPatch);
+            addEscalatedQuestion({ ...placeholder, ...finalPatch, aiResponse: accumulated } as ChatRecord);
+          }
+        }
+      }
+
+      if (!finalized) {
+        throw new Error('Stream ended without a completion event');
+      }
+    } catch (err) {
+      // 流式失败（网络中断/服务端异常/超时）：移除占位记录，改走非流式接口（内部还有本地规则库兜底）
+      setChatHistory((prev) => prev.filter((item) => item.id !== recordId));
+      await askQuestionNonStreaming(text);
     } finally {
       setIsLoading(false);
     }
@@ -753,6 +909,9 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
 
                         {/* Text breakdown (rendered as Markdown) */}
                         <AnswerMarkdown content={item.aiResponse} />
+                        {item.isStreaming && (
+                          <span className="inline-block w-1.5 h-3.5 bg-teal-500 align-middle animate-pulse ml-0.5" />
+                        )}
 
                         {/* Suggested action pill */}
                         {item.suggestedAction && (
@@ -820,6 +979,30 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
                                   {language === 'zh' ? '影响说明：' : 'Impact: '}{path.consequence}
                                 </p>
                               </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Recommended learning videos: 结合提问内容顺带推荐商业学习中心的相关视频 */}
+                        {item.recommendedVideos && item.recommendedVideos.length > 0 && (
+                          <div className="mt-3 pt-3 border-t border-slate-200/70 space-y-1.5">
+                            <div className="flex items-center gap-1.5 text-teal-800 font-bold text-[13px]">
+                              <GraduationCap className="w-3.5 h-3.5 text-teal-600" />
+                              <span>{language === 'zh' ? '相关商业学习视频推荐：' : 'Related learning videos:'}</span>
+                            </div>
+                            {item.recommendedVideos.map((video) => (
+                              <button
+                                key={video.id}
+                                type="button"
+                                onClick={() => onNavigateToLearning?.()}
+                                className="w-full flex items-center justify-between gap-2 px-2.5 py-2 bg-white rounded-lg border border-slate-200 hover:border-teal-400 hover:bg-teal-50/40 text-left transition-colors cursor-pointer"
+                              >
+                                <span className="flex items-center gap-1.5 min-w-0 text-slate-800 font-semibold text-[13px]">
+                                  <PlayCircle className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+                                  <span className="truncate">{language === 'zh' ? video.titleZh : video.titleEn}</span>
+                                </span>
+                                <span className="text-[11px] text-slate-400 shrink-0">{video.durationMinutes} min</span>
+                              </button>
                             ))}
                           </div>
                         )}

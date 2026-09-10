@@ -5,6 +5,7 @@ import { GoogleGenAI } from '@google/genai';
 // 无扩展名的 './src/lib/currencies' 在 Node ESM 解析中会 ERR_MODULE_NOT_FOUND。
 import { SUPPORTED_CURRENCIES } from './src/lib/currencies.js';
 import { inferBusinessStructureLocally } from './src/lib/inferBusinessStructure.js';
+import { LEARNING_VIDEOS } from './src/lib/learningVideos.js';
 
 // 加载根目录 .env：仅本地开发需要；Vercel 平台会自动注入环境变量。
 // 注意：不能顶层 import 'dotenv/config'——在 Vercel 以 ESM 打包 serverless 函数时，
@@ -268,162 +269,18 @@ function tryGeneralKnowledge(question: string): KnowledgeEntry | null {
   return null;
 }
 
-// 1. Health & Config status API
-app.get('/api/health', (req, res) => {
-  const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GEMINI_API_KEY;
-  const hasGemini = Boolean(geminiKey && geminiKey !== 'MY_GEMINI_API_KEY');
-  // 前端 Vite 只读取 VITE_* 前缀变量，因此 health 需一并检查，避免"已配置但 badge 仍显示未配置"
-  const supabaseUrl =
-    process.env.SUPABASE_URL ||
-    process.env.NEXT_PUBLIC_SUPABASE_URL ||
-    process.env.VITE_SUPABASE_URL;
-  const supabaseKey =
-    process.env.SUPABASE_ANON_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    process.env.VITE_SUPABASE_ANON_KEY;
-  const hasSupabase = Boolean(supabaseUrl && supabaseKey);
-  res.json({
-    status: 'ok',
-    version: '1.4.1',
-    hasGeminiKey: hasGemini,
-    hasSupabaseConfig: hasSupabase,
-    timestamp: new Date().toISOString()
-  });
-});
-
-// 2. AI Rule Consultation & Edge Case Evaluator
-// 注意：asyncHandler 包装保证内部任何异常（含本地兜底引擎崩溃）都会被捕获并返回 JSON 500，
-// 而不是让 Express 4 静默挂起 / 平台直接 FUNCTION_INVOCATION_FAILED。
-app.post(
-  ['/api/ai/chat', '/api/ai-consultation'],
-  asyncHandler(async (req, res) => {
-    // 请求体可能为空（未带 Content-Type 或 body 为空）：先归一化，避免 req.body.question 抛 TypeError
-    const body: any = (req.body && typeof req.body === 'object' ? req.body : {}) || {};
-    const question = String(body.question ?? body.message ?? '').trim();
-    const { context, language = 'zh' } = body;
-    if (!question) {
-      return res.status(400).json({ error: 'Question or message is required' });
-    }
-
-  const ai = getGeminiClient();
-  // Gemini 失败信息（未配置/调用失败），用于回退分支给前端准确的降级状态
-  let geminiUnavailable = !ai;
-  let geminiError: string | null = null;
-  let geminiErrorKind: 'quota' | 'auth' | 'model' | 'timeout' | 'network' | null = null;
-
-  // Check if query is an edge-case rule boundary question
-  const isEdgeKeyword = /休渔|季节|倒闭|天灾|战乱|物物交换|欠条|赊账|没有发票|教会赠款|非官方汇率|两套账|换人|无执照/i.test(
-    question
-  );
-
-  if (ai) {
-    // 429 配额冷却期内：不发起注定失败的云端请求，直接走本地规则库兜底
-    if (Date.now() < geminiQuotaCooldownUntil) {
-      geminiUnavailable = true;
-      geminiErrorKind = 'quota';
-      geminiError = 'Gemini 免费配额冷却中，已切换本地规则库回答';
-    } else {
-      try {
-      // 通用助手系统提示词：既能回答任何问题，也能在涉及本平台规则时给出专业解答
-      const systemInstruction = `
-你是一个友善、博学、乐于助人的通用 AI 助手，服务于"商业财务测算"平台（BAM 平台，全球海外小微商业自测评分工具）。
-你可以回答用户提出的【任何问题】——包括但不限于：财务与商业常识、小微生意经营、平台填报与评分规则、日常实用知识、生活技巧、技术问题、语言翻译、概念解释等。
-
-【回答准则】
-1. 用户问什么就答什么。不要强行把话题引导到商业自测上，除非用户主动询问本平台的填报/评分/规则。
-2. 使用与用户提问相同的语言回答（中文问题用中文，英文问题用英文，其他语言同理）。
-3. 回答通俗易懂、结构清晰、直接有用；必要时用大白话解释专业术语。
-4. 当问题涉及本平台的"商业模型自测、评分规则、填报指引"时，切换为平台专家模式：
-   - 用大白话解释概念（如：经营月均总流水 = 客人买单的总进账，还没扣任何成本；毛利 = 流水减进货本钱；OPEX = 每月雷打不动的房租与人工）；
-   - 结合行业大数据基准给出参考（如餐饮毛利率约55%-70%、社区零售20%-35%、生活服务70%-88%、备用金建议≥3个月固定开销）；
-   - 明确说明"此处的规则提问仅用于辅助理解，绝不计入评分系统；手写账本、截图与纯手动填写 100% 同权、零歧视"；
-   - 遇到休渔期、战乱汇率、物物交换、无发票等边缘情况时，给出 2 种保守填报路径（路径A/路径B）并预估得分与后果。
-5. "answer" 字段请使用规范、简洁的 Markdown 排版，让语法符号与装饰符号尽量少：
-   - 推荐使用：## / ### 小标题、**加粗**、- 无序列表、1. 有序列表；
-   - 不要堆砌装饰性符号与表情符号（例如 ⚠️ 📌 🔑 1️⃣ 【】 等花哨标记），除非表达重要风险提示，一条回答中 emoji 最多 1 个；
-   - 避免用连续特殊符号（如 ===、>>>、•••）装饰版面，保持干净易读；
-   - 需要换行处用空行分段，不要在每行末尾添加两个空格等隐藏符号。
-
-返回合法的 JSON 数据，格式如下：
-{
-  "answer": "对用户问题的完整、直接、有用的回答",
-  "confidence": "HIGH" | "LOW_EDGE_CASE",
-  "isEdgeCase": boolean,
-  "category": "简短的问题类型标签（如：通用问答 | 概念大白话解析 | 行业大数据基准 | 规则合规指引 | 边缘疑难推算）",
-  "suggestedAction": "若涉及填报规则则给出可落地的填报动作，否则为空字符串",
-  "bigDataBenchmark": "若涉及经营财务则给出一句行业大数据参考，否则为空字符串",
-  "conservativePaths": []
-}
-`;
-
-      const replyText = await generateGeminiContent(
-        `用户提问: "${question}"\n用户界面语言: ${language}\n当前上下文: ${JSON.stringify(context || {})}`,
-        systemInstruction
-      );
-
-      try {
-        const parsed = JSON.parse(replyText);
-        const answerText = parsed.answer || replyText;
-        if (!answerText.trim()) {
-          throw new Error('Gemini returned empty answer');
-        }
-        return res.json({
-          reply: answerText,
-          aiResponse: answerText,
-          answer: answerText,
-          aiMode: 'gemini',
-          confidence: parsed.confidence || (isEdgeKeyword ? 'LOW_EDGE_CASE' : 'HIGH'),
-          isEdgeCase: parsed.isEdgeCase ?? isEdgeKeyword,
-          category: parsed.category || 'AI 智能答疑',
-          suggestedAction: parsed.suggestedAction || '',
-          bigDataBenchmark: parsed.bigDataBenchmark || '',
-          conservativePaths: parsed.conservativePaths || [],
-          geminiUnavailable: false,
-          geminiError: null,
-          geminiErrorKind: null
-        });
-      } catch {
-        // Gemini 返回的不是合法 JSON，回退到纯文本模式
-        return res.json({
-          reply: replyText,
-          aiResponse: replyText,
-          answer: replyText,
-          aiMode: 'gemini',
-          confidence: isEdgeKeyword ? 'LOW_EDGE_CASE' : 'HIGH',
-          isEdgeCase: isEdgeKeyword,
-          category: 'AI 智能答疑',
-          suggestedAction: '',
-          bigDataBenchmark: '',
-          conservativePaths: [],
-          geminiUnavailable: false,
-          geminiError: null,
-          geminiErrorKind: null
-        });
-      }
-    } catch (err: any) {
-      // Gemini 调用失败：标记降级状态，让流程继续走到本地规则库兜底
-      console.warn('Gemini API request failed, falling back to smart big-data rule engine:', err?.message || err);
-      geminiUnavailable = true;
-      const errMsg = (err?.message || String(err) || '').slice(0, 200);
-      geminiError = errMsg;
-      if (/429|RESOURCE_EXHAUSTED|quota|Quota/i.test(errMsg)) {
-        geminiErrorKind = 'quota';
-        geminiQuotaCooldownUntil = Date.now() + GEMINI_QUOTA_COOLDOWN_MS;
-      } else if (/401|403|api key|permission|unauthorized/i.test(errMsg)) {
-        geminiErrorKind = 'auth';
-      } else if (/404|no longer available|not found|does not support/i.test(errMsg)) {
-        geminiErrorKind = 'model';
-      } else if (/timed out|timeout/i.test(errMsg)) {
-        geminiErrorKind = 'timeout';
-      } else {
-        geminiErrorKind = 'network';
-      }
-    }
-    }
-  }
-
-  // ============ 走到这里说明 Gemini 不可用或失败，下面是本地兜底引擎 ============
-
+function computeLocalFallback(
+  question: string,
+  language: string,
+  isEdgeKeyword: boolean
+): {
+  reply: string;
+  category: string;
+  suggestedAction: string;
+  bigDataBenchmark: string;
+  isEdgeCase: boolean;
+  conservativePaths?: any[];
+} {
     // Smart Big-Data Knowledge Engine (Deterministic Fallback)
     let fallbackReply = '';
     let isEdgeCase = isEdgeKeyword;
@@ -769,21 +626,365 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
 • 【行业大数据基准】可查看各行业平均流水、毛利率与安全线。`;
     }
 
-    return res.json({
-      reply: fallbackReply,
-      aiResponse: fallbackReply,
-      answer: fallbackReply,
+  return {
+    reply: fallbackReply,
+    category,
+    suggestedAction,
+    bigDataBenchmark,
+    isEdgeCase,
+    conservativePaths: paths
+  };
+}
+
+// 关键词 -> 学习中心视频 id 的匹配规则：AI 问答命中相关主题时，顺带推荐商业学习视频
+const VIDEO_KEYWORD_RULES: { pattern: RegExp; videoIds: string[] }[] = [
+  { pattern: /保本|不亏|盈亏平衡|breakeven|break-even/i, videoIds: ['yt-break-even-point'] },
+  { pattern: /毛利|进货|成本|cogs|原材料|采购|定价/i, videoIds: ['yt-cost-accounting-basics', 'yt-gross-margin-pricing'] },
+  { pattern: /备用金|跑道|runway|现金储备|存款|应急资金|撑几个月|现金流/i, videoIds: ['yt-cashflow-runway'] },
+  { pattern: /凭证|记账本|手写|发票|截图|记账/i, videoIds: ['yt-record-keeping-basics'] },
+  { pattern: /签证|工作许可|work permit|visa/i, videoIds: ['yt-visa-work-permit-costs'] },
+  { pattern: /注册|执照|无执照|公司注册|registration/i, videoIds: ['yt-company-registration-guide'] },
+  { pattern: /启动资金|开店要多少钱|前期投入|初始投入|多少钱能开|startup/i, videoIds: ['yt-visa-work-permit-costs', 'yt-cost-accounting-basics'] },
+  { pattern: /房租|工资|人工|opex|固定开销|水电|租金/i, videoIds: ['yt-cost-accounting-basics'] }
+];
+
+function matchRecommendedVideos(question: string, category: string) {
+  const matchedIds = new Set<string>();
+  for (const rule of VIDEO_KEYWORD_RULES) {
+    if (rule.pattern.test(question) || rule.pattern.test(category)) {
+      rule.videoIds.forEach((id) => matchedIds.add(id));
+    }
+  }
+  if (matchedIds.size === 0) return [];
+  return LEARNING_VIDEOS.filter((v) => matchedIds.has(v.id)).slice(0, 3).map((v) => ({
+    id: v.id,
+    titleZh: v.titleZh,
+    titleEn: v.titleEn,
+    category: v.category,
+    categoryEn: v.categoryEn,
+    url: v.url,
+    source: v.source,
+    durationMinutes: v.durationMinutes
+  }));
+}
+
+// 1. Health & Config status API
+app.get('/api/health', (req, res) => {
+  const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GEMINI_API_KEY;
+  const hasGemini = Boolean(geminiKey && geminiKey !== 'MY_GEMINI_API_KEY');
+  // 前端 Vite 只读取 VITE_* 前缀变量，因此 health 需一并检查，避免"已配置但 badge 仍显示未配置"
+  const supabaseUrl =
+    process.env.SUPABASE_URL ||
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    process.env.VITE_SUPABASE_URL;
+  const supabaseKey =
+    process.env.SUPABASE_ANON_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    process.env.VITE_SUPABASE_ANON_KEY;
+  const hasSupabase = Boolean(supabaseUrl && supabaseKey);
+  res.json({
+    status: 'ok',
+    version: '1.4.1',
+    hasGeminiKey: hasGemini,
+    hasSupabaseConfig: hasSupabase,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// 2. AI Rule Consultation & Edge Case Evaluator
+// 注意：asyncHandler 包装保证内部任何异常（含本地兜底引擎崩溃）都会被捕获并返回 JSON 500，
+// 而不是让 Express 4 静默挂起 / 平台直接 FUNCTION_INVOCATION_FAILED。
+app.post(
+  ['/api/ai/chat', '/api/ai-consultation'],
+  asyncHandler(async (req, res) => {
+    // 请求体可能为空（未带 Content-Type 或 body 为空）：先归一化，避免 req.body.question 抛 TypeError
+    const body: any = (req.body && typeof req.body === 'object' ? req.body : {}) || {};
+    const question = String(body.question ?? body.message ?? '').trim();
+    const { context, language = 'zh' } = body;
+    if (!question) {
+      return res.status(400).json({ error: 'Question or message is required' });
+    }
+
+  const ai = getGeminiClient();
+  // Gemini 失败信息（未配置/调用失败），用于回退分支给前端准确的降级状态
+  let geminiUnavailable = !ai;
+  let geminiError: string | null = null;
+  let geminiErrorKind: 'quota' | 'auth' | 'model' | 'timeout' | 'network' | null = null;
+
+  // Check if query is an edge-case rule boundary question
+  const isEdgeKeyword = /休渔|季节|倒闭|天灾|战乱|物物交换|欠条|赊账|没有发票|教会赠款|非官方汇率|两套账|换人|无执照/i.test(
+    question
+  );
+
+  if (ai) {
+    // 429 配额冷却期内：不发起注定失败的云端请求，直接走本地规则库兜底
+    if (Date.now() < geminiQuotaCooldownUntil) {
+      geminiUnavailable = true;
+      geminiErrorKind = 'quota';
+      geminiError = 'Gemini 免费配额冷却中，已切换本地规则库回答';
+    } else {
+      try {
+      // 通用助手系统提示词：既能回答任何问题，也能在涉及本平台规则时给出专业解答
+      const systemInstruction = `
+你是一个友善、博学、乐于助人的通用 AI 助手，服务于"商业财务测算"平台（BAM 平台，全球海外小微商业自测评分工具）。
+你可以回答用户提出的【任何问题】——包括但不限于：财务与商业常识、小微生意经营、平台填报与评分规则、日常实用知识、生活技巧、技术问题、语言翻译、概念解释等。
+
+【回答准则】
+1. 用户问什么就答什么。不要强行把话题引导到商业自测上，除非用户主动询问本平台的填报/评分/规则。
+2. 使用与用户提问相同的语言回答（中文问题用中文，英文问题用英文，其他语言同理）。
+3. 回答通俗易懂、结构清晰、直接有用；必要时用大白话解释专业术语。
+4. 当问题涉及本平台的"商业模型自测、评分规则、填报指引"时，切换为平台专家模式：
+   - 用大白话解释概念（如：经营月均总流水 = 客人买单的总进账，还没扣任何成本；毛利 = 流水减进货本钱；OPEX = 每月雷打不动的房租与人工）；
+   - 结合行业大数据基准给出参考（如餐饮毛利率约55%-70%、社区零售20%-35%、生活服务70%-88%、备用金建议≥3个月固定开销）；
+   - 明确说明"此处的规则提问仅用于辅助理解，绝不计入评分系统；手写账本、截图与纯手动填写 100% 同权、零歧视"；
+   - 遇到休渔期、战乱汇率、物物交换、无发票等边缘情况时，给出 2 种保守填报路径（路径A/路径B）并预估得分与后果。
+5. "answer" 字段请使用规范、简洁的 Markdown 排版，让语法符号与装饰符号尽量少：
+   - 推荐使用：## / ### 小标题、**加粗**、- 无序列表、1. 有序列表；
+   - 不要堆砌装饰性符号与表情符号（例如 ⚠️ 📌 🔑 1️⃣ 【】 等花哨标记），除非表达重要风险提示，一条回答中 emoji 最多 1 个；
+   - 避免用连续特殊符号（如 ===、>>>、•••）装饰版面，保持干净易读；
+   - 需要换行处用空行分段，不要在每行末尾添加两个空格等隐藏符号。
+
+返回合法的 JSON 数据，格式如下：
+{
+  "answer": "对用户问题的完整、直接、有用的回答",
+  "confidence": "HIGH" | "LOW_EDGE_CASE",
+  "isEdgeCase": boolean,
+  "category": "简短的问题类型标签（如：通用问答 | 概念大白话解析 | 行业大数据基准 | 规则合规指引 | 边缘疑难推算）",
+  "suggestedAction": "若涉及填报规则则给出可落地的填报动作，否则为空字符串",
+  "bigDataBenchmark": "若涉及经营财务则给出一句行业大数据参考，否则为空字符串",
+  "conservativePaths": []
+}
+`;
+
+      const replyText = await generateGeminiContent(
+        `用户提问: "${question}"\n用户界面语言: ${language}\n当前上下文: ${JSON.stringify(context || {})}`,
+        systemInstruction
+      );
+
+      try {
+        const parsed = JSON.parse(replyText);
+        const answerText = parsed.answer || replyText;
+        if (!answerText.trim()) {
+          throw new Error('Gemini returned empty answer');
+        }
+        return res.json({
+          reply: answerText,
+          aiResponse: answerText,
+          answer: answerText,
+          aiMode: 'gemini',
+          confidence: parsed.confidence || (isEdgeKeyword ? 'LOW_EDGE_CASE' : 'HIGH'),
+          isEdgeCase: parsed.isEdgeCase ?? isEdgeKeyword,
+          category: parsed.category || 'AI 智能答疑',
+          suggestedAction: parsed.suggestedAction || '',
+          bigDataBenchmark: parsed.bigDataBenchmark || '',
+          conservativePaths: parsed.conservativePaths || [],
+          geminiUnavailable: false,
+          geminiError: null,
+          geminiErrorKind: null,
+          recommendedVideos: matchRecommendedVideos(question, parsed.category || '')
+        });
+      } catch {
+        // Gemini 返回的不是合法 JSON，回退到纯文本模式
+        return res.json({
+          reply: replyText,
+          aiResponse: replyText,
+          answer: replyText,
+          aiMode: 'gemini',
+          confidence: isEdgeKeyword ? 'LOW_EDGE_CASE' : 'HIGH',
+          isEdgeCase: isEdgeKeyword,
+          category: 'AI 智能答疑',
+          suggestedAction: '',
+          bigDataBenchmark: '',
+          conservativePaths: [],
+          geminiUnavailable: false,
+          geminiError: null,
+          geminiErrorKind: null,
+          recommendedVideos: matchRecommendedVideos(question, '')
+        });
+      }
+    } catch (err: any) {
+      // Gemini 调用失败：标记降级状态，让流程继续走到本地规则库兜底
+      console.warn('Gemini API request failed, falling back to smart big-data rule engine:', err?.message || err);
+      geminiUnavailable = true;
+      const errMsg = (err?.message || String(err) || '').slice(0, 200);
+      geminiError = errMsg;
+      if (/429|RESOURCE_EXHAUSTED|quota|Quota/i.test(errMsg)) {
+        geminiErrorKind = 'quota';
+        geminiQuotaCooldownUntil = Date.now() + GEMINI_QUOTA_COOLDOWN_MS;
+      } else if (/401|403|api key|permission|unauthorized/i.test(errMsg)) {
+        geminiErrorKind = 'auth';
+      } else if (/404|no longer available|not found|does not support/i.test(errMsg)) {
+        geminiErrorKind = 'model';
+      } else if (/timed out|timeout/i.test(errMsg)) {
+        geminiErrorKind = 'timeout';
+      } else {
+        geminiErrorKind = 'network';
+      }
+    }
+    }
+  }
+
+  // ============ 走到这里说明 Gemini 不可用或失败，下面是本地兜底引擎 ============
+  const local = computeLocalFallback(question, language, isEdgeKeyword);
+  const recommendedVideos = matchRecommendedVideos(question, local.category);
+
+  return res.json({
+    reply: local.reply,
+    aiResponse: local.reply,
+    answer: local.reply,
+    aiMode: 'rules',
+    confidence: local.isEdgeCase ? 'LOW_EDGE_CASE' : 'HIGH',
+    isEdgeCase: local.isEdgeCase,
+    category: local.category,
+    suggestedAction: local.suggestedAction,
+    bigDataBenchmark: local.bigDataBenchmark,
+    conservativePaths: local.conservativePaths,
+    geminiUnavailable,
+    geminiError,
+    geminiErrorKind,
+    recommendedVideos
+  });
+  })
+);
+
+// 2.1 AI Rule Consultation — Streaming (SSE) variant
+// 非流式接口需要等 Gemini 生成完整 JSON 后才一次性返回，网络往返 + 生成耗时叠加导致体感很慢。
+// 这里改用 Server-Sent Events 边生成边推送文本片段，前端可以像打字机一样实时展示，首字节时间大幅缩短。
+// 分类元数据（category/suggestedAction/推荐视频）复用本地规则引擎的确定性分类逻辑而不依赖
+// Gemini 的 JSON 结构化输出——流式场景下半截 JSON 本来也没法增量解析。
+app.post(
+  ['/api/ai/chat/stream', '/api/ai-consultation/stream'],
+  asyncHandler(async (req, res) => {
+    const body: any = (req.body && typeof req.body === 'object' ? req.body : {}) || {};
+    const question = String(body.question ?? body.message ?? '').trim();
+    const { context, language = 'zh' } = body;
+    if (!question) {
+      return res.status(400).json({ error: 'Question or message is required' });
+    }
+
+    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    // 关闭反向代理（如 nginx）的响应缓冲，保证文本片段逐块及时下发而不是攒够一批才发
+    res.setHeader('X-Accel-Buffering', 'no');
+    (res as any).flushHeaders?.();
+
+    const sendEvent = (payload: Record<string, unknown>) => {
+      res.write(`data: ${JSON.stringify(payload)}\n\n`);
+    };
+
+    const isEdgeKeyword = /休渔|季节|倒闭|天灾|战乱|物物交换|欠条|赊账|没有发票|教会赠款|非官方汇率|两套账|换人|无执照/i.test(
+      question
+    );
+
+    const ai = getGeminiClient();
+    let geminiUnavailable = !ai;
+    let geminiError: string | null = null;
+    let geminiErrorKind: 'quota' | 'auth' | 'model' | 'timeout' | 'network' | null = null;
+    let streamedAny = false;
+
+    if (ai && Date.now() >= geminiQuotaCooldownUntil) {
+      try {
+        const systemInstruction = `
+你是一个友善、博学、乐于助人的通用 AI 助手，服务于"商业财务测算"平台（BAM 平台，全球海外小微商业自测评分工具）。
+你可以回答用户提出的【任何问题】——包括但不限于：财务与商业常识、小微生意经营、平台填报与评分规则、日常实用知识、生活技巧、技术问题、语言翻译、概念解释等。
+
+【回答准则】
+1. 用户问什么就答什么。不要强行把话题引导到商业自测上，除非用户主动询问本平台的填报/评分/规则。
+2. 使用与用户提问相同的语言回答（中文问题用中文，英文问题用英文，其他语言同理）。
+3. 回答通俗易懂、结构清晰、直接有用；必要时用大白话解释专业术语。
+4. 当问题涉及本平台的"商业模型自测、评分规则、填报指引"时，切换为平台专家模式，结合行业大数据基准给出参考。
+5. 直接输出规范、简洁的 Markdown 正文（## / ### 小标题、**加粗**、- 无序列表、1. 有序列表均可）。
+   不要用 JSON 包裹，不要输出多余的解释性前后缀，不要堆砌装饰性符号与表情符号（一条回答中 emoji 最多 1 个）。
+`;
+        const streamResult = await ai.models.generateContentStream({
+          model: GEMINI_MODELS[0],
+          contents: `用户提问: "${question}"\n用户界面语言: ${language}\n当前上下文: ${JSON.stringify(context || {})}`,
+          config: { systemInstruction }
+        });
+        for await (const chunk of streamResult) {
+          const text = chunk.text || '';
+          if (text) {
+            streamedAny = true;
+            sendEvent({ type: 'chunk', text });
+          }
+        }
+        if (streamedAny) {
+          const local = computeLocalFallback(question, language, isEdgeKeyword);
+          sendEvent({
+            type: 'done',
+            aiMode: 'gemini',
+            category: local.category,
+            suggestedAction: local.suggestedAction,
+            bigDataBenchmark: local.bigDataBenchmark,
+            isEdgeCase: local.isEdgeCase,
+            conservativePaths: local.conservativePaths,
+            recommendedVideos: matchRecommendedVideos(question, local.category),
+            geminiUnavailable: false,
+            geminiError: null,
+            geminiErrorKind: null
+          });
+          return res.end();
+        }
+        throw new Error('Gemini stream returned no content');
+      } catch (err: any) {
+        console.warn('Gemini streaming failed, falling back to local rule engine:', err?.message || err);
+        geminiUnavailable = true;
+        const errMsg = (err?.message || String(err) || '').slice(0, 200);
+        geminiError = errMsg;
+        if (/429|RESOURCE_EXHAUSTED|quota|Quota/i.test(errMsg)) {
+          geminiErrorKind = 'quota';
+          geminiQuotaCooldownUntil = Date.now() + GEMINI_QUOTA_COOLDOWN_MS;
+        } else if (/401|403|api key|permission|unauthorized/i.test(errMsg)) {
+          geminiErrorKind = 'auth';
+        } else if (/404|no longer available|not found|does not support/i.test(errMsg)) {
+          geminiErrorKind = 'model';
+        } else if (/timed out|timeout/i.test(errMsg)) {
+          geminiErrorKind = 'timeout';
+        } else {
+          geminiErrorKind = 'network';
+        }
+        // 已经推送过部分内容后才失败（极少见）：不能再从头切换成本地兜底覆盖，
+        // 否则用户会看到"半句 AI 回答 + 突然跳到本地规则库回答"的割裂体验，直接结束本次回答。
+        if (streamedAny) {
+          sendEvent({
+            type: 'done',
+            aiMode: 'gemini',
+            category: 'AI 智能答疑',
+            suggestedAction: '',
+            bigDataBenchmark: '',
+            isEdgeCase: isEdgeKeyword,
+            conservativePaths: [],
+            recommendedVideos: matchRecommendedVideos(question, ''),
+            geminiUnavailable: true,
+            geminiError,
+            geminiErrorKind
+          });
+          return res.end();
+        }
+      }
+    }
+
+    // ============ 本地兜底：Gemini 不可用/失败，按小段切块模拟打字机效果 ============
+    const local = computeLocalFallback(question, language, isEdgeKeyword);
+    const chunks = local.reply.match(/[\s\S]{1,24}/g) || [local.reply];
+    for (const c of chunks) {
+      sendEvent({ type: 'chunk', text: c });
+    }
+    sendEvent({
+      type: 'done',
       aiMode: 'rules',
-      confidence: isEdgeCase ? 'LOW_EDGE_CASE' : 'HIGH',
-      isEdgeCase,
-      category,
-      suggestedAction,
-      bigDataBenchmark,
-      conservativePaths: paths,
+      category: local.category,
+      suggestedAction: local.suggestedAction,
+      bigDataBenchmark: local.bigDataBenchmark,
+      isEdgeCase: local.isEdgeCase,
+      conservativePaths: local.conservativePaths,
+      recommendedVideos: matchRecommendedVideos(question, local.category),
       geminiUnavailable,
       geminiError,
       geminiErrorKind
     });
+    res.end();
   })
 );
 
