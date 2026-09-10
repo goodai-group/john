@@ -318,6 +318,7 @@ export interface LearningVideo {
   descriptionZh: string;
   descriptionEn: string;
   category: string; // 分类，如"成本核算"/"签证与合规"/"现金流管理"
+  categoryEn: string; // 分类英文名，如 "Cost Accounting" / "Visa & Compliance" / "Cash Flow Management"
   source: LearningVideoSource;
   url: string; // internal: /public 下的视频地址; youtube: 完整播放或搜索链接
   durationMinutes: number;
