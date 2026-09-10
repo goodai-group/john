@@ -333,9 +333,9 @@ export const AssessmentForm: React.FC<FormProps> = ({
     if (restoredDraftRef.current) {
       // 本次挂载恢复了草稿：先告诉用户内容还在，避免"我填的怎么还在/怎么变了"的困惑
       restoredDraftRef.current = false;
-      setSaveStatus('已恢复上次未提交的填写');
+      setSaveStatus(language === 'en' ? 'Restored your last unsubmitted draft' : '已恢复上次未提交的填写');
     } else {
-      setSaveStatus('草稿已自动暂存至本地');
+      setSaveStatus(language === 'en' ? 'Draft auto-saved locally' : '草稿已自动暂存至本地');
     }
     const timer = setTimeout(() => setSaveStatus(null), 2500);
     return () => clearTimeout(timer);
@@ -354,54 +354,70 @@ export const AssessmentForm: React.FC<FormProps> = ({
     switch (formData.industry) {
       case 'food_beverage':
         return {
-          label: '食材与饮品原料成本 (COGS)',
-          badge: '咖啡/烘焙/餐食原料',
-          tip: '咖啡豆、鲜奶、面粉、肉类蔬菜、酱料及一次性环保餐具等直接食材成本（不含房租人工）。'
+          label: language === 'en' ? 'Food & Beverage Ingredient Cost (COGS)' : '食材与饮品原料成本 (COGS)',
+          badge: language === 'en' ? 'Coffee / Bakery / Food Ingredients' : '咖啡/烘焙/餐食原料',
+          tip: language === 'en'
+            ? 'Direct food cost such as coffee beans, milk, flour, meat & vegetables, sauces, and disposable eco tableware (excludes rent and labor).'
+            : '咖啡豆、鲜奶、面粉、肉类蔬菜、酱料及一次性环保餐具等直接食材成本（不含房租人工）。'
         };
       case 'medical_health':
         return {
-          label: '药品与医用耗材成本 (COGS)',
-          badge: '药品与耗材',
-          tip: '中西药品、注射器、敷料纱布、消毒用品等直接采购成本（不含房租人工）。'
+          label: language === 'en' ? 'Medicine & Medical Supplies Cost (COGS)' : '药品与医用耗材成本 (COGS)',
+          badge: language === 'en' ? 'Medicine & Supplies' : '药品与耗材',
+          tip: language === 'en'
+            ? 'Direct purchasing cost for Western/traditional medicine, syringes, dressings/gauze, disinfectant supplies, etc. (excludes rent and labor).'
+            : '中西药品、注射器、敷料纱布、消毒用品等直接采购成本（不含房租人工）。'
         };
       case 'retail_store':
         return {
-          label: '商品进货与采购成本 (COGS)',
-          badge: '进货本钱',
-          tip: '向批发商采购的日用百货、食品调料、数码家电等商品成本（含长途运费，不含房租人工）。'
+          label: language === 'en' ? 'Merchandise Purchasing Cost (COGS)' : '商品进货与采购成本 (COGS)',
+          badge: language === 'en' ? 'Purchasing Cost' : '进货本钱',
+          tip: language === 'en'
+            ? 'Cost of daily goods, food seasonings, digital appliances, etc. purchased from wholesalers (includes long-haul freight, excludes rent and labor).'
+            : '向批发商采购的日用百货、食品调料、数码家电等商品成本（含长途运费，不含房租人工）。'
         };
       case 'education_training':
         return {
-          label: '教材与教学耗材成本 (COGS)',
-          badge: '教学资料',
-          tip: '教材讲义、练习册、文具教具、在线平台等直接教学耗材（不含房租人工）。'
+          label: language === 'en' ? 'Teaching Materials & Supplies Cost (COGS)' : '教材与教学耗材成本 (COGS)',
+          badge: language === 'en' ? 'Teaching Materials' : '教学资料',
+          tip: language === 'en'
+            ? 'Direct teaching materials such as textbooks, handouts, workbooks, stationery/teaching aids, online platforms (excludes rent and labor).'
+            : '教材讲义、练习册、文具教具、在线平台等直接教学耗材（不含房租人工）。'
         };
       case 'vocational_training':
         return {
-          label: '实训原料与工具耗材 (COGS)',
-          badge: '材料与工具',
-          tip: '实训用的木料、皮革、布料、焊锡零配件、五金耗材等（不含房租人工）。'
+          label: language === 'en' ? 'Hands-on Training Materials & Tools (COGS)' : '实训原料与工具耗材 (COGS)',
+          badge: language === 'en' ? 'Materials & Tools' : '材料与工具',
+          tip: language === 'en'
+            ? 'Materials for hands-on training such as wood, leather, fabric, solder/hardware fittings, etc. (excludes rent and labor).'
+            : '实训用的木料、皮革、布料、焊锡零配件、五金耗材等（不含房租人工）。'
         };
       case 'agriculture':
         return {
-          label: '种苗肥料与农资成本 (COGS)',
-          badge: '农业生产资料',
-          tip: '种子种苗、有机肥料、生物农药、保鲜包装等直接农业投入（不含房租人工）。'
+          label: language === 'en' ? 'Seeds, Fertilizer & Farm Inputs Cost (COGS)' : '种苗肥料与农资成本 (COGS)',
+          badge: language === 'en' ? 'Agricultural Inputs' : '农业生产资料',
+          tip: language === 'en'
+            ? 'Direct agricultural inputs such as seeds/seedlings, organic fertilizer, biopesticides, preservation packaging (excludes rent and labor).'
+            : '种子种苗、有机肥料、生物农药、保鲜包装等直接农业投入（不含房租人工）。'
         };
       case 'child_care':
         return {
-          label: '儿童膳食与教具耗材 (COGS)',
-          badge: '餐食与用品',
-          tip: '儿童每日营养食材、牛奶、益智教具、绘画文具、卫生纸品等（不含房租人工）。'
+          label: language === 'en' ? "Children's Meals & Teaching Supplies Cost (COGS)" : '儿童膳食与教具耗材 (COGS)',
+          badge: language === 'en' ? 'Meals & Supplies' : '餐食与用品',
+          tip: language === 'en'
+            ? "Children's daily nutritional food, milk, educational aids, drawing supplies, hygiene products, etc. (excludes rent and labor)."
+            : '儿童每日营养食材、牛奶、益智教具、绘画文具、卫生纸品等（不含房租人工）。'
         };
       default:
         return {
-          label: '原材料与直接采购成本 (COGS)',
-          badge: '进货本钱',
-          tip: '进货货款、生鲜食材原料等直接买货成本（包含长途运费，不含房租和员工工资）。'
+          label: language === 'en' ? 'Raw Materials & Direct Purchasing Cost (COGS)' : '原材料与直接采购成本 (COGS)',
+          badge: language === 'en' ? 'Purchasing Cost' : '进货本钱',
+          tip: language === 'en'
+            ? 'Direct purchasing cost such as goods payment, fresh food ingredients, etc. (includes long-haul freight, excludes rent and staff wages).'
+            : '进货货款、生鲜食材原料等直接买货成本（包含长途运费，不含房租和员工工资）。'
         };
     }
-  }, [formData.industry]);
+  }, [formData.industry, language]);
 
   // —— 动态成本项（COGS / OPEX）辅助函数 ——
   const updateDynamicCogsItem = (id: string, patch: Partial<{ label: string; value: number; isFixed: boolean }>) => {
@@ -418,7 +434,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
       ...prev,
       dynamicCogsItems: [
         ...(prev.dynamicCogsItems || []),
-        { id: `cogs-${Date.now()}`, label: '新增物料成本项', value: 0, isFixed: false }
+        { id: `cogs-${Date.now()}`, label: language === 'en' ? 'New material cost item' : '新增物料成本项', value: 0, isFixed: false }
       ],
       updatedAt: new Date().toISOString()
     }));
@@ -446,7 +462,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
       ...prev,
       dynamicOpexItems: [
         ...(prev.dynamicOpexItems || []),
-        { id: `opex-${Date.now()}`, label: '新增运营开支项', value: 0, isFixed: false }
+        { id: `opex-${Date.now()}`, label: language === 'en' ? 'New operating expense item' : '新增运营开支项', value: 0, isFixed: false }
       ],
       updatedAt: new Date().toISOString()
     }));
@@ -483,14 +499,14 @@ export const AssessmentForm: React.FC<FormProps> = ({
       const toLocal = (usd: number) => Math.round(usd * rate);
       const newCogs = (tpl.cogsItems || []).map((it) => ({
         id: `cogs-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        label: it.name || '物料成本项',
+        label: it.name || (language === 'en' ? 'Material cost item' : '物料成本项'),
         value: Number(it.amount) || 0,
         suggestedAmount: Number(it.amount) || 0,
         isFixed: false
       }));
       const newOpex = (tpl.opexItems || []).map((it) => ({
         id: `opex-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        label: it.name || '运营开支项',
+        label: it.name || (language === 'en' ? 'Operating expense item' : '运营开支项'),
         value: Number(it.amount) || 0,
         suggestedAmount: Number(it.amount) || 0,
         isFixed: false
@@ -699,7 +715,9 @@ export const AssessmentForm: React.FC<FormProps> = ({
   const restoreAiSuggestion = () => {
     if (!aiSuggested) return;
     const ok = window.confirm(
-      '恢复 AI 建议会把明细金额填回 AI 的估值（仅供参考，不代表你的真实成本）。\n\n建议：把数字改回你的实际值，避免数据失真。\n\n确认要恢复吗？'
+      language === 'en'
+        ? 'Restoring the AI suggestion will fill the line-item amounts with the AI\'s estimate (for reference only, not your actual cost).\n\nTip: change the numbers back to your real values to avoid inaccurate data.\n\nConfirm restore?'
+        : '恢复 AI 建议会把明细金额填回 AI 的估值（仅供参考，不代表你的真实成本）。\n\n建议：把数字改回你的实际值，避免数据失真。\n\n确认要恢复吗？'
     );
     if (!ok) return;
     const cogsItems = aiSuggested.cogs.map((it) => ({
@@ -827,7 +845,9 @@ export const AssessmentForm: React.FC<FormProps> = ({
           ...b,
           revenue: { amount: avg, currency: formData.baseCurrency },
           isEstimated: true,
-          note: 'AI识别流水缺口，按最近的真实月份数据自动估算'
+          note: language === 'en'
+            ? 'AI detected a revenue gap and auto-estimated it from the nearest real monthly data'
+            : 'AI识别流水缺口，按最近的真实月份数据自动估算'
         };
       });
       setFormData((prev) => ({ ...prev, monthlyBreakdowns: updated }));
@@ -863,8 +883,12 @@ export const AssessmentForm: React.FC<FormProps> = ({
           detectedAmount: Math.round((seed % 4000) + 800),
           currency: formData.baseCurrency,
           transactionCount: Math.max(3, seed % 40),
-          periodLabel: '本次凭证覆盖周期（AI 自动提取）',
-          note: 'AI 已从凭证中识别出以下结构化数据，可核对后手动修改上方金额'
+          periodLabel: language === 'en'
+            ? 'Period covered by this proof (auto-extracted by AI)'
+            : '本次凭证覆盖周期（AI 自动提取）',
+          note: language === 'en'
+            ? 'AI has extracted the structured data below from your proof; review and manually adjust the amounts above if needed'
+            : 'AI 已从凭证中识别出以下结构化数据，可核对后手动修改上方金额'
         };
         setFormData((prev) => ({
           ...prev,
@@ -904,8 +928,8 @@ export const AssessmentForm: React.FC<FormProps> = ({
 
   // —— 两步流程定义 ——
   const stepsList = [
-    { num: 1, title: '生意叫什么？' },
-    { num: 2, title: '赚多少、花多少、兜里有多少现金' }
+    { num: 1, title: language === 'en' ? 'What\'s your business?' : '生意叫什么？' },
+    { num: 2, title: language === 'en' ? 'Revenue, expenses & cash on hand' : '赚多少、花多少、兜里有多少现金' }
   ];
 
   // —— 断点流水按需出现：仅当月度数据存在缺口（中间某月为 0 且前后有值）时显示 ——
@@ -918,9 +942,9 @@ export const AssessmentForm: React.FC<FormProps> = ({
 
   // —— AI 推断结果摘要（行业/币种）——
   const industryLabel =
-    INDUSTRY_BENCHMARKS.find((b) => b.id === formData.industry)?.nameZh ||
+    INDUSTRY_BENCHMARKS.find((b) => b.id === formData.industry)?.[language === 'en' ? 'nameEn' : 'nameZh'] ||
     (formData.industry === CUSTOM_INDUSTRY_VALUE ? formData.customIndustryName : formData.industry) ||
-    '未识别';
+    (language === 'en' ? 'Not identified' : '未识别');
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">

@@ -121,7 +121,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {isUserMenuOpen && (
               <div className={`absolute ${dark ? 'bottom-full mb-2 left-0' : 'right-0 mt-2'} w-60 rounded-2xl bg-white border border-neutral-200 shadow-xl p-3 z-50 animate-in fade-in`}>
                 <p className="text-xs font-bold text-neutral-900 truncate">
-                  {currentUser.displayName || 'Google 用户'}
+                  {currentUser.displayName || (language === 'zh' ? 'Google 用户' : 'Google User')}
                 </p>
                 <p className="text-[13px] text-neutral-500 truncate mb-2">
                   {currentUser.email}
