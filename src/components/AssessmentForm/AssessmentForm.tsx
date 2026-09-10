@@ -995,10 +995,12 @@ export const AssessmentForm: React.FC<FormProps> = ({
             <div className="text-center space-y-1.5">
               <h3 className="text-xl sm:text-2xl font-black text-slate-900 flex items-center justify-center gap-2">
                 <FileText className="w-5 h-5 text-teal-600" />
-                <span>1. 生意叫什么？</span>
+                <span>{language === 'en' ? '1. What\'s your business?' : '1. 生意叫什么？'}</span>
               </h3>
               <p className="text-xs text-slate-500 font-medium">
-                只填名字。行业、币种、成本结构，AI 都会自动替你推断，也可以随时在下方「高级设置」里改。
+                {language === 'en'
+                  ? 'Just the name. AI will automatically infer industry, currency and cost structure for you — you can always change it below in "Advanced Settings".'
+                  : '只填名字。行业、币种、成本结构，AI 都会自动替你推断，也可以随时在下方「高级设置」里改。'}
               </p>
             </div>
 
@@ -1023,20 +1025,24 @@ export const AssessmentForm: React.FC<FormProps> = ({
               )}
               <div className="mt-2 text-[13px] space-y-1">
                 {inferState === 'loading' && (
-                  <span className="text-teal-500 font-semibold animate-pulse">AI 正在推算行业、币种与成本结构…</span>
+                  <span className="text-teal-500 font-semibold animate-pulse">
+                    {language === 'en' ? 'AI is inferring industry, currency and cost structure…' : 'AI 正在推算行业、币种与成本结构…'}
+                  </span>
                 )}
                 {inferState === 'done' && (
-                  <span className="text-emerald-600 font-semibold">✓ AI 已自动预填，可修改或点「恢复 AI 建议」</span>
+                  <span className="text-emerald-600 font-semibold">
+                    {language === 'en' ? '✓ AI has auto-filled the fields — edit them or click "Restore AI Suggestion"' : '✓ AI 已自动预填，可修改或点「恢复 AI 建议」'}
+                  </span>
                 )}
                 {inferState === 'error' && (
                   <span className="text-amber-600 font-semibold">
-                    网络或后端暂时不可用，请检查连接或手动选择行业。
+                    {language === 'en' ? 'Network or backend temporarily unavailable — check your connection or select the industry manually.' : '网络或后端暂时不可用，请检查连接或手动选择行业。'}
                     <button
                       type="button"
                       onClick={() => formData.projectName.trim().length >= 2 && handleProjectNameChange(formData.projectName)}
                       className="ml-1 underline font-bold hover:text-amber-700 cursor-pointer"
                     >
-                      重新推算
+                      {language === 'en' ? 'Retry' : '重新推算'}
                     </button>
                   </span>
                 )}
@@ -1047,15 +1053,22 @@ export const AssessmentForm: React.FC<FormProps> = ({
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
                 <Briefcase className="w-3.5 h-3.5 text-teal-600" />
-                <span>目前所处阶段</span>
+                <span>{language === 'en' ? 'Current stage' : '目前所处阶段'}</span>
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 {(
-                  [
-                    { value: 'not_started', label: '尚未启动', desc: '还没开业，先估算成本和要赚多少' },
-                    { value: 'has_prototype', label: '已有原型', desc: '小范围试过，还没稳定营收' },
-                    { value: 'has_revenue', label: '已有营收', desc: '正在经营，想体检真实数字' }
-                  ] as { value: BusinessStage; label: string; desc: string }[]
+                  language === 'en'
+                    ? [
+                        { value: 'not_started', label: 'Not started', desc: 'Not open yet — estimate cost and target earnings first' },
+                        { value: 'has_prototype', label: 'Have a prototype', desc: 'Tried on a small scale, no stable revenue yet' },
+                        { value: 'has_revenue', label: 'Have revenue', desc: 'Currently operating, want a real-numbers check-up' }
+                      ]
+                    : [
+                        { value: 'not_started', label: '尚未启动', desc: '还没开业，先估算成本和要赚多少' },
+                        { value: 'has_prototype', label: '已有原型', desc: '小范围试过，还没稳定营收' },
+                        { value: 'has_revenue', label: '已有营收', desc: '正在经营，想体检真实数字' }
+                      ]
+                ) as { value: BusinessStage; label: string; desc: string }[]
                 ).map((opt) => (
                   <button
                     key={opt.value}

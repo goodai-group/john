@@ -37,10 +37,14 @@ export const AccessibilityToolbar: React.FC<AccessibilityProps> = ({
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      setVoiceStatus('当前浏览器不支持原生语音识别，已为您切换为快捷语音试听模拟模式。');
+      setVoiceStatus(
+        language === 'zh'
+          ? '当前浏览器不支持原生语音识别，已为您切换为快捷语音试听模拟模式。'
+          : 'Your browser does not support native speech recognition; switched to a quick demo simulation mode.'
+      );
       setIsRecording(true);
       setTimeout(() => {
-        setVoiceTranscript('月营业额五万八千元');
+        setVoiceTranscript(language === 'zh' ? '月营业额五万八千元' : 'Monthly revenue fifty-eight thousand');
         setIsRecording(false);
       }, 2000);
       return;
@@ -54,7 +58,11 @@ export const AccessibilityToolbar: React.FC<AccessibilityProps> = ({
 
       recognition.onstart = () => {
         setIsRecording(true);
-        setVoiceStatus('正在倾听... 请说出金额或文字（如“三万五千”或“房租四千”）');
+        setVoiceStatus(
+          language === 'zh'
+            ? '正在倾听... 请说出金额或文字（如“三万五千”或“房租四千”）'
+            : 'Listening... please say an amount or text (e.g. "thirty-five thousand" or "rent four thousand")'
+        );
       };
 
       recognition.onresult = (event: any) => {
@@ -65,18 +73,26 @@ export const AccessibilityToolbar: React.FC<AccessibilityProps> = ({
       recognition.onerror = (event: any) => {
         console.warn('Speech error:', event.error);
         setIsRecording(false);
-        setVoiceStatus(`语音识别提示: ${event.error || '未检测到声音'}`);
+        setVoiceStatus(
+          language === 'zh'
+            ? `语音识别提示: ${event.error || '未检测到声音'}`
+            : `Speech recognition notice: ${event.error || 'no sound detected'}`
+        );
       };
 
       recognition.onend = () => {
         setIsRecording(false);
-        setVoiceStatus('语音录入完毕！');
+        setVoiceStatus(language === 'zh' ? '语音录入完毕！' : 'Voice input complete!');
       };
 
       recognition.start();
     } catch (e: any) {
       setIsRecording(false);
-      setVoiceStatus('启动麦克风失败，请检查麦克风权限设置。');
+      setVoiceStatus(
+        language === 'zh'
+          ? '启动麦克风失败，请检查麦克风权限设置。'
+          : 'Failed to start the microphone. Please check your microphone permission settings.'
+      );
     }
   };
 

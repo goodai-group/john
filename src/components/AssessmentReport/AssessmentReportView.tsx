@@ -520,33 +520,33 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
             </div>
             <div>
               <h4 className="text-xs font-bold text-neutral-900">
-                对比上一版本 (v{prevVersion.version} ➔ v{report.version})
+                {t(`对比上一版本 (v${prevVersion.version} ➔ v${report.version})`, `Compared to previous version (v${prevVersion.version} ➔ v${report.version})`)}
               </h4>
               <p className="text-[13px] text-neutral-500">
-                优化措施落地后的数据变化趋势
+                {t('优化措施落地后的数据变化趋势', 'Data trends after optimization measures were implemented')}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-4 text-xs font-bold">
             <div className="bg-white px-3 py-1.5 rounded-xl border border-teal-100 flex items-center space-x-1.5">
-              <span className="text-neutral-500">得分变化:</span>
+              <span className="text-neutral-500">{t('得分变化:', 'Score change:')}</span>
               <span className={scoreDiff >= 0 ? 'text-emerald-600 font-mono' : 'text-rose-600 font-mono'}>
-                {scoreDiff >= 0 ? `+${scoreDiff}` : scoreDiff} 分
+                {scoreDiff >= 0 ? `+${scoreDiff}` : scoreDiff} {t('分', 'pts')}
               </span>
             </div>
 
             <div className="bg-white px-3 py-1.5 rounded-xl border border-teal-100 flex items-center space-x-1.5">
-              <span className="text-neutral-500">利润率变化:</span>
+              <span className="text-neutral-500">{t('利润率变化:', 'Margin change:')}</span>
               <span className={marginDiff >= 0 ? 'text-emerald-600 font-mono' : 'text-rose-600 font-mono'}>
                 {marginDiff >= 0 ? `+${marginDiff}%` : `${marginDiff}%`}
               </span>
             </div>
 
             <div className="bg-white px-3 py-1.5 rounded-xl border border-teal-100 flex items-center space-x-1.5">
-              <span className="text-neutral-500">备用金支撑:</span>
+              <span className="text-neutral-500">{t('备用金支撑:', 'Cash runway:')}</span>
               <span className={runwayDiff >= 0 ? 'text-emerald-600 font-mono' : 'text-rose-600 font-mono'}>
-                {runwayDiff >= 0 ? `+${runwayDiff}月` : `${runwayDiff}月`}
+                {runwayDiff >= 0 ? `+${runwayDiff}${t('月', ' mo')}` : `${runwayDiff}${t('月', ' mo')}`}
               </span>
             </div>
           </div>
