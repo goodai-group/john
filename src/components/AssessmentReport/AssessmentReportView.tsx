@@ -351,7 +351,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
           {/* Version Switcher */}
           {allVersions.length > 1 && (
             <div className="flex items-center gap-2 text-xs font-bold text-neutral-700 bg-neutral-50 px-3 py-1.5 rounded-2xl border border-neutral-200">
-              <span className="text-neutral-400 uppercase tracking-wider text-[10px]">历史版本:</span>
+              <span className="text-neutral-400 uppercase tracking-wider text-[12px]">历史版本:</span>
               <select
                 value={report.version}
                 onChange={(e) => onSelectVersion?.(Number(e.target.value))}
@@ -366,7 +366,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
 
               <button
                 onClick={() => setShowVersionDiff(!showVersionDiff)}
-                className={`p-1 rounded-lg border text-[11px] font-bold flex items-center gap-1 cursor-pointer ${
+                className={`p-1 rounded-lg border text-[13px] font-bold flex items-center gap-1 cursor-pointer ${
                   showVersionDiff ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-neutral-600 border-neutral-200'
                 }`}
                 title="查看与上一版本的得分变化对比"
@@ -470,7 +470,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
               <h4 className="text-xs font-bold text-neutral-900">
                 对比上一版本 (v{prevVersion.version} ➔ v{report.version})
               </h4>
-              <p className="text-[11px] text-neutral-500">
+              <p className="text-[13px] text-neutral-500">
                 优化措施落地后的数据变化趋势
               </p>
             </div>
@@ -528,7 +528,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                   <span className="text-2xl sm:text-3xl font-mono font-black text-neutral-900 leading-none">
                     {report.totalScore}
                   </span>
-                  <span className="text-[10px] text-neutral-400 font-bold mt-0.5">/ 100 {t('分', '')}</span>
+                  <span className="text-[12px] text-neutral-400 font-bold mt-0.5">/ 100 {t('分', '')}</span>
                 </div>
               </div>
 
@@ -584,7 +584,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                     </div>
                   </div>
                 ) : null}
-                <p className="text-[11px] sm:text-xs text-neutral-500 font-medium mt-1.5 leading-relaxed max-w-3xl">
+                <p className="text-[13px] sm:text-xs text-neutral-500 font-medium mt-1.5 leading-relaxed max-w-3xl">
                   大白话：{getPlainVerdict()}
                 </p>
 
@@ -692,9 +692,9 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                   </div>
                   <div className="text-base font-mono font-black text-neutral-900">
                     {cogsPct} 块钱
-                    <span className="text-[10px] text-neutral-400 font-normal ml-1">/百元</span>
+                    <span className="text-[12px] text-neutral-400 font-normal ml-1">/百元</span>
                   </div>
-                  <div className="text-[11px] text-neutral-500 font-medium mt-0.5">
+                  <div className="text-[13px] text-neutral-500 font-medium mt-0.5">
                     每月花费 {formatMoney(monthlyCogs, baseCurr)}
                   </div>
                 </div>
@@ -706,9 +706,9 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                   </div>
                   <div className="text-base font-mono font-black text-neutral-900">
                     {opexPct} 块钱
-                    <span className="text-[10px] text-neutral-400 font-normal ml-1">/百元</span>
+                    <span className="text-[12px] text-neutral-400 font-normal ml-1">/百元</span>
                   </div>
-                  <div className="text-[11px] text-neutral-500 font-medium mt-0.5">
+                  <div className="text-[13px] text-neutral-500 font-medium mt-0.5">
                     每月花费 {formatMoney(monthlyOpex, baseCurr)}
                   </div>
                 </div>
@@ -720,9 +720,9 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                   </div>
                   <div className="text-base font-mono font-black text-neutral-900">
                     {taxOtherPct} 块钱
-                    <span className="text-[10px] text-neutral-400 font-normal ml-1">/百元</span>
+                    <span className="text-[12px] text-neutral-400 font-normal ml-1">/百元</span>
                   </div>
-                  <div className="text-[11px] text-neutral-500 font-medium mt-0.5">
+                  <div className="text-[13px] text-neutral-500 font-medium mt-0.5">
                     合规与日常消耗
                   </div>
                 </div>
@@ -734,9 +734,9 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                   </div>
                   <div className="text-base font-mono font-black text-emerald-700">
                     {netPct} 块钱
-                    <span className="text-[10px] text-neutral-400 font-normal ml-1">/百元</span>
+                    <span className="text-[12px] text-neutral-400 font-normal ml-1">/百元</span>
                   </div>
-                  <div className="text-[11px] text-neutral-500 font-medium mt-0.5">
+                  <div className="text-[13px] text-neutral-500 font-medium mt-0.5">
                     每月净落袋 {formatMoney(netProfit, baseCurr)}
                   </div>
                 </div>
@@ -763,7 +763,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
               <div className="p-5 rounded-2xl bg-neutral-50 border-2 border-neutral-200 flex flex-col justify-between space-y-3">
                 <div className="flex items-start justify-between">
                   <div>
-                    <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-neutral-400 mb-0.5">
+                    <div className="text-[12px] font-mono font-bold uppercase tracking-wider text-neutral-400 mb-0.5">
                       QUESTION 01
                     </div>
                     <h4 className="text-sm font-bold text-neutral-900">
@@ -797,7 +797,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
               <div className="p-5 rounded-2xl bg-neutral-50 border-2 border-neutral-200 flex flex-col justify-between space-y-3">
                 <div className="flex items-start justify-between">
                   <div>
-                    <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-neutral-400 mb-0.5">
+                    <div className="text-[12px] font-mono font-bold uppercase tracking-wider text-neutral-400 mb-0.5">
                       QUESTION 02
                     </div>
                     <h4 className="text-sm font-bold text-neutral-900">
@@ -832,7 +832,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
               <div className="p-5 rounded-2xl bg-neutral-50 border-2 border-neutral-200 flex flex-col justify-between space-y-3">
                 <div className="flex items-start justify-between">
                   <div>
-                    <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-neutral-400 mb-0.5">
+                    <div className="text-[12px] font-mono font-bold uppercase tracking-wider text-neutral-400 mb-0.5">
                       QUESTION 03
                     </div>
                     <h4 className="text-sm font-bold text-neutral-900">
@@ -867,7 +867,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
               <div className="p-5 rounded-2xl bg-neutral-50 border-2 border-neutral-200 flex flex-col justify-between space-y-3">
                 <div className="flex items-start justify-between">
                   <div>
-                    <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-neutral-400 mb-0.5">
+                    <div className="text-[12px] font-mono font-bold uppercase tracking-wider text-neutral-400 mb-0.5">
                       QUESTION 04
                     </div>
                     <h4 className="text-sm font-bold text-neutral-900">
@@ -930,7 +930,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                 {aiCustomDiagnosis.potentialGrowthAreas && (
                   <div className="pt-2 flex flex-wrap gap-2">
                     {aiCustomDiagnosis.potentialGrowthAreas.map((g, idx) => (
-                      <span key={`growth-${idx}-${g}`} className="bg-amber-900/60 text-amber-200 px-2.5 py-0.5 rounded-lg border border-amber-700/50 text-[11px] font-medium">
+                      <span key={`growth-${idx}-${g}`} className="bg-amber-900/60 text-amber-200 px-2.5 py-0.5 rounded-lg border border-amber-700/50 text-[13px] font-medium">
                         🚀 {g}
                       </span>
                     ))}
@@ -961,7 +961,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                   >
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border ${priorityStyle.className}`}>
+                        <span className={`text-[12px] font-bold px-2 py-0.5 rounded-lg border ${priorityStyle.className}`}>
                           {language === 'en' ? priorityStyle.label[1] : priorityStyle.label[0]}
                         </span>
                         <input
@@ -979,7 +979,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                       </p>
                     </div>
 
-                    <div className="pt-2 text-[11px] font-bold flex items-center gap-1 text-neutral-400">
+                    <div className="pt-2 text-[13px] font-bold flex items-center gap-1 text-neutral-400">
                       {isDone ? t('✅ 已完成落地', '✅ Completed') : t('点击标记为已完成', 'Click to mark as done')}
                     </div>
                   </div>
@@ -1019,10 +1019,10 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
             <div className="lg:col-span-8 bg-white border-2 border-neutral-200 rounded-3xl p-6 sm:p-8 shadow-xs flex flex-col justify-between space-y-4">
               <div>
                 <div className="flex items-center space-x-2 mb-3">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-teal-700 bg-teal-50 px-3 py-1 rounded-full border border-teal-100">
+                  <span className="text-[12px] font-bold uppercase tracking-wider text-teal-700 bg-teal-50 px-3 py-1 rounded-full border border-teal-100">
                     工场服事标准体检评估报告
                   </span>
-                  <span className="text-[10px] text-neutral-400 font-medium">
+                  <span className="text-[12px] text-neutral-400 font-medium">
                     生成时间: {new Date(report.createdAt).toLocaleDateString()}
                   </span>
                 </div>
@@ -1238,7 +1238,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                         y={y}
                         textAnchor="middle"
                         dominantBaseline="central"
-                        className="text-[9px] font-bold fill-neutral-700"
+                        className="text-[11px] font-bold fill-neutral-700"
                       >
                         {dim.dimensionPlain || dim.dimension}
                       </text>
@@ -1282,7 +1282,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                         className="bg-teal-600 rounded-full transition-all"
                       ></div>
                     </div>
-                    <div className="flex items-center justify-between text-[11px] text-neutral-500">
+                    <div className="flex items-center justify-between text-[13px] text-neutral-500">
                       <span>{dim.dimension}</span>
                       <span>行业标杆: {dim.benchmark}/100</span>
                     </div>
@@ -1297,35 +1297,35 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
             <h3 className="text-base font-black text-neutral-900">标准化财务指标核算</h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="p-4 rounded-2xl bg-neutral-50 border border-neutral-200">
-                <div className="text-[10px] text-neutral-400 font-mono font-bold uppercase">月真实毛利率</div>
+                <div className="text-[12px] text-neutral-400 font-mono font-bold uppercase">月真实毛利率</div>
                 <div className="text-xl font-mono font-black text-neutral-900 mt-1">
                   {grossMarginPercent}%
                 </div>
-                <div className="text-[11px] text-neutral-500 mt-0.5">月毛利 {formatMoney(grossProfit, baseCurr)}</div>
+                <div className="text-[13px] text-neutral-500 mt-0.5">月毛利 {formatMoney(grossProfit, baseCurr)}</div>
               </div>
 
               <div className="p-4 rounded-2xl bg-neutral-50 border border-neutral-200">
-                <div className="text-[10px] text-neutral-400 font-mono font-bold uppercase">月净利润率</div>
+                <div className="text-[12px] text-neutral-400 font-mono font-bold uppercase">月净利润率</div>
                 <div className="text-xl font-mono font-black text-neutral-900 mt-1">
                   {netProfitMarginPercent}%
                 </div>
-                <div className="text-[11px] text-neutral-500 mt-0.5">净利润 {formatMoney(netProfit, baseCurr)}</div>
+                <div className="text-[13px] text-neutral-500 mt-0.5">净利润 {formatMoney(netProfit, baseCurr)}</div>
               </div>
 
               <div className="p-4 rounded-2xl bg-neutral-50 border border-neutral-200">
-                <div className="text-[10px] text-neutral-400 font-mono font-bold uppercase">固定开支占比 (OPEX)</div>
+                <div className="text-[12px] text-neutral-400 font-mono font-bold uppercase">固定开支占比 (OPEX)</div>
                 <div className="text-xl font-mono font-black text-neutral-900 mt-1">
                   {opexRatioPercent}%
                 </div>
-                <div className="text-[11px] text-neutral-500 mt-0.5">固定开销 {formatMoney(monthlyOpex, baseCurr)}</div>
+                <div className="text-[13px] text-neutral-500 mt-0.5">固定开销 {formatMoney(monthlyOpex, baseCurr)}</div>
               </div>
 
               <div className="p-4 rounded-2xl bg-neutral-50 border border-neutral-200">
-                <div className="text-[10px] text-neutral-400 font-mono font-bold uppercase">备用金支撑月数</div>
+                <div className="text-[12px] text-neutral-400 font-mono font-bold uppercase">备用金支撑月数</div>
                 <div className="text-xl font-mono font-black text-neutral-900 mt-1">
                   {cashRunwayMonths} 个月
                 </div>
-                <div className="text-[11px] text-neutral-500 mt-0.5">安全底线为 ≥ 3.0 月</div>
+                <div className="text-[13px] text-neutral-500 mt-0.5">安全底线为 ≥ 3.0 月</div>
               </div>
             </div>
           </div>

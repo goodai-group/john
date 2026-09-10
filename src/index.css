@@ -3,6 +3,20 @@
 /* 新设计稿的暖米白页面底色（区别于默认 neutral-50 的冷灰调），供 bg-warm 类使用 */
 @theme {
   --color-warm: #f7f3ec;
+
+  /* 字号整体上调一档：原版 text-xs/sm 系列在正文与卡片里显得又小又密。
+     只覆盖字号 token（不动 spacing/尺寸 scale），全站 text-xs~text-xl 类
+     自动跟着变大，不需要逐文件改 className。 */
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.45;
+  --text-sm: 0.9375rem;
+  --text-sm--line-height: 1.5;
+  --text-base: 1.0625rem;
+  --text-base--line-height: 1.6;
+  --text-lg: 1.1875rem;
+  --text-lg--line-height: 1.6;
+  --text-xl: 1.375rem;
+  --text-xl--line-height: 1.5;
 }
 
 @layer base {

@@ -208,7 +208,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       ? '登录账号'
                       : 'Sign in'}
             </h2>
-            <p className="text-[11px] text-slate-500 font-medium leading-snug">
+            <p className="text-[13px] text-slate-500 font-medium leading-snug">
               {mode === 'newpass'
                 ? zh
                   ? '您正在通过邮件链接重置密码，输入新密码后即可用新密码登录'
@@ -307,7 +307,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
             <div className="flex items-center gap-3 my-4">
               <div className="h-px flex-1 bg-slate-200" />
-              <span className="text-[11px] text-slate-400 font-bold">
+              <span className="text-[13px] text-slate-400 font-bold">
                 {zh ? '或使用邮箱登录' : 'or with email'}
               </span>
               <div className="h-px flex-1 bg-slate-200" />
@@ -385,7 +385,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 type="button"
                 onClick={() => switchMode('forgot')}
                 disabled={submitting}
-                className="text-[11px] font-semibold text-teal-600 hover:text-teal-800 cursor-pointer"
+                className="text-[13px] font-semibold text-teal-600 hover:text-teal-800 cursor-pointer"
               >
                 {zh ? '忘记密码？' : 'Forgot password?'}
               </button>
@@ -417,7 +417,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         </form>
 
         {/* 隐私与安全说明 */}
-        <div className="flex items-start gap-1.5 mt-4 pt-3 border-t border-slate-100 text-[10px] text-slate-400">
+        <div className="flex items-start gap-1.5 mt-4 pt-3 border-t border-slate-100 text-[12px] text-slate-400">
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
           <span>
             {zh

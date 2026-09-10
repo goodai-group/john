@@ -58,7 +58,7 @@ export const LearningCenterPage: React.FC<LearningCenterPageProps> = ({ language
             <div className="text-3xl font-black text-teal-600">
               {watchedCount}/{totalCount}
             </div>
-            <div className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
+            <div className="text-[13px] text-slate-400 font-bold uppercase tracking-wider">
               {language === 'zh' ? '已学完' : 'Completed'}
             </div>
           </div>
@@ -71,7 +71,7 @@ export const LearningCenterPage: React.FC<LearningCenterPageProps> = ({ language
               style={{ width: `${progressPercent}%` }}
             />
           </div>
-          <p className="text-[11px] text-slate-400 font-semibold">
+          <p className="text-[13px] text-slate-400 font-semibold">
             {language === 'zh' ? `学习进度 ${progressPercent}%` : `Progress ${progressPercent}%`}
           </p>
         </div>
@@ -110,10 +110,10 @@ export const LearningCenterPage: React.FC<LearningCenterPageProps> = ({ language
               }`}
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-100 text-teal-700">
+                <span className="text-[12px] font-bold px-2 py-0.5 rounded-full bg-teal-100 text-teal-700">
                   {video.category}
                 </span>
-                <span className="inline-flex items-center gap-1 text-[10px] text-slate-400 font-semibold">
+                <span className="inline-flex items-center gap-1 text-[12px] text-slate-400 font-semibold">
                   {video.source === 'youtube' ? (
                     <Youtube className="w-3 h-3 text-rose-500" />
                   ) : (
@@ -128,10 +128,10 @@ export const LearningCenterPage: React.FC<LearningCenterPageProps> = ({ language
               </div>
 
               <h3 className="text-sm font-black text-slate-900 leading-snug">{title}</h3>
-              <p className="text-[11px] text-slate-500 leading-relaxed line-clamp-3">{description}</p>
+              <p className="text-[13px] text-slate-500 leading-relaxed line-clamp-3">{description}</p>
 
               <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                <span className="inline-flex items-center gap-1 text-[11px] text-slate-400 font-semibold">
+                <span className="inline-flex items-center gap-1 text-[13px] text-slate-400 font-semibold">
                   <Clock className="w-3.5 h-3.5" />
                   {video.durationMinutes} {language === 'zh' ? '分钟' : 'min'}
                 </span>
@@ -140,7 +140,7 @@ export const LearningCenterPage: React.FC<LearningCenterPageProps> = ({ language
                   <button
                     type="button"
                     onClick={() => handlePlay(video.id, video.url)}
-                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-[11px] font-bold transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-[13px] font-bold transition-colors cursor-pointer"
                   >
                     <PlayCircle className="w-3.5 h-3.5" />
                     {language === 'zh' ? '观看' : 'Watch'}

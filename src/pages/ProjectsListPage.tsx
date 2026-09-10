@@ -101,7 +101,7 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
       <div className="bg-white rounded-3xl p-6 sm:p-7 border-2 border-neutral-200 shadow-xs flex flex-wrap items-center justify-between gap-4">
         <div>
           <div className="flex items-center space-x-2 mb-1">
-            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-100">
+            <span className="text-[12px] font-mono font-bold uppercase tracking-wider text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-100">
               PROJECTS & CLOUD HUB
             </span>
           </div>
@@ -150,12 +150,12 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
                   : t('未登录账号（数据暂存本地浏览器）', 'Not signed in (data stored locally only)')}
               </span>
               {currentUser && (
-                <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold border border-emerald-200">
+                <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[12px] font-bold border border-emerald-200">
                   {t('下次登录随时找回', 'Recoverable on next sign-in')}
                 </span>
               )}
             </div>
-            <p className="text-[11px] opacity-80 mt-0.5">
+            <p className="text-[13px] opacity-80 mt-0.5">
               {currentUser
                 ? t('您的所有商业自测表单与 5 维雷达体检报告已与您的账号自动双向同步。', 'All your assessment forms and 5-dimension radar reports are auto-synced to your account.')
                 : t('注册账号（支持 Google 或邮箱密码），将当前报告永久关联至您的专属云端空间，换手机或电脑随时查看。', 'Sign up (Google or email) to permanently link this report to your cloud space and access it from any device.')}
@@ -226,16 +226,16 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
                     <div>
                       <div className="flex items-center space-x-1.5 mb-1.5">
                         {proj.isSensitiveRegion ? (
-                          <span className="text-[10px] bg-amber-50 text-amber-800 font-bold px-2.5 py-0.5 rounded-full border border-amber-200 flex items-center space-x-1">
+                          <span className="text-[12px] bg-amber-50 text-amber-800 font-bold px-2.5 py-0.5 rounded-full border border-amber-200 flex items-center space-x-1">
                             <ShieldAlert className="w-3 h-3 text-amber-600" />
                             <span>{t('敏感脱敏', 'Sensitive/Redacted')}</span>
                           </span>
                         ) : (
-                          <span className="text-[10px] bg-teal-50 text-teal-700 font-bold px-2.5 py-0.5 rounded-full border border-teal-100">
+                          <span className="text-[12px] bg-teal-50 text-teal-700 font-bold px-2.5 py-0.5 rounded-full border border-teal-100">
                             {t('常规模式', 'Standard Mode')}
                           </span>
                         )}
-                        <span className="text-[10px] text-neutral-400 font-medium">
+                        <span className="text-[12px] text-neutral-400 font-medium">
                           {new Date(proj.updatedAt).toLocaleDateString()}
                         </span>
                       </div>
@@ -253,7 +253,7 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
                         <div className="text-xl font-mono font-black leading-none">
                           {latestReport.totalScore}
                         </div>
-                        <span className="text-[9px] font-bold text-amber-400 block mt-1 tracking-wider uppercase">
+                        <span className="text-[11px] font-bold text-amber-400 block mt-1 tracking-wider uppercase">
                           {latestReport.tier}
                         </span>
                       </div>
@@ -266,13 +266,13 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
 
                   <div className="grid grid-cols-2 gap-2 text-xs text-neutral-700 bg-neutral-50 p-3 rounded-2xl border border-neutral-100">
                     <div>
-                      <span className="text-neutral-400 block text-[10px] font-bold uppercase mb-0.5">{t('月均总流水', 'Avg. Monthly Revenue')}:</span>
+                      <span className="text-neutral-400 block text-[12px] font-bold uppercase mb-0.5">{t('月均总流水', 'Avg. Monthly Revenue')}:</span>
                       <span className="font-mono font-bold text-neutral-900">
                         {formatMoney(proj.monthlyRevenue.amount, proj.monthlyRevenue.currency)}
                       </span>
                     </div>
                     <div>
-                      <span className="text-neutral-400 block text-[10px] font-bold uppercase mb-0.5">{t('凭证方式', 'Proof Type')}:</span>
+                      <span className="text-neutral-400 block text-[12px] font-bold uppercase mb-0.5">{t('凭证方式', 'Proof Type')}:</span>
                       <span className="font-bold text-neutral-800">
                         {proofTypeLabel(proj.proofType, language)}
                       </span>
@@ -292,7 +292,7 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
                       {proj.collaborators.length > 0
                         ? t(`协作者 ${proj.collaborators.length} 人`, `${proj.collaborators.length} Collaborator${proj.collaborators.length > 1 ? 's' : ''}`)
                         : t('添加协作者', 'Add Collaborator')}
-                      <span className="text-[10px] text-neutral-400 font-medium">
+                      <span className="text-[12px] text-neutral-400 font-medium">
                         {collabOpenId === proj.id ? t('收起', 'Collapse') : t('管理', 'Manage')}
                       </span>
                     </button>
@@ -311,7 +311,7 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
                                   <span className="font-medium text-slate-800 text-xs truncate">
                                     {c.email}
                                   </span>
-                                  <span className="text-[10px] bg-teal-100 text-teal-700 px-1.5 py-0.5 rounded shrink-0">
+                                  <span className="text-[12px] bg-teal-100 text-teal-700 px-1.5 py-0.5 rounded shrink-0">
                                     {t('协作者 · 可编辑', 'Collaborator · Editor')}
                                   </span>
                                 </div>
@@ -326,7 +326,7 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
                             ))}
                           </div>
                         ) : (
-                          <p className="text-[11px] text-teal-700 font-medium">
+                          <p className="text-[13px] text-teal-700 font-medium">
                             {t('暂无协作者。可邀请配偶、当地同工一起核对数据。', 'No collaborators yet. Invite a spouse or local teammate to review the data together.')}
                           </p>
                         )}
@@ -354,7 +354,7 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
                           </button>
                         </div>
                         {collabError && (
-                          <p className="text-[11px] text-rose-600 font-semibold">⚠️ {collabError}</p>
+                          <p className="text-[13px] text-rose-600 font-semibold">⚠️ {collabError}</p>
                         )}
                       </div>
                     )}

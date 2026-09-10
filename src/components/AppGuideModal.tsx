@@ -60,10 +60,10 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-100">
+              <span className="text-[12px] font-mono font-bold uppercase tracking-wider text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-100">
                 USER GUIDE & APP OVERVIEW
               </span>
-              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+              <span className="text-[12px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
                 零基础大白话版
               </span>
             </div>
@@ -142,7 +142,7 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
                     <CheckCircle2 className="w-4 h-4" />
                   </div>
                   <h4 className="font-bold text-emerald-950 mb-1">公开透明 · 零门槛</h4>
-                  <p className="text-emerald-800 text-[11px] leading-relaxed">
+                  <p className="text-emerald-800 text-[13px] leading-relaxed">
                     没有复杂的财务术语，所有评分规则、安全水位与 5 道否决红线完全公开清晰。
                   </p>
                 </div>
@@ -152,7 +152,7 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
                     <Zap className="w-4 h-4" />
                   </div>
                   <h4 className="font-bold text-amber-950 mb-1">1秒套用工场真实范本</h4>
-                  <p className="text-amber-800 text-[11px] leading-relaxed">
+                  <p className="text-amber-800 text-[13px] leading-relaxed">
                     内置医疗门诊、语言辅导、技能培训等真实工场模型，无需手动算数字即可直接自测。
                   </p>
                 </div>
@@ -162,7 +162,7 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
                     <ShieldCheck className="w-4 h-4" />
                   </div>
                   <h4 className="font-bold text-sky-950 mb-1">工场安全与隐私保护</h4>
-                  <p className="text-sky-800 text-[11px] leading-relaxed">
+                  <p className="text-sky-800 text-[13px] leading-relaxed">
                     支持脱敏安全模式；随时可在「我的项目」中一键彻底粉碎删除，或安全保存。
                   </p>
                 </div>
@@ -179,7 +179,7 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
                 </div>
                 <div className="flex-1">
                   <h4 className="font-bold text-neutral-900 text-xs">第 1 步：选范本或随手说（3 种轻松方式任选）</h4>
-                  <p className="text-neutral-600 text-[11px] mt-1 leading-relaxed">
+                  <p className="text-neutral-600 text-[13px] mt-1 leading-relaxed">
                     • <strong>方式 A（最推荐）</strong>：点击【常用服事范本】，直接载入医疗诊所、语言学校、技能培训的真实数字；<br />
                     • <strong>方式 B（口语随手写）</strong>：在【AI 随手写】里输入大白话（如“我们在工场办门诊月进账3万8，进药1万5，房租3500”），AI 自动识别；<br />
                     • <strong>方式 C</strong>：手动填几笔核心收支。
@@ -193,7 +193,7 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
                 </div>
                 <div className="flex-1">
                   <h4 className="font-bold text-neutral-900 text-xs">第 2 步：看实时晴雨表（1 秒测算出存活跑道）</h4>
-                  <p className="text-neutral-600 text-[11px] mt-1 leading-relaxed">
+                  <p className="text-neutral-600 text-[13px] mt-1 leading-relaxed">
                     • <strong>救命现金电池</strong>：显示如果一分钱不进账，手头的应急备用金能维持几个月房租同工；<br />
                     • <strong>每 100 元进账去向</strong>：进药教材耗材占几成、房租同工占几成、结余留存几成；<br />
                     • <strong>综合评级预估</strong>：AA 级（稳健良性）、BB 级（有风险需改善）。
@@ -207,7 +207,7 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
                 </div>
                 <div className="flex-1">
                   <h4 className="font-bold text-neutral-900 text-xs">第 3 步：生成体检报告与沙盒试算</h4>
-                  <p className="text-neutral-600 text-[11px] mt-1 leading-relaxed">
+                  <p className="text-neutral-600 text-[13px] mt-1 leading-relaxed">
                     • 查看 5 维度健康雷达图与 5 道否决安全红线筛查结果；<br />
                     • 在沙盒试算器中模拟“如果药品降低采购价”、“如果多存备用金”对安全跑道的影响。
                   </p>
@@ -219,47 +219,47 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
           {/* TAB 3: GLOSSARY */}
           {activeTab === 'glossary' && (
             <div className="space-y-2.5">
-              <p className="text-[11px] text-neutral-500 font-medium">
+              <p className="text-[13px] text-neutral-500 font-medium">
                 财务专业名词太绕？这里全换成工场大白话：
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <div className="p-3 rounded-2xl bg-neutral-50 border border-neutral-200">
                   <div className="flex items-center gap-1.5 font-bold text-neutral-900 mb-1">
-                    <span className="px-1.5 py-0.5 rounded bg-teal-100 text-teal-700 text-[10px]">门诊/学费进账</span>
+                    <span className="px-1.5 py-0.5 rounded bg-teal-100 text-teal-700 text-[12px]">门诊/学费进账</span>
                     <span>= 当月看诊费与服务收入</span>
                   </div>
-                  <p className="text-neutral-600 text-[11px]">
+                  <p className="text-neutral-600 text-[13px]">
                     门诊挂号、平价药品售出、学生辅导学费等来自服务对象的实际流水进账。
                   </p>
                 </div>
 
                 <div className="p-3 rounded-2xl bg-neutral-50 border border-neutral-200">
                   <div className="flex items-center gap-1.5 font-bold text-neutral-900 mb-1">
-                    <span className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 text-[10px]">采购直接耗材</span>
+                    <span className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 text-[12px]">采购直接耗材</span>
                     <span>= 药品 / 教材 / 耗材进货价</span>
                   </div>
-                  <p className="text-neutral-600 text-[11px]">
+                  <p className="text-neutral-600 text-[13px]">
                     采购常用药品、针剂注射耗材、急救包、教材教具与实训耗材的直接进价花费。
                   </p>
                 </div>
 
                 <div className="p-3 rounded-2xl bg-neutral-50 border border-neutral-200">
                   <div className="flex items-center gap-1.5 font-bold text-neutral-900 mb-1">
-                    <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-[10px]">固定运转开销</span>
+                    <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-[12px]">固定运转开销</span>
                     <span>= 房租 + 同工补贴 + 水电</span>
                   </div>
-                  <p className="text-neutral-600 text-[11px]">
+                  <p className="text-neutral-600 text-[13px]">
                     不管今天有没有病人或学生，每个月都必须支出的诊所房租、本地助理护士/老师薪资与水电网费。
                   </p>
                 </div>
 
                 <div className="p-3 rounded-2xl bg-neutral-50 border border-neutral-200">
                   <div className="flex items-center gap-1.5 font-bold text-neutral-900 mb-1">
-                    <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 text-[10px]">应急水库与跑道</span>
+                    <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 text-[12px]">应急水库与跑道</span>
                     <span>= 手头活钱与能撑几个月</span>
                   </div>
-                  <p className="text-neutral-600 text-[11px]">
+                  <p className="text-neutral-600 text-[13px]">
                     卡里或手头随时能动的急用备用金。如果遇到动荡或停业，这笔钱能保障服事维持运转几个月。
                   </p>
                 </div>
@@ -272,21 +272,21 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
             <div className="space-y-3">
               <div className="p-3.5 rounded-2xl bg-neutral-50 border border-neutral-200 space-y-1">
                 <h4 className="font-bold text-neutral-900 text-xs">Q1：我只有手写记账本或者微信收款码截图，会被扣分吗？</h4>
-                <p className="text-neutral-600 text-[11px] leading-relaxed">
+                <p className="text-neutral-600 text-[13px] leading-relaxed">
                   <strong>绝对不会！</strong> 本系统的核心原则是「凭证平等」。无论是正规银行盖章流水、手写日记本、还是完全无凭证手动填写 14 项数字，打分引擎基于同一套数学模型计算，不以凭证形式为由扣减任何分数。
                 </p>
               </div>
 
               <div className="p-3.5 rounded-2xl bg-neutral-50 border border-neutral-200 space-y-1">
                 <h4 className="font-bold text-neutral-900 text-xs">Q2：如果有些月份流水断了或者记不清怎么办？</h4>
-                <p className="text-neutral-600 text-[11px] leading-relaxed">
+                <p className="text-neutral-600 text-[13px] leading-relaxed">
                   系统提供【AI 断点流水自动均摊补齐】功能，会自动根据前后相邻月份的平均值进行智能平滑估算，无需凭空捏造。
                 </p>
               </div>
 
               <div className="p-3.5 rounded-2xl bg-neutral-50 border border-neutral-200 space-y-1">
                 <h4 className="font-bold text-neutral-900 text-xs">Q3：提交自测会产生费用吗？</h4>
-                <p className="text-neutral-600 text-[11px] leading-relaxed">
+                <p className="text-neutral-600 text-[13px] leading-relaxed">
                   本自测工具 100% 免费开放，零门槛、零中介费、零隐形收费。
                 </p>
               </div>

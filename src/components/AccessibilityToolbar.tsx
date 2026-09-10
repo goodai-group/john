@@ -202,7 +202,7 @@ export const AccessibilityToolbar: React.FC<AccessibilityProps> = ({
             {voiceTranscript && (
               <div className="flex items-center justify-between p-2 rounded bg-white border border-sky-200">
                 <span className="text-xs font-medium text-slate-800">识别结果: {voiceTranscript}</span>
-                <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-0.5">
+                <span className="text-[12px] text-emerald-600 font-bold flex items-center gap-0.5">
                   <Check className="w-3 h-3" /> 可在表单各输入框右侧直接使用麦克风输入
                 </span>
               </div>
