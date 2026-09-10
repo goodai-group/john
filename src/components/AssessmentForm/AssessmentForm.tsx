@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import {
   BusinessFormData,
+  BusinessStage,
   CurrencyCode,
   Language,
   MoneyField,
@@ -49,6 +50,7 @@ import {
   InferredStructure
 } from '../../lib/inferBusinessStructure';
 import { calculateBreakEvenRevenue } from '../../lib/breakEvenCalculator';
+import { calculatePaybackPeriod, calculateRequiredRevenueForTarget } from '../../lib/paybackCalculator';
 import { detectFormAnomalies } from '../../lib/anomalyDetection';
 
 /** 行业枚举值集合，用于在 AI 返回值与可选项之间做映射 */
@@ -88,6 +90,10 @@ const DEFAULT_FORM_DATA: BusinessFormData = {
   projectName: '',
   industry: 'food_beverage',
   businessType: '餐饮与熟食',
+  businessStage: 'has_revenue',
+  initialInvestmentEstimate: { amount: 0, currency: 'USD' },
+  targetPaybackMonths: 12,
+  anomalyOverrides: {},
   isSensitiveRegion: false,
   regionCountry: '肯尼亚 (Kenya)',
   regionDetail: '',
@@ -217,7 +223,78 @@ export const AssessmentForm: React.FC<FormProps> = ({
   ]);
 
   // —— 第2点：AI 自动识别用户填错的数值及类目并提醒（本地规则化，仅提醒不阻断）——
-  const anomalyWarnings = React.useMemo(() => detectFormAnomalies(formData), [formData]);
+  const rawAnomalyWarnings = React.useMemo(() => detectFormAnomalies(formData), [formData]);
+  // 第4点"特殊理由"：用户已标注例外说明的提醒仍保留在列表里，但会附带其理由，不再当作待核对项
+  const anomalyWarnings = rawAnomalyWarnings.filter((w) => !formData.anomalyOverrides?.[w.field]);
+  const overriddenAnomalyWarnings = rawAnomalyWarnings.filter((w) => formData.anomalyOverrides?.[w.field]);
+
+  // —— 第5点：回本时间（收回初始投资所需时间），与盈亏平衡点是两条独立时间线，避免混为一谈 ——
+  const payback = React.useMemo(() => calculatePaybackPeriod(formData), [
+    formData.monthlyRevenue,
+    formData.monthlyRealOperatingRevenue,
+    formData.cogsCost,
+    formData.dynamicCogsItems,
+    formData.rentCost,
+    formData.laborCost,
+    formData.utilityCost,
+    formData.otherOpex,
+    formData.dynamicOpexItems,
+    formData.taxCost,
+    formData.existingDebtMonthlyPayment,
+    formData.companyRegistrationCost,
+    formData.companyRegistrationAmortizationMonths,
+    formData.visaFeeCost,
+    formData.visaFeeAmortizationMonths,
+    formData.equipmentDepreciationCost,
+    formData.initialInvestmentEstimate,
+    formData.baseCurrency,
+    formData.customCurrencyCode,
+    formData.hasMultipleRates,
+    formData.customExchangeRateValue
+  ]);
+
+  // —— 第6点：按用户设定的目标回本时间反推所需月/日收入 ——
+  const reverseTarget = React.useMemo(
+    () => calculateRequiredRevenueForTarget(formData, formData.targetPaybackMonths || 12),
+    [
+      formData.targetPaybackMonths,
+      formData.cogsCost,
+      formData.dynamicCogsItems,
+      formData.rentCost,
+      formData.laborCost,
+      formData.utilityCost,
+      formData.otherOpex,
+      formData.dynamicOpexItems,
+      formData.taxCost,
+      formData.existingDebtMonthlyPayment,
+      formData.companyRegistrationCost,
+      formData.companyRegistrationAmortizationMonths,
+      formData.visaFeeCost,
+      formData.visaFeeAmortizationMonths,
+      formData.equipmentDepreciationCost,
+      formData.initialInvestmentEstimate,
+      formData.baseCurrency,
+      formData.customCurrencyCode,
+      formData.hasMultipleRates,
+      formData.customExchangeRateValue
+    ]
+  );
+
+  const setAnomalyOverride = (field: string, reason: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      anomalyOverrides: { ...(prev.anomalyOverrides || {}), [field]: reason },
+      updatedAt: new Date().toISOString()
+    }));
+  };
+
+  const clearAnomalyOverride = (field: string) => {
+    setFormData((prev) => {
+      const next = { ...(prev.anomalyOverrides || {}) };
+      delete next[field];
+      return { ...prev, anomalyOverrides: next, updatedAt: new Date().toISOString() };
+    });
+  };
 
   // Auto-save local draft on any change
   useEffect(() => {
@@ -585,6 +662,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
       | 'equipmentDepreciationCost'
       | 'existingDebtMonthlyPayment'
       | 'cashAndLiquidAssets'
+      | 'initialInvestmentEstimate'
       | 'inventoryValue',
     amount: number,
     currency?: CurrencyCode
@@ -841,6 +919,42 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   </span>
                 )}
               </div>
+            </div>
+
+            {/* 所处阶段：决定后面是「填真实数字体检」还是「先估算未来」 */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
+                <Briefcase className="w-3.5 h-3.5 text-teal-600" />
+                <span>目前所处阶段</span>
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {(
+                  [
+                    { value: 'not_started', label: '尚未启动', desc: '还没开业，先估算成本和要赚多少' },
+                    { value: 'has_prototype', label: '已有原型', desc: '小范围试过，还没稳定营收' },
+                    { value: 'has_revenue', label: '已有营收', desc: '正在经营，想体检真实数字' }
+                  ] as { value: BusinessStage; label: string; desc: string }[]
+                ).map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => updateField('businessStage', opt.value)}
+                    className={`text-left p-3 rounded-xl border-2 transition-colors cursor-pointer ${
+                      formData.businessStage === opt.value
+                        ? 'border-teal-600 bg-teal-50'
+                        : 'border-slate-200 bg-white hover:border-teal-300'
+                    }`}
+                  >
+                    <span className="block text-xs font-black text-slate-900">{opt.label}</span>
+                    <span className="block text-[12px] text-slate-500 mt-0.5">{opt.desc}</span>
+                  </button>
+                ))}
+              </div>
+              {formData.businessStage !== 'has_revenue' && (
+                <p className="text-[12px] text-amber-700 font-medium mt-1.5">
+                  你还没有真实营收，下一步的数字都当作「预估/假设」来填即可，系统会明确标注这是假设。
+                </p>
+              )}
             </div>
 
             {/* AI 推断结果摘要 */}
@@ -1466,6 +1580,29 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       className="w-full p-2 border border-slate-300 rounded-lg font-semibold text-emerald-800"
                     />
                   </div>
+
+                  {/* 第5/6点：初始投资估算——回本时间与反推收入的基数 */}
+                  <div className="p-3.5 rounded-xl border border-amber-200 bg-amber-50/40">
+                    <div className="flex justify-between mb-1">
+                      <label className="font-bold text-slate-800 flex items-center gap-1">
+                        <Target className="w-3.5 h-3.5 text-amber-600" />
+                        初始投资估算（装修/设备/首批进货等一次性投入）
+                      </label>
+                      <span className="text-[13px] text-slate-400">{formData.initialInvestmentEstimate.currency}</span>
+                    </div>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      placeholder="例如：装修+设备+首批进货一次性总投入"
+                      value={formData.initialInvestmentEstimate.amount || ''}
+                      onChange={(e) => updateMoney('initialInvestmentEstimate', Number(e.target.value))}
+                      className="w-full p-2 border border-amber-300 rounded-lg font-semibold text-amber-900"
+                    />
+                    <p className="text-[12px] text-amber-700 mt-1">
+                      填了这一项，下方才能算出「回本时间」与「按目标回本时间反推所需收入」。
+                    </p>
+                  </div>
                 </div>
 
                 {/* AI 推断的动态运营开支明细 */}
@@ -1652,10 +1789,98 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       }`}
                     >
                       <span className="font-bold shrink-0">{w.severity === 'error' ? '⚠️' : '💡'}</span>
-                      <span>{language === 'en' ? w.messageEn : w.messageZh}</span>
+                      <span className="flex-1">{language === 'en' ? w.messageEn : w.messageZh}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const reason = window.prompt('这个数值确实特殊？简单说明原因（AI 只记录，不做判断）：');
+                          if (reason && reason.trim()) setAnomalyOverride(w.field, reason.trim());
+                        }}
+                        className="text-[12px] shrink-0 px-2 py-0.5 rounded bg-white/70 border border-current font-bold hover:bg-white cursor-pointer"
+                      >
+                        标注特殊理由
+                      </button>
                     </li>
                   ))}
                 </ul>
+              </div>
+            )}
+
+            {/* 第4点：已标注特殊理由的提醒——不再当作待核对项，但保留记录，AI 只记录不判断 */}
+            {overriddenAnomalyWarnings.length > 0 && (
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
+                <div className="flex items-center gap-2 font-black text-slate-700">
+                  <CheckCircle2 className="w-4 h-4 text-slate-500" />
+                  <span>{overriddenAnomalyWarnings.length} 项已标注特殊理由（仅记录，不影响评分判断）</span>
+                </div>
+                <ul className="space-y-1.5">
+                  {overriddenAnomalyWarnings.map((w, idx) => (
+                    <li key={`${w.field}-ov-${idx}`} className="p-2 rounded-lg border border-slate-200 bg-white text-slate-600 flex items-start gap-1.5">
+                      <span className="flex-1">
+                        <span className="block text-slate-500">{language === 'en' ? w.messageEn : w.messageZh}</span>
+                        <span className="block mt-0.5 font-semibold text-slate-700">理由：{formData.anomalyOverrides?.[w.field]}</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => clearAnomalyOverride(w.field)}
+                        className="text-[12px] shrink-0 px-2 py-0.5 rounded border border-slate-300 font-bold hover:bg-slate-100 cursor-pointer"
+                      >
+                        撤销标注
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* 第5/6点：回本时间 + 按目标回本时间反推所需收入 */}
+            {formData.initialInvestmentEstimate.amount > 0 && (
+              <div className="p-4 rounded-2xl bg-indigo-50/60 border-2 border-indigo-200 space-y-3 text-xs">
+                <div className="flex items-center gap-2 font-black text-indigo-950">
+                  <Target className="w-4 h-4 text-indigo-600" />
+                  <span>回本时间（收回初始投资）</span>
+                </div>
+                <p className="text-indigo-800 leading-relaxed">
+                  初始投资 <b>{formatMoney(payback.initialInvestment, formData.baseCurrency)}</b>，
+                  按当前填写的月收入与月成本，月度净结余为
+                  <b className={payback.monthlyNetSurplus >= 0 ? ' text-emerald-700' : ' text-rose-700'}>
+                    {' '}{formatMoney(payback.monthlyNetSurplus, formData.baseCurrency)}/月
+                  </b>
+                  {payback.paybackMonths !== null ? (
+                    <>
+                      ，预计 <span className="text-base font-black text-indigo-900 mx-1">{payback.paybackMonths.toFixed(1)}</span> 个月可以回本。
+                    </>
+                  ) : (
+                    '。当前净结余不为正，暂时算不出回本时间——先让「不亏钱」成立，回本时间才有意义。'
+                  )}
+                </p>
+                <p className="text-[12px] text-indigo-500">
+                  这条时间线回答「本金什么时候能收回来」，与上方的「盈亏平衡点」（回答「什么时候不再亏钱」）是两回事，请勿混淆；同时记得预留家庭生活费和应急资金，不要把全部结余都算作可抽走的利润。
+                </p>
+
+                <div className="pt-2 border-t border-indigo-200 space-y-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-bold text-indigo-900">如果我想在</span>
+                    <input
+                      type="number"
+                      min={1}
+                      value={formData.targetPaybackMonths || ''}
+                      onChange={(e) => updateField('targetPaybackMonths', Math.max(1, Number(e.target.value) || 1))}
+                      className="w-20 p-1.5 border border-indigo-300 rounded-lg font-black text-indigo-900 text-center"
+                    />
+                    <span className="font-bold text-indigo-900">个月内回本，至少要赚多少？</span>
+                  </div>
+                  {reverseTarget && (
+                    <p className="text-indigo-800 leading-relaxed">
+                      至少要做到每月收入
+                      <span className="text-base font-black text-indigo-900 mx-1">
+                        {formatMoney(reverseTarget.requiredMonthlyRevenue, formData.baseCurrency)}
+                      </span>
+                      （约每天 {formatMoney(reverseTarget.requiredDailyRevenue, formData.baseCurrency)}），
+                      请对照上方行业基准判断这个目标相对你的成本结构是否现实、对应的市场需求量是否存在。
+                    </p>
+                  )}
+                </div>
               </div>
             )}
 

@@ -71,6 +71,8 @@ export interface MonthlyBreakdown {
   note?: string;
 }
 
+export type BusinessStage = 'not_started' | 'has_prototype' | 'has_revenue';
+
 export interface BusinessFormData {
   id: string;
   version: number;
@@ -80,6 +82,16 @@ export interface BusinessFormData {
   industry: string;
   customIndustryName?: string;
   businessType: string;
+
+  // 所处阶段：尚未启动 / 已有原型（还没营收）/ 已有营收，用于区分"预估未来"与"体检过去"两种填报口径
+  businessStage: BusinessStage;
+  // 初始投资估算（第5/6点：回本时间与反推收入的基数），未启动/原型阶段通常需要填写
+  initialInvestmentEstimate: MoneyField;
+  // 用户设定的目标回本时间（月），用于反推所需月/日收入
+  targetPaybackMonths?: number;
+
+  // 第4点"特殊理由"：用户对某条 AI 合理性提醒标注的例外说明，AI 只记录不判断，标注后仍展示但降级为已核对状态
+  anomalyOverrides?: Record<string, string>;
 
   // 动态收支明细项（支持 AI 智能推算生成与自由编辑增删）
   dynamicCogsItems?: DynamicCostItem[];
