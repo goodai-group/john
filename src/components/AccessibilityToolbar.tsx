@@ -37,10 +37,14 @@ export const AccessibilityToolbar: React.FC<AccessibilityProps> = ({
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      setVoiceStatus('当前浏览器不支持原生语音识别，已为您切换为快捷语音试听模拟模式。');
+      setVoiceStatus(
+        language === 'zh'
+          ? '当前浏览器不支持原生语音识别，已为您切换为快捷语音试听模拟模式。'
+          : 'Your browser does not support native speech recognition; switched to a quick demo simulation mode.'
+      );
       setIsRecording(true);
       setTimeout(() => {
-        setVoiceTranscript('月营业额五万八千元');
+        setVoiceTranscript(language === 'zh' ? '月营业额五万八千元' : 'Monthly revenue fifty-eight thousand');
         setIsRecording(false);
       }, 2000);
       return;
@@ -54,7 +58,11 @@ export const AccessibilityToolbar: React.FC<AccessibilityProps> = ({
 
       recognition.onstart = () => {
         setIsRecording(true);
-        setVoiceStatus('正在倾听... 请说出金额或文字（如“三万五千”或“房租四千”）');
+        setVoiceStatus(
+          language === 'zh'
+            ? '正在倾听... 请说出金额或文字（如“三万五千”或“房租四千”）'
+            : 'Listening... please say an amount or text (e.g. "thirty-five thousand" or "rent four thousand")'
+        );
       };
 
       recognition.onresult = (event: any) => {
@@ -65,18 +73,26 @@ export const AccessibilityToolbar: React.FC<AccessibilityProps> = ({
       recognition.onerror = (event: any) => {
         console.warn('Speech error:', event.error);
         setIsRecording(false);
-        setVoiceStatus(`语音识别提示: ${event.error || '未检测到声音'}`);
+        setVoiceStatus(
+          language === 'zh'
+            ? `语音识别提示: ${event.error || '未检测到声音'}`
+            : `Speech recognition notice: ${event.error || 'no sound detected'}`
+        );
       };
 
       recognition.onend = () => {
         setIsRecording(false);
-        setVoiceStatus('语音录入完毕！');
+        setVoiceStatus(language === 'zh' ? '语音录入完毕！' : 'Voice input complete!');
       };
 
       recognition.start();
     } catch (e: any) {
       setIsRecording(false);
-      setVoiceStatus('启动麦克风失败，请检查麦克风权限设置。');
+      setVoiceStatus(
+        language === 'zh'
+          ? '启动麦克风失败，请检查麦克风权限设置。'
+          : 'Failed to start the microphone. Please check your microphone permission settings.'
+      );
     }
   };
 
@@ -112,8 +128,14 @@ export const AccessibilityToolbar: React.FC<AccessibilityProps> = ({
                 <Type className="w-4 h-4" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-900">大字号与大点击区域</p>
-                <p className="text-xs text-slate-500">将文字放大 120%，加大按钮点击热区，方便阅读与点击</p>
+                <p className="text-sm font-semibold text-slate-900">
+                  {language === 'zh' ? '大字号与大点击区域' : 'Large Text & Larger Tap Targets'}
+                </p>
+                <p className="text-xs text-slate-500">
+                  {language === 'zh'
+                    ? '将文字放大 120%，加大按钮点击热区，方便阅读与点击'
+                    : 'Enlarges text by 120% and expands button tap areas for easier reading and tapping'}
+                </p>
               </div>
             </div>
             <button
@@ -124,7 +146,7 @@ export const AccessibilityToolbar: React.FC<AccessibilityProps> = ({
                   : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
               }`}
             >
-              {largeFont ? '已开启' : '关闭中'}
+              {largeFont ? (language === 'zh' ? '已开启' : 'On') : (language === 'zh' ? '关闭中' : 'Off')}
             </button>
           </div>
 
@@ -135,8 +157,14 @@ export const AccessibilityToolbar: React.FC<AccessibilityProps> = ({
                 <Eye className="w-4 h-4" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-900">高清晰高对比度模式</p>
-                <p className="text-xs text-slate-500">强化边框线与文字反差，适合强光室外或视力不便用户</p>
+                <p className="text-sm font-semibold text-slate-900">
+                  {language === 'zh' ? '高清晰高对比度模式' : 'High-Contrast Mode'}
+                </p>
+                <p className="text-xs text-slate-500">
+                  {language === 'zh'
+                    ? '强化边框线与文字反差，适合强光室外或视力不便用户'
+                    : 'Sharpens borders and text contrast, suited for bright outdoor light or low-vision users'}
+                </p>
               </div>
             </div>
             <button
@@ -147,7 +175,7 @@ export const AccessibilityToolbar: React.FC<AccessibilityProps> = ({
                   : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
               }`}
             >
-              {highContrast ? '已开启' : '关闭中'}
+              {highContrast ? (language === 'zh' ? '已开启' : 'On') : (language === 'zh' ? '关闭中' : 'Off')}
             </button>
           </div>
 
@@ -158,8 +186,14 @@ export const AccessibilityToolbar: React.FC<AccessibilityProps> = ({
                 <Sparkles className="w-4 h-4" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-900">轻量传输模式（弱网省流）</p>
-                <p className="text-xs text-slate-500">关闭所有外部动画与大文件依赖，优先保障核心填报顺畅</p>
+                <p className="text-sm font-semibold text-slate-900">
+                  {language === 'zh' ? '轻量传输模式（弱网省流）' : 'Low-Bandwidth Mode (Data Saver)'}
+                </p>
+                <p className="text-xs text-slate-500">
+                  {language === 'zh'
+                    ? '关闭所有外部动画与大文件依赖，优先保障核心填报顺畅'
+                    : 'Disables external animations and large-file dependencies to keep core form entry smooth'}
+                </p>
               </div>
             </div>
             <button
@@ -170,7 +204,7 @@ export const AccessibilityToolbar: React.FC<AccessibilityProps> = ({
                   : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
               }`}
             >
-              {lowBandwidth ? '已开启' : '关闭中'}
+              {lowBandwidth ? (language === 'zh' ? '已开启' : 'On') : (language === 'zh' ? '关闭中' : 'Off')}
             </button>
           </div>
 
@@ -179,7 +213,7 @@ export const AccessibilityToolbar: React.FC<AccessibilityProps> = ({
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2 text-sky-900 font-semibold text-xs">
                 <Volume2 className="w-4 h-4 text-sky-600" />
-                <span>语音说出金额转数字辅助 (Speech-to-Number)</span>
+                <span>{language === 'zh' ? '语音说出金额转数字辅助 (Speech-to-Number)' : 'Speak an Amount to Convert to Number (Speech-to-Number)'}</span>
               </div>
               <button
                 onClick={handleStartVoice}
@@ -191,7 +225,7 @@ export const AccessibilityToolbar: React.FC<AccessibilityProps> = ({
                 }`}
               >
                 {isRecording ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
-                <span>{isRecording ? '录音中...' : '点击说出金额'}</span>
+                <span>{isRecording ? (language === 'zh' ? '录音中...' : 'Recording...') : (language === 'zh' ? '点击说出金额' : 'Tap and say an amount')}</span>
               </button>
             </div>
             {voiceStatus && (
@@ -201,9 +235,9 @@ export const AccessibilityToolbar: React.FC<AccessibilityProps> = ({
             )}
             {voiceTranscript && (
               <div className="flex items-center justify-between p-2 rounded bg-white border border-sky-200">
-                <span className="text-xs font-medium text-slate-800">识别结果: {voiceTranscript}</span>
+                <span className="text-xs font-medium text-slate-800">{language === 'zh' ? '识别结果' : 'Recognized'}: {voiceTranscript}</span>
                 <span className="text-[12px] text-emerald-600 font-bold flex items-center gap-0.5">
-                  <Check className="w-3 h-3" /> 可在表单各输入框右侧直接使用麦克风输入
+                  <Check className="w-3 h-3" /> {language === 'zh' ? '可在表单各输入框右侧直接使用麦克风输入' : 'You can use the microphone directly next to any form field'}
                 </span>
               </div>
             )}
@@ -215,7 +249,7 @@ export const AccessibilityToolbar: React.FC<AccessibilityProps> = ({
             onClick={onClose}
             className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors cursor-pointer"
           >
-            完成设置
+            {language === 'zh' ? '完成设置' : 'Done'}
           </button>
         </div>
       </div>

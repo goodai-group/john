@@ -39,20 +39,36 @@ interface AuthModalProps {
 
 export type AuthMode = 'signin' | 'signup' | 'forgot' | 'newpass';
 
-// 常见 Supabase Auth 错误 → 用户能看懂的中文提示
-function translateAuthError(message: string): string {
+// 常见 Supabase Auth 错误 → 用户能看懂的提示（中 / 英）
+function translateAuthError(message: string, language: Language): string {
   const m = message || '';
-  if (/invalid login credentials/i.test(m)) return '邮箱或密码不正确，请核对后重试。';
+  const zh = language === 'zh';
+  if (/invalid login credentials/i.test(m))
+    return zh ? '邮箱或密码不正确，请核对后重试。' : 'Incorrect email or password. Please check and try again.';
   if (/email not confirmed/i.test(m))
-    return '该邮箱尚未验证：请先点击注册邮件中的验证链接激活账号，再回来登录。';
-  if (/user already registered/i.test(m)) return '该邮箱已注册，请直接登录；若忘记密码可点击「忘记密码」找回。';
-  if (/password should be at least/i.test(m)) return '密码长度至少需要 6 位，请重新设置。';
-  if (/unable to validate email address/i.test(m)) return '邮箱格式无效，请输入正确的邮箱地址。';
-  if (/rate limit|too many|after \d+ seconds/i.test(m)) return '操作过于频繁，请稍等 60 秒后再试。';
+    return zh
+      ? '该邮箱尚未验证：请先点击注册邮件中的验证链接激活账号，再回来登录。'
+      : 'This email has not been verified: please click the verification link in your sign-up email first, then come back to sign in.';
+  if (/user already registered/i.test(m))
+    return zh
+      ? '该邮箱已注册，请直接登录；若忘记密码可点击「忘记密码」找回。'
+      : 'This email is already registered. Please sign in directly, or click "Forgot password?" to reset it.';
+  if (/password should be at least/i.test(m))
+    return zh ? '密码长度至少需要 6 位，请重新设置。' : 'Password must be at least 6 characters. Please set a new one.';
+  if (/unable to validate email address/i.test(m))
+    return zh ? '邮箱格式无效，请输入正确的邮箱地址。' : 'Invalid email format. Please enter a valid email address.';
+  if (/rate limit|too many|after \d+ seconds/i.test(m))
+    return zh ? '操作过于频繁，请稍等 60 秒后再试。' : 'Too many attempts. Please wait 60 seconds and try again.';
   if (/signup.*disabled|email.*provider.*disabled|provider is not enabled/i.test(m))
-    return '邮箱注册暂未开启：请在 Supabase 控制台 → Authentication → Providers → Email 中启用邮箱登录。';
-  if (/not configured/i.test(m)) return '云端登录尚未配置：请在项目根目录 .env 中填写 Supabase 地址与密钥。';
-  if (/network|fetch|connection/i.test(m)) return '网络连接异常，请检查网络后重试。';
+    return zh
+      ? '邮箱注册暂未开启：请在 Supabase 控制台 → Authentication → Providers → Email 中启用邮箱登录。'
+      : 'Email sign-up is not enabled yet: please enable it in the Supabase dashboard under Authentication → Providers → Email.';
+  if (/not configured/i.test(m))
+    return zh
+      ? '云端登录尚未配置：请在项目根目录 .env 中填写 Supabase 地址与密钥。'
+      : 'Cloud sign-in is not configured yet: please fill in the Supabase URL and key in the project root .env file.';
+  if (/network|fetch|connection/i.test(m))
+    return zh ? '网络连接异常，请检查网络后重试。' : 'Network connection error. Please check your connection and try again.';
   return m;
 }
 
@@ -125,7 +141,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     try {
       if (mode === 'newpass') {
         // 找回密码回跳后的最后一步：保存新密码（由调用方提示并关闭弹窗）
-        if (!onSetNewPassword) throw new Error('当前不支持设置新密码，请重新发起找回密码。');
+        if (!onSetNewPassword)
+          throw new Error(
+            zh
+              ? '当前不支持设置新密码，请重新发起找回密码。'
+              : 'Setting a new password is not supported right now. Please restart the password reset process.'
+          );
         await onSetNewPassword(password);
         return;
       }
@@ -158,7 +179,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         setMode('signin');
       }
     } catch (err: any) {
-      setErrMsg(translateAuthError(err?.message || String(err)));
+      setErrMsg(translateAuthError(err?.message || String(err), language));
     } finally {
       setLoading(false);
     }
@@ -278,7 +299,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 try {
                   await onGoogleLogin();
                 } catch (err: any) {
-                  setErrMsg(translateAuthError(err?.message || String(err)));
+                  setErrMsg(translateAuthError(err?.message || String(err), language));
                 }
               }}
               disabled={isGoogleLoading}

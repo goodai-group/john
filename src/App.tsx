@@ -187,7 +187,9 @@ export default function App() {
           setIsAuthModalOpen(true);
           pushBanner({
             kind: 'info',
-            text: '请为账号设置新密码，保存后即可用新密码登录。'
+            text: language === 'zh'
+              ? '请为账号设置新密码，保存后即可用新密码登录。'
+              : 'Please set a new password for your account. Once saved, you can sign in with it.'
           });
           return;
         }
@@ -195,7 +197,12 @@ export default function App() {
         // 邮箱验证链接 / Google 登录回跳等场景同样给出"已登录"的即时反馈
         if (event === 'SIGNED_IN') flashSignedIn();
         pushBanner(
-          { kind: 'info', text: `欢迎回来，${user.displayName || user.email}！正在载入您的专属云端档案...` }
+          {
+            kind: 'info',
+            text: language === 'zh'
+              ? `欢迎回来，${user.displayName || user.email}！正在载入您的专属云端档案...`
+              : `Welcome back, ${user.displayName || user.email}! Loading your cloud profile...`
+          }
         );
         try {
           await syncWithCloudDatabase(user);
@@ -204,13 +211,20 @@ export default function App() {
           setProjects(refreshedProjects);
           setReports(refreshedReports);
           pushBanner(
-            { kind: 'info', text: `已同步 ${user.displayName || user.email} 的专属云端自测档案` },
+            {
+              kind: 'info',
+              text: language === 'zh'
+                ? `已同步 ${user.displayName || user.email} 的专属云端自测档案`
+                : `Synced ${user.displayName || user.email}'s cloud assessment profile`
+            },
             4000
           );
         } catch (e: any) {
           pushBanner({
             kind: 'error',
-            text: `云端同步失败：${e?.message || '已自动使用本地数据'}`
+            text: language === 'zh'
+              ? `云端同步失败：${e?.message || '已自动使用本地数据'}`
+              : `Cloud sync failed: ${e?.message || 'Automatically switched to local data'}`
           });
         }
       }
@@ -225,10 +239,16 @@ export default function App() {
     if (callbackError) {
       const { code, description } = callbackError;
       const text = /expired|otp_expired/i.test(code) || /expired/i.test(description)
-        ? '该链接已过期或已被使用过，请重新发起登录 / 找回密码。'
+        ? (language === 'zh'
+          ? '该链接已过期或已被使用过，请重新发起登录 / 找回密码。'
+          : 'This link has expired or was already used. Please sign in / reset your password again.')
         : /access_denied/i.test(code)
-          ? '该登录链接无效（可能已被使用过或已失效），请重新发起登录。'
-          : `登录链接异常：${description || code}`;
+          ? (language === 'zh'
+            ? '该登录链接无效（可能已被使用过或已失效），请重新发起登录。'
+            : 'This sign-in link is invalid (it may have already been used or expired). Please sign in again.')
+          : (language === 'zh'
+            ? `登录链接异常：${description || code}`
+            : `Sign-in link error: ${description || code}`);
       pushBanner({ kind: 'error', text });
       // 清掉 URL 上的错误参数，避免刷新后又弹一次
       clearAuthCallbackParams();
@@ -259,13 +279,20 @@ export default function App() {
       setProjects(loadStoredProjects());
       setReports(loadStoredReports());
       pushBanner(
-        { kind: 'info', text: `已同步 ${user.displayName || user.email} 的专属云端自测档案` },
+        {
+          kind: 'info',
+          text: language === 'zh'
+            ? `已同步 ${user.displayName || user.email} 的专属云端自测档案`
+            : `Synced ${user.displayName || user.email}'s cloud assessment profile`
+        },
         4000
       );
     } catch (e: any) {
       pushBanner({
         kind: 'error',
-        text: `云端同步失败：${e?.message || '已自动使用本地数据'}`
+        text: language === 'zh'
+          ? `云端同步失败：${e?.message || '已自动使用本地数据'}`
+          : `Cloud sync failed: ${e?.message || 'Automatically switched to local data'}`
       });
     }
   };
@@ -276,13 +303,20 @@ export default function App() {
       setIsSigningIn(true);
       const user = await signInWithGoogle();
       if (user) {
-        await applyAuthedUser(user, `Google 登录成功！已与 ${user.email} 绑定`);
+        await applyAuthedUser(
+          user,
+          language === 'zh'
+            ? `Google 登录成功！已与 ${user.email} 绑定`
+            : `Signed in with Google! Linked to ${user.email}`
+        );
       } else {
         // 用户关闭了授权窗口 / 弹窗被拦截 / 等待超时：温和引导，不视为错误
         pushBanner(
           {
             kind: 'info',
-            text: '未完成 Google 登录（已取消或被拦截）。可再次点击登录，或改用邮箱密码登录。'
+            text: language === 'zh'
+              ? '未完成 Google 登录（已取消或被拦截）。可再次点击登录，或改用邮箱密码登录。'
+              : 'Google sign-in was not completed (cancelled or blocked). You can try again, or use email and password instead.'
           },
           4000
         );
@@ -290,7 +324,9 @@ export default function App() {
     } catch (err: any) {
       const code = err?.code || '';
       const msg = err?.message || '';
-      let displayMsg = `登录失败：${msg || '无法连接 Google 登录服务'}`;
+      let displayMsg = language === 'zh'
+        ? `登录失败：${msg || '无法连接 Google 登录服务'}`
+        : `Sign-in failed: ${msg || 'Unable to connect to Google sign-in service'}`;
 
       if (
         code === 'auth/popup-closed-by-user' ||
@@ -300,32 +336,40 @@ export default function App() {
         msg.includes('Popup closed by user') ||
         msg.includes('user closed')
       ) {
-        displayMsg = '您已关闭 Google 登录窗口。仍可正常使用本地保存，或随时再次点击登录。';
+        displayMsg = language === 'zh'
+          ? '您已关闭 Google 登录窗口。仍可正常使用本地保存，或随时再次点击登录。'
+          : 'You closed the Google sign-in window. Local saving still works normally, or click sign in again anytime.';
         pushBanner({ kind: 'info', text: displayMsg }, 4000);
       } else if (
         msg.includes('popup') ||
         msg.includes('window.open') ||
         msg.includes('blocked')
       ) {
-        displayMsg = '浏览器阻止了登录弹出窗口，请在地址栏允许弹窗后重试。';
+        displayMsg = language === 'zh'
+          ? '浏览器阻止了登录弹出窗口，请在地址栏允许弹窗后重试。'
+          : 'Your browser blocked the sign-in popup. Please allow popups in the address bar and try again.';
         pushBanner({ kind: 'info', text: displayMsg }, 5000);
       } else if (msg.includes('not configured') || msg.includes('Supabase Auth is not configured')) {
-        displayMsg = 'Supabase 云端尚未配置：请在项目根目录 .env 中填写 VITE_SUPABASE_URL 与 VITE_SUPABASE_ANON_KEY。';
+        displayMsg = language === 'zh'
+          ? 'Supabase 云端尚未配置：请在项目根目录 .env 中填写 VITE_SUPABASE_URL 与 VITE_SUPABASE_ANON_KEY。'
+          : 'Supabase cloud is not configured yet: please fill in VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in the project root .env file.';
         pushBanner({
           kind: 'error',
           text: displayMsg,
-          action: { href: supabaseAuthUrl, label: '打开 Supabase 设置' }
+          action: { href: supabaseAuthUrl, label: language === 'zh' ? '打开 Supabase 设置' : 'Open Supabase settings' }
         });
       } else if (
         msg.includes('Google provider is not enabled') ||
         msg.includes('provider is not enabled') ||
         code === 'auth/operation-not-allowed'
       ) {
-        displayMsg = 'Google 登录方式尚未在 Supabase 中开启，请在 Supabase 控制台 Enable Google Provider。';
+        displayMsg = language === 'zh'
+          ? 'Google 登录方式尚未在 Supabase 中开启，请在 Supabase 控制台 Enable Google Provider。'
+          : 'Google sign-in is not enabled in Supabase yet. Please enable the Google provider in the Supabase dashboard.';
         pushBanner({
           kind: 'error',
           text: displayMsg,
-          action: { href: supabaseAuthUrl, label: '打开登录方式设置' }
+          action: { href: supabaseAuthUrl, label: language === 'zh' ? '打开登录方式设置' : 'Open sign-in provider settings' }
         });
       } else {
         pushBanner({ kind: 'error', text: displayMsg });
@@ -339,8 +383,13 @@ export default function App() {
   // 邮箱 + 密码登录 / 注册 / 找回密码
   const handleEmailLogin = async (email: string, password: string) => {
     const user = await signInWithEmail(email.trim(), password);
-    if (!user) throw new Error('登录失败，请稍后重试');
-    await applyAuthedUser(user, `账号登录成功！欢迎回来，${user.displayName || user.email}`);
+    if (!user) throw new Error(language === 'zh' ? '登录失败，请稍后重试' : 'Sign-in failed, please try again later');
+    await applyAuthedUser(
+      user,
+      language === 'zh'
+        ? `账号登录成功！欢迎回来，${user.displayName || user.email}`
+        : `Signed in successfully! Welcome back, ${user.displayName || user.email}`
+    );
   };
 
   const handleEmailSignUp = async (
@@ -352,7 +401,9 @@ export default function App() {
     if (result.user) {
       await applyAuthedUser(
         result.user,
-        `注册成功！欢迎加入，${result.user.displayName || result.user.email}`
+        language === 'zh'
+          ? `注册成功！欢迎加入，${result.user.displayName || result.user.email}`
+          : `Signed up successfully! Welcome, ${result.user.displayName || result.user.email}`
       );
       return true;
     }
@@ -360,7 +411,7 @@ export default function App() {
       // Supabase 开启了"邮箱确认"：弹窗内已提示用户去邮箱点验证链接
       return false;
     }
-    throw new Error('注册失败，请稍后重试');
+    throw new Error(language === 'zh' ? '注册失败，请稍后重试' : 'Sign-up failed, please try again later');
   };
 
   const handleSendPasswordReset = async (email: string) => {
@@ -375,11 +426,21 @@ export default function App() {
       setAuthInitialMode(undefined);
       flashSignedIn();
       pushBanner(
-        { kind: 'info', text: '新密码已保存！下次可直接用新密码登录。' },
+        {
+          kind: 'info',
+          text: language === 'zh'
+            ? '新密码已保存！下次可直接用新密码登录。'
+            : 'New password saved! You can sign in with it next time.'
+        },
         4000
       );
     } catch (err: any) {
-      throw new Error(err?.message || '保存新密码失败，请重新发起找回密码。');
+      throw new Error(
+        err?.message ||
+          (language === 'zh'
+            ? '保存新密码失败，请重新发起找回密码。'
+            : 'Failed to save new password. Please restart the password reset process.')
+      );
     }
   };
 
@@ -407,8 +468,16 @@ export default function App() {
 
     pushBanner(
       remoteLogoutFailed
-        ? { kind: 'info', text: '已在本机退出登录（远端会话状态未能确认，如仍显示已登录请重新刷新页面）。' }
-        : { kind: 'info', text: '已安全退出 Google 登录。' },
+        ? {
+            kind: 'info',
+            text: language === 'zh'
+              ? '已在本机退出登录（远端会话状态未能确认，如仍显示已登录请重新刷新页面）。'
+              : 'Signed out on this device (remote session state could not be confirmed; please refresh if you still appear signed in).'
+          }
+        : {
+            kind: 'info',
+            text: language === 'zh' ? '已安全退出 Google 登录。' : 'Successfully signed out of Google.'
+          },
       3000
     );
   };
@@ -604,12 +673,27 @@ export default function App() {
   }, []);
 
   const handleTriggerSync = async () => {
-    pushBanner({ kind: 'info', text: '正在与 Supabase 云端数据库集合同步 (projects, assessment_reports, escalated_questions)...' });
+    pushBanner({
+      kind: 'info',
+      text: language === 'zh'
+        ? '正在与 Supabase 云端数据库集合同步 (projects, assessment_reports, escalated_questions)...'
+        : 'Syncing with Supabase cloud database collections (projects, assessment_reports, escalated_questions)...'
+    });
     try {
       if (isCloudDatabaseAvailable()) {
         // 超时保护：Supabase 网络不可用时不再无限挂起"同步中"，8 秒后明确提示失败
         const timeoutPromise = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('云端连接超时（网络不可用或未登录），已保留本地数据，可稍后重试')), 8000)
+          setTimeout(
+            () =>
+              reject(
+                new Error(
+                  language === 'zh'
+                    ? '云端连接超时（网络不可用或未登录），已保留本地数据，可稍后重试'
+                    : 'Cloud connection timed out (network unavailable or not signed in). Local data has been kept; please retry later'
+                )
+              ),
+            8000
+          )
         );
         await Promise.race([syncWithCloudDatabase(currentUser), timeoutPromise]);
         const refreshedProjects = loadStoredProjects();
@@ -617,20 +701,41 @@ export default function App() {
         setProjects(refreshedProjects);
         setReports(refreshedReports);
         if (currentUser) {
-          pushBanner({ kind: 'info', text: '云端数据库双向同步已完成！数据已安全持久化' }, 4000);
+          pushBanner(
+            {
+              kind: 'info',
+              text: language === 'zh'
+                ? '云端数据库双向同步已完成！数据已安全持久化'
+                : 'Two-way cloud database sync complete! Your data is safely persisted'
+            },
+            4000
+          );
         } else {
           pushBanner(
-            { kind: 'info', text: '本地数据已安全保存。使用 Google 登录后可开启专属云端档案同步' },
+            {
+              kind: 'info',
+              text: language === 'zh'
+                ? '本地数据已安全保存。使用 Google 登录后可开启专属云端档案同步'
+                : 'Local data has been safely saved. Sign in with Google to enable cloud profile sync'
+            },
             4000
           );
         }
       } else {
-        pushBanner({ kind: 'info', text: '本地持久化模式正常运行中' }, 4000);
+        pushBanner(
+          {
+            kind: 'info',
+            text: language === 'zh' ? '本地持久化模式正常运行中' : 'Running normally in local persistence mode'
+          },
+          4000
+        );
       }
     } catch (e: any) {
       pushBanner({
         kind: 'error',
-        text: `同步失败：${e.message || '本地数据已保存'}`
+        text: language === 'zh'
+          ? `同步失败：${e.message || '本地数据已保存'}`
+          : `Sync failed: ${e.message || 'Local data has been saved'}`
       });
     }
   };
@@ -696,7 +801,7 @@ export default function App() {
             <button
               type="button"
               onClick={dismissBanner}
-              aria-label="关闭通知"
+              aria-label={language === 'zh' ? '关闭通知' : 'Dismiss notification'}
               className={`shrink-0 rounded-md p-1 transition-colors ${
                 banner.kind === 'error'
                   ? 'hover:bg-rose-200 text-rose-700'
@@ -814,12 +919,12 @@ export default function App() {
             setAiInitialTopic(undefined);
             setIsAiDrawerOpen(true);
           }}
-          aria-label="打开 AI 答疑"
-          title="AI 答疑：任何不懂的地方都能问"
+          aria-label={language === 'zh' ? '打开 AI 答疑' : 'Open AI Q&A'}
+          title={language === 'zh' ? 'AI 答疑：任何不懂的地方都能问' : 'AI Q&A: ask about anything you don\'t understand'}
           className="fixed bottom-20 md:bottom-6 right-5 sm:right-6 z-40 flex items-center gap-2 pl-4 pr-5 py-3 rounded-full bg-gradient-to-r from-violet-600 to-teal-600 text-white text-sm font-bold shadow-xl hover:shadow-2xl hover:from-violet-500 hover:to-teal-500 active:scale-95 transition-all cursor-pointer animate-in fade-in"
         >
           <MessageCircle className="w-5 h-5" />
-          <span className="hidden sm:inline">AI 答疑</span>
+          <span className="hidden sm:inline">{language === 'zh' ? 'AI 答疑' : 'AI Q&A'}</span>
         </button>
       )}
 
@@ -887,9 +992,13 @@ export default function App() {
             <div className="absolute inset-0 rounded-full border-4 border-amber-400 border-t-transparent animate-spin"></div>
             <Heart className="w-8 h-8 text-amber-400 absolute inset-0 m-auto animate-pulse" />
           </div>
-          <h2 className="text-white text-lg sm:text-xl font-black tracking-tight">正在为你生成体检报告…</h2>
+          <h2 className="text-white text-lg sm:text-xl font-black tracking-tight">
+            {language === 'zh' ? '正在为你生成体检报告…' : 'Generating your assessment report…'}
+          </h2>
           <p className="text-neutral-400 text-sm mt-2 max-w-sm leading-relaxed">
-            我们正把你的店名、行业和每一笔开支，算成一句你能听懂的人话。
+            {language === 'zh'
+              ? '我们正把你的店名、行业和每一笔开支，算成一句你能听懂的人话。'
+              : 'We\'re turning your business name, industry, and every expense into plain, human-readable insight.'}
           </p>
         </div>
       )}

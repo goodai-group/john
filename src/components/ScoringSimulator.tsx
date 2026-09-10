@@ -45,7 +45,7 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
     version: 1,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    projectName: '试算预览',
+    projectName: language === 'zh' ? '试算预览' : 'Simulator Preview',
     industry: 'other',
     businessType: '',
     businessStage: 'has_revenue',
@@ -154,13 +154,17 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <h2 className="text-xl font-black text-neutral-900 tracking-tight">商业模型试算器 (Sandbox Simulator)</h2>
+                <h2 className="text-xl font-black text-neutral-900 tracking-tight">
+                  {language === 'zh' ? '商业模型试算器 (Sandbox Simulator)' : 'Business Model Sandbox Simulator'}
+                </h2>
                 <span className="text-[12px] font-mono font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 rounded-full">
-                  不提交 · 不记录
+                  {language === 'zh' ? '不提交 · 不记录' : 'No submission · No logging'}
                 </span>
               </div>
               <p className="text-xs text-neutral-500 font-medium mt-0.5">
-                随意滑动滑块测算不同进货成本、租金人工与毛利变化对红线判定与最终得分的影响，数据纯本地计算。
+                {language === 'zh'
+                  ? '随意滑动滑块测算不同进货成本、租金人工与毛利变化对红线判定与最终得分的影响，数据纯本地计算。'
+                  : 'Freely drag the sliders to see how sourcing costs, rent, labor, and margin changes affect the Gate checks and final score — all calculated locally.'}
               </p>
             </div>
           </div>
@@ -171,13 +175,13 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
               className="flex items-center space-x-1 px-3.5 py-2 rounded-2xl bg-neutral-100 hover:bg-neutral-200/80 text-neutral-700 text-xs font-bold border border-neutral-200 transition-colors cursor-pointer"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              <span>重置默认参数</span>
+              <span>{language === 'zh' ? '重置默认参数' : 'Reset Defaults'}</span>
             </button>
             <button
               onClick={handleApply}
               className="flex items-center space-x-1.5 px-4 py-2 rounded-2xl bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-bold shadow-md shadow-neutral-900/10 border-2 border-neutral-800 transition-all cursor-pointer hover:scale-102"
             >
-              <span>带入正式申报表</span>
+              <span>{language === 'zh' ? '带入正式申报表' : 'Apply to Assessment Form'}</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -191,10 +195,12 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
             <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
               <h3 className="text-sm font-bold text-neutral-900 flex items-center space-x-2">
                 <Sparkles className="w-4 h-4 text-teal-600" />
-                <span>1. 收入与毛利参数调校</span>
+                <span>{language === 'zh' ? '1. 收入与毛利参数调校' : '1. Revenue & Gross Margin Parameters'}</span>
               </h3>
               <div className="flex items-center space-x-2">
-                <span className="text-xs text-neutral-400 font-bold uppercase tracking-wider">试算币种:</span>
+                <span className="text-xs text-neutral-400 font-bold uppercase tracking-wider">
+                  {language === 'zh' ? '试算币种:' : 'Currency:'}
+                </span>
                 <select
                   value={currency}
                   onChange={(e) => setCurrency(e.target.value as CurrencyCode)}
@@ -212,7 +218,7 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
             {/* Monthly gross revenue */}
             <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
               <div className="flex justify-between text-xs font-bold text-neutral-800 mb-2">
-                <span>月均总流水 (Gross Revenue)</span>
+                <span>{language === 'zh' ? '月均总流水 (Gross Revenue)' : 'Average Monthly Gross Revenue'}</span>
                 <span className="text-teal-600 font-mono text-sm">
                   {formatMoney(monthlyRevenue, currency)}
                 </span>
@@ -232,7 +238,11 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
             <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
               <div className="flex justify-between text-xs font-bold text-neutral-800 mb-2">
                 <span className="flex items-center space-x-1">
-                  <span>真实自营收入占比 (排除借款/赠款)</span>
+                  <span>
+                    {language === 'zh'
+                      ? '真实自营收入占比 (排除借款/赠款)'
+                      : 'Real Operating Revenue Ratio (excl. loans/grants)'}
+                  </span>
                   <span className="text-neutral-400 font-normal text-[13px]">[Gate-1 ≥ 60%]</span>
                 </span>
                 <span className={`font-mono text-sm ${realRevenueRatio >= 60 ? 'text-emerald-600' : 'text-rose-600'}`}>
@@ -255,8 +265,10 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
             <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
               <div className="flex justify-between text-xs font-bold text-neutral-800 mb-2">
                 <span className="flex items-center space-x-1">
-                  <span>COGS 原材料与直接进货成本占比</span>
-                  <span className="text-neutral-400 font-normal text-[13px]">[毛利率: {grossMargin.toFixed(1)}%]</span>
+                  <span>{language === 'zh' ? 'COGS 原材料与直接进货成本占比' : 'COGS Materials & Direct Sourcing Ratio'}</span>
+                  <span className="text-neutral-400 font-normal text-[13px]">
+                    [{language === 'zh' ? '毛利率' : 'Gross Margin'}: {grossMargin.toFixed(1)}%]
+                  </span>
                 </span>
                 <span className="text-amber-600 font-mono text-sm">
                   {cogsRatio}% ({formatMoney(cogsAmount, currency)})
@@ -276,12 +288,14 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
           {/* Section 2: OPEX Costs Bento */}
           <div className="bg-white rounded-3xl p-6 sm:p-7 border-2 border-neutral-200 shadow-xs space-y-4">
             <h3 className="text-sm font-bold text-neutral-900 border-b border-neutral-100 pb-3">
-              2. OPEX 运营固定开销与债务结构
+              {language === 'zh' ? '2. OPEX 运营固定开销与债务结构' : '2. OPEX Fixed Costs & Debt Structure'}
             </h3>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
               <div className="p-3 bg-neutral-50 rounded-2xl border border-neutral-100">
-                <label className="block text-neutral-500 font-bold mb-1">每月房租 (Rent)</label>
+                <label className="block text-neutral-500 font-bold mb-1">
+                  {language === 'zh' ? '每月房租 (Rent)' : 'Monthly Rent'}
+                </label>
                 <input
                   type="number"
                   value={rent}
@@ -290,7 +304,9 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
                 />
               </div>
               <div className="p-3 bg-neutral-50 rounded-2xl border border-neutral-100">
-                <label className="block text-neutral-500 font-bold mb-1">员工工资 (Labor)</label>
+                <label className="block text-neutral-500 font-bold mb-1">
+                  {language === 'zh' ? '员工工资 (Labor)' : 'Staff Wages (Labor)'}
+                </label>
                 <input
                   type="number"
                   value={labor}
@@ -299,7 +315,9 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
                 />
               </div>
               <div className="p-3 bg-neutral-50 rounded-2xl border border-neutral-100">
-                <label className="block text-neutral-500 font-bold mb-1">水电杂费 (Utility)</label>
+                <label className="block text-neutral-500 font-bold mb-1">
+                  {language === 'zh' ? '水电杂费 (Utility)' : 'Utilities'}
+                </label>
                 <input
                   type="number"
                   value={utilities}
@@ -308,7 +326,9 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
                 />
               </div>
               <div className="p-3 bg-neutral-50 rounded-2xl border border-neutral-100">
-                <label className="block text-neutral-500 font-bold mb-1">税金及规费 (Tax)</label>
+                <label className="block text-neutral-500 font-bold mb-1">
+                  {language === 'zh' ? '税金及规费 (Tax)' : 'Taxes & Fees'}
+                </label>
                 <input
                   type="number"
                   value={taxes}
@@ -317,7 +337,9 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
                 />
               </div>
               <div className="p-3 bg-neutral-50 rounded-2xl border border-neutral-100">
-                <label className="block text-neutral-500 font-bold mb-1">每月偿债本息 (Debt)</label>
+                <label className="block text-neutral-500 font-bold mb-1">
+                  {language === 'zh' ? '每月偿债本息 (Debt)' : 'Monthly Debt Payment'}
+                </label>
                 <input
                   type="number"
                   value={debtPayment}
@@ -326,7 +348,9 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
                 />
               </div>
               <div className="p-3 bg-neutral-50 rounded-2xl border border-neutral-100">
-                <label className="block text-neutral-500 font-bold mb-1">现有可用备用金 (Cash)</label>
+                <label className="block text-neutral-500 font-bold mb-1">
+                  {language === 'zh' ? '现有可用备用金 (Cash)' : 'Available Cash Reserves'}
+                </label>
                 <input
                   type="number"
                   value={liquidCash}
@@ -344,7 +368,7 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
           <div className="bg-neutral-900 border-2 border-neutral-800 rounded-3xl p-6 sm:p-7 text-white shadow-xl flex flex-col justify-between space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-xs text-neutral-400 uppercase tracking-widest font-bold">
-                实时预估综合评分
+                {language === 'zh' ? '实时预估综合评分' : 'Live Estimated Score'}
               </span>
               <span
                 className={`px-3 py-1 rounded-full text-[12px] font-bold uppercase tracking-wider ${
@@ -353,14 +377,22 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
                     : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
                 }`}
               >
-                {allGatesPassed ? '通过红线检查' : '触发一票否决'}
+                {allGatesPassed
+                  ? language === 'zh'
+                    ? '通过红线检查'
+                    : 'Gate Checks Passed'
+                  : language === 'zh'
+                  ? '触发一票否决'
+                  : 'Disqualified'}
               </span>
             </div>
 
             <div className="flex items-baseline justify-between my-2">
               <div>
                 <div className="text-5xl sm:text-6xl font-mono font-black tracking-tight">{score}</div>
-                <div className="text-xs font-semibold text-neutral-400 mt-1">/ 100 分 · 客观推演</div>
+                <div className="text-xs font-semibold text-neutral-400 mt-1">
+                  {language === 'zh' ? '/ 100 分 · 客观推演' : '/ 100 points · Objective simulation'}
+                </div>
               </div>
 
               {/* 同 AssessmentReportView 的修复：固定宽度装不下 "REJECT" 会被裁切，改为 min-w + 自适应字号 */}
@@ -375,11 +407,15 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
             {/* Quick Metrics Grid */}
             <div className="grid grid-cols-2 gap-2 pt-3 border-t border-neutral-800 text-xs">
               <div className="bg-neutral-800/80 p-3 rounded-2xl border border-neutral-700/80">
-                <span className="text-neutral-400 block text-[12px] uppercase font-bold mb-0.5">毛利率</span>
+                <span className="text-neutral-400 block text-[12px] uppercase font-bold mb-0.5">
+                  {language === 'zh' ? '毛利率' : 'Gross Margin'}
+                </span>
                 <span className="font-mono font-bold text-sm text-emerald-400">{grossMargin.toFixed(1)}%</span>
               </div>
               <div className="bg-neutral-800/80 p-3 rounded-2xl border border-neutral-700/80">
-                <span className="text-neutral-400 block text-[12px] uppercase font-bold mb-0.5">月到手纯利</span>
+                <span className="text-neutral-400 block text-[12px] uppercase font-bold mb-0.5">
+                  {language === 'zh' ? '月到手纯利' : 'Monthly Net Profit'}
+                </span>
                 <span
                   className={`font-mono font-bold text-sm ${
                     netProfitPAT >= 0 ? 'text-emerald-400' : 'text-rose-400'
@@ -389,12 +425,18 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
                 </span>
               </div>
               <div className="bg-neutral-800/80 p-3 rounded-2xl border border-neutral-700/80">
-                <span className="text-neutral-400 block text-[12px] uppercase font-bold mb-0.5">OPEX 固定比</span>
+                <span className="text-neutral-400 block text-[12px] uppercase font-bold mb-0.5">
+                  {language === 'zh' ? 'OPEX 固定比' : 'OPEX Ratio'}
+                </span>
                 <span className="font-mono font-bold text-sm text-amber-400">{opexRatio.toFixed(1)}%</span>
               </div>
               <div className="bg-neutral-800/80 p-3 rounded-2xl border border-neutral-700/80">
-                <span className="text-neutral-400 block text-[12px] uppercase font-bold mb-0.5">备用金缓冲</span>
-                <span className="font-mono font-bold text-sm text-sky-400">{cashRunway.toFixed(1)} 个月</span>
+                <span className="text-neutral-400 block text-[12px] uppercase font-bold mb-0.5">
+                  {language === 'zh' ? '备用金缓冲' : 'Cash Runway'}
+                </span>
+                <span className="font-mono font-bold text-sm text-sky-400">
+                  {cashRunway.toFixed(1)} {language === 'zh' ? '个月' : 'months'}
+                </span>
               </div>
             </div>
           </div>
@@ -403,7 +445,7 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
           <div className="bg-white rounded-3xl p-6 sm:p-7 border-2 border-neutral-200 shadow-xs space-y-3">
             <h4 className="text-sm font-bold text-neutral-900 flex items-center space-x-2 pb-2 border-b border-neutral-100">
               <ShieldCheck className="w-4 h-4 text-teal-600" />
-              <span>5 项 Gate 红线底线检查状态</span>
+              <span>{language === 'zh' ? '5 项 Gate 红线底线检查状态' : '5 Gate Threshold Check Status'}</span>
             </h4>
 
             <div className="space-y-2 text-xs">
@@ -414,7 +456,9 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
                   ) : (
                     <AlertTriangle className="w-4 h-4 text-rose-600" />
                   )}
-                  <span className="font-bold text-neutral-800">真实营业额占比 ≥ 60%</span>
+                  <span className="font-bold text-neutral-800">
+                    {language === 'zh' ? '真实营业额占比 ≥ 60%' : 'Real Revenue Ratio ≥ 60%'}
+                  </span>
                 </div>
                 <span className={`font-mono font-bold ${gate1 ? 'text-emerald-700' : 'text-rose-600'}`}>
                   {realRevenueRatio}%
@@ -428,7 +472,9 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
                   ) : (
                     <AlertTriangle className="w-4 h-4 text-rose-600" />
                   )}
-                  <span className="font-bold text-neutral-800">毛利率底线 ≥ 20%</span>
+                  <span className="font-bold text-neutral-800">
+                    {language === 'zh' ? '毛利率底线 ≥ 20%' : 'Gross Margin Floor ≥ 20%'}
+                  </span>
                 </div>
                 <span className={`font-mono font-bold ${gate2 ? 'text-emerald-700' : 'text-rose-600'}`}>
                   {grossMargin.toFixed(1)}%
@@ -442,10 +488,18 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
                   ) : (
                     <AlertTriangle className="w-4 h-4 text-rose-600" />
                   )}
-                  <span className="font-bold text-neutral-800">毛利润覆盖每月固定开销</span>
+                  <span className="font-bold text-neutral-800">
+                    {language === 'zh' ? '毛利润覆盖每月固定开销' : 'Gross Profit Covers Monthly OPEX'}
+                  </span>
                 </div>
                 <span className={`font-mono font-bold ${gate3 ? 'text-emerald-700' : 'text-rose-600'}`}>
-                  {grossProfit >= totalOpex ? '已全额覆盖' : '缺口透支'}
+                  {grossProfit >= totalOpex
+                    ? language === 'zh'
+                      ? '已全额覆盖'
+                      : 'Fully covered'
+                    : language === 'zh'
+                    ? '缺口透支'
+                    : 'Shortfall'}
                 </span>
               </div>
 
@@ -456,10 +510,18 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
                   ) : (
                     <AlertTriangle className="w-4 h-4 text-rose-600" />
                   )}
-                  <span className="font-bold text-neutral-800">税后净利润 PAT ≥ 0</span>
+                  <span className="font-bold text-neutral-800">
+                    {language === 'zh' ? '税后净利润 PAT ≥ 0' : 'Net Profit After Tax (PAT) ≥ 0'}
+                  </span>
                 </div>
                 <span className={`font-mono font-bold ${gate4 ? 'text-emerald-700' : 'text-rose-600'}`}>
-                  {netProfitPAT >= 0 ? '正向盈利' : '月度净亏损'}
+                  {netProfitPAT >= 0
+                    ? language === 'zh'
+                      ? '正向盈利'
+                      : 'Profitable'
+                    : language === 'zh'
+                    ? '月度净亏损'
+                    : 'Monthly net loss'}
                 </span>
               </div>
 
@@ -470,17 +532,23 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
                   ) : (
                     <AlertTriangle className="w-4 h-4 text-rose-600" />
                   )}
-                  <span className="font-bold text-neutral-800">偿债保障 ≥ 1.25x 或 无债</span>
+                  <span className="font-bold text-neutral-800">
+                    {language === 'zh' ? '偿债保障 ≥ 1.25x 或 无债' : 'Debt Coverage ≥ 1.25x or No Debt'}
+                  </span>
                 </div>
                 <span className={`font-mono font-bold ${gate5 ? 'text-emerald-700' : 'text-rose-600'}`}>
-                  {debtPayment === 0 ? '无债务' : `${dscr.toFixed(2)}x`}
+                  {debtPayment === 0 ? (language === 'zh' ? '无债务' : 'No debt') : `${dscr.toFixed(2)}x`}
                 </span>
               </div>
             </div>
 
             <div className="pt-2 text-[13px] text-neutral-400 font-medium flex items-start space-x-1.5">
               <Info className="w-3.5 h-3.5 text-teal-500 shrink-0 mt-0.5" />
-              <span>试算仅供自我推演，如需生成带有雷达图与行业对比的正式诊断报告，可点击上方“带入正式申报表”一键填报。</span>
+              <span>
+                {language === 'zh'
+                  ? '试算仅供自我推演，如需生成带有雷达图与行业对比的正式诊断报告，可点击上方"带入正式申报表"一键填报。'
+                  : 'This simulation is for exploration only. To generate a formal diagnostic report with radar charts and industry comparisons, click "Apply to Assessment Form" above.'}
+              </span>
             </div>
           </div>
         </div>

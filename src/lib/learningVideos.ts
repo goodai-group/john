@@ -15,6 +15,7 @@ export const LEARNING_VIDEOS: LearningVideo[] = [
     descriptionZh: '本平台的品牌介绍短片，快速了解体检报告能帮你看懂哪些经营问题。',
     descriptionEn: 'Our brand intro video — a quick overview of what the health check report tells you.',
     category: '平台入门',
+    categoryEn: 'Getting Started',
     source: 'internal',
     url: '/intro.mp4',
     durationMinutes: 2
@@ -26,6 +27,7 @@ export const LEARNING_VIDEOS: LearningVideo[] = [
     descriptionZh: '学习如何把税收、公司注册费、签证费用、设备折旧这些容易被忽略的成本都算进生意的真实开销。',
     descriptionEn: 'Learn how to fold taxes, registration fees, visa costs, and equipment depreciation into your true cost of doing business.',
     category: '成本核算',
+    categoryEn: 'Cost Accounting',
     source: 'youtube',
     url: 'https://www.youtube.com/results?search_query=small+business+cost+accounting+tax+registration+depreciation+for+beginners',
     durationMinutes: 12
@@ -37,6 +39,7 @@ export const LEARNING_VIDEOS: LearningVideo[] = [
     descriptionZh: '用大白话讲清楚保本点（Break-Even Point）的概念，配合本平台的「保本收入」自动计算功能一起使用效果更好。',
     descriptionEn: 'A plain-language explanation of break-even point — pairs well with this platform’s automatic break-even calculator.',
     category: '盈亏平衡',
+    categoryEn: 'Break-Even Analysis',
     source: 'youtube',
     url: 'https://www.youtube.com/results?search_query=break+even+point+explained+small+business+simple',
     durationMinutes: 8
@@ -48,6 +51,7 @@ export const LEARNING_VIDEOS: LearningVideo[] = [
     descriptionZh: '介绍常见的经营者签证、工作许可申请流程与费用构成，帮助你把这部分成本准确计入财务测算。',
     descriptionEn: 'Overview of common entrepreneur visa and work permit application costs, so you can accurately fold them into your financial plan.',
     category: '签证与合规',
+    categoryEn: 'Visa & Compliance',
     source: 'youtube',
     url: 'https://www.youtube.com/results?search_query=business+visa+work+permit+cost+overseas+entrepreneur+guide',
     durationMinutes: 10
@@ -59,6 +63,7 @@ export const LEARNING_VIDEOS: LearningVideo[] = [
     descriptionZh: '不同国家公司注册流程差异很大，这类视频能帮你建立基本认知框架，再结合本平台的属地成本预估核实细节。',
     descriptionEn: 'Company registration varies a lot by country — build a basic mental model here, then verify specifics with this platform’s local cost estimate.',
     category: '签证与合规',
+    categoryEn: 'Visa & Compliance',
     source: 'youtube',
     url: 'https://www.youtube.com/results?search_query=how+to+register+a+small+business+overseas+cost+process',
     durationMinutes: 11
@@ -70,6 +75,7 @@ export const LEARNING_VIDEOS: LearningVideo[] = [
     descriptionZh: '讲解现金跑道（Cash Runway）概念与常见安全月数标准，理解报告里「能撑几个月」这一指标的由来。',
     descriptionEn: 'Explains cash runway and common safety thresholds — helps you understand the "months of survival" metric in your report.',
     category: '现金流管理',
+    categoryEn: 'Cash Flow Management',
     source: 'youtube',
     url: 'https://www.youtube.com/results?search_query=cash+runway+small+business+how+many+months+reserve',
     durationMinutes: 9
@@ -81,6 +87,7 @@ export const LEARNING_VIDEOS: LearningVideo[] = [
     descriptionZh: '帮助理解毛利率、定价策略与固定开销之间的关系，配合评分规则页的行业基准一起看。',
     descriptionEn: 'Understand the relationship between gross margin, pricing strategy, and fixed costs — pairs well with the industry benchmark page.',
     category: '成本核算',
+    categoryEn: 'Cost Accounting',
     source: 'youtube',
     url: 'https://www.youtube.com/results?search_query=gross+margin+pricing+strategy+small+business+explained',
     durationMinutes: 10
@@ -92,6 +99,7 @@ export const LEARNING_VIDEOS: LearningVideo[] = [
     descriptionZh: '没有财务背景也能上手的简易记账方法，与本平台「凭证平等」原则相呼应——手写记账本同样有效。',
     descriptionEn: 'Simple bookkeeping methods anyone can start with no finance background — aligned with this platform’s "all proof types are equal" principle.',
     category: '记账基础',
+    categoryEn: 'Bookkeeping Basics',
     source: 'youtube',
     url: 'https://www.youtube.com/results?search_query=simple+bookkeeping+for+small+business+owners+beginners',
     durationMinutes: 13
@@ -100,4 +108,13 @@ export const LEARNING_VIDEOS: LearningVideo[] = [
 
 export const LEARNING_CATEGORIES: string[] = Array.from(
   new Set(LEARNING_VIDEOS.map((v) => v.category))
+);
+
+// 中文分类名 -> 英文分类名映射，供 /learn 页面切换语言时展示分类筛选 Tab 使用
+export const LEARNING_CATEGORY_LABELS_EN: Record<string, string> = LEARNING_VIDEOS.reduce(
+  (acc, v) => {
+    acc[v.category] = v.categoryEn;
+    return acc;
+  },
+  {} as Record<string, string>
 );

@@ -45,68 +45,98 @@ export const INDUSTRY_BIG_DATA = [
   {
     id: 'fnb',
     name: '餐饮小吃 / 烘焙茶饮',
+    nameEn: 'Food Stalls / Bakery & Tea Drinks',
     avgRevenue: '¥35,000 ~ ¥150,000 / 月',
+    avgRevenueEn: '¥35,000 ~ ¥150,000 / mo',
     grossMargin: '55% ~ 70%',
     grossMarginLabel: '偏高 (原料占30%-45%)',
+    grossMarginLabelEn: 'On the higher side (ingredients 30%-45%)',
     opexRatio: '30% ~ 45%',
     runwaySafety: '≥ 2.5 ~ 3.5 个月',
+    runwaySafetyEn: '≥ 2.5 ~ 3.5 mo',
     netProfitMargin: '15% ~ 25%',
-    keySurvivalRule: '房租和员工底薪若超过总流水 45%，翻台率或客单稍跌即陷入亏损。'
+    keySurvivalRule: '房租和员工底薪若超过总流水 45%，翻台率或客单稍跌即陷入亏损。',
+    keySurvivalRuleEn: 'If rent and base wages exceed 45% of revenue, a small drop in table turnover or ticket size tips you into a loss.'
   },
   {
     id: 'retail',
     name: '社区超市 / 便利杂货',
+    nameEn: 'Community Grocery / Convenience Store',
     avgRevenue: '¥50,000 ~ ¥300,000 / 月',
+    avgRevenueEn: '¥50,000 ~ ¥300,000 / mo',
     grossMargin: '20% ~ 35%',
     grossMarginLabel: '走量微利 (进货占65%-80%)',
+    grossMarginLabelEn: 'Volume, thin margin (stock 65%-80%)',
     opexRatio: '12% ~ 22%',
     runwaySafety: '≥ 2.0 ~ 3.0 个月',
+    runwaySafetyEn: '≥ 2.0 ~ 3.0 mo',
     netProfitMargin: '8% ~ 14%',
-    keySurvivalRule: '严控临期损耗与供货账期，毛利率低于 18% 时极易触碰 Gate-2 红线。'
+    keySurvivalRule: '严控临期损耗与供货账期，毛利率低于 18% 时极易触碰 Gate-2 红线。',
+    keySurvivalRuleEn: 'Tightly control near-expiry waste and supplier payment terms — margins below 18% easily trip the Gate-2 red line.'
   },
   {
     id: 'ecommerce',
     name: '跨境电商 / 独立外贸',
+    nameEn: 'Cross-Border E-commerce / Independent Trade',
     avgRevenue: '¥80,000 ~ ¥500,000+ / 月',
+    avgRevenueEn: '¥80,000 ~ ¥500,000+ / mo',
     grossMargin: '30% ~ 50%',
     grossMarginLabel: '中等 (含采购+头程运费)',
+    grossMarginLabelEn: 'Moderate (includes stock + first-leg freight)',
     opexRatio: '15% ~ 28%',
     runwaySafety: '≥ 3.5 ~ 5.0 个月',
+    runwaySafetyEn: '≥ 3.5 ~ 5.0 mo',
     netProfitMargin: '10% ~ 22%',
-    keySurvivalRule: '海外回款周期常有15-45天滞后，备用金需充足支撑采购周转。'
+    keySurvivalRule: '海外回款周期常有15-45天滞后，备用金需充足支撑采购周转。',
+    keySurvivalRuleEn: 'Overseas payment collection often lags 15-45 days; reserves must be enough to sustain purchasing cycles.'
   },
   {
     id: 'service',
     name: '生活美业 / 汽修维修',
+    nameEn: 'Beauty & Personal Care / Auto Repair',
     avgRevenue: '¥20,000 ~ ¥85,000 / 月',
+    avgRevenueEn: '¥20,000 ~ ¥85,000 / mo',
     grossMargin: '70% ~ 88%',
     grossMarginLabel: '极高 (耗材低，主要为手艺)',
+    grossMarginLabelEn: 'Very high (low supplies cost, mostly skilled labor)',
     opexRatio: '35% ~ 55%',
     runwaySafety: '≥ 3.0 ~ 4.0 个月',
+    runwaySafetyEn: '≥ 3.0 ~ 4.0 mo',
     netProfitMargin: '25% ~ 40%',
-    keySurvivalRule: '人工与场地是最大支出，师傅提成与底薪结构需具备弹性。'
+    keySurvivalRule: '人工与场地是最大支出，师傅提成与底薪结构需具备弹性。',
+    keySurvivalRuleEn: 'Labor and venue are the largest costs; commission and base-wage structures need to stay flexible.'
   },
   {
     id: 'workshop',
     name: '微型工坊 / 小型加工',
+    nameEn: 'Micro Workshop / Small-Scale Processing',
     avgRevenue: '¥60,000 ~ ¥260,000 / 月',
+    avgRevenueEn: '¥60,000 ~ ¥260,000 / mo',
     grossMargin: '35% ~ 52%',
     grossMarginLabel: '中等 (原料+耗损耗电)',
+    grossMarginLabelEn: 'Moderate (materials + wear & power costs)',
     opexRatio: '20% ~ 35%',
     runwaySafety: '≥ 3.0 ~ 4.5 个月',
+    runwaySafetyEn: '≥ 3.0 ~ 4.5 mo',
     netProfitMargin: '12% ~ 20%',
-    keySurvivalRule: '警惕客户赊账拖欠压死现金流，应收账款周期需严格管控。'
+    keySurvivalRule: '警惕客户赊账拖欠压死现金流，应收账款周期需严格管控。',
+    keySurvivalRuleEn: 'Watch for customer credit delays choking cash flow; receivables cycles need strict control.'
   },
   {
     id: 'agri',
     name: '农林水产 / 季节生鲜',
+    nameEn: 'Agriculture, Forestry & Fisheries / Seasonal Fresh Goods',
     avgRevenue: '¥40,000 ~ ¥200,000 / 旺季月',
+    avgRevenueEn: '¥40,000 ~ ¥200,000 / peak mo',
     grossMargin: '40% ~ 65%',
     grossMarginLabel: '季节波动大',
+    grossMarginLabelEn: 'Large seasonal swings',
     opexRatio: '15% ~ 30%',
     runwaySafety: '≥ 5.0 ~ 8.0 个月 (需跨越休产期)',
+    runwaySafetyEn: '≥ 5.0 ~ 8.0 mo (must span the off-season)',
     netProfitMargin: '18% ~ 30%',
-    keySurvivalRule: '休渔或休耕期无流水，必须通过年化12个月均摊填报，备用金留足全年固定开销。'
+    keySurvivalRule: '休渔或休耕期无流水，必须通过年化12个月均摊填报，备用金留足全年固定开销。',
+    keySurvivalRuleEn: 'No income during the off-season/fallow period — report using a 12-month annualized average, and keep enough reserve to cover the full year\'s fixed costs.'
   }
 ];
 
@@ -116,6 +146,14 @@ const FAQ_PRESETS = [
   '只有手写记账本和微信收款截图，打分会吃亏吗？',
   '账上备用金要留几个月才算安全？',
   '季节性生意（休渔期没进账）该怎么填？'
+];
+
+const FAQ_PRESETS_EN = [
+  'What does "monthly revenue" mean, and how is it different from take-home profit?',
+  'How is cost of goods sold (COGS) calculated? Does it include shipping?',
+  'I only have a handwritten ledger and payment-app screenshots — will my score suffer?',
+  'How many months of reserve funds count as safe?',
+  'How do I report a seasonal business (no income during the off-season)?'
 ];
 
 // ---- Markdown 渲染 ----
@@ -571,25 +609,27 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-bold text-slate-900">
-                  AI 智能答疑 · 任何问题都能问
+                  {language === 'zh' ? 'AI 智能答疑 · 任何问题都能问' : 'AI Q&A · Ask Anything'}
                 </h2>
                 {aiConfigured === false ? (
                   <span className="text-[12px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
-                    本地规则库
+                    {language === 'zh' ? '本地规则库' : 'Local Rule Engine'}
                   </span>
                 ) : geminiHealthy === false ? (
                   <span className="text-[12px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 flex items-center gap-1">
                     <AlertTriangle className="w-3 h-3" />
-                    AI 暂不可用
+                    {language === 'zh' ? 'AI 暂不可用' : 'AI Temporarily Unavailable'}
                   </span>
                 ) : (
                   <span className="text-[12px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                    AI 智能驱动
+                    {language === 'zh' ? 'AI 智能驱动' : 'AI-Powered'}
                   </span>
                 )}
               </div>
               <p className="text-xs text-slate-500">
-                商业规则大白话解答 · 提问记录绝不计入评分
+                {language === 'zh'
+                  ? '商业规则大白话解答 · 提问记录绝不计入评分'
+                  : 'Plain-language business rule answers · questions never affect your score'}
               </p>
             </div>
           </div>
@@ -604,7 +644,9 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
         {/* AI 未配置提示：引导配置 GEMINI_API_KEY 以启用真正的 AI 智能问答 */}
         {aiConfigured === false && (
           <div className="bg-amber-50 border-b border-amber-100 px-5 py-1.5 text-[13px] text-amber-900 font-medium">
-            当前为本地规则库模式，可解答平台填报与评分问题；如需通用 AI，请在 .env 配置 GEMINI_API_KEY 后重启。
+            {language === 'zh'
+              ? '当前为本地规则库模式，可解答平台填报与评分问题；如需通用 AI，请在 .env 配置 GEMINI_API_KEY 后重启。'
+              : 'Currently running in local rule-engine mode, which can answer questions about entry and scoring; for general AI, configure GEMINI_API_KEY in .env and restart.'}
           </div>
         )}
 
@@ -619,7 +661,7 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
             }`}
           >
             <Sparkles className="w-3.5 h-3.5" />
-            <span>问答咨询</span>
+            <span>{language === 'zh' ? '问答咨询' : 'Q&A'}</span>
           </button>
           <button
             onClick={() => setActiveTab('benchmarks')}
@@ -630,7 +672,7 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
             }`}
           >
             <BarChart3 className="w-3.5 h-3.5" />
-            <span>行业数据基准</span>
+            <span>{language === 'zh' ? '行业数据基准' : 'Industry Benchmarks'}</span>
           </button>
         </div>
 
@@ -642,10 +684,14 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
               {chatHistory.length === 0 ? (
                 <div className="space-y-3">
                   <p className="text-[14px] leading-relaxed text-slate-700">
-                    您好！我是 AI 助手，<b>经营问题都能用大白话讲清</b>——直接输入提问，或点下方高频问题试一试：
+                    {language === 'zh' ? (
+                      <>您好！我是 AI 助手，<b>经营问题都能用大白话讲清</b>——直接输入提问，或点下方高频问题试一试：</>
+                    ) : (
+                      <>Hi! I'm your AI assistant — <b>I can explain business questions in plain language</b>. Type a question directly, or try one of the frequent questions below:</>
+                    )}
                   </p>
                   <div className="space-y-2">
-                    {FAQ_PRESETS.map((q, idx) => (
+                    {(language === 'zh' ? FAQ_PRESETS : FAQ_PRESETS_EN).map((q, idx) => (
                       <button
                         key={idx}
                         onClick={() => handleAskQuestion(q)}
@@ -667,11 +713,11 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
                       <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-2.5">
                         <div className="flex items-start gap-2 text-slate-900 font-bold text-xs sm:text-sm">
                           <HelpCircle className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
-                          <span>问：{item.question}</span>
+                          <span>{language === 'zh' ? '问：' : 'Q: '}{item.question}</span>
                         </div>
                         {item.aiMode === 'gemini' && (
                           <span className="text-[12px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 shrink-0">
-                            AI 智能回答
+                            {language === 'zh' ? 'AI 智能回答' : 'AI Answer'}
                           </span>
                         )}
                       </div>
@@ -681,7 +727,11 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
                         <div className="flex items-center justify-between text-teal-700 font-bold text-xs pb-1 border-b border-slate-200/60">
                           <div className="flex items-center gap-1.5">
                             <Sparkles className="w-3.5 h-3.5 text-teal-600" />
-                            <span>{item.aiMode === 'gemini' ? 'AI 解答：' : '大白话解答：'}</span>
+                            <span>
+                              {language === 'zh'
+                                ? (item.aiMode === 'gemini' ? 'AI 解答：' : '大白话解答：')
+                                : (item.aiMode === 'gemini' ? 'AI Answer:' : 'Plain-Language Answer:')}
+                            </span>
                           </div>
                           <button
                             onClick={() => handleCopy(item.id, item.aiResponse)}
@@ -690,12 +740,12 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
                             {copiedId === item.id ? (
                               <>
                                 <Check className="w-3 h-3 text-emerald-600" />
-                                <span className="text-emerald-600">已复制</span>
+                                <span className="text-emerald-600">{language === 'zh' ? '已复制' : 'Copied'}</span>
                               </>
                             ) : (
                               <>
                                 <Copy className="w-3 h-3" />
-                                <span>复制解答</span>
+                                <span>{language === 'zh' ? '复制解答' : 'Copy answer'}</span>
                               </>
                             )}
                           </button>
@@ -708,7 +758,7 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
                         {item.suggestedAction && (
                           <div className="mt-2.5 pt-2 border-t border-slate-200/70 flex items-center gap-1.5 text-[13px] text-teal-900 bg-teal-50/60 px-2.5 py-1.5 rounded-lg font-medium">
                             <Lightbulb className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                            <span><b>填报指引：</b>{item.suggestedAction}</span>
+                            <span><b>{language === 'zh' ? '填报指引：' : 'Filing tip: '}</b>{item.suggestedAction}</span>
                           </div>
                         )}
 
@@ -716,18 +766,26 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
                         {item.aiMode !== 'gemini' && item.geminiUnavailable && (
                           <div
                             className="mt-2 pt-1.5 border-t border-rose-100 flex items-center justify-between gap-2 text-[13px] text-rose-800"
-                            title="本次回答由内置本地规则库提供，提问与回答均不影响任何评分"
+                            title={language === 'zh' ? '本次回答由内置本地规则库提供，提问与回答均不影响任何评分' : 'This answer was provided by the built-in local rule engine; questions and answers never affect any score'}
                           >
                             <span className="flex items-center gap-1 min-w-0">
                               <AlertTriangle className="w-3 h-3 text-rose-500 shrink-0" />
                               <span className="truncate">
-                                {item.geminiErrorKind === 'quota'
-                                  ? '云端 AI 免费额度已用完，已用本地规则库回答'
-                                  : item.geminiErrorKind === 'auth'
-                                    ? '云端 AI 密钥无效，已用本地规则库回答'
-                                    : item.geminiErrorKind === 'model'
-                                      ? '云端 AI 模型暂不可用，已用本地规则库回答'
-                                      : '云端 AI 暂不可用，已用本地规则库回答'}
+                                {language === 'zh'
+                                  ? (item.geminiErrorKind === 'quota'
+                                      ? '云端 AI 免费额度已用完，已用本地规则库回答'
+                                      : item.geminiErrorKind === 'auth'
+                                        ? '云端 AI 密钥无效，已用本地规则库回答'
+                                        : item.geminiErrorKind === 'model'
+                                          ? '云端 AI 模型暂不可用，已用本地规则库回答'
+                                          : '云端 AI 暂不可用，已用本地规则库回答')
+                                  : (item.geminiErrorKind === 'quota'
+                                      ? 'Cloud AI free quota exhausted; answered by the local rule engine'
+                                      : item.geminiErrorKind === 'auth'
+                                        ? 'Cloud AI key is invalid; answered by the local rule engine'
+                                        : item.geminiErrorKind === 'model'
+                                          ? 'Cloud AI model is temporarily unavailable; answered by the local rule engine'
+                                          : 'Cloud AI is temporarily unavailable; answered by the local rule engine')}
                               </span>
                             </span>
                             <button
@@ -736,7 +794,7 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
                               disabled={isLoading}
                               className="text-rose-700 hover:text-rose-900 underline underline-offset-2 disabled:opacity-50 cursor-pointer shrink-0"
                             >
-                              {isLoading ? '重试中...' : '重试'}
+                              {isLoading ? (language === 'zh' ? '重试中...' : 'Retrying...') : (language === 'zh' ? '重试' : 'Retry')}
                             </button>
                           </div>
                         )}
@@ -746,7 +804,7 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
                           <div className="mt-3 pt-3 border-t border-amber-200 space-y-2">
                             <div className="flex items-center gap-1 text-amber-800 font-bold text-[13px]">
                               <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
-                              <span>规则未决情况下的保守填报路径指引：</span>
+                              <span>{language === 'zh' ? '规则未决情况下的保守填报路径指引：' : 'Conservative filing paths for unresolved rule cases:'}</span>
                             </div>
                             {item.conservativePaths.map((path, pIdx) => (
                               <div
@@ -759,7 +817,7 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
                                 </div>
                                 <p className="text-slate-600 text-[13px]">{path.assumption}</p>
                                 <p className="text-[12px] text-amber-800 font-medium">
-                                  影响说明：{path.consequence}
+                                  {language === 'zh' ? '影响说明：' : 'Impact: '}{path.consequence}
                                 </p>
                               </div>
                             ))}
@@ -778,7 +836,7 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
                           }`}
                         >
                           <ThumbsUp className="w-3 h-3" />
-                          <span>有用</span>
+                          <span>{language === 'zh' ? '有用' : 'Helpful'}</span>
                         </button>
                         <button
                           onClick={() => handleFeedback(item.id, 'not_helpful')}
@@ -789,7 +847,7 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
                           }`}
                         >
                           <ThumbsDown className="w-3 h-3" />
-                          <span>没用</span>
+                          <span>{language === 'zh' ? '没用' : 'Not helpful'}</span>
                         </button>
                       </div>
                     </div>
@@ -805,10 +863,12 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
               <div className="p-3.5 rounded-xl bg-slate-900 text-white text-xs space-y-1">
                 <div className="flex items-center gap-2 text-teal-300 font-bold">
                   <TrendingUp className="w-4 h-4" />
-                  <span>全球小微商业真实样本大数据分布（分行业 P50 中位数）</span>
+                  <span>{language === 'zh' ? '全球小微商业真实样本大数据分布（分行业 P50 中位数）' : 'Global Micro-Business Sample Data (Industry P50 Medians)'}</span>
                 </div>
                 <p className="text-slate-300 text-[13px]">
-                  汇集全球数万家无财务背景小微企业经营指标，为您自查毛利空间与开销结构提供精准对标。
+                  {language === 'zh'
+                    ? '汇集全球数万家无财务背景小微企业经营指标，为您自查毛利空间与开销结构提供精准对标。'
+                    : 'Aggregated operating metrics from tens of thousands of micro-businesses worldwide, giving you a precise benchmark for margin and cost structure.'}
                 </p>
               </div>
 
@@ -820,39 +880,39 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
                   >
                     <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-slate-900 text-sm">{ind.name}</span>
+                        <span className="font-bold text-slate-900 text-sm">{language === 'zh' ? ind.name : ind.nameEn}</span>
                       </div>
                       <span className="text-[13px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md">
-                        {ind.avgRevenue}
+                        {language === 'zh' ? ind.avgRevenue : ind.avgRevenueEn}
                       </span>
                     </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                       <div className="p-2 bg-slate-50 rounded-lg border border-slate-100">
-                        <span className="text-[12px] text-slate-400 block font-medium">典型毛利率</span>
+                        <span className="text-[12px] text-slate-400 block font-medium">{language === 'zh' ? '典型毛利率' : 'Typical Gross Margin'}</span>
                         <span className="font-bold text-slate-900 text-xs sm:text-sm">{ind.grossMargin}</span>
-                        <span className="text-[11px] text-slate-500 block truncate">{ind.grossMarginLabel}</span>
+                        <span className="text-[11px] text-slate-500 block truncate">{language === 'zh' ? ind.grossMarginLabel : ind.grossMarginLabelEn}</span>
                       </div>
                       <div className="p-2 bg-slate-50 rounded-lg border border-slate-100">
-                        <span className="text-[12px] text-slate-400 block font-medium">房租人工占比</span>
+                        <span className="text-[12px] text-slate-400 block font-medium">{language === 'zh' ? '房租人工占比' : 'Rent & Labor Share'}</span>
                         <span className="font-bold text-slate-900 text-xs sm:text-sm">{ind.opexRatio}</span>
-                        <span className="text-[11px] text-slate-500 block truncate">雷打不动开销</span>
+                        <span className="text-[11px] text-slate-500 block truncate">{language === 'zh' ? '雷打不动开销' : 'Fixed costs'}</span>
                       </div>
                       <div className="p-2 bg-slate-50 rounded-lg border border-slate-100">
-                        <span className="text-[12px] text-slate-400 block font-medium">备用金安全线</span>
-                        <span className="font-bold text-emerald-700 text-xs sm:text-sm">{ind.runwaySafety}</span>
-                        <span className="text-[11px] text-slate-500 block truncate">抗断流月数</span>
+                        <span className="text-[12px] text-slate-400 block font-medium">{language === 'zh' ? '备用金安全线' : 'Reserve Safety Line'}</span>
+                        <span className="font-bold text-emerald-700 text-xs sm:text-sm">{language === 'zh' ? ind.runwaySafety : ind.runwaySafetyEn}</span>
+                        <span className="text-[11px] text-slate-500 block truncate">{language === 'zh' ? '抗断流月数' : 'Months of runway'}</span>
                       </div>
                       <div className="p-2 bg-slate-50 rounded-lg border border-slate-100">
-                        <span className="text-[12px] text-slate-400 block font-medium">到手净利润率</span>
+                        <span className="text-[12px] text-slate-400 block font-medium">{language === 'zh' ? '到手净利润率' : 'Net Profit Margin'}</span>
                         <span className="font-bold text-teal-700 text-xs sm:text-sm">{ind.netProfitMargin}</span>
-                        <span className="text-[11px] text-slate-500 block truncate">实际进口袋</span>
+                        <span className="text-[11px] text-slate-500 block truncate">{language === 'zh' ? '实际进口袋' : 'Actual take-home'}</span>
                       </div>
                     </div>
 
                     <div className="p-2.5 bg-amber-50/60 rounded-xl border border-amber-200/70 text-[13px] text-amber-900 leading-relaxed flex items-start gap-2">
                       <Lightbulb className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
-                      <span><b>老手生存准则：</b>{ind.keySurvivalRule}</span>
+                      <span><b>{language === 'zh' ? '老手生存准则：' : 'Veteran survival rule: '}</b>{language === 'zh' ? ind.keySurvivalRule : ind.keySurvivalRuleEn}</span>
                     </div>
                   </div>
                 ))}
@@ -867,7 +927,7 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
           <div className="flex gap-2">
             <input
               type="text"
-              placeholder="输入经营问题，如：毛利率怎么算？现金要留几个月？..."
+              placeholder={language === 'zh' ? '输入经营问题，如：毛利率怎么算？现金要留几个月？...' : 'Ask a business question, e.g. how is gross margin calculated? How many months of cash reserve?'}
               value={questionInput}
               onChange={(e) => setQuestionInput(e.target.value)}
               onKeyDown={(e) => {
@@ -883,7 +943,7 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
               className="px-4 py-2.5 bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer shrink-0"
             >
               <Send className="w-3.5 h-3.5" />
-              <span>{isLoading ? '解答中...' : '提问'}</span>
+              <span>{isLoading ? (language === 'zh' ? '解答中...' : 'Answering...') : (language === 'zh' ? '提问' : 'Ask')}</span>
             </button>
           </div>
         </div>

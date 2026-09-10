@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { GraduationCap, PlayCircle, CheckCircle2, ExternalLink, Youtube, Film, Clock } from 'lucide-react';
 import { Language } from '../types';
-import { LEARNING_VIDEOS, LEARNING_CATEGORIES } from '../lib/learningVideos';
+import { LEARNING_VIDEOS, LEARNING_CATEGORIES, LEARNING_CATEGORY_LABELS_EN } from '../lib/learningVideos';
 import { getLearningProgress, setVideoWatched } from '../lib/storage';
 
 interface LearningCenterPageProps {
@@ -14,6 +14,12 @@ export const LearningCenterPage: React.FC<LearningCenterPageProps> = ({ language
   const [playingVideoId, setPlayingVideoId] = useState<string | null>(null);
 
   const categories = useMemo(() => ['全部', ...LEARNING_CATEGORIES], []);
+
+  const categoryLabel = (cat: string) => {
+    if (language === 'zh') return cat;
+    if (cat === '全部') return 'All';
+    return LEARNING_CATEGORY_LABELS_EN[cat] || cat;
+  };
 
   const filteredVideos = useMemo(
     () =>
@@ -89,7 +95,7 @@ export const LearningCenterPage: React.FC<LearningCenterPageProps> = ({ language
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
-              {cat}
+              {categoryLabel(cat)}
             </button>
           ))}
         </div>
@@ -111,7 +117,7 @@ export const LearningCenterPage: React.FC<LearningCenterPageProps> = ({ language
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="text-[12px] font-bold px-2 py-0.5 rounded-full bg-teal-100 text-teal-700">
-                  {video.category}
+                  {categoryLabel(video.category)}
                 </span>
                 <span className="inline-flex items-center gap-1 text-[12px] text-slate-400 font-semibold">
                   {video.source === 'youtube' ? (
