@@ -623,21 +623,34 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                   <div className="mt-3 p-3 rounded-xl bg-amber-50 border-2 border-amber-300 flex items-start gap-2 text-amber-900">
                     <span className="text-xl leading-none mt-0.5">⚠️</span>
                     <div className="text-xs leading-relaxed">
-                      <strong className="font-black">数据合理性提示：</strong>
+                      <strong className="font-black">{t('数据合理性提示：', 'Data sanity notice: ')}</strong>
                       {monthlyRealRevenue > 0 && monthlyRealRevenue < 1000 ? (
-                        <span>月营收仅 <strong>{formatMoney(monthlyRealRevenue, baseCurr)}</strong> 异常小，请检查是否把「年营业额」误填为月流水，或漏报真实生意规模。</span>
+                        language === 'zh' ? (
+                          <span>月营收仅 <strong>{formatMoney(monthlyRealRevenue, baseCurr)}</strong> 异常小，请检查是否把「年营业额」误填为月流水，或漏报真实生意规模。</span>
+                        ) : (
+                          <span>Monthly revenue of only <strong>{formatMoney(monthlyRealRevenue, baseCurr)}</strong> looks unusually low — check whether "annual revenue" was mistakenly entered as monthly revenue, or whether the true business scale was underreported.</span>
+                        )
                       ) : cogsPct >= 80 && opexRatioPercent >= 200 ? (
-                        <span>进货占比达 {cogsPct.toFixed(0)}% 同时固定开销占比 {opexRatioPercent.toFixed(0)}%，这两个比值同时异常很可能是明细项里某项金额错填了（粘错了数字 / 多填了一个 0 / AI 默认估算偏离实际）。请逐项核对下面的明细数值。</span>
+                        <span>{t(
+                          `进货占比达 ${cogsPct.toFixed(0)}% 同时固定开销占比 ${opexRatioPercent.toFixed(0)}%，这两个比值同时异常很可能是明细项里某项金额错填了（粘错了数字 / 多填了一个 0 / AI 默认估算偏离实际）。请逐项核对下面的明细数值。`,
+                          `Purchasing cost is ${cogsPct.toFixed(0)}% of revenue and fixed overhead is ${opexRatioPercent.toFixed(0)}% — both being abnormal at the same time likely means a line-item amount was entered incorrectly (a typo, an extra zero, or an inaccurate AI estimate). Please double-check the detailed figures below.`
+                        )}</span>
                       ) : cogsPct >= 80 ? (
-                        <span>进货占比达 {cogsPct.toFixed(0)}%（进货 ≈ 营收）。请检查动态物料明细项：是否有某项金额粘错（如把「月营业额」误填到进货明细里），或 AI 建议的初始金额偏离实际。</span>
+                        <span>{t(
+                          `进货占比达 ${cogsPct.toFixed(0)}%（进货 ≈ 营收）。请检查动态物料明细项：是否有某项金额粘错（如把「月营业额」误填到进货明细里），或 AI 建议的初始金额偏离实际。`,
+                          `Purchasing cost is ${cogsPct.toFixed(0)}% of revenue (purchasing ≈ revenue). Check the material cost line items: was an amount entered incorrectly (e.g. "monthly revenue" typed into a purchasing line item), or is the AI's suggested starting value off?`
+                        )}</span>
                       ) : (
-                        <span>固定开销占比 {opexRatioPercent.toFixed(0)}% 远超健康区间。请检查房租/人工/水电是否把「年总额」误填成月金额，或数字多填了零。</span>
+                        <span>{t(
+                          `固定开销占比 ${opexRatioPercent.toFixed(0)}% 远超健康区间。请检查房租/人工/水电是否把「年总额」误填成月金额，或数字多填了零。`,
+                          `Fixed overhead is ${opexRatioPercent.toFixed(0)}% of revenue, far above the healthy range. Check whether rent/wages/utilities had an "annual total" mistakenly entered as a monthly amount, or an extra zero was typed.`
+                        )}</span>
                       )}
                     </div>
                   </div>
                 ) : null}
                 <p className="text-[13px] sm:text-xs text-neutral-500 font-medium mt-1.5 leading-relaxed max-w-3xl">
-                  大白话：{getPlainVerdict()}
+                  {t('大白话：', 'In plain terms: ')}{getPlainVerdict()}
                 </p>
 
                 {/* 红线合规状态：从专业明细模式精简为一行，默认就能看见 */}
@@ -654,17 +667,28 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                     <span className="flex items-center gap-1.5">
                       <ShieldCheck className={`w-3.5 h-3.5 ${hasCriticalWeakness ? 'text-amber-600' : 'text-emerald-600'}`} />
                       {hasCriticalWeakness && weakestDimension
-                        ? `${report.gates.length} 项安全红线全部通过，但「${weakestDimension.dimensionPlain}」仅 ${weakestDimension.score}/100，仍有真实风险需关注`
-                        : `${report.gates.length} 项安全红线全部通过，无资金断流或倒挂风险`}
+                        ? t(
+                            `${report.gates.length} 项安全红线全部通过，但「${weakestDimension.dimensionPlain}」仅 ${weakestDimension.score}/100，仍有真实风险需关注`,
+                            `All ${report.gates.length} safety gates passed, but "${weakestDimension.dimensionPlain}" is only ${weakestDimension.score}/100 — a real risk that still needs attention`
+                          )
+                        : t(
+                            `${report.gates.length} 项安全红线全部通过，无资金断流或倒挂风险`,
+                            `All ${report.gates.length} safety gates passed — no risk of cash-flow breakdown or margin inversion`
+                          )}
                     </span>
                   ) : (
                     <span className="flex items-center gap-1.5">
                       <AlertOctagon className="w-3.5 h-3.5 text-rose-600" />
-                      触发 {((report.failedGates || report.gates.filter((g) => g.status !== 'PASS')).length)} 项安全红线：
-                      {(report.failedGates && report.failedGates.length > 0
-                        ? report.failedGates
-                        : report.gates.filter((g) => g.status !== 'PASS')
-                      ).map((g) => g.plainName || g.name).join('、')}
+                      {t(
+                        `触发 ${((report.failedGates || report.gates.filter((g) => g.status !== 'PASS')).length)} 项安全红线：${(report.failedGates && report.failedGates.length > 0
+                          ? report.failedGates
+                          : report.gates.filter((g) => g.status !== 'PASS')
+                        ).map((g) => g.plainName || g.name).join('、')}`,
+                        `${((report.failedGates || report.gates.filter((g) => g.status !== 'PASS')).length)} safety gate(s) triggered: ${(report.failedGates && report.failedGates.length > 0
+                          ? report.failedGates
+                          : report.gates.filter((g) => g.status !== 'PASS')
+                        ).map((g) => g.plainName || g.name).join(', ')}`
+                      )}
                     </span>
                   )}
                 </div>
@@ -695,9 +719,9 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                     key="breakdown-cogs"
                     style={{ width: `${cogsPct}%` }}
                     className="bg-amber-400 text-amber-950 flex items-center justify-center text-xs font-mono font-bold transition-all relative group"
-                    title={`进货采购: ${cogsPct}% (${formatMoney(monthlyCogs, baseCurr)})`}
+                    title={t(`进货采购: ${cogsPct}% (${formatMoney(monthlyCogs, baseCurr)})`, `Purchasing: ${cogsPct}% (${formatMoney(monthlyCogs, baseCurr)})`)}
                   >
-                    {cogsPct >= 10 && <span>进货 {cogsPct}元</span>}
+                    {cogsPct >= 10 && <span>{t(`进货 ${cogsPct}元`, `Purchasing ${cogsPct}`)}</span>}
                   </div>
                 )}
                 {/* 2. OPEX Bar */}
@@ -706,9 +730,9 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                     key="breakdown-opex"
                     style={{ width: `${opexPct}%` }}
                     className="bg-teal-500 text-white flex items-center justify-center text-xs font-mono font-bold transition-all relative group"
-                    title={`房租与工人工资: ${opexPct}% (${formatMoney(monthlyOpex, baseCurr)})`}
+                    title={t(`房租与工人工资: ${opexPct}% (${formatMoney(monthlyOpex, baseCurr)})`, `Rent & Wages: ${opexPct}% (${formatMoney(monthlyOpex, baseCurr)})`)}
                   >
-                    {opexPct >= 10 && <span>房租人工 {opexPct}元</span>}
+                    {opexPct >= 10 && <span>{t(`房租人工 ${opexPct}元`, `Rent/Wages ${opexPct}`)}</span>}
                   </div>
                 )}
                 {/* 3. Taxes & Other */}
@@ -717,9 +741,9 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                     key="breakdown-tax"
                     style={{ width: `${taxOtherPct}%` }}
                     className="bg-neutral-300 text-neutral-800 flex items-center justify-center text-xs font-mono font-bold transition-all relative group"
-                    title={`税费与杂支: ${taxOtherPct}%`}
+                    title={t(`税费与杂支: ${taxOtherPct}%`, `Taxes & Other: ${taxOtherPct}%`)}
                   >
-                    {taxOtherPct >= 10 && <span>税费 {taxOtherPct}元</span>}
+                    {taxOtherPct >= 10 && <span>{t(`税费 ${taxOtherPct}元`, `Taxes ${taxOtherPct}`)}</span>}
                   </div>
                 )}
                 {/* 4. Net Profit Bar */}
@@ -728,9 +752,9 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                     key="breakdown-net"
                     style={{ width: `${Math.max(4, netPct)}%` }}
                     className="bg-emerald-500 text-white flex items-center justify-center text-xs font-mono font-bold transition-all relative group"
-                    title={`净赚利润: ${netPct}% (${formatMoney(netProfit, baseCurr)})`}
+                    title={t(`净赚利润: ${netPct}% (${formatMoney(netProfit, baseCurr)})`, `Net Profit: ${netPct}% (${formatMoney(netProfit, baseCurr)})`)}
                   >
-                    {netPct >= 8 && <span>净赚 {netPct}元</span>}
+                    {netPct >= 8 && <span>{t(`净赚 ${netPct}元`, `Net ${netPct}`)}</span>}
                   </div>
                 )}
               </div>
@@ -740,56 +764,56 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                 <div className="bg-amber-50/70 border border-amber-200 p-3 rounded-2xl">
                   <div className="flex items-center space-x-1.5 text-xs text-amber-800 font-bold mb-1">
                     <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0"></span>
-                    <span>1. 进货采购成本</span>
+                    <span>{t('1. 进货采购成本', '1. Purchasing Cost')}</span>
                   </div>
                   <div className="text-base font-mono font-black text-neutral-900">
-                    {cogsPct} 块钱
-                    <span className="text-[12px] text-neutral-400 font-normal ml-1">/百元</span>
+                    {cogsPct} {t('块钱', '')}
+                    <span className="text-[12px] text-neutral-400 font-normal ml-1">{t('/百元', '/100')}</span>
                   </div>
                   <div className="text-[13px] text-neutral-500 font-medium mt-0.5">
-                    每月花费 {formatMoney(monthlyCogs, baseCurr)}
+                    {t(`每月花费 ${formatMoney(monthlyCogs, baseCurr)}`, `${formatMoney(monthlyCogs, baseCurr)}/month`)}
                   </div>
                 </div>
 
                 <div className="bg-teal-50/70 border border-teal-200 p-3 rounded-2xl">
                   <div className="flex items-center space-x-1.5 text-xs text-teal-800 font-bold mb-1">
                     <span className="w-2.5 h-2.5 rounded-full bg-teal-500 shrink-0"></span>
-                    <span>2. 房租工人工资</span>
+                    <span>{t('2. 房租工人工资', '2. Rent & Wages')}</span>
                   </div>
                   <div className="text-base font-mono font-black text-neutral-900">
-                    {opexPct} 块钱
-                    <span className="text-[12px] text-neutral-400 font-normal ml-1">/百元</span>
+                    {opexPct} {t('块钱', '')}
+                    <span className="text-[12px] text-neutral-400 font-normal ml-1">{t('/百元', '/100')}</span>
                   </div>
                   <div className="text-[13px] text-neutral-500 font-medium mt-0.5">
-                    每月花费 {formatMoney(monthlyOpex, baseCurr)}
+                    {t(`每月花费 ${formatMoney(monthlyOpex, baseCurr)}`, `${formatMoney(monthlyOpex, baseCurr)}/month`)}
                   </div>
                 </div>
 
                 <div className="bg-neutral-100 border border-neutral-200 p-3 rounded-2xl">
                   <div className="flex items-center space-x-1.5 text-xs text-neutral-700 font-bold mb-1">
                     <span className="w-2.5 h-2.5 rounded-full bg-neutral-400 shrink-0"></span>
-                    <span>3. 税费与杂支</span>
+                    <span>{t('3. 税费与杂支', '3. Taxes & Other')}</span>
                   </div>
                   <div className="text-base font-mono font-black text-neutral-900">
-                    {taxOtherPct} 块钱
-                    <span className="text-[12px] text-neutral-400 font-normal ml-1">/百元</span>
+                    {taxOtherPct} {t('块钱', '')}
+                    <span className="text-[12px] text-neutral-400 font-normal ml-1">{t('/百元', '/100')}</span>
                   </div>
                   <div className="text-[13px] text-neutral-500 font-medium mt-0.5">
-                    合规与日常消耗
+                    {t('合规与日常消耗', 'Compliance and misc. expenses')}
                   </div>
                 </div>
 
                 <div className="bg-emerald-50/70 border border-emerald-200 p-3 rounded-2xl">
                   <div className="flex items-center space-x-1.5 text-xs text-emerald-800 font-bold mb-1">
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0"></span>
-                    <span>4. 真正落袋净利</span>
+                    <span>{t('4. 真正落袋净利', '4. Actual Net Profit')}</span>
                   </div>
                   <div className="text-base font-mono font-black text-emerald-700">
-                    {netPct} 块钱
-                    <span className="text-[12px] text-neutral-400 font-normal ml-1">/百元</span>
+                    {netPct} {t('块钱', '')}
+                    <span className="text-[12px] text-neutral-400 font-normal ml-1">{t('/百元', '/100')}</span>
                   </div>
                   <div className="text-[13px] text-neutral-500 font-medium mt-0.5">
-                    每月净落袋 {formatMoney(netProfit, baseCurr)}
+                    {t(`每月净落袋 ${formatMoney(netProfit, baseCurr)}`, `${formatMoney(netProfit, baseCurr)}/month net`)}
                   </div>
                 </div>
               </div>
@@ -974,10 +998,10 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
               <div className="bg-amber-950/40 border border-amber-500/40 rounded-2xl p-4 text-xs space-y-2 animate-in fade-in">
                 <div className="font-bold text-amber-300 flex items-center gap-1.5">
                   <Sparkles className="w-4 h-4" />
-                  <span>Gemini 3.7 定制诊断：{aiCustomDiagnosis.summaryHeadline || '已完成实时深度诊断'}</span>
+                  <span>{t('Gemini 3.7 定制诊断：', 'Gemini 3.7 Custom Diagnosis: ')}{aiCustomDiagnosis.summaryHeadline || t('已完成实时深度诊断', 'Live deep diagnosis complete')}</span>
                 </div>
                 <p className="text-neutral-300 leading-relaxed">
-                  {aiCustomDiagnosis.plainExplanation || 'AI 已根据你的业务数据生成诊断结论，请参考下方行动清单与专业建议。'}
+                  {aiCustomDiagnosis.plainExplanation || t('AI 已根据你的业务数据生成诊断结论，请参考下方行动清单与专业建议。', 'AI has generated a diagnosis based on your business data — see the action checklist and recommendations below.')}
                 </p>
                 {aiCustomDiagnosis.potentialGrowthAreas && (
                   <div className="pt-2 flex flex-wrap gap-2">
@@ -1063,7 +1087,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-neutral-100 hover:bg-neutral-200/80 border border-neutral-200 text-neutral-700 text-xs font-bold transition-colors cursor-pointer print:hidden"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span>返回小白速览</span>
+            <span>{t('返回小白速览', 'Back to Simple View')}</span>
           </button>
           {/* Main Bento Grid Header Section */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
@@ -1072,18 +1096,18 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
               <div>
                 <div className="flex items-center space-x-2 mb-3">
                   <span className="text-[12px] font-bold uppercase tracking-wider text-teal-700 bg-teal-50 px-3 py-1 rounded-full border border-teal-100">
-                    工场服事标准体检评估报告
+                    {t('工场服事标准体检评估报告', 'Standard Ministry Business Assessment Report')}
                   </span>
                   <span className="text-[12px] text-neutral-400 font-medium">
-                    生成时间: {new Date(report.createdAt).toLocaleDateString()}
+                    {t('生成时间:', 'Generated:')} {new Date(report.createdAt).toLocaleDateString()}
                   </span>
                 </div>
 
                 <h2 className="text-2xl sm:text-3xl font-black text-neutral-900 tracking-tight leading-tight">
-                  {report.projectName || '工场医疗教育服事自测项目'}
+                  {report.projectName || t('工场医疗教育服事自测项目', 'Ministry Medical/Education Self-Assessment Project')}
                 </h2>
                 <p className="text-xs text-neutral-500 font-medium mt-1">
-                  行业领域：{report.industry} ｜ 申报版本：v{report.version} ｜ 基准币种：{report.baseCurrency}
+                  {t('行业领域：', 'Industry: ')}{report.industry} ｜ {t('申报版本：', 'Version: ')}v{report.version} ｜ {t('基准币种：', 'Base currency: ')}{report.baseCurrency}
                 </p>
               </div>
 
@@ -1092,7 +1116,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                 {report.dataMinimizationNotice && (
                   <span className="text-xs bg-amber-50 text-amber-800 font-semibold px-3 py-1 rounded-xl border border-amber-200 flex items-center space-x-1.5">
                     <ShieldCheck className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                    <span>敏感安全脱敏模式</span>
+                    <span>{t('敏感安全脱敏模式', 'Sensitive/Redacted Mode')}</span>
                   </span>
                 )}
 
@@ -1106,7 +1130,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                 {report.estimatedMonthsCount > 0 && (
                   <span className="text-xs bg-cyan-50 text-cyan-800 font-semibold px-3 py-1 rounded-xl border border-cyan-200 flex items-center space-x-1.5">
                     <Sparkles className="w-3.5 h-3.5 text-cyan-600 shrink-0" />
-                    <span>流水断点平滑估算已确认 ({report.estimatedMonthsCount} 个月)</span>
+                    <span>{t(`流水断点平滑估算已确认 (${report.estimatedMonthsCount} 个月)`, `Revenue-gap smoothing estimate confirmed (${report.estimatedMonthsCount} months)`)}</span>
                   </span>
                 )}
               </div>
@@ -1119,7 +1143,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                   SCORE & GRADE
                 </span>
                 <span className="text-xs bg-neutral-800 text-emerald-400 px-3 py-1 rounded-full font-bold border border-neutral-700">
-                  {report.tier} 等级
+                  {report.tier} {t('等级', 'Tier')}
                 </span>
               </div>
 
@@ -1129,22 +1153,22 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                   <span className="text-base text-neutral-500 font-normal ml-1">/100</span>
                 </div>
                 <div className="text-xs text-neutral-400 font-medium mt-1">
-                  综合抗风险与自我造血指数
+                  {t('综合抗风险与自我造血指数', 'Composite resilience & self-sufficiency index')}
                 </div>
               </div>
 
               <div className="flex items-center justify-between pt-3 border-t border-neutral-800 text-xs font-medium">
-                <span className="text-neutral-400">门槛红线 (Gates):</span>
+                <span className="text-neutral-400">{t('门槛红线 (Gates):', 'Gates:')}</span>
                 <span className={`font-bold flex items-center space-x-1 ${report.gatePassed ? 'text-emerald-400' : 'text-rose-400'}`}>
                   {report.gatePassed ? (
                     <>
                       <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>全部通过 ({report.gates.length}/{report.gates.length})</span>
+                      <span>{t(`全部通过 (${report.gates.length}/${report.gates.length})`, `All passed (${report.gates.length}/${report.gates.length})`)}</span>
                     </>
                   ) : (
                     <>
                       <AlertOctagon className="w-3.5 h-3.5" />
-                      <span>{(report.failedGates || report.gates.filter((g) => g.status !== 'PASS')).length}项触发红线</span>
+                      <span>{t(`${(report.failedGates || report.gates.filter((g) => g.status !== 'PASS')).length}项触发红线`, `${(report.failedGates || report.gates.filter((g) => g.status !== 'PASS')).length} gate(s) triggered`)}</span>
                     </>
                   )}
                 </span>
@@ -1158,10 +1182,10 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
               <div>
                 <h3 className="text-base font-black text-neutral-900 flex items-center space-x-2">
                   <ShieldCheck className="w-5 h-5 text-teal-600" />
-                  <span>{report.gates.length} 项一票否决门槛红线 (Gate Checks)</span>
+                  <span>{t(`${report.gates.length} 项一票否决门槛红线 (Gate Checks)`, `${report.gates.length} Pass/Fail Gate Checks`)}</span>
                 </h3>
                 <p className="text-xs text-neutral-500 font-medium mt-0.5">
-                  依据标准规范，任何一项触发即判定商业模式存在资金断流或倒挂风险。
+                  {t('依据标准规范，任何一项触发即判定商业模式存在资金断流或倒挂风险。', 'Per standard policy, triggering any one gate indicates the business model has a cash-flow breakdown or margin-inversion risk.')}
                 </p>
               </div>
               <span className={`text-xs font-bold px-3 py-1.5 rounded-2xl border ${
@@ -1169,7 +1193,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                   ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                   : 'bg-rose-50 text-rose-800 border-rose-200'
               }`}>
-                {report.gatePassed ? '全部红线合规' : '存在触发红线'}
+                {report.gatePassed ? t('全部红线合规', 'All gates compliant') : t('存在触发红线', 'Some gates triggered')}
               </span>
             </div>
 
@@ -1213,8 +1237,8 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
             {/* Visual Radar SVG Box */}
             <div className="lg:col-span-5 bg-white border-2 border-neutral-200 rounded-3xl p-6 shadow-xs flex flex-col justify-between space-y-4">
               <div>
-                <h3 className="text-base font-black text-neutral-900">5 维能力雷达透视</h3>
-                <p className="text-xs text-neutral-500 font-medium">对比行业前 20% 标杆基准线</p>
+                <h3 className="text-base font-black text-neutral-900">{t('5 维能力雷达透视', '5-Dimension Radar View')}</h3>
+                <p className="text-xs text-neutral-500 font-medium">{t('对比行业前 20% 标杆基准线', 'Compared to the top-20% industry benchmark')}</p>
               </div>
 
               {/* Spider Radar Chart SVG */}
@@ -1302,11 +1326,11 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
               <div className="flex items-center justify-center space-x-6 text-xs font-medium pt-2 border-t border-neutral-100">
                 <div className="flex items-center space-x-1.5 text-teal-700">
                   <span className="w-3 h-3 rounded bg-teal-600 inline-block"></span>
-                  <span className="font-bold">本项目得分</span>
+                  <span className="font-bold">{t('本项目得分', 'This Project')}</span>
                 </div>
                 <div className="flex items-center space-x-1.5 text-neutral-500">
                   <span className="w-3 h-3 rounded bg-teal-200 inline-block border border-teal-400"></span>
-                  <span>行业标杆线</span>
+                  <span>{t('行业标杆线', 'Industry Benchmark')}</span>
                 </div>
               </div>
             </div>
@@ -1314,8 +1338,8 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
             {/* 5 Dimensions Details List */}
             <div className="lg:col-span-7 bg-white border-2 border-neutral-200 rounded-3xl p-6 shadow-xs flex flex-col justify-between space-y-3">
               <div>
-                <h3 className="text-base font-black text-neutral-900">5 维得分明细</h3>
-                <p className="text-xs text-neutral-500 font-medium">每项满分 100 分，加权综合后构成总分 100 分</p>
+                <h3 className="text-base font-black text-neutral-900">{t('5 维得分明细', '5-Dimension Score Breakdown')}</h3>
+                <p className="text-xs text-neutral-500 font-medium">{t('每项满分 100 分，加权综合后构成总分 100 分', 'Each dimension is scored out of 100; the weighted sum forms the total score out of 100')}</p>
               </div>
 
               <div className="space-y-3">
@@ -1336,7 +1360,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                     </div>
                     <div className="flex items-center justify-between text-[13px] text-neutral-500">
                       <span>{dim.dimension}</span>
-                      <span>行业标杆: {dim.benchmark}/100</span>
+                      <span>{t('行业标杆:', 'Benchmark:')} {dim.benchmark}/100</span>
                     </div>
                   </div>
                 ))}
@@ -1346,38 +1370,38 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
 
           {/* Section 4: Key Normalized Financial Metrics Cards */}
           <div className="bg-white border-2 border-neutral-200 rounded-3xl p-6 sm:p-8 shadow-xs space-y-4">
-            <h3 className="text-base font-black text-neutral-900">标准化财务指标核算</h3>
+            <h3 className="text-base font-black text-neutral-900">{t('标准化财务指标核算', 'Normalized Financial Metrics')}</h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="p-4 rounded-2xl bg-neutral-50 border border-neutral-200">
-                <div className="text-[12px] text-neutral-400 font-mono font-bold uppercase">月真实毛利率</div>
+                <div className="text-[12px] text-neutral-400 font-mono font-bold uppercase">{t('月真实毛利率', 'Monthly Gross Margin')}</div>
                 <div className="text-xl font-mono font-black text-neutral-900 mt-1">
                   {grossMarginPercent}%
                 </div>
-                <div className="text-[13px] text-neutral-500 mt-0.5">月毛利 {formatMoney(grossProfit, baseCurr)}</div>
+                <div className="text-[13px] text-neutral-500 mt-0.5">{t('月毛利', 'Gross profit')} {formatMoney(grossProfit, baseCurr)}</div>
               </div>
 
               <div className="p-4 rounded-2xl bg-neutral-50 border border-neutral-200">
-                <div className="text-[12px] text-neutral-400 font-mono font-bold uppercase">月净利润率</div>
+                <div className="text-[12px] text-neutral-400 font-mono font-bold uppercase">{t('月净利润率', 'Monthly Net Margin')}</div>
                 <div className="text-xl font-mono font-black text-neutral-900 mt-1">
                   {netProfitMarginPercent}%
                 </div>
-                <div className="text-[13px] text-neutral-500 mt-0.5">净利润 {formatMoney(netProfit, baseCurr)}</div>
+                <div className="text-[13px] text-neutral-500 mt-0.5">{t('净利润', 'Net profit')} {formatMoney(netProfit, baseCurr)}</div>
               </div>
 
               <div className="p-4 rounded-2xl bg-neutral-50 border border-neutral-200">
-                <div className="text-[12px] text-neutral-400 font-mono font-bold uppercase">固定开支占比 (OPEX)</div>
+                <div className="text-[12px] text-neutral-400 font-mono font-bold uppercase">{t('固定开支占比 (OPEX)', 'Fixed Cost Ratio (OPEX)')}</div>
                 <div className="text-xl font-mono font-black text-neutral-900 mt-1">
                   {opexRatioPercent}%
                 </div>
-                <div className="text-[13px] text-neutral-500 mt-0.5">固定开销 {formatMoney(monthlyOpex, baseCurr)}</div>
+                <div className="text-[13px] text-neutral-500 mt-0.5">{t('固定开销', 'Fixed costs')} {formatMoney(monthlyOpex, baseCurr)}</div>
               </div>
 
               <div className="p-4 rounded-2xl bg-neutral-50 border border-neutral-200">
-                <div className="text-[12px] text-neutral-400 font-mono font-bold uppercase">备用金支撑月数</div>
+                <div className="text-[12px] text-neutral-400 font-mono font-bold uppercase">{t('备用金支撑月数', 'Cash Runway (Months)')}</div>
                 <div className="text-xl font-mono font-black text-neutral-900 mt-1">
-                  {cashRunwayMonths} 个月
+                  {cashRunwayMonths} {t('个月', 'months')}
                 </div>
-                <div className="text-[13px] text-neutral-500 mt-0.5">安全底线为 ≥ 3.0 月</div>
+                <div className="text-[13px] text-neutral-500 mt-0.5">{t('安全底线为 ≥ 3.0 月', 'Safe threshold is ≥ 3.0 months')}</div>
               </div>
             </div>
           </div>

@@ -5,17 +5,19 @@ import {
   PieChart,
   Activity
 } from 'lucide-react';
-import { BusinessFormData } from '../../types';
+import { BusinessFormData, Language } from '../../types';
 import { calculateAssessmentReport } from '../../lib/scoringEngine';
 
 interface LiveHealthGaugeProps {
   formData: BusinessFormData;
+  language: Language;
   onOpenAiHelper?: (topic?: string) => void;
   revenueTouched?: boolean;
 }
 
 export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
   formData,
+  language,
   onOpenAiHelper,
   revenueTouched = false
 }) => {
@@ -60,15 +62,15 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
   // Runway battery color
   let batteryColor = 'text-emerald-600 bg-emerald-50 border-emerald-200';
   let batteryBarColor = 'bg-emerald-500';
-  let batteryLabel = '充足安全 (≥3个月)';
+  let batteryLabel = language === 'en' ? 'Safe & Sufficient (≥3 months)' : '充足安全 (≥3个月)';
   if (runwayNum < 1.5) {
     batteryColor = 'text-rose-600 bg-rose-50 border-rose-200';
     batteryBarColor = 'bg-rose-500';
-    batteryLabel = '严重不足 (<1.5个月)';
+    batteryLabel = language === 'en' ? 'Critically Low (<1.5 months)' : '严重不足 (<1.5个月)';
   } else if (runwayNum < 3.0) {
     batteryColor = 'text-amber-600 bg-amber-50 border-amber-200';
     batteryBarColor = 'bg-amber-500';
-    batteryLabel = '较为吃紧 (1.5~3个月)';
+    batteryLabel = language === 'en' ? 'Somewhat Tight (1.5~3 months)' : '较为吃紧 (1.5~3个月)';
   }
 
 
@@ -84,30 +86,32 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-xs font-mono font-bold uppercase tracking-wider text-neutral-500 bg-neutral-50 px-2.5 py-0.5 rounded-full border border-neutral-100">
-                  实时晴雨表
+                  {language === 'en' ? 'Live Barometer' : '实时晴雨表'}
                 </span>
-                <span className="text-xs text-neutral-500 font-bold">100% 自动计算</span>
+                <span className="text-xs text-neutral-500 font-bold">{language === 'en' ? '100% Auto-calculated' : '100% 自动计算'}</span>
               </div>
-              <h3 className="text-base sm:text-lg font-black text-neutral-900 mt-0.5">商宣模式运转健康实时测算</h3>
+              <h3 className="text-base sm:text-lg font-black text-neutral-900 mt-0.5">{language === 'en' ? 'Live Business Health Check' : '商宣模式运转健康实时测算'}</h3>
             </div>
           </div>
 
           <div className="flex items-center space-x-3">
             <div className="text-right">
-              <span className="text-xs text-neutral-400 font-medium block">预估健康分</span>
+              <span className="text-xs text-neutral-400 font-medium block">{language === 'en' ? 'Estimated Health Score' : '预估健康分'}</span>
               <span className="text-2xl font-black text-neutral-300 font-mono">
                 -- <span className="text-sm text-neutral-300">/ 100</span>
               </span>
             </div>
             <span className="px-3.5 py-2 rounded-2xl font-black text-sm border bg-neutral-100 text-neutral-500 border-neutral-200">
-              待填写
+              {language === 'en' ? 'Awaiting Input' : '待填写'}
             </span>
           </div>
         </div>
 
         <div className="py-10 text-center">
           <p className="text-sm font-medium text-neutral-500">
-            输入真实月总流水后，这里会实时显示健康测算
+            {language === 'en'
+              ? 'Once you enter real monthly total revenue, the health check will appear here live'
+              : '输入真实月总流水后，这里会实时显示健康测算'}
           </p>
         </div>
       </div>
@@ -125,18 +129,18 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono font-bold uppercase tracking-wider text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-100">
-                实时晴雨表
+                {language === 'en' ? 'Live Barometer' : '实时晴雨表'}
               </span>
-              <span className="text-xs text-neutral-500 font-bold">100% 自动计算</span>
+              <span className="text-xs text-neutral-500 font-bold">{language === 'en' ? '100% Auto-calculated' : '100% 自动计算'}</span>
             </div>
-            <h3 className="text-base sm:text-lg font-black text-neutral-900 mt-0.5">商宣模式运转健康实时测算</h3>
+            <h3 className="text-base sm:text-lg font-black text-neutral-900 mt-0.5">{language === 'en' ? 'Live Business Health Check' : '商宣模式运转健康实时测算'}</h3>
           </div>
         </div>
 
         {/* Live Score Badge */}
         <div className="flex items-center space-x-3">
           <div className="text-right">
-            <span className="text-xs text-neutral-400 font-medium block">预估健康分</span>
+            <span className="text-xs text-neutral-400 font-medium block">{language === 'en' ? 'Estimated Health Score' : '预估健康分'}</span>
             <span className="text-2xl font-black text-teal-900 font-mono">
               {report.totalScore} <span className="text-sm text-neutral-400">/ 100</span>
             </span>
@@ -152,7 +156,7 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
                 : 'bg-rose-100 text-rose-900 border-rose-300'
             }`}
           >
-            {report.tier} 级
+            {report.tier} {language === 'en' ? 'Tier' : '级'}
           </span>
         </div>
       </div>
@@ -168,7 +172,7 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
               ) : (
                 <BatteryCharging className="w-6 h-6" />
               )}
-              <span className="font-bold text-sm sm:text-base">救命现金电池 (能撑多久)</span>
+              <span className="font-bold text-sm sm:text-base">{language === 'en' ? 'Emergency Cash Battery (how long it lasts)' : '救命现金电池 (能撑多久)'}</span>
             </div>
             <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-white/90 border border-current">
               {batteryLabel}
@@ -177,10 +181,10 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
 
           <div className="flex items-baseline justify-between">
             <span className="text-3xl sm:text-4xl font-black font-mono tracking-tight">
-              {runwayMonths} <span className="text-base font-bold">个月</span>
+              {runwayMonths} <span className="text-base font-bold">{language === 'en' ? 'months' : '个月'}</span>
             </span>
             <span className="text-xs sm:text-sm font-semibold opacity-90">
-              备用金 {cash.toLocaleString()} {formData.baseCurrency}
+              {language === 'en' ? 'Reserve' : '备用金'} {cash.toLocaleString()} {formData.baseCurrency}
             </span>
           </div>
 
@@ -193,11 +197,17 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
           </div>
 
           <p className="text-xs sm:text-sm opacity-90 leading-relaxed font-medium">
-            {runwayNum >= 3.0
-              ? '备用金储备充裕，即使突发淡季或短期停业也能从容应对。'
-              : runwayNum >= 1.5
-              ? '现金储备中等，建议适度控制进货与非必要开销，留足 3 个月以上。'
-              : '现金极其危险！一旦顾客减少或发生意外支出可能立即面临断流。'}
+            {language === 'en'
+              ? (runwayNum >= 3.0
+                  ? 'Your reserve is ample — you can comfortably handle a sudden slow season or a short closure.'
+                  : runwayNum >= 1.5
+                  ? 'Your cash reserve is moderate — consider moderately controlling purchasing and non-essential spending, and build up at least 3 months of runway.'
+                  : 'Your cash position is extremely risky! A drop in customers or an unexpected expense could immediately cause a cash-flow break.')
+              : (runwayNum >= 3.0
+                  ? '备用金储备充裕，即使突发淡季或短期停业也能从容应对。'
+                  : runwayNum >= 1.5
+                  ? '现金储备中等，建议适度控制进货与非必要开销，留足 3 个月以上。'
+                  : '现金极其危险！一旦顾客减少或发生意外支出可能立即面临断流。')}
           </p>
         </div>
 
@@ -206,9 +216,9 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2 font-bold text-neutral-900">
               <PieChart className="w-5 h-5 text-teal-600" />
-              <span className="text-sm sm:text-base">每进账 100 块钱怎么分的？</span>
+              <span className="text-sm sm:text-base">{language === 'en' ? 'Where does every 100 you earn go?' : '每进账 100 块钱怎么分的？'}</span>
             </div>
-            <span className="text-xs text-neutral-500 font-bold">大白话收支构成</span>
+            <span className="text-xs text-neutral-500 font-bold">{language === 'en' ? 'Plain-language income breakdown' : '大白话收支构成'}</span>
           </div>
 
           {/* Multi-segment Bar */}
@@ -216,43 +226,51 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
             <div
               className="bg-rose-400 h-full transition-all duration-300"
               style={{ width: `${cogsPct * scale}%` }}
-              title={`进货成本: ${Math.round(cogsPct)}%`}
+              title={language === 'en' ? `Purchasing cost: ${Math.round(cogsPct)}%` : `进货成本: ${Math.round(cogsPct)}%`}
             />
             <div
               className="bg-amber-400 h-full transition-all duration-300"
               style={{ width: `${opexPct * scale}%` }}
-              title={`房租人工水电: ${Math.round(opexPct)}%`}
+              title={language === 'en' ? `Rent, labor & utilities: ${Math.round(opexPct)}%` : `房租人工水电: ${Math.round(opexPct)}%`}
             />
             <div
               className="bg-emerald-500 h-full transition-all duration-300"
               style={{ width: `${netPct * scale}%` }}
-              title={`净利润: ${Math.max(0, netMarginPct)}%`}
+              title={language === 'en' ? `Net profit: ${Math.max(0, netMarginPct)}%` : `净利润: ${Math.max(0, netMarginPct)}%`}
             />
           </div>
 
           <div className="grid grid-cols-3 gap-1 text-xs sm:text-sm font-semibold pt-1">
             <div className="flex items-center gap-1.5 text-rose-800">
               <span className="w-2.5 h-2.5 rounded-full bg-rose-400 shrink-0" />
-              <span>进货 <strong>{Math.round(cogsPct)}%</strong></span>
+              <span>{language === 'en' ? 'Purchasing' : '进货'} <strong>{Math.round(cogsPct)}%</strong></span>
             </div>
             <div className="flex items-center gap-1.5 text-amber-800">
               <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" />
-              <span>租金人工 <strong>{opexRatioPct}%</strong></span>
+              <span>{language === 'en' ? 'Rent & Labor' : '租金人工'} <strong>{opexRatioPct}%</strong></span>
             </div>
             <div className="flex items-center gap-1.5 text-emerald-800">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
-              <span>净赚落袋 <strong>{netMarginPct}%</strong></span>
+              <span>{language === 'en' ? 'Net Profit' : '净赚落袋'} <strong>{netMarginPct}%</strong></span>
             </div>
           </div>
 
           <p className="text-xs sm:text-sm text-neutral-600 leading-relaxed font-medium">
-            {netProfit < 0
-              ? '当前处于亏损状态：每进账 100 块，进货与开销已占满甚至超过 100%，需优先压缩成本或提升售价。'
-              : netMarginPct >= 20
-              ? '净利润率非常健康，自我造血与抗风险能力优秀。'
-              : netMarginPct >= 8
-              ? '属于微利稳健运行，注意控制房租和原料损耗。'
-              : '净利润偏薄或处于亏损边缘，需排查是否进价过高或租金过重。'}
+            {language === 'en'
+              ? (netProfit < 0
+                  ? 'You are currently operating at a loss: for every 100 you earn, purchasing and expenses already take up 100% or more — prioritize cutting costs or raising prices.'
+                  : netMarginPct >= 20
+                  ? 'Your net profit margin is very healthy, with excellent self-sustaining and risk-resilience capability.'
+                  : netMarginPct >= 8
+                  ? 'You are running at a modest, stable profit — watch your rent and material waste.'
+                  : 'Your net profit is thin or near the loss line — check whether your purchasing costs are too high or rent too heavy.')
+              : (netProfit < 0
+                  ? '当前处于亏损状态：每进账 100 块，进货与开销已占满甚至超过 100%，需优先压缩成本或提升售价。'
+                  : netMarginPct >= 20
+                  ? '净利润率非常健康，自我造血与抗风险能力优秀。'
+                  : netMarginPct >= 8
+                  ? '属于微利稳健运行，注意控制房租和原料损耗。'
+                  : '净利润偏薄或处于亏损边缘，需排查是否进价过高或租金过重。')}
           </p>
         </div>
       </div>
