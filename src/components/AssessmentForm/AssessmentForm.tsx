@@ -484,13 +484,57 @@ export const AssessmentForm: React.FC<FormProps> = ({
     updateField('customIndustryName', value || undefined);
   };
 
+  // 主报告币种（Base Currency）字段名 → 各明细项自身的 MoneyField 字段名，
+  // 用于用户切换主报告币种时，把已录入的每一条明细（如 COGS/AI咨询 的币种下拉）同步过去，
+  // 避免出现「主币种改了，但某条明细的币种下拉还停在此前 AI 推断/模板带出的旧值」的不匹配。
+  const MONEY_FIELD_KEYS: Array<keyof BusinessFormData> = [
+    'monthlyRevenue',
+    'monthlyRealOperatingRevenue',
+    'monthlyExternalGrants',
+    'cogsCost',
+    'rentCost',
+    'laborCost',
+    'utilityCost',
+    'taxCost',
+    'otherOpex',
+    'companyRegistrationCost',
+    'visaFeeCost',
+    'equipmentDepreciationCost',
+    'existingDebtMonthlyPayment',
+    'cashAndLiquidAssets',
+    'initialInvestmentEstimate',
+    'inventoryValue'
+  ];
+
+  const syncMoneyFieldsToCurrency = (prev: BusinessFormData, newCurrency: CurrencyCode): Partial<BusinessFormData> => {
+    const patch: Partial<BusinessFormData> = {};
+    MONEY_FIELD_KEYS.forEach((key) => {
+      const field = prev[key] as unknown as MoneyField | undefined;
+      if (field) {
+        (patch as Record<string, unknown>)[key] = { ...field, currency: newCurrency };
+      }
+    });
+    if (prev.monthlyBreakdowns?.length) {
+      patch.monthlyBreakdowns = prev.monthlyBreakdowns.map((mb) => ({
+        ...mb,
+        revenue: { ...mb.revenue, currency: newCurrency }
+      }));
+    }
+    return patch;
+  };
+
   const handleCurrencyChange = (value: string) => {
     if (value === CUSTOM_CURRENCY_VALUE) {
       updateField('baseCurrency', CUSTOM_CURRENCY_VALUE as any);
       return;
     }
-    updateField('baseCurrency', value as CurrencyCode);
-    updateField('customCurrencyCode', undefined as any);
+    setFormData((prev) => ({
+      ...prev,
+      ...syncMoneyFieldsToCurrency(prev, value as CurrencyCode),
+      baseCurrency: value as CurrencyCode,
+      customCurrencyCode: undefined,
+      updatedAt: new Date().toISOString()
+    }));
     setCustomCurrencyCode('');
   };
   const handleCustomCurrencyInput = (value: string) => {
