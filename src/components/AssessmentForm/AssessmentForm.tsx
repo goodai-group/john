@@ -679,7 +679,15 @@ export const AssessmentForm: React.FC<FormProps> = ({
       };
     }
 
-    setFormData((prev) => ({ ...prev, ...patch }));
+    setFormData((prev) => {
+      // 主币种变化时，把所有费用明细（场地租金/工资/水电/税金/债务/现金备用金/初始投资等）
+      // 的币种也一并同步，避免出现「顶部收入已变 THB，但其余费用项仍停在旧币种」的错位。
+      const currencyPatch =
+        patch.baseCurrency && patch.baseCurrency !== prev.baseCurrency
+          ? syncMoneyFieldsToCurrency(prev, patch.baseCurrency as CurrencyCode)
+          : {};
+      return { ...prev, ...currencyPatch, ...patch };
+    });
   };
 
   const handleProjectNameChange = (value: string) => {
