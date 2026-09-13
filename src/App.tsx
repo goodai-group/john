@@ -100,7 +100,12 @@ export default function App() {
   }, []);
 
   // User Authentication State
-  const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
+  const [currentUser, setCurrentUser] = useState<AppUser | null>(() => {
+    if (typeof window !== 'undefined' && window.location.search.includes('mockUser=1')) {
+      return { uid: 'mock-123', email: 'test@example.com', displayName: '测试主理人', photoURL: '' };
+    }
+    return null;
+  });
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   // 登录弹窗的初始模式：找回密码链接回跳时直接展示「设置新密码」
@@ -179,6 +184,9 @@ export default function App() {
 
   // Subscribe to Supabase Google Auth state
   useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.search.includes('mockUser=1')) {
+      return;
+    }
     const unsubscribe = subscribeToAuthChanges(async (user, event) => {
       setCurrentUser(user);
       if (user) {

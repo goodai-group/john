@@ -1346,7 +1346,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
         </div>
       )}
 
-      {/* STEP 2: 赚多少、花多少、兜里有多少现金（一屏看完） */}
+      {/* STEP 2: 赚多少、花多少、兜里有多少现金（清晰分块纵向排版） */}
       {currentStep === 2 && (
         <div className="space-y-6">
           <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
@@ -1357,216 +1357,195 @@ export const AssessmentForm: React.FC<FormProps> = ({
               </h3>
               <p className="text-xs text-slate-500">
                 {language === 'en'
-                  ? 'Revenue on the left, cost & cash on the right. Click "Generate Report" when done.'
-                  : '左边是收入，右边是成本与现金。填完直接点「出报告」。'}
+                  ? 'Enter by category: revenue, costs & expenses, cash reserve. AI will calculate break-even and payback periods in real-time.'
+                  : '分模块清晰录入：收入、成本与开支、现金备用金，AI 实时计算保本与回本。'}
               </p>
             </div>
 
-            {/* 两栏：收入 | 成本+现金 */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-              {/* —— 左栏：赚多少（收入）—— */}
-              <div className="space-y-4">
-                <h4 className="text-sm font-black text-slate-900 flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-emerald-600" />
-                  {language === 'en' ? 'Revenue (monthly income)' : '赚多少（每月收入）'}
-                </h4>
+            {/* 清晰模块化纵向流式排版 */}
+            <div className="flex flex-col space-y-6">
 
-                {/* 第3点：根据右边已填成本自动算出的保本收入，帮助没经验的用户先有参照锚点再填收入 */}
-                {breakEven.hasEnoughData && (
-                  <div className="p-4 rounded-2xl bg-amber-50/70 border-2 border-amber-300 space-y-1.5 text-xs">
-                    <div className="flex items-center gap-2">
-                      <Target className="w-4 h-4 text-amber-600" />
-                      <span className="font-black text-amber-950">{language === 'en' ? 'AI-calculated break-even revenue (the minimum to avoid a loss)' : 'AI 算出的保本收入（不亏钱的最低线）'}</span>
-                      <InfoTooltip
-                        language={language}
-                        text={
-                          language === 'en'
-                            ? `Based on the purchasing, rent & labor, tax, debt repayment, and registration/visa/depreciation costs you entered on the right, totaling ${formatMoney(breakEven.monthlyCostTotal, formData.baseCurrency)} / month, estimated over ${breakEven.operatingDaysPerMonth} operating days per month. For reference only before entering revenue — does not represent the final score.`
-                            : `根据你右边已填的进货、房租人工、税金、还贷与注册/签证/折旧成本合计 ${formatMoney(breakEven.monthlyCostTotal, formData.baseCurrency)} / 月，按每月经营 ${breakEven.operatingDaysPerMonth} 天估算得出。仅供填收入前参考，不代表最终评分结果。`
+              {/* —— 模块 1：赚多少（收入模块） —— */}
+              <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-50/80 to-teal-50/40 border border-emerald-200 shadow-2xs space-y-4">
+                <div className="flex items-center justify-between flex-wrap gap-2 border-b border-emerald-100 pb-3">
+                  <h4 className="text-sm font-black text-emerald-950 flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-emerald-600" />
+                    <span>{language === 'en' ? '1. Revenue (Monthly Income)' : '1. 赚多少（每月收入）'}</span>
+                  </h4>
+                  <span className="text-[12px] bg-emerald-100 text-emerald-800 font-bold px-2.5 py-0.5 rounded-full">
+                    {language === 'en' ? 'Monthly Inflow' : '月度现金流入'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4">
+                  {/* F8 经营月均总流水 */}
+                  <div className="p-4 rounded-xl bg-white border-2 border-teal-200 shadow-2xs space-y-2.5 text-xs">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div>
+                        <label className="font-black text-slate-900 text-sm flex items-center gap-1.5">
+                          <span>{language === 'en' ? 'Average Monthly Total Revenue' : '经营月均总流水'}</span>
+                          <span className="text-[12px] bg-teal-600 text-white font-bold px-2 py-0.5 rounded-full">
+                            {language === 'en' ? 'Total Turnover' : '总营业额'}
+                          </span>
+                          <InfoTooltip language={language} text={language === 'en'
+                            ? 'In plain terms: all the cash customers pay into your pocket, before deducting purchasing, rent and labor! If you have church subsidies, charity donations or relief funds, list them separately below so they are not mistakenly counted as real operating revenue.'
+                            : '大白话：客人买单进你口袋的全部毛钱，尚未扣除进货、房租与人工！若有教会补助、慈善捐赠或救济资金，请在下方单独列出，不会被误计入真实经营占比。'} />
+                        </label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => onOpenAiHelper?.(language === 'en' ? 'Is average monthly total revenue income or something else?' : '经营月均总流水是收入还是什么？')}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-teal-100 hover:bg-teal-200 text-teal-800 text-[13px] font-bold transition-colors cursor-pointer"
+                        >
+                          <Sparkles className="w-3 h-3 text-teal-600" />
+                          <span>{language === 'en' ? 'Ask AI' : 'AI解答'}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onOpenAiHelper?.(language === 'en' ? 'What are the average revenue and profit benchmarks across industries?' : '各行业大数据平均流水与利润基准是多少？')}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-[13px] font-bold transition-colors cursor-pointer"
+                        >
+                          <BarChart3 className="w-3 h-3 text-emerald-700" />
+                          <span>{language === 'en' ? 'Check Benchmarks' : '查基准'}</span>
+                        </button>
+                        <select
+                          value={formData.monthlyRevenue.currency}
+                          onChange={(e) =>
+                            updateMoney(
+                              'monthlyRevenue',
+                              formData.monthlyRevenue.amount,
+                              e.target.value as CurrencyCode
+                            )
+                          }
+                          className="px-2 py-1.5 rounded-lg border border-slate-300 font-bold bg-white text-slate-700 text-xs shadow-2xs"
+                        >
+                          {SUPPORTED_CURRENCIES.map((c) => (
+                            <option key={c.code} value={c.code}>
+                              {c.code} ({c.symbol})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      placeholder={language === 'en' ? 'e.g. 50000' : '例如 50000'}
+                      value={formData.monthlyRevenue.amount || ''}
+                      onChange={(e) => updateMoney('monthlyRevenue', Number(e.target.value))}
+                      className="w-full p-3 border-2 border-teal-200 focus:border-teal-600 rounded-xl font-black text-slate-900 text-base bg-white shadow-2xs"
+                    />
+                    {formData.monthlyRevenue.amount > 0 && (
+                      <p className="text-[13px] text-teal-700 font-semibold">
+                        {language === 'en'
+                          ? `Real operating revenue auto-synced to ${formatMoney(formData.monthlyRealOperatingRevenue.amount, formData.monthlyRealOperatingRevenue.currency)} (total revenue − external grants)`
+                          : `真实经营收入已自动同步为 ${formatMoney(formData.monthlyRealOperatingRevenue.amount, formData.monthlyRealOperatingRevenue.currency)}（总流水 − 外部赠款）`}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* 真实客户主营销售收入 */}
+                    <div className="p-4 rounded-xl bg-white border border-emerald-200 space-y-2 text-xs">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <label className="font-bold text-emerald-950 flex items-center gap-1.5">
+                            <span>{language === 'en' ? 'Of which: real customer sales revenue' : '其中：真实客户主营销售收入'}</span>
+                            <InfoTooltip language={language} text={language === 'en' ? 'Business revenue truly paid by customers, excluding any loans from friends/family or relief subsidies.' : '排除任何亲友借款、救济补贴后，真正由客户买单带来的生意收入。'} />
+                          </label>
+                        </div>
+                        <select
+                          value={formData.monthlyRealOperatingRevenue.currency}
+                          onChange={(e) =>
+                            updateMoney(
+                              'monthlyRealOperatingRevenue',
+                              formData.monthlyRealOperatingRevenue.amount,
+                              e.target.value as CurrencyCode
+                            )
+                          }
+                          className="px-2 py-1 rounded border border-emerald-300 font-bold bg-white text-emerald-900"
+                        >
+                          {SUPPORTED_CURRENCIES.map((c) => (
+                            <option key={c.code} value={c.code}>
+                              {c.code}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min={0}
+                        value={formData.monthlyRealOperatingRevenue.amount || ''}
+                        onChange={(e) =>
+                          updateMoney('monthlyRealOperatingRevenue', Number(e.target.value))
                         }
+                        className="w-full p-2.5 border border-emerald-300 rounded-xl font-bold text-emerald-950 bg-white"
                       />
                     </div>
-                    <p className="text-amber-800 leading-relaxed">
-                      {language === 'en' ? (
-                        <>
-                          You need to sell at least
-                          <span className="text-base font-black text-amber-900 mx-1">
-                            {formatMoney(breakEven.dailyBreakEvenRevenue, formData.baseCurrency)}
-                          </span>
-                          per day (at least {formatMoney(breakEven.monthlyBreakEvenRevenue, formData.baseCurrency)} per month) to avoid a loss.
-                        </>
-                      ) : (
-                        <>
-                          你每天至少要卖到
-                          <span className="text-base font-black text-amber-900 mx-1">
-                            {formatMoney(breakEven.dailyBreakEvenRevenue, formData.baseCurrency)}
-                          </span>
-                          （每月至少 {formatMoney(breakEven.monthlyBreakEvenRevenue, formData.baseCurrency)}）才不亏钱。
-                        </>
-                      )}
-                    </p>
-                  </div>
-                )}
 
-                {/* F8 经营月均总流水 */}
-                <div className="p-4 rounded-2xl bg-teal-50/40 border-2 border-teal-200 space-y-2.5 text-xs">
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <div>
-                      <label className="font-black text-slate-900 text-sm flex items-center gap-1.5">
-                        <span>{language === 'en' ? 'Average Monthly Total Revenue' : '经营月均总流水'}</span>
-                        <span className="text-[12px] bg-teal-600 text-white font-bold px-2 py-0.5 rounded-full">
-                          {language === 'en' ? 'Total Turnover' : '总营业额'}
-                        </span>
-                        <InfoTooltip language={language} text={language === 'en'
-                          ? 'In plain terms: all the cash customers pay into your pocket, before deducting purchasing, rent and labor! If you have church subsidies, charity donations or relief funds, list them separately below so they are not mistakenly counted as real operating revenue.'
-                          : '大白话：客人买单进你口袋的全部毛钱，尚未扣除进货、房租与人工！若有教会补助、慈善捐赠或救济资金，请在下方单独列出，不会被误计入真实经营占比。'} />
-                      </label>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => onOpenAiHelper?.(language === 'en' ? 'Is average monthly total revenue income or something else?' : '经营月均总流水是收入还是什么？')}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-teal-100 hover:bg-teal-200 text-teal-800 text-[13px] font-bold transition-colors cursor-pointer"
-                      >
-                        <Sparkles className="w-3 h-3 text-teal-600" />
-                        <span>{language === 'en' ? 'Ask AI' : 'AI解答'}</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onOpenAiHelper?.(language === 'en' ? 'What are the average revenue and profit benchmarks across industries?' : '各行业大数据平均流水与利润基准是多少？')}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-[13px] font-bold transition-colors cursor-pointer"
-                      >
-                        <BarChart3 className="w-3 h-3 text-emerald-700" />
-                        <span>{language === 'en' ? 'Check Benchmarks' : '查基准'}</span>
-                      </button>
-                      <select
-                        value={formData.monthlyRevenue.currency}
-                        onChange={(e) =>
-                          updateMoney(
-                            'monthlyRevenue',
-                            formData.monthlyRevenue.amount,
-                            e.target.value as CurrencyCode
-                          )
-                        }
-                        className="px-2 py-1.5 rounded-lg border border-slate-300 font-bold bg-white text-slate-700 text-xs shadow-2xs"
-                      >
-                        {SUPPORTED_CURRENCIES.map((c) => (
-                          <option key={c.code} value={c.code}>
-                            {c.code} ({c.symbol})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    min={0}
-                    placeholder={language === 'en' ? 'e.g. 50000' : '例如 50000'}
-                    value={formData.monthlyRevenue.amount || ''}
-                    onChange={(e) => updateMoney('monthlyRevenue', Number(e.target.value))}
-                    className="w-full p-3 border-2 border-teal-200 focus:border-teal-600 rounded-xl font-black text-slate-900 text-base bg-white shadow-2xs"
-                  />
-                  {formData.monthlyRevenue.amount > 0 && (
-                    <p className="text-[13px] text-teal-700 font-semibold">
-                      {language === 'en'
-                        ? `Real operating revenue auto-synced to ${formatMoney(formData.monthlyRealOperatingRevenue.amount, formData.monthlyRealOperatingRevenue.currency)} (total revenue − external grants)`
-                        : `真实经营收入已自动同步为 ${formatMoney(formData.monthlyRealOperatingRevenue.amount, formData.monthlyRealOperatingRevenue.currency)}（总流水 − 外部赠款）`}
-                    </p>
-                  )}
-                </div>
-
-                {/* 真实客户主营销售收入 */}
-                <div className="p-4 rounded-xl bg-emerald-50/70 border border-emerald-200 space-y-2 text-xs">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className="font-bold text-emerald-950 flex items-center gap-1.5">
-                        <span>{language === 'en' ? 'Of which: real customer sales revenue' : '其中：真实客户主营销售收入'}</span>
-                        <InfoTooltip language={language} text={language === 'en' ? 'Business revenue truly paid by customers, excluding any loans from friends/family or relief subsidies.' : '排除任何亲友借款、救济补贴后，真正由客户买单带来的生意收入。'} />
-                      </label>
-                    </div>
-                    <select
-                      value={formData.monthlyRealOperatingRevenue.currency}
-                      onChange={(e) =>
-                        updateMoney(
-                          'monthlyRealOperatingRevenue',
-                          formData.monthlyRealOperatingRevenue.amount,
-                          e.target.value as CurrencyCode
-                        )
-                      }
-                      className="px-2 py-1 rounded border border-emerald-300 font-bold bg-white text-emerald-900"
-                    >
-                      {SUPPORTED_CURRENCIES.map((c) => (
-                        <option key={c.code} value={c.code}>
-                          {c.code}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    min={0}
-                    value={formData.monthlyRealOperatingRevenue.amount || ''}
-                    onChange={(e) =>
-                      updateMoney('monthlyRealOperatingRevenue', Number(e.target.value))
-                    }
-                    className="w-full p-2.5 border border-emerald-300 rounded-xl font-bold text-emerald-950 bg-white"
-                  />
-                </div>
-
-                {/* 外部支持款 / 机构赠款 */}
-                <div className="p-4 rounded-xl bg-amber-50/70 border border-amber-200 space-y-2 text-xs">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className="font-bold text-amber-950">
-                        {language === 'en' ? 'Of which: external support / institutional grants' : '其中：外部支持款 / 机构赠款'}
-                      </label>
-                      <p className="text-[13px] text-amber-700">
+                    {/* 外部支持款 / 机构赠款 */}
+                    <div className="p-4 rounded-xl bg-white border border-amber-200 space-y-2 text-xs">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <label className="font-bold text-amber-950">
+                            {language === 'en' ? 'Of which: external support / institutional grants' : '其中：外部支持款 / 机构赠款'}
+                          </label>
+                        </div>
+                        <select
+                          value={formData.monthlyExternalGrants.currency}
+                          onChange={(e) =>
+                            updateMoney(
+                              'monthlyExternalGrants',
+                              formData.monthlyExternalGrants.amount,
+                              e.target.value as CurrencyCode
+                            )
+                          }
+                          className="px-2 py-1 rounded border border-amber-300 font-bold bg-white text-amber-900"
+                        >
+                          {SUPPORTED_CURRENCIES.map((c) => (
+                            <option key={c.code} value={c.code}>
+                              {c.code}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min={0}
+                        placeholder={language === 'en' ? 'Enter 0 if none' : '无则填 0'}
+                        value={formData.monthlyExternalGrants.amount || ''}
+                        onChange={(e) => updateMoney('monthlyExternalGrants', Number(e.target.value))}
+                        className="w-full p-2.5 border border-amber-300 rounded-xl font-bold text-amber-950 bg-white"
+                      />
+                      <p className="text-[12px] text-amber-700">
                         {language === 'en'
-                          ? 'If you have church subsidies, charity donations or relief funds, list them here separately so they are not mistakenly counted as real operating revenue.'
-                          : '若有教会补助、慈善捐赠或救济资金，请在此单独列出，不会被误计入真实经营占比。'}
+                          ? 'Church subsidies, charity donations or relief funds listed here will not be miscounted as real customer revenue.'
+                          : '教会补助、慈善捐赠或救济资金单独列出，不会误计为真实经营占比。'}
                       </p>
                     </div>
-                    <select
-                      value={formData.monthlyExternalGrants.currency}
-                      onChange={(e) =>
-                        updateMoney(
-                          'monthlyExternalGrants',
-                          formData.monthlyExternalGrants.amount,
-                          e.target.value as CurrencyCode
-                        )
-                      }
-                      className="px-2 py-1 rounded border border-amber-300 font-bold bg-white text-amber-900"
-                    >
-                      {SUPPORTED_CURRENCIES.map((c) => (
-                        <option key={c.code} value={c.code}>
-                          {c.code}
-                        </option>
-                      ))}
-                    </select>
                   </div>
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    min={0}
-                    placeholder={language === 'en' ? 'Enter 0 if none' : '无则填 0'}
-                    value={formData.monthlyExternalGrants.amount || ''}
-                    onChange={(e) => updateMoney('monthlyExternalGrants', Number(e.target.value))}
-                    className="w-full p-2.5 border border-amber-300 rounded-xl font-bold text-amber-950 bg-white"
-                  />
                 </div>
               </div>
 
-              {/* —— 右栏：花多少 + 兜里有多少现金 —— */}
-              <div className="space-y-4">
-                <h4 className="text-sm font-black text-slate-900 flex items-center gap-2">
-                  <Layers className="w-4 h-4 text-rose-600" />
-                  {language === 'en' ? 'Expenses + Cash on Hand' : '花多少 + 兜里有多少现金'}
-                </h4>
+
+              {/* —— 模块 2：花多少（成本与开支模块） —— */}
+              <div className="p-5 rounded-2xl bg-gradient-to-br from-rose-50/70 to-slate-50 border border-rose-200 shadow-2xs space-y-4">
+                <div className="flex items-center justify-between flex-wrap gap-2 border-b border-rose-100 pb-3">
+                  <h4 className="text-sm font-black text-rose-950 flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-rose-600" />
+                    <span>{language === 'en' ? '2. Costs & Expenses (Monthly Outflow)' : '2. 花多少（每月成本与开支）'}</span>
+                  </h4>
+                  <span className="text-[12px] bg-rose-100 text-rose-800 font-bold px-2.5 py-0.5 rounded-full">
+                    {language === 'en' ? 'Monthly Expenses' : '月度运营开支'}
+                  </span>
+                </div>
 
                 {/* F10 COGS */}
-                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
+                <div className="p-4 rounded-xl bg-white border border-slate-200 space-y-2 text-xs">
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <div>
                       <div className="flex items-center gap-2">
@@ -1663,8 +1642,8 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   )}
                 </div>
 
-                {/* 固定开销 2x2 */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                {/* 固定开销网格 */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
                   <div className="p-3.5 rounded-xl border border-slate-200 bg-white">
                     <div className="flex justify-between mb-1">
                       <label className="font-bold text-slate-800">{language === 'en' ? 'Rent & Property' : '场地租金与物业'}</label>
@@ -1725,7 +1704,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     />
                   </div>
 
-                  <div className="p-3.5 rounded-xl border border-slate-200 bg-white">
+                  <div className="p-3.5 rounded-xl border border-slate-200 bg-white col-span-1 sm:col-span-2 lg:col-span-2">
                     <div className="flex justify-between mb-1">
                       <label className="font-bold text-slate-800">{language === 'en' ? 'Monthly Debt Repayment (Principal & Interest)' : '每月偿还债务本息'}</label>
                       <span className="text-[13px] text-slate-400">{formData.existingDebtMonthlyPayment.currency}</span>
@@ -1740,53 +1719,13 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       className="w-full p-2 border border-slate-300 rounded-lg font-semibold"
                     />
                   </div>
-
-                  <div className="p-3.5 rounded-xl border border-slate-200 bg-white">
-                    <div className="flex justify-between mb-1">
-                      <label className="font-bold text-slate-800">{language === 'en' ? 'Current Available Cash Reserve' : '当前可用现金备用金'}</label>
-                      <span className="text-[13px] text-slate-400">{formData.cashAndLiquidAssets.currency}</span>
-                    </div>
-                    <input
-                      type="number"
-                      inputMode="numeric"
-                      min={0}
-                      value={formData.cashAndLiquidAssets.amount || ''}
-                      onChange={(e) => updateMoney('cashAndLiquidAssets', Number(e.target.value))}
-                      className="w-full p-2 border border-slate-300 rounded-lg font-semibold text-emerald-800"
-                    />
-                  </div>
-
-                  {/* 第5/6点：初始投资估算——回本时间与反推收入的基数 */}
-                  <div className="p-3.5 rounded-xl border border-amber-200 bg-amber-50/40">
-                    <div className="flex justify-between mb-1">
-                      <label className="font-bold text-slate-800 flex items-center gap-1">
-                        <Target className="w-3.5 h-3.5 text-amber-600" />
-                        {language === 'en' ? 'Initial Investment Estimate (renovation/equipment/first stock, one-time)' : '初始投资估算（装修/设备/首批进货等一次性投入）'}
-                      </label>
-                      <span className="text-[13px] text-slate-400">{formData.initialInvestmentEstimate.currency}</span>
-                    </div>
-                    <input
-                      type="number"
-                      inputMode="numeric"
-                      min={0}
-                      placeholder={language === 'en' ? 'e.g. renovation + equipment + first stock, one-time total investment' : '例如：装修+设备+首批进货一次性总投入'}
-                      value={formData.initialInvestmentEstimate.amount || ''}
-                      onChange={(e) => updateMoney('initialInvestmentEstimate', Number(e.target.value))}
-                      className="w-full p-2 border border-amber-300 rounded-lg font-semibold text-amber-900"
-                    />
-                    <p className="text-[12px] text-amber-700 mt-1">
-                      {language === 'en'
-                        ? 'Fill this in to calculate "payback period" and "required revenue for target payback period" below.'
-                        : '填了这一项，下方才能算出「回本时间」与「按目标回本时间反推所需收入」。'}
-                    </p>
-                  </div>
                 </div>
 
                 {/* AI 推断的动态运营开支明细 */}
                 {(formData.dynamicOpexItems || []).length > 0 && (
-                  <div className="p-3 rounded-xl bg-teal-50/50 border border-dashed border-teal-300 space-y-2 text-xs">
+                  <div className="p-3 rounded-xl bg-white border border-dashed border-slate-300 space-y-2 text-xs">
                     <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <span className="text-[13px] font-black text-teal-900">
+                      <span className="text-[13px] font-black text-slate-900">
                         {language === 'en' ? 'Industry-specific operating expense breakdown (add/remove/edit)' : '按行业细分的运营开支明细（可增删改）'}
                         {opexTouched && (
                           <span className="ml-1.5 inline-block text-[11px] px-1 py-0.5 rounded bg-amber-100 text-amber-700 font-bold align-middle">{language === 'en' ? 'Manually adjusted' : '已手动调整'}</span>
@@ -1829,286 +1768,388 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   </div>
                 )}
 
-                {/* 第1点+第5点：全球化经营成本——税收/签证/设备折旧/公司注册费用全部纳入成本，AI 给出属地参考估值可核实修改 */}
-                <div className="p-4 rounded-2xl bg-violet-50/50 border border-violet-200 space-y-3 text-xs">
+                {/* 全球化经营成本——税收/签证/设备折旧/公司注册 */}
+                <div className="p-4 rounded-2xl bg-white border border-violet-200 space-y-3 text-xs">
                   <div className="flex items-center gap-2">
                     <Building2 className="w-4 h-4 text-violet-600" />
                     <span className="font-black text-violet-950">{language === 'en' ? 'Global Operating Costs (Registration/Visa/Depreciation)' : '全球化经营成本（注册/签证/折旧）'}</span>
                     <span className="text-[12px] bg-violet-200 text-violet-900 font-bold px-1.5 py-0.5 rounded">
-                      {language === 'en' ? `AI has provided a reference value for ${regulatoryEstimate.countryLabel}` : `AI 已给出 ${regulatoryEstimate.countryLabel} 参考值`}
+                      {language === 'en' ? `AI reference for ${regulatoryEstimate.countryLabel}` : `AI 已给出 ${regulatoryEstimate.countryLabel} 参考值`}
                     </span>
                   </div>
                   <p className="text-[13px] text-violet-700 leading-relaxed">
                     {regulatoryEstimate.corporateTaxRateHint}
-                    {language === 'en' ? '. The below are AI reference estimates — please verify local conditions and update to your real figures—' : '。以下为 AI 参考估值，请核实当地实际情况后修改为你的真实数字——'}
-                    <span className="italic">{regulatoryEstimate.sourceNote}</span>
+                    {language === 'en' ? '. Below are AI reference estimates — update to your real figures:' : '。以下为 AI 参考估值，请核实后修改为你的真实数字：'}
                   </p>
 
-                  {/* 公司注册/执照费用 */}
-                  <div className="p-3 rounded-xl bg-white border border-violet-200 space-y-1.5">
-                    <div className="flex items-center justify-between flex-wrap gap-1.5">
-                      <label className="font-bold text-slate-800 flex items-center gap-1.5">
-                        <Landmark className="w-3.5 h-3.5 text-violet-500" />
-                        {language === 'en' ? 'Company Registration / License / Annual Inspection Fee (one-time or annual total)' : '公司注册 / 执照 / 年检费用（一次性或年度总额）'}
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          updateMoney('companyRegistrationCost', regulatoryEstimate.registrationLocal)
-                        }
-                        className="text-[12px] px-2 py-0.5 rounded bg-violet-100 text-violet-700 font-bold hover:bg-violet-200 cursor-pointer whitespace-nowrap"
-                      >
-                        {language === 'en'
-                          ? `Use AI Suggestion (approx. ${formatMoney(regulatoryEstimate.registrationLocal, formData.baseCurrency)})`
-                          : `使用 AI 建议（约 ${formatMoney(regulatoryEstimate.registrationLocal, formData.baseCurrency)}）`}
-                      </button>
-                    </div>
-                    <div className="flex items-center gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {/* 公司注册/执照费用 */}
+                    <div className="p-3 rounded-xl bg-violet-50/40 border border-violet-200 space-y-1.5">
+                      <div className="flex items-center justify-between flex-wrap gap-1">
+                        <label className="font-bold text-slate-800 text-[12px]">
+                          {language === 'en' ? 'Registration/License Fee' : '公司注册/执照年检费'}
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => updateMoney('companyRegistrationCost', regulatoryEstimate.registrationLocal)}
+                          className="text-[11px] underline text-violet-700 font-bold hover:text-violet-900 cursor-pointer"
+                        >
+                          {language === 'en' ? 'Use AI value' : '填入AI估值'}
+                        </button>
+                      </div>
                       <input
                         type="number"
                         inputMode="numeric"
                         min={0}
-                        placeholder={language === 'en' ? `AI reference approx. ${regulatoryEstimate.registrationLocal}` : `AI 参考约 ${regulatoryEstimate.registrationLocal}`}
+                        placeholder={`约 ${regulatoryEstimate.registrationLocal}`}
                         value={formData.companyRegistrationCost.amount || ''}
                         onChange={(e) => updateMoney('companyRegistrationCost', Number(e.target.value))}
-                        className="flex-1 p-2 border border-violet-200 rounded-lg font-semibold text-slate-900"
+                        className="w-full p-2 border border-violet-200 rounded-lg font-semibold text-slate-900 bg-white"
                       />
-                      <span className="text-[12px] text-slate-500 whitespace-nowrap">{language === 'en' ? 'Amortize over' : '分摊'}</span>
-                      <input
-                        type="number"
-                        min={1}
-                        title={language === 'en' ? 'Number of months to amortize over' : '分摊到经营的月数'}
-                        value={formData.companyRegistrationAmortizationMonths || 12}
-                        onChange={(e) =>
-                          updateField(
-                            'companyRegistrationAmortizationMonths',
-                            Math.max(1, Number(e.target.value) || 12)
-                          )
-                        }
-                        className="w-16 p-2 border border-violet-200 rounded-lg font-semibold text-center"
-                      />
-                      <span className="text-[12px] text-slate-500 whitespace-nowrap">{language === 'en' ? 'months' : '个月'}</span>
+                      <div className="flex items-center gap-1 text-[11px] text-slate-500">
+                        <span>{language === 'en' ? 'Amortize over' : '分摊'}</span>
+                        <input
+                          type="number"
+                          min={1}
+                          value={formData.companyRegistrationAmortizationMonths || 12}
+                          onChange={(e) => updateField('companyRegistrationAmortizationMonths', Math.max(1, Number(e.target.value) || 12))}
+                          className="w-12 p-0.5 border border-violet-200 rounded text-center bg-white font-bold"
+                        />
+                        <span>{language === 'en' ? 'months' : '个月'}</span>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* 签证与工作许可费用 */}
-                  <div className="p-3 rounded-xl bg-white border border-violet-200 space-y-1.5">
-                    <div className="flex items-center justify-between flex-wrap gap-1.5">
-                      <label className="font-bold text-slate-800 flex items-center gap-1.5">
-                        <Plane className="w-3.5 h-3.5 text-violet-500" />
-                        {language === 'en' ? 'Owner/Staff Visa & Work Permit Fees (total)' : '经营者/员工签证与工作许可费用（总额）'}
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => updateMoney('visaFeeCost', regulatoryEstimate.visaLocal)}
-                        className="text-[12px] px-2 py-0.5 rounded bg-violet-100 text-violet-700 font-bold hover:bg-violet-200 cursor-pointer whitespace-nowrap"
-                      >
-                        {language === 'en'
-                          ? `Use AI Suggestion (approx. ${formatMoney(regulatoryEstimate.visaLocal, formData.baseCurrency)})`
-                          : `使用 AI 建议（约 ${formatMoney(regulatoryEstimate.visaLocal, formData.baseCurrency)}）`}
-                      </button>
-                    </div>
-                    <div className="flex items-center gap-2">
+                    {/* 签证与工作许可费用 */}
+                    <div className="p-3 rounded-xl bg-violet-50/40 border border-violet-200 space-y-1.5">
+                      <div className="flex items-center justify-between flex-wrap gap-1">
+                        <label className="font-bold text-slate-800 text-[12px]">
+                          {language === 'en' ? 'Visa & Work Permits' : '签证与工作许可费用'}
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => updateMoney('visaFeeCost', regulatoryEstimate.visaLocal)}
+                          className="text-[11px] underline text-violet-700 font-bold hover:text-violet-900 cursor-pointer"
+                        >
+                          {language === 'en' ? 'Use AI value' : '填入AI估值'}
+                        </button>
+                      </div>
                       <input
                         type="number"
                         inputMode="numeric"
                         min={0}
-                        placeholder={language === 'en' ? `Enter 0 if no visa needed; AI reference approx. ${regulatoryEstimate.visaLocal}` : `无需签证填 0，AI 参考约 ${regulatoryEstimate.visaLocal}`}
+                        placeholder={`约 ${regulatoryEstimate.visaLocal}`}
                         value={formData.visaFeeCost.amount || ''}
                         onChange={(e) => updateMoney('visaFeeCost', Number(e.target.value))}
-                        className="flex-1 p-2 border border-violet-200 rounded-lg font-semibold text-slate-900"
+                        className="w-full p-2 border border-violet-200 rounded-lg font-semibold text-slate-900 bg-white"
                       />
-                      <span className="text-[12px] text-slate-500 whitespace-nowrap">{language === 'en' ? 'Amortize over' : '分摊'}</span>
+                      <div className="flex items-center gap-1 text-[11px] text-slate-500">
+                        <span>{language === 'en' ? 'Amortize over' : '分摊'}</span>
+                        <input
+                          type="number"
+                          min={1}
+                          value={formData.visaFeeAmortizationMonths || 12}
+                          onChange={(e) => updateField('visaFeeAmortizationMonths', Math.max(1, Number(e.target.value) || 12))}
+                          className="w-12 p-0.5 border border-violet-200 rounded text-center bg-white font-bold"
+                        />
+                        <span>{language === 'en' ? 'months' : '个月'}</span>
+                      </div>
+                    </div>
+
+                    {/* 设备折旧费 */}
+                    <div className="p-3 rounded-xl bg-violet-50/40 border border-violet-200 space-y-1.5">
+                      <label className="font-bold text-slate-800 text-[12px]">
+                        {language === 'en' ? 'Equipment Depreciation / Mo' : '设备月度折旧费'}
+                      </label>
                       <input
                         type="number"
-                        min={1}
-                        title={language === 'en' ? 'Number of months to amortize over' : '分摊到经营的月数'}
-                        value={formData.visaFeeAmortizationMonths || 12}
-                        onChange={(e) =>
-                          updateField('visaFeeAmortizationMonths', Math.max(1, Number(e.target.value) || 12))
-                        }
-                        className="w-16 p-2 border border-violet-200 rounded-lg font-semibold text-center"
+                        inputMode="numeric"
+                        min={0}
+                        placeholder={language === 'en' ? 'e.g. equipment ÷ months' : '总设备值 ÷ 预计使用月数'}
+                        value={formData.equipmentDepreciationCost.amount || ''}
+                        onChange={(e) => updateMoney('equipmentDepreciationCost', Number(e.target.value))}
+                        className="w-full p-2 border border-violet-200 rounded-lg font-semibold text-slate-900 bg-white"
                       />
-                      <span className="text-[12px] text-slate-500 whitespace-nowrap">{language === 'en' ? 'months' : '个月'}</span>
+                      <p className="text-[11px] text-slate-400 leading-tight">
+                        {language === 'en' ? 'Directly booked to monthly cost' : '按月计入运营成本'}
+                      </p>
                     </div>
                   </div>
+                </div>
+              </div>
 
-                  {/* 设备折旧费 */}
-                  <div className="p-3 rounded-xl bg-white border border-violet-200 space-y-1.5">
-                    <label className="font-bold text-slate-800 flex items-center gap-1.5">
-                      <Wrench className="w-3.5 h-3.5 text-violet-500" />
-                      {language === 'en' ? 'Monthly Equipment Depreciation (booked directly to monthly cost)' : '设备月度折旧费（按月直接计入成本）'}
-                    </label>
+
+              {/* —— 模块 3：兜里有多少现金 & 初始投入（现金储备与投资模块） —— */}
+              <div className="p-5 rounded-2xl bg-gradient-to-br from-indigo-50/70 to-blue-50/40 border border-indigo-200 shadow-2xs space-y-4">
+                <div className="flex items-center justify-between flex-wrap gap-2 border-b border-indigo-100 pb-3">
+                  <h4 className="text-sm font-black text-indigo-950 flex items-center gap-2">
+                    <Wallet className="w-4 h-4 text-indigo-600" />
+                    <span>{language === 'en' ? '3. Cash Reserve & Initial Investment' : '3. 兜里现金 & 初始投入'}</span>
+                  </h4>
+                  <span className="text-[12px] bg-indigo-100 text-indigo-800 font-bold px-2.5 py-0.5 rounded-full">
+                    {language === 'en' ? 'Capital & Liquidity' : '资本与资金链储备'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* 可用现金备用金 */}
+                  <div className="p-4 rounded-xl bg-white border-2 border-emerald-200 space-y-2 text-xs">
+                    <div className="flex justify-between items-center">
+                      <label className="font-black text-slate-900 flex items-center gap-1 text-xs">
+                        <span>{language === 'en' ? 'Current Available Cash Reserve' : '当前可用现金备用金'}</span>
+                      </label>
+                      <span className="text-xs font-bold text-slate-500">{formData.cashAndLiquidAssets.currency}</span>
+                    </div>
                     <input
                       type="number"
                       inputMode="numeric"
                       min={0}
-                      placeholder={language === 'en' ? 'e.g. total equipment value ÷ expected months of use' : '例如：设备总值 ÷ 预计使用月数'}
-                      value={formData.equipmentDepreciationCost.amount || ''}
-                      onChange={(e) => updateMoney('equipmentDepreciationCost', Number(e.target.value))}
-                      className="w-full p-2 border border-violet-200 rounded-lg font-semibold text-slate-900"
+                      value={formData.cashAndLiquidAssets.amount || ''}
+                      onChange={(e) => updateMoney('cashAndLiquidAssets', Number(e.target.value))}
+                      className="w-full p-2.5 border border-emerald-300 rounded-xl font-black text-emerald-900 text-base bg-white"
                     />
+                    <p className="text-[12px] text-slate-500">
+                      {language === 'en'
+                        ? 'Includes bank deposits and mobile money that can cover urgent operational risks.'
+                        : '包含可随时支取的银行存款、移动支付资金等，用于抵御风险。'}
+                    </p>
                   </div>
-                </div>
-              </div>
-            </div>
 
-            {/* 第2点：AI 自动识别用户填错的数值及类目并提醒（仅提醒，不阻断提交） */}
-            {anomalyWarnings.length > 0 && (
-              <div className="p-4 rounded-2xl bg-rose-50/70 border-2 border-rose-300 space-y-2 text-xs">
-                <div className="flex items-center gap-2 font-black text-rose-950">
-                  <AlertOctagon className="w-4 h-4 text-rose-600" />
-                  <span>
-                    {language === 'en'
-                      ? `AI found ${anomalyWarnings.length} possibly incorrect value(s) or categorie(s) — please review`
-                      : `AI 发现 ${anomalyWarnings.length} 处可能填错的数值或类目，建议核对`}
-                  </span>
-                </div>
-                <ul className="space-y-1.5">
-                  {anomalyWarnings.map((w, idx) => (
-                    <li
-                      key={`${w.field}-${idx}`}
-                      className={`p-2 rounded-lg border flex items-start gap-1.5 ${
-                        w.severity === 'error'
-                          ? 'bg-rose-100/70 border-rose-300 text-rose-900'
-                          : 'bg-amber-50/70 border-amber-300 text-amber-900'
-                      }`}
-                    >
-                      <span className="font-bold shrink-0">{w.severity === 'error' ? '⚠️' : '💡'}</span>
-                      <span className="flex-1">{language === 'en' ? w.messageEn : w.messageZh}</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const reason = window.prompt(
-                            language === 'en'
-                              ? 'Is this value genuinely unusual? Briefly explain why (AI only records this, no judgment made):'
-                              : '这个数值确实特殊？简单说明原因（AI 只记录，不做判断）：'
-                          );
-                          if (reason && reason.trim()) setAnomalyOverride(w.field, reason.trim());
-                        }}
-                        className="text-[12px] shrink-0 px-2 py-0.5 rounded bg-white/70 border border-current font-bold hover:bg-white cursor-pointer"
-                      >
-                        {language === 'en' ? 'Add Note' : '标注特殊理由'}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* 第4点：已标注特殊理由的提醒——不再当作待核对项，但保留记录，AI 只记录不判断 */}
-            {overriddenAnomalyWarnings.length > 0 && (
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
-                <div className="flex items-center gap-2 font-black text-slate-700">
-                  <CheckCircle2 className="w-4 h-4 text-slate-500" />
-                  <span>
-                    {language === 'en'
-                      ? `${overriddenAnomalyWarnings.length} item(s) annotated with a special reason (recorded only, does not affect the score)`
-                      : `${overriddenAnomalyWarnings.length} 项已标注特殊理由（仅记录，不影响评分判断）`}
-                  </span>
-                </div>
-                <ul className="space-y-1.5">
-                  {overriddenAnomalyWarnings.map((w, idx) => (
-                    <li key={`${w.field}-ov-${idx}`} className="p-2 rounded-lg border border-slate-200 bg-white text-slate-600 flex items-start gap-1.5">
-                      <span className="flex-1">
-                        <span className="block text-slate-500">{language === 'en' ? w.messageEn : w.messageZh}</span>
-                        <span className="block mt-0.5 font-semibold text-slate-700">{language === 'en' ? 'Reason: ' : '理由：'}{formData.anomalyOverrides?.[w.field]}</span>
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => clearAnomalyOverride(w.field)}
-                        className="text-[12px] shrink-0 px-2 py-0.5 rounded border border-slate-300 font-bold hover:bg-slate-100 cursor-pointer"
-                      >
-                        {language === 'en' ? 'Remove Note' : '撤销标注'}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* 第5/6点：回本时间 + 按目标回本时间反推所需收入 */}
-            {formData.initialInvestmentEstimate.amount > 0 && (
-              <div className="p-4 rounded-2xl bg-indigo-50/60 border-2 border-indigo-200 space-y-3 text-xs">
-                <div className="flex items-center gap-2 font-black text-indigo-950">
-                  <Target className="w-4 h-4 text-indigo-600" />
-                  <span>{language === 'en' ? 'Payback Period (recovering initial investment)' : '回本时间（收回初始投资）'}</span>
-                </div>
-                <p className="text-indigo-800 leading-relaxed">
-                  {language === 'en' ? (
-                    <>
-                      Initial investment <b>{formatMoney(payback.initialInvestment, formData.baseCurrency)}</b>, based on the monthly revenue and cost you entered, the monthly net surplus is
-                      <b className={payback.monthlyNetSurplus >= 0 ? ' text-emerald-700' : ' text-rose-700'}>
-                        {' '}{formatMoney(payback.monthlyNetSurplus, formData.baseCurrency)}/mo
-                      </b>
-                      {payback.paybackMonths !== null ? (
-                        <>
-                          , expected to pay back in <span className="text-base font-black text-indigo-900 mx-1">{payback.paybackMonths.toFixed(1)}</span> months.
-                        </>
-                      ) : (
-                        '. The current net surplus is not positive, so a payback period cannot be calculated yet — first make sure you are not losing money, then payback period becomes meaningful.'
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      初始投资 <b>{formatMoney(payback.initialInvestment, formData.baseCurrency)}</b>，
-                      按当前填写的月收入与月成本，月度净结余为
-                      <b className={payback.monthlyNetSurplus >= 0 ? ' text-emerald-700' : ' text-rose-700'}>
-                        {' '}{formatMoney(payback.monthlyNetSurplus, formData.baseCurrency)}/月
-                      </b>
-                      {payback.paybackMonths !== null ? (
-                        <>
-                          ，预计 <span className="text-base font-black text-indigo-900 mx-1">{payback.paybackMonths.toFixed(1)}</span> 个月可以回本。
-                        </>
-                      ) : (
-                        '。当前净结余不为正，暂时算不出回本时间——先让「不亏钱」成立，回本时间才有意义。'
-                      )}
-                    </>
-                  )}
-                </p>
-                <p className="text-[12px] text-indigo-500">
-                  {language === 'en'
-                    ? 'This timeline answers "when will my principal be recovered", which is different from the "break-even point" above (which answers "when will I stop losing money") — please don\'t confuse the two; also remember to set aside living expenses and emergency funds rather than treating the entire surplus as withdrawable profit.'
-                    : '这条时间线回答「本金什么时候能收回来」，与上方的「盈亏平衡点」（回答「什么时候不再亏钱」）是两回事，请勿混淆；同时记得预留家庭生活费和应急资金，不要把全部结余都算作可抽走的利润。'}
-                </p>
-
-                <div className="pt-2 border-t border-indigo-200 space-y-2">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-bold text-indigo-900">{language === 'en' ? 'If I want to pay back in' : '如果我想在'}</span>
+                  {/* 初始投资估算 */}
+                  <div className="p-4 rounded-xl bg-white border border-amber-300 space-y-2 text-xs">
+                    <div className="flex justify-between items-center">
+                      <label className="font-bold text-slate-900 flex items-center gap-1 text-xs">
+                        <Target className="w-3.5 h-3.5 text-amber-600" />
+                        <span>{language === 'en' ? 'Initial Investment Estimate' : '初始投资估算（一次性投入）'}</span>
+                      </label>
+                      <span className="text-xs font-bold text-slate-500">{formData.initialInvestmentEstimate.currency}</span>
+                    </div>
                     <input
                       type="number"
-                      min={1}
-                      value={formData.targetPaybackMonths || ''}
-                      onChange={(e) => updateField('targetPaybackMonths', Math.max(1, Number(e.target.value) || 1))}
-                      className="w-20 p-1.5 border border-indigo-300 rounded-lg font-black text-indigo-900 text-center"
+                      inputMode="numeric"
+                      min={0}
+                      placeholder={language === 'en' ? 'renovation + equipment + stock' : '例如：装修+设备+首批进货'}
+                      value={formData.initialInvestmentEstimate.amount || ''}
+                      onChange={(e) => updateMoney('initialInvestmentEstimate', Number(e.target.value))}
+                      className="w-full p-2.5 border border-amber-300 rounded-xl font-bold text-amber-900 bg-white"
                     />
-                    <span className="font-bold text-indigo-900">{language === 'en' ? 'months, how much do I need to earn at minimum?' : '个月内回本，至少要赚多少？'}</span>
+                    <p className="text-[12px] text-amber-700">
+                      {language === 'en'
+                        ? 'Used by AI to calculate payback period and target revenue below.'
+                        : '填入此项后，下方 AI 会自动测算「回本时间」与「目标反推收入」。'}
+                    </p>
                   </div>
-                  {reverseTarget && (
-                    <p className="text-indigo-800 leading-relaxed">
+                </div>
+              </div>
+
+
+              {/* —— 模块 4：AI 动态测算与风险校验（保本与回本分析） —— */}
+              <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-50/90 via-orange-50/50 to-amber-50/30 border-2 border-amber-300 shadow-xs space-y-4">
+                <div className="flex items-center justify-between flex-wrap gap-2 border-b border-amber-200 pb-3">
+                  <h4 className="text-sm font-black text-amber-950 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-amber-600" />
+                    <span>{language === 'en' ? '4. AI Real-time Financial Analysis & Diagnostics' : '4. AI 实时财务测算与智能校验'}</span>
+                  </h4>
+                  <span className="text-[12px] bg-amber-200 text-amber-900 font-bold px-2.5 py-0.5 rounded-full">
+                    {language === 'en' ? 'Live Auto-Calculations' : 'AI 动态计算'}
+                  </span>
+                </div>
+
+                {/* AI 算出的保本收入 */}
+                {breakEven.hasEnoughData ? (
+                  <div className="p-4 rounded-xl bg-white border border-amber-300 space-y-1.5 text-xs shadow-2xs">
+                    <div className="flex items-center gap-2">
+                      <Target className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span className="font-black text-amber-950 text-sm">{language === 'en' ? 'AI Break-Even Revenue Threshold' : 'AI 算出的保本收入（不亏钱最低线）'}</span>
+                      <InfoTooltip
+                        language={language}
+                        text={
+                          language === 'en'
+                            ? `Based on monthly cost of ${formatMoney(breakEven.monthlyCostTotal, formData.baseCurrency)} (purchasing + opex + taxes + debt repayment + amortizations), calculated over ${breakEven.operatingDaysPerMonth} operating days.`
+                            : `根据你已填的进货、房租人工、税金、还贷与折旧/许可成本合计 ${formatMoney(breakEven.monthlyCostTotal, formData.baseCurrency)} / 月，按每月经营 ${breakEven.operatingDaysPerMonth} 天估算。`
+                        }
+                      />
+                    </div>
+                    <p className="text-amber-900 leading-relaxed font-medium">
                       {language === 'en' ? (
                         <>
-                          You need monthly revenue of at least
-                          <span className="text-base font-black text-indigo-900 mx-1">
-                            {formatMoney(reverseTarget.requiredMonthlyRevenue, formData.baseCurrency)}
+                          You need to sell at least
+                          <span className="text-base font-black text-amber-950 mx-1.5 underline decoration-amber-400 decoration-2">
+                            {formatMoney(breakEven.dailyBreakEvenRevenue, formData.baseCurrency)}
                           </span>
-                          (approx. {formatMoney(reverseTarget.requiredDailyRevenue, formData.baseCurrency)} per day) — check against the industry benchmarks above to see whether this target is realistic for your cost structure and whether the market demand exists.
+                          per day (at least <span className="font-bold">{formatMoney(breakEven.monthlyBreakEvenRevenue, formData.baseCurrency)}</span> per month) to avoid a loss.
                         </>
                       ) : (
                         <>
-                          至少要做到每月收入
-                          <span className="text-base font-black text-indigo-900 mx-1">
-                            {formatMoney(reverseTarget.requiredMonthlyRevenue, formData.baseCurrency)}
+                          你每天至少要卖到
+                          <span className="text-base font-black text-amber-950 mx-1.5 underline decoration-amber-400 decoration-2">
+                            {formatMoney(breakEven.dailyBreakEvenRevenue, formData.baseCurrency)}
                           </span>
-                          （约每天 {formatMoney(reverseTarget.requiredDailyRevenue, formData.baseCurrency)}），
-                          请对照上方行业基准判断这个目标相对你的成本结构是否现实、对应的市场需求量是否存在。
+                          （每月至少 <span className="font-bold">{formatMoney(breakEven.monthlyBreakEvenRevenue, formData.baseCurrency)}</span>）才不亏钱。
                         </>
                       )}
                     </p>
-                  )}
-                </div>
+                  </div>
+                ) : (
+                  <div className="p-3.5 rounded-xl bg-white/80 border border-amber-200 text-xs text-amber-800 font-medium flex items-center gap-2">
+                    <InfoTooltip language={language} text={language === 'en' ? 'Please fill in cost and expense items above.' : '请先在上方填入成本或开支项目。'} />
+                    <span>{language === 'en' ? 'Fill in monthly cost or expenses above to unlock AI break-even calculations.' : '在上方填入月度成本或开支后，此处将自动算出不亏钱的保本流水门槛。'}</span>
+                  </div>
+                )}
+
+                {/* 回本时间与目标反推 */}
+                {formData.initialInvestmentEstimate.amount > 0 && (
+                  <div className="p-4 rounded-xl bg-white border border-indigo-200 space-y-3 text-xs shadow-2xs">
+                    <div className="flex items-center gap-2 font-black text-indigo-950 text-sm">
+                      <Target className="w-4 h-4 text-indigo-600" />
+                      <span>{language === 'en' ? 'Payback Period & Target Required Revenue' : '回本时间预测与目标反推'}</span>
+                    </div>
+                    <p className="text-indigo-900 leading-relaxed font-medium">
+                      {language === 'en' ? (
+                        <>
+                          Initial investment <b>{formatMoney(payback.initialInvestment, formData.baseCurrency)}</b>, monthly net surplus is
+                          <b className={payback.monthlyNetSurplus >= 0 ? ' text-emerald-700' : ' text-rose-700'}>
+                            {' '}{formatMoney(payback.monthlyNetSurplus, formData.baseCurrency)}/mo
+                          </b>
+                          {payback.paybackMonths !== null ? (
+                            <>
+                              , expected payback in <span className="text-base font-black text-indigo-900 mx-1.5">{payback.paybackMonths.toFixed(1)}</span> months.
+                            </>
+                          ) : (
+                            '. Net surplus is not positive yet — payback period cannot be calculated until operational profit is positive.'
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          初始投资 <b>{formatMoney(payback.initialInvestment, formData.baseCurrency)}</b>，
+                          月度净结余为
+                          <b className={payback.monthlyNetSurplus >= 0 ? ' text-emerald-700' : ' text-rose-700'}>
+                            {' '}{formatMoney(payback.monthlyNetSurplus, formData.baseCurrency)}/月
+                          </b>
+                          {payback.paybackMonths !== null ? (
+                            <>
+                              ，预计 <span className="text-base font-black text-indigo-900 mx-1.5">{payback.paybackMonths.toFixed(1)}</span> 个月可以回本。
+                            </>
+                          ) : (
+                            '。当前净结余不为正，暂时算不出回本时间——先让经营结余为正，回本时间才有意义。'
+                          )}
+                        </>
+                      )}
+                    </p>
+
+                    <div className="pt-2 border-t border-indigo-100 space-y-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-indigo-900">{language === 'en' ? 'Target payback period:' : '如果我想在'}</span>
+                        <input
+                          type="number"
+                          min={1}
+                          value={formData.targetPaybackMonths || ''}
+                          onChange={(e) => updateField('targetPaybackMonths', Math.max(1, Number(e.target.value) || 1))}
+                          className="w-20 p-1.5 border border-indigo-300 rounded-lg font-black text-indigo-900 text-center bg-white"
+                        />
+                        <span className="font-bold text-indigo-900">{language === 'en' ? 'months, required monthly revenue:' : '个月内回本，至少要赚多少？'}</span>
+                      </div>
+                      {reverseTarget && (
+                        <p className="text-indigo-900 leading-relaxed font-semibold">
+                          {language === 'en' ? (
+                            <>
+                              Need monthly revenue of at least
+                              <span className="text-base font-black text-indigo-950 mx-1.5">
+                                {formatMoney(reverseTarget.requiredMonthlyRevenue, formData.baseCurrency)}
+                              </span>
+                              (approx. {formatMoney(reverseTarget.requiredDailyRevenue, formData.baseCurrency)} / day).
+                            </>
+                          ) : (
+                            <>
+                              至少要做到的每月收入：
+                              <span className="text-base font-black text-indigo-950 mx-1.5">
+                                {formatMoney(reverseTarget.requiredMonthlyRevenue, formData.baseCurrency)}
+                              </span>
+                              （约每天 {formatMoney(reverseTarget.requiredDailyRevenue, formData.baseCurrency)}）。
+                            </>
+                          )}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* AI 异常数值提醒 */}
+                {anomalyWarnings.length > 0 && (
+                  <div className="p-4 rounded-xl bg-rose-50/90 border-2 border-rose-300 space-y-2 text-xs">
+                    <div className="flex items-center gap-2 font-black text-rose-950">
+                      <AlertOctagon className="w-4 h-4 text-rose-600 shrink-0" />
+                      <span>
+                        {language === 'en'
+                          ? `AI found ${anomalyWarnings.length} item(s) to verify`
+                          : `AI 发现 ${anomalyWarnings.length} 处可能填错的数值或类目，建议核对`}
+                      </span>
+                    </div>
+                    <ul className="space-y-1.5">
+                      {anomalyWarnings.map((w, idx) => (
+                        <li
+                          key={`${w.field}-${idx}`}
+                          className={`p-2 rounded-lg border flex items-start gap-1.5 ${
+                            w.severity === 'error'
+                              ? 'bg-rose-100/70 border-rose-300 text-rose-900'
+                              : 'bg-amber-50/70 border-amber-300 text-amber-900'
+                          }`}
+                        >
+                          <span className="font-bold shrink-0">{w.severity === 'error' ? '⚠️' : '💡'}</span>
+                          <span className="flex-1 font-medium">{language === 'en' ? w.messageEn : w.messageZh}</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const reason = window.prompt(
+                                language === 'en'
+                                  ? 'Is this value genuinely unusual? Briefly explain why:'
+                                  : '这个数值确实特殊？简单说明原因（AI 只记录，不做判断）：'
+                              );
+                              if (reason && reason.trim()) setAnomalyOverride(w.field, reason.trim());
+                            }}
+                            className="text-[12px] shrink-0 px-2 py-0.5 rounded bg-white/80 border border-current font-bold hover:bg-white cursor-pointer"
+                          >
+                            {language === 'en' ? 'Add Note' : '标注特殊理由'}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* 已标注特殊理由的提醒 */}
+                {overriddenAnomalyWarnings.length > 0 && (
+                  <div className="p-3.5 rounded-xl bg-white border border-slate-200 space-y-2 text-xs">
+                    <div className="flex items-center gap-2 font-black text-slate-700">
+                      <CheckCircle2 className="w-4 h-4 text-slate-500" />
+                      <span>
+                        {language === 'en'
+                          ? `${overriddenAnomalyWarnings.length} item(s) annotated with a special reason`
+                          : `${overriddenAnomalyWarnings.length} 项已标注特殊理由（仅记录，不影响评分判断）`}
+                      </span>
+                    </div>
+                    <ul className="space-y-1.5">
+                      {overriddenAnomalyWarnings.map((w, idx) => (
+                        <li key={`${w.field}-ov-${idx}`} className="p-2 rounded-lg border border-slate-200 bg-slate-50 text-slate-600 flex items-start gap-1.5">
+                          <span className="flex-1">
+                            <span className="block text-slate-500">{language === 'en' ? w.messageEn : w.messageZh}</span>
+                            <span className="block mt-0.5 font-semibold text-slate-700">{language === 'en' ? 'Reason: ' : '理由：'}{formData.anomalyOverrides?.[w.field]}</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => clearAnomalyOverride(w.field)}
+                            className="text-[12px] shrink-0 px-2 py-0.5 rounded border border-slate-300 font-bold hover:bg-slate-100 cursor-pointer"
+                          >
+                            {language === 'en' ? 'Remove Note' : '撤销标注'}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
               </div>
-            )}
+
+            </div>
 
             {/* 更多设置（月度流水 / 资金证明 / 经营时长 / 员工）——藏起来 */}
             <div className="border border-slate-200 rounded-2xl overflow-hidden">
