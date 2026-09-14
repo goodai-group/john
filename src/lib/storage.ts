@@ -118,6 +118,12 @@ export function getStoredProjects(): BusinessFormData[] {
   }
 }
 
+// assessment_reports.project_id 有外键约束指向 projects.id：project 与其 report 的云端
+// upsert 若并发发出，report 的写入可能在 project 那一行提交前先到达数据库，触发外键
+// 校验失败（400）。这里记录每个 projectId 最近一次云端 upsert 的 Promise，
+// 供 saveReport 在写 report 前等待，从而保证同一 project 的云端行一定先落地。
+const pendingProjectCloudSync = new Map<string, Promise<boolean>>();
+
 export function saveProject(project: BusinessFormData): void {
   // 重新保存即视为"存活"，从删除墓碑中移除（避免同 id 数据被墓碑误拦）
   writeDeletedIds(STORAGE_KEY_DELETED_PROJECTS, unmarkDeleted(getDeletedProjectIds(), project.id));
@@ -132,9 +138,11 @@ export function saveProject(project: BusinessFormData): void {
 
   // Sync to Supabase Cloud Table /projects
   if (isCloudDatabaseAvailable()) {
-    saveAssessmentToCloud(project).catch((err) =>
-      console.warn('Background cloud save assessment failed:', err)
-    );
+    const syncPromise = saveAssessmentToCloud(project).catch((err) => {
+      console.warn('Background cloud save assessment failed:', err);
+      return false;
+    });
+    pendingProjectCloudSync.set(project.id, syncPromise);
   }
 }
 
@@ -202,9 +210,11 @@ export function saveReport(report: AssessmentReport): void {
 
   // Sync to Supabase Cloud Table /assessment_reports
   if (isCloudDatabaseAvailable()) {
-    saveReportToCloud(report).catch((err) =>
-      console.warn('Background cloud save report failed:', err)
-    );
+    // 等待同一 project 的云端 upsert 先落地，避免 project_id 外键约束校验失败
+    const waitForProject = pendingProjectCloudSync.get(report.projectId) || Promise.resolve(true);
+    waitForProject
+      .then(() => saveReportToCloud(report))
+      .catch((err) => console.warn('Background cloud save report failed:', err));
   }
 }
 
