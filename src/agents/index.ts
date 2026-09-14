@@ -37,6 +37,9 @@ export function listAgents(): Array<{
 }
 
 export * from './types.js';
+export * from './dossier.js';
+export { runCoach, planFor } from './coach.js';
+export type { CoachIntent, CoachEnvelope, CoachDeps } from './coach.js';
 export { runAgent, newRequestId } from './runtime.js';
 export { setTraceSink } from './trace.js';
 export { listTools, getTool, TOOL_REGISTRY, TOOL_DATASETS } from './tools.js';
