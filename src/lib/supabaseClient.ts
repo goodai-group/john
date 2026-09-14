@@ -158,16 +158,14 @@ export const subscribeToAuthChanges = (
     callback(null, 'INITIAL_SESSION');
     return () => {};
   }
+  // 注意：Supabase v2 的 onAuthStateChange 在订阅建立后会立即以当前会话
+  // 触发一次回调（event 为 INITIAL_SESSION），已经涵盖"刷新页面后恢复登录状态"，
+  // 不需要再额外调用 getSession() 手动补一次——之前两者都调用会导致 callback
+  // 在每次挂载时对已登录用户触发两次（云端同步、"欢迎回来"提示条等全部重复跑一遍）。
   const { data } = supabase.auth.onAuthStateChange((event, session) => {
     const appUser = toAppUser(session?.user);
     cachedSupabaseUser = appUser;
     callback(appUser, event);
-  });
-  // 初始化时先主动拉取一次会话，保证刷新页面后登录状态恢复
-  supabase.auth.getSession().then(({ data: sessionData }) => {
-    const appUser = toAppUser(sessionData.session?.user);
-    cachedSupabaseUser = appUser;
-    callback(appUser, 'INITIAL_SESSION');
   });
   return () => {
     data.subscription.unsubscribe();
