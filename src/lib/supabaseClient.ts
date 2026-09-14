@@ -841,6 +841,23 @@ CREATE TABLE IF NOT EXISTS public.agent_facts (
 CREATE UNIQUE INDEX IF NOT EXISTS agent_facts_project_key_idx
   ON public.agent_facts (project_id, fact_type, fact_key);
 
+-- 修复历史遗留问题：assessment_reports.id 列类型误建为 UUID，
+-- 导致 report-<timestamp> 格式的 ID 在读写/删除时报
+-- "invalid input syntax for type uuid"。可安全重复执行。
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'assessment_reports'
+      AND column_name = 'id'
+      AND data_type <> 'text'
+  ) THEN
+    ALTER TABLE public.assessment_reports
+      ALTER COLUMN id TYPE TEXT USING id::TEXT;
+  END IF;
+END $$;
+
 -- 启用 RLS 前建议先按 owner 隔离（可选，默认宽松以便本地开发）：
 -- ALTER TABLE public.projects ENABLE ROW LEVEL SECURITY;
 -- CREATE POLICY "owner select" ON public.projects FOR SELECT USING (owner_uid = auth.uid() OR owner_uid IS NULL);

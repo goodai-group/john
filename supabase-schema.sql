@@ -139,6 +139,29 @@ CREATE TABLE IF NOT EXISTS public.agent_facts (
 CREATE UNIQUE INDEX IF NOT EXISTS agent_facts_project_key_idx
   ON public.agent_facts (project_id, fact_type, fact_key);
 
+-- ============================================================
+-- 修复历史遗留问题：assessment_reports.id 列类型误建为 UUID
+-- 现象：删除/写入 report-<timestamp> 格式的 ID 时报错
+--   "invalid input syntax for type uuid: report-xxxx"
+-- 原因：部分早期安装通过 Supabase 控制台手动建表，默认把 id 建成了 UUID，
+--   与本文件定义的 TEXT 主键不一致（CREATE TABLE IF NOT EXISTS 不会修正
+--   已存在表的列类型，所以重新执行本文件无法自动修复）。
+--   以下语句可安全重复执行，仅在实际列类型不是 text 时才会转换。
+-- ============================================================
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'assessment_reports'
+      AND column_name = 'id'
+      AND data_type <> 'text'
+  ) THEN
+    ALTER TABLE public.assessment_reports
+      ALTER COLUMN id TYPE TEXT USING id::TEXT;
+  END IF;
+END $$;
+
 -- 如需按用户隔离数据（登录后只看到自己的数据），可取消下面注释启用：
 -- ALTER TABLE public.projects ENABLE ROW LEVEL SECURITY;
 -- CREATE POLICY "owner select" ON public.projects FOR SELECT USING (owner_uid = auth.uid() OR owner_uid IS NULL);
