@@ -53,11 +53,22 @@ import {
 import { calculateBreakEvenRevenue } from '../../lib/breakEvenCalculator';
 import { calculatePaybackPeriod, calculateRequiredRevenueForTarget } from '../../lib/paybackCalculator';
 import { detectFormAnomalies } from '../../lib/anomalyDetection';
+import { FieldProvenanceBadge, PendingConfirmationsBar } from '../FieldProvenanceBadge';
 
 /** 行业枚举值集合，用于在 AI 返回值与可选项之间做映射 */
 const INDUSTRY_KEYS = INDUSTRY_BENCHMARKS.map((b) => b.id) as string[];
 /** 下拉里选中的"自定义行业"占位值 */
 export const CUSTOM_INDUSTRY_VALUE = '__CUSTOM__';
+
+/**
+ * 该明细项是否已被用户真正复核过。
+ * 值被改成与 AI 建议不同，才算用户过了目；仍等于建议值（含自动预填）视为未复核。
+ */
+function isReviewedByUser(it: { value?: number; suggestedAmount?: number }): boolean {
+  if (!it.value) return false;
+  if (!it.suggestedAmount) return true;
+  return it.value !== it.suggestedAmount;
+}
 
 /** 调用后端 AI 接口，基于项目/店铺名称推算行业、币种与成本结构 */
 async function callInferBusinessStructure(projectName: string): Promise<InferredStructure | null> {
@@ -255,6 +266,24 @@ export const AssessmentForm: React.FC<FormProps> = ({
 
   // —— 第2点：AI 自动识别用户填错的数值及类目并提醒（本地规则化，仅提醒不阻断）——
   const rawAnomalyWarnings = React.useMemo(() => detectFormAnomalies(formData), [formData]);
+
+  /**
+   * 尚未被用户复核的 AI 建议数量。
+   *
+   * 【判定口径】值为空，**或者值仍与 AI 建议值完全相同** —— 后者同样算未复核。
+   *
+   * 这一条很关键：本地推断引擎会把建议值直接自动预填进表单（见绿字「AI 已自动预填」），
+   * 如果只看「有没有值」，这些 AI 填的数字会被当成用户填的，
+   * 徽章会错误地显示「你已填写」。用户改过之后才算真正过了目。
+   */
+  const pendingSuggestionCount = React.useMemo(() => {
+    const items = [
+      ...(formData.dynamicCogsItems || []),
+      ...(formData.dynamicOpexItems || [])
+    ].filter((it) => it.suggestedAmount && !isReviewedByUser(it)).length;
+    const estimatedMonths = (formData.monthlyBreakdowns || []).filter((b) => b.isEstimated).length;
+    return items + estimatedMonths;
+  }, [formData.dynamicCogsItems, formData.dynamicOpexItems, formData.monthlyBreakdowns]);
   // 第4点"特殊理由"：用户已标注例外说明的提醒仍保留在列表里，但会附带其理由，不再当作待核对项
   const anomalyWarnings = rawAnomalyWarnings.filter((w) => !formData.anomalyOverrides?.[w.field]);
   const overriddenAnomalyWarnings = rawAnomalyWarnings.filter((w) => formData.anomalyOverrides?.[w.field]);
@@ -1349,6 +1378,10 @@ export const AssessmentForm: React.FC<FormProps> = ({
       {/* STEP 2: 赚多少、花多少、兜里有多少现金（清晰分块纵向排版） */}
       {currentStep === 2 && (
         <div className="space-y-6">
+          {/* 待确认汇总：让用户知道还有几项 AI 建议没被采纳。
+              刻意不自动采纳 —— 幻觉数字到不了评分引擎的前提，就是必须由用户亲自确认。 */}
+          <PendingConfirmationsBar count={pendingSuggestionCount} language={language} />
+
           <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
             <div className="border-b border-slate-100 pb-3">
               <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
@@ -1630,6 +1663,12 @@ export const AssessmentForm: React.FC<FormProps> = ({
                             title={it.suggestedAmount ? (language === 'en' ? `AI suggested reference amount: ${it.suggestedAmount} (for reference only, please fill in your real figure)` : `AI 建议参考金额：${it.suggestedAmount}（仅供参考，请填你的真实数字）`) : (language === 'en' ? 'Please fill in your real monthly amount' : '请填你的真实月度金额')}
                           />
                           <span className="text-[12px] text-rose-700 whitespace-nowrap shrink-0 pl-0.5">{formData.baseCurrency}/{language === 'en' ? 'mo' : '月'}</span>
+                          {it.suggestedAmount ? (
+                            <FieldProvenanceBadge
+                              confidence={isReviewedByUser(it) ? 'confirmed' : 'suggested'}
+                              language={language}
+                            />
+                          ) : null}
                           <button type="button" onClick={() => removeDynamicCogsItem(it.id)} className="p-1 text-rose-500 hover:text-rose-700 cursor-pointer shrink-0">
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -1757,6 +1796,12 @@ export const AssessmentForm: React.FC<FormProps> = ({
                           title={it.suggestedAmount ? (language === 'en' ? `AI suggested reference amount: ${it.suggestedAmount} (for reference only, please fill in your real figure)` : `AI 建议参考金额：${it.suggestedAmount}（仅供参考，请填你的真实数字）`) : (language === 'en' ? 'Please fill in your real monthly amount' : '请填你的真实月度金额')}
                         />
                         <span className="text-[12px] text-teal-700 whitespace-nowrap shrink-0 pl-0.5">{formData.baseCurrency}/{language === 'en' ? 'mo' : '月'}</span>
+                        {it.suggestedAmount ? (
+                          <FieldProvenanceBadge
+                            confidence={isReviewedByUser(it) ? 'confirmed' : 'suggested'}
+                            language={language}
+                          />
+                        ) : null}
                         <button type="button" onClick={() => removeDynamicOpexItem(it.id)} className="p-1 text-teal-500 hover:text-teal-700 cursor-pointer shrink-0">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>

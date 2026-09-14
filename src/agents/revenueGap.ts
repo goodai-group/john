@@ -38,7 +38,7 @@ export interface RevenueGapOutput {
  * 并且相邻月份也只会在这个写死数组里查找，实际上永远查不到匹配、只会用兜底值 30000 估算。
  * 现在月份列表直接取自用户传入 rawRecords 自身携带的月份（按字符串排序）。
  */
-function estimateRevenueGaps(input: RevenueGapInput): RevenueGapOutput {
+export function estimateRevenueGaps(input: RevenueGapInput): RevenueGapOutput {
   const { rawRecords, currency } = input;
 
   const months = Array.from(

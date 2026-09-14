@@ -24,7 +24,7 @@ export interface BusinessStructureOutput {
   [key: string]: unknown;
 }
 
-const SYSTEM_INSTRUCTION = `
+export const BUSINESS_STRUCTURE_SYSTEM_INSTRUCTION = `
 你是一个专为全球商业宣教(BAM)、爱心工场与小微实体项目打造的商业模型与财务架构分析专家。
 用户提供了项目/店铺名称（如：“恩典社区义诊所”、“麦种烘焙咖啡馆”、“内罗毕手机维修培训工坊”、“清迈有机蔬菜种植社”、“金边儿童辅导中心”等）。
 
@@ -126,7 +126,7 @@ export const businessStructureAgent: AgentDefinition<
     try {
       replyText = await generateGeminiContent(
         `项目/店铺名称: "${input.projectName}"\n用户当前选择的行业: "${input.currentIndustry}"\n当前币种: "${input.baseCurrency}"`,
-        SYSTEM_INSTRUCTION
+        BUSINESS_STRUCTURE_SYSTEM_INSTRUCTION
       );
     } catch (err: any) {
       console.warn(

@@ -794,6 +794,53 @@ CREATE INDEX IF NOT EXISTS agent_runs_agent_started_idx
 CREATE INDEX IF NOT EXISTS agent_runs_degraded_idx
   ON public.agent_runs (degraded, started_at DESC);
 
+-- ============================================================
+-- action_items：行动清单的生命周期（Phase 1）
+-- 不做这张表，Tracker 无法催办，行动清单会退化成一次性展示。
+-- expected_score_gain 由 Strategist 通过确定性引擎模拟验算得出，不是模型估的。
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.action_items (
+  id TEXT PRIMARY KEY,
+  project_id TEXT REFERENCES public.projects(id) ON DELETE CASCADE,
+  report_version INT,
+  title TEXT NOT NULL,
+  detail TEXT,
+  horizon_days INT,
+  expected_score_gain NUMERIC,
+  status TEXT DEFAULT 'open',
+  owner_email TEXT,
+  due_date DATE,
+  created_by_agent TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS action_items_project_status_idx
+  ON public.action_items (project_id, status);
+
+-- ============================================================
+-- agent_facts：长期记忆（Phase 1）
+-- 两类内容同等重要：
+--   1. 用户已确认的事实
+--   2. 用户否决过的建议 —— 没有它，Agent 每月会重复推荐同一条被拒绝的建议，
+--      用户会迅速失去信任
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.agent_facts (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  project_id TEXT REFERENCES public.projects(id) ON DELETE CASCADE,
+  fact_type TEXT NOT NULL,
+  fact_key TEXT NOT NULL,
+  fact_value JSONB,
+  source TEXT,
+  confidence TEXT,
+  source_ref TEXT,
+  as_of DATE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS agent_facts_project_key_idx
+  ON public.agent_facts (project_id, fact_type, fact_key);
+
 -- 启用 RLS 前建议先按 owner 隔离（可选，默认宽松以便本地开发）：
 -- ALTER TABLE public.projects ENABLE ROW LEVEL SECURITY;
 -- CREATE POLICY "owner select" ON public.projects FOR SELECT USING (owner_uid = auth.uid() OR owner_uid IS NULL);
