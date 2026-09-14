@@ -54,6 +54,7 @@ export function calculateBreakEvenRevenue(
     | 'visaFeeCost'
     | 'visaFeeAmortizationMonths'
     | 'equipmentDepreciationCost'
+    | 'dynamicEquipmentItems'
     | 'baseCurrency'
     | 'customCurrencyCode'
     | 'hasMultipleRates'

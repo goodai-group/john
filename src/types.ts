@@ -62,6 +62,14 @@ export interface DynamicOpexItem {
   suggestedAmount?: number; // AI 推断的参考金额（仅用于占位提示，不参与计算）
 }
 
+// 按台/按项填报的设备清单：月度折旧 = 设备值 ÷ 预计使用月数，用户逐台填，避免自己心算总设备值
+export interface DynamicEquipmentItem {
+  id: string;
+  label: string;
+  value: number; // 该台设备的总值
+  usefulLifeMonths: number; // 预计统计/使用月数
+}
+
 export interface MoneyField {
   amount: number;
   currency: CurrencyCode;
@@ -105,6 +113,7 @@ export interface BusinessFormData {
   // 动态收支明细项（支持 AI 智能推算生成与自由编辑增删）
   dynamicCogsItems?: DynamicCostItem[];
   dynamicOpexItems?: DynamicOpexItem[];
+  dynamicEquipmentItems?: DynamicEquipmentItem[]; // 按台填报的设备清单，月度折旧自动汇总
 
   // 敏感地区数据安全模式
   isSensitiveRegion: boolean;
@@ -262,6 +271,7 @@ export interface AssessmentReport {
   // 按行业细分的动态成本明细（AI 推断，用户可增删改）
   dynamicCogsItems?: DynamicCostItem[];
   dynamicOpexItems?: DynamicOpexItem[];
+  dynamicEquipmentItems?: DynamicEquipmentItem[];
 }
 
 export interface EscalatedQuestion {

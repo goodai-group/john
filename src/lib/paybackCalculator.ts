@@ -48,6 +48,7 @@ type PaybackFormFields = Pick<
   | 'visaFeeCost'
   | 'visaFeeAmortizationMonths'
   | 'equipmentDepreciationCost'
+  | 'dynamicEquipmentItems'
   | 'initialInvestmentEstimate'
   | 'baseCurrency'
   | 'customCurrencyCode'
