@@ -2,9 +2,9 @@ import { LearningVideo } from '../types.js';
 
 /**
  * 第4点：商业知识学习中心的视频清单。
- * - source: 'internal' 指向站内已有素材（如开场品牌片）；'youtube' 指向 YouTube 搜索结果页，
- *   避免直接拼接猜测的视频 ID（可能已失效或指向错误内容），改由运营同工后续用真实
- *   已核实过的播放链接替换 url 字段即可，数据结构与页面逻辑无需改动。
+ * - source: 'internal' 指向站内已有素材（如开场品牌片）；'youtube' 指向精选的具体视频播放链接
+ *   （非搜索结果页），点击「观看」可直接进入对应视频。若某条链接后续失效，
+ *   运营同工可直接替换 url 字段，数据结构与页面逻辑无需改动。
  * - 分类覆盖用户提出的"成本核算/盈亏平衡/签证与合规/现金流"等商业基础知识主题。
  */
 export const LEARNING_VIDEOS: LearningVideo[] = [
@@ -29,7 +29,7 @@ export const LEARNING_VIDEOS: LearningVideo[] = [
     category: '成本核算',
     categoryEn: 'Cost Accounting',
     source: 'youtube',
-    url: 'https://www.youtube.com/results?search_query=small+business+cost+accounting+tax+registration+depreciation+for+beginners',
+    url: 'https://www.youtube.com/watch?v=MP3epJs2MPA',
     durationMinutes: 12
   },
   {
@@ -41,8 +41,8 @@ export const LEARNING_VIDEOS: LearningVideo[] = [
     category: '盈亏平衡',
     categoryEn: 'Break-Even Analysis',
     source: 'youtube',
-    url: 'https://www.youtube.com/results?search_query=break+even+point+explained+small+business+simple',
-    durationMinutes: 8
+    url: 'https://www.youtube.com/watch?v=YprkwmZFaIw',
+    durationMinutes: 9
   },
   {
     id: 'yt-visa-work-permit-costs',
@@ -53,7 +53,7 @@ export const LEARNING_VIDEOS: LearningVideo[] = [
     category: '签证与合规',
     categoryEn: 'Visa & Compliance',
     source: 'youtube',
-    url: 'https://www.youtube.com/results?search_query=business+visa+work+permit+cost+overseas+entrepreneur+guide',
+    url: 'https://www.youtube.com/watch?v=mizM-YWUWkA',
     durationMinutes: 10
   },
   {
@@ -65,7 +65,7 @@ export const LEARNING_VIDEOS: LearningVideo[] = [
     category: '签证与合规',
     categoryEn: 'Visa & Compliance',
     source: 'youtube',
-    url: 'https://www.youtube.com/results?search_query=how+to+register+a+small+business+overseas+cost+process',
+    url: 'https://www.youtube.com/watch?v=8MBteGbNkyE',
     durationMinutes: 11
   },
   {
@@ -77,7 +77,7 @@ export const LEARNING_VIDEOS: LearningVideo[] = [
     category: '现金流管理',
     categoryEn: 'Cash Flow Management',
     source: 'youtube',
-    url: 'https://www.youtube.com/results?search_query=cash+runway+small+business+how+many+months+reserve',
+    url: 'https://www.youtube.com/watch?v=2qmSrKkU7Ko',
     durationMinutes: 9
   },
   {
@@ -89,7 +89,7 @@ export const LEARNING_VIDEOS: LearningVideo[] = [
     category: '成本核算',
     categoryEn: 'Cost Accounting',
     source: 'youtube',
-    url: 'https://www.youtube.com/results?search_query=gross+margin+pricing+strategy+small+business+explained',
+    url: 'https://www.youtube.com/watch?v=n0NnetjeVdw',
     durationMinutes: 10
   },
   {
@@ -101,7 +101,7 @@ export const LEARNING_VIDEOS: LearningVideo[] = [
     category: '记账基础',
     categoryEn: 'Bookkeeping Basics',
     source: 'youtube',
-    url: 'https://www.youtube.com/results?search_query=simple+bookkeeping+for+small+business+owners+beginners',
+    url: 'https://www.youtube.com/watch?v=itpCtsopKTI',
     durationMinutes: 13
   }
 ];
