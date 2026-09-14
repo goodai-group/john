@@ -393,9 +393,9 @@ async function performCloudSync(currentUser?: AppUser | null): Promise<void> {
     const liveCloudProjects = cloudProjects.filter((p) => !deletedProjectIds.includes(p.id));
     const liveCloudReports = cloudReports.filter((r) => !deletedReportIds.includes(r.id));
 
-    // If cloud has projects, merge them with local
+    // 合并云端与本地 projects（云端优先取最新版本）
+    const localProjects = getStoredProjects();
     if (liveCloudProjects.length > 0) {
-      const localProjects = getStoredProjects();
       // 以项目 id 为键合并（保留最新版本），避免同一项目多版本同时进入列表导致 React 重复 key
       const mergedProjectsMap = new Map<string, BusinessFormData>();
       const putLatest = (p: BusinessFormData) => {
@@ -409,24 +409,36 @@ async function performCloudSync(currentUser?: AppUser | null): Promise<void> {
       liveCloudProjects.forEach(putLatest);
       const mergedList = Array.from(mergedProjectsMap.values());
       localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(mergedList));
-    } else if (currentUser?.uid) {
-      // 仅登录用户：云端为空时把本地数据上传（未登录的匿名访问不向公共表写入数据，避免数据串扰/泄漏）
-      const localProjects = getStoredProjects();
-      for (const p of localProjects) {
+    }
+
+    // 仅登录用户：把云端还没有的本地 project 补推上去（未登录的匿名访问不向公共表写入数据，避免数据串扰/泄漏）。
+    // 注意：不能只在 liveCloudProjects 为空时才推送——云端已有其它 project 时，
+    // 本地新建但尚未同步的 project 同样需要补推，否则它的 report 会在 project 行缺失的情况下
+    // 因外键约束（assessment_reports.project_id → projects.id）被拒绝写入。
+    if (currentUser?.uid) {
+      const cloudProjectIds = new Set(liveCloudProjects.map((p) => p.id));
+      const localOnlyProjects = localProjects.filter((p) => !cloudProjectIds.has(p.id));
+      for (const p of localOnlyProjects) {
         await saveAssessmentToCloud(p, currentUser);
       }
     }
 
+    // 合并云端与本地 reports
+    const localReports = getAllReports();
     if (liveCloudReports.length > 0) {
-      const localReports = getAllReports();
       const mergedReportsMap = new Map<string, AssessmentReport>();
       localReports.forEach((r) => mergedReportsMap.set(r.id, r));
       liveCloudReports.forEach((r) => mergedReportsMap.set(r.id, r));
       const mergedList = Array.from(mergedReportsMap.values());
       localStorage.setItem(STORAGE_KEY_REPORTS, JSON.stringify(mergedList));
-    } else if (currentUser?.uid) {
-      const localReports = getAllReports();
-      for (const r of localReports) {
+    }
+
+    // 同理：补推云端还没有的本地 report。放在 project 补推之后执行，
+    // 保证同一 project 的云端行先落地，避免外键校验失败。
+    if (currentUser?.uid) {
+      const cloudReportIds = new Set(liveCloudReports.map((r) => r.id));
+      const localOnlyReports = localReports.filter((r) => !cloudReportIds.has(r.id));
+      for (const r of localOnlyReports) {
         await saveReportToCloud(r, currentUser);
       }
     }
