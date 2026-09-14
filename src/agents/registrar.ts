@@ -33,8 +33,10 @@ export interface RegistrarInput {
 
 export interface RegistrarOutput {
   success: true;
-  /** 行业/币种/成本骨架推断结果 */
-  structure: Record<string, unknown>;
+  /** 行业/币种/成本骨架推断结果；云端不可用时为 null（见 structureUnavailable） */
+  structure: Record<string, unknown> | null;
+  /** true 表示云端 AI 不可用，不再用写死模板冒充推断结果 */
+  structureUnavailable?: boolean;
   /** 流水断点补全结果（无输入时为 null） */
   revenueGaps: ReturnType<typeof estimateRevenueGaps> | null;
   /** 填报异常提醒（仅提醒，不阻断提交 —— 与「AI 只做助手不做裁判」原则一致） */
@@ -137,22 +139,23 @@ function deterministicParts(input: RegistrarInput): {
 }
 
 function assemble(
-  structure: Record<string, unknown>,
-  input: RegistrarInput
+  structure: Record<string, unknown> | null,
+  input: RegistrarInput,
+  structureUnavailable = false
 ): RegistrarOutput {
   const { revenueGaps, anomalies } = deterministicParts(input);
   const proposals = [
-    ...structureToProposals(structure),
+    ...(structure ? structureToProposals(structure) : []),
     ...(revenueGaps ? gapsToProposals(revenueGaps) : [])
   ];
-  return { success: true, structure, revenueGaps, anomalies, proposals };
+  return { success: true, structure, structureUnavailable, revenueGaps, anomalies, proposals };
 }
 
 export const registrarAgent: AgentDefinition<RegistrarInput, RegistrarOutput> = {
   name: 'registrar',
   claimType: 'project_fact',
   futureRole: 'Registrar 建档员',
-  tools: ['inferBusinessStructureLocally', 'detectFormAnomalies'],
+  tools: ['detectFormAnomalies'],
   timeoutMs: 27000,
 
   parseInput(raw) {
@@ -177,19 +180,8 @@ export const registrarAgent: AgentDefinition<RegistrarInput, RegistrarOutput> = 
   },
 
   fallback(input) {
-    const inferLocally = getTool('inferBusinessStructureLocally');
-    const s = inferLocally(input.projectName || input.currentIndustry, input.baseCurrency);
-    const structure: Record<string, unknown> = {
-      inferredIndustryKey: s.inferredIndustryKey,
-      industryDisplayName: s.industryDisplayName,
-      customIndustryName: s.customIndustryName,
-      suggestedCurrency: s.suggestedCurrency,
-      revenueTip: s.revenueTip,
-      estimatedMonthlyRevenue: s.estimatedMonthlyRevenue,
-      cogsItems: s.cogsItems,
-      opexItems: s.opexItems,
-      benchmarkAdvice: s.benchmarkAdvice
-    };
-    return assemble(structure, input);
+    // 不再用写死的行业模板冒充「AI 推断结果」——只保留确定性的流水补全与异常检测，
+    // 行业/成本骨架在云端不可用时如实返回 null，交由用户手动填写。
+    return assemble(null, input, true);
   }
 };
