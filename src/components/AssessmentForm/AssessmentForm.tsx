@@ -1647,7 +1647,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   <div className="p-3.5 rounded-xl border border-slate-200 bg-white">
                     <div className="flex justify-between mb-1">
                       <label className="font-bold text-slate-800">{language === 'en' ? 'Rent & Property' : '场地租金与物业'}</label>
-                      <span className="text-[13px] text-slate-400">{formData.rentCost.currency}</span>
+                      <span className="text-[13px] text-slate-400">{formData.rentCost.currency}/{language === 'en' ? 'mo' : '月'}</span>
                     </div>
                     <input
                       type="number"
@@ -1662,7 +1662,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   <div className="p-3.5 rounded-xl border border-slate-200 bg-white">
                     <div className="flex justify-between mb-1">
                       <label className="font-bold text-slate-800">{language === 'en' ? 'Staff Wages & Labor Costs' : '员工工资与人工支出'}</label>
-                      <span className="text-[13px] text-slate-400">{formData.laborCost.currency}</span>
+                      <span className="text-[13px] text-slate-400">{formData.laborCost.currency}/{language === 'en' ? 'mo' : '月'}</span>
                     </div>
                     <input
                       type="number"
@@ -1677,7 +1677,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   <div className="p-3.5 rounded-xl border border-slate-200 bg-white">
                     <div className="flex justify-between mb-1">
                       <label className="font-bold text-slate-800">{language === 'en' ? 'Utilities, Internet & Misc.' : '水电网络杂费'}</label>
-                      <span className="text-[13px] text-slate-400">{formData.utilityCost.currency}</span>
+                      <span className="text-[13px] text-slate-400">{formData.utilityCost.currency}/{language === 'en' ? 'mo' : '月'}</span>
                     </div>
                     <input
                       type="number"
@@ -1692,7 +1692,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   <div className="p-3.5 rounded-xl border border-slate-200 bg-white">
                     <div className="flex justify-between mb-1">
                       <label className="font-bold text-slate-800">{language === 'en' ? 'Taxes & Fees' : '税金及规费'}</label>
-                      <span className="text-[13px] text-slate-400">{formData.taxCost.currency}</span>
+                      <span className="text-[13px] text-slate-400">{formData.taxCost.currency}/{language === 'en' ? 'mo' : '月'}</span>
                     </div>
                     <input
                       type="number"
@@ -1707,7 +1707,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   <div className="p-3.5 rounded-xl border border-slate-200 bg-white col-span-1 sm:col-span-2 lg:col-span-2">
                     <div className="flex justify-between mb-1">
                       <label className="font-bold text-slate-800">{language === 'en' ? 'Monthly Debt Repayment (Principal & Interest)' : '每月偿还债务本息'}</label>
-                      <span className="text-[13px] text-slate-400">{formData.existingDebtMonthlyPayment.currency}</span>
+                      <span className="text-[13px] text-slate-400">{formData.existingDebtMonthlyPayment.currency}/{language === 'en' ? 'mo' : '月'}</span>
                     </div>
                     <input
                       type="number"
@@ -1788,6 +1788,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       <div className="flex items-center justify-between flex-wrap gap-1">
                         <label className="font-bold text-slate-800 text-[12px]">
                           {language === 'en' ? 'Registration/License Fee' : '公司注册/执照年检费'}
+                          <span className="text-[11px] text-slate-400 font-normal"> ({formData.companyRegistrationCost.currency}, {language === 'en' ? 'one-time/annual' : '一次性/年度'})</span>
                         </label>
                         <button
                           type="button"
@@ -1824,6 +1825,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       <div className="flex items-center justify-between flex-wrap gap-1">
                         <label className="font-bold text-slate-800 text-[12px]">
                           {language === 'en' ? 'Visa & Work Permits' : '签证与工作许可费用'}
+                          <span className="text-[11px] text-slate-400 font-normal"> ({formData.visaFeeCost.currency}, {language === 'en' ? 'total' : '总额'})</span>
                         </label>
                         <button
                           type="button"
@@ -1859,6 +1861,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     <div className="p-3 rounded-xl bg-violet-50/40 border border-violet-200 space-y-1.5">
                       <label className="font-bold text-slate-800 text-[12px]">
                         {language === 'en' ? 'Equipment Depreciation / Mo' : '设备月度折旧费'}
+                        <span className="text-[11px] text-slate-400 font-normal"> ({formData.equipmentDepreciationCost.currency}/{language === 'en' ? 'mo' : '月'})</span>
                       </label>
                       <input
                         type="number"
@@ -1897,7 +1900,10 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       <label className="font-black text-slate-900 flex items-center gap-1 text-xs">
                         <span>{language === 'en' ? 'Current Available Cash Reserve' : '当前可用现金备用金'}</span>
                       </label>
-                      <span className="text-xs font-bold text-slate-500">{formData.cashAndLiquidAssets.currency}</span>
+                      <span className="text-xs font-bold text-slate-500">
+                        {formData.cashAndLiquidAssets.currency}
+                        {language === 'en' ? ' (balance, not periodic)' : '（当前余额，非周期性）'}
+                      </span>
                     </div>
                     <input
                       type="number"
@@ -1921,7 +1927,10 @@ export const AssessmentForm: React.FC<FormProps> = ({
                         <Target className="w-3.5 h-3.5 text-amber-600" />
                         <span>{language === 'en' ? 'Initial Investment Estimate' : '初始投资估算（一次性投入）'}</span>
                       </label>
-                      <span className="text-xs font-bold text-slate-500">{formData.initialInvestmentEstimate.currency}</span>
+                      <span className="text-xs font-bold text-slate-500">
+                        {formData.initialInvestmentEstimate.currency}
+                        {language === 'en' ? ' (one-time)' : '（一次性）'}
+                      </span>
                     </div>
                     <input
                       type="number"
