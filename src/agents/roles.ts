@@ -9,14 +9,19 @@ import { confirmedFormOnly } from './dossier.js';
 import { consultationAgent } from './consultation.js';
 import { registrarAgent } from './registrar.js';
 import { strategistAgent } from './strategist.js';
+import { interpreterAgent } from './interpreter.js';
+import { trackerAgent } from './tracker.js';
 import { getTool } from './tools.js';
+import { simulateLevers } from './levers.js';
 
 /** 角色名 -> 承担该角色的 Agent */
 export const ROLE_AGENTS: Record<string, AgentDefinition<any, any>> = {
   consultation: consultationAgent,
   registrar: registrarAgent,
-  strategist: strategistAgent
-  // interpreter / tracker / guardian / scout 在后续 Phase 接入
+  strategist: strategistAgent,
+  interpreter: interpreterAgent,
+  tracker: trackerAgent
+  // scout 在 Phase 4 接入；guardian 是旁路校验器而非 Agent，见 coach 的审查环节
 };
 
 /**
@@ -53,10 +58,24 @@ export function inputForRole(role: string, dossier: ProjectDossier): unknown {
       };
     }
 
-    case 'interpreter':
+    case 'interpreter': {
+      const report = getTool('runBusinessAssessment')(confirmedForm);
+      return { report, language: 'zh' };
+    }
+
     case 'tracker': {
       const report = getTool('runBusinessAssessment')(confirmedForm);
-      return { form: confirmedForm, report };
+      // previous 由调用方通过 dossier.externalFacts 注入（Phase 3 起前端传上一版）
+      const prevRaw = dossier.externalFacts['previous_version'];
+      let previous: unknown = null;
+      if (prevRaw && typeof prevRaw.value === 'string') {
+        try {
+          previous = JSON.parse(prevRaw.value);
+        } catch {
+          previous = null;
+        }
+      }
+      return { current: { form: confirmedForm, report }, previous, language: 'zh' };
     }
 
     case 'scout':
@@ -81,4 +100,37 @@ function rejectedLeverIdsOf(dossier: ProjectDossier): string[] {
   const fact = dossier.externalFacts['rejected_levers'];
   if (!fact || typeof fact.value !== 'string') return [];
   return fact.value.split(',').map((s) => s.trim()).filter(Boolean);
+}
+
+/**
+ * 为 Guardian 提供校验依据 —— 确定性引擎的权威数值。
+ *
+ * 这是「数值一致性」这条审查规则得以成立的基础：Guardian 拿引擎现算的结果，
+ * 去比对 Agent 产物里的数字。模型偷改分数增益、或凭空多出一条没模拟过的建议，
+ * 都会在这里被抓出来。
+ */
+export function authoritativeForRole(
+  role: string,
+  dossier: ProjectDossier
+): { totalScore?: number; leverGains?: Record<string, number>; validAnchors?: string[] } | undefined {
+  const confirmedForm = confirmedFormOnly(dossier);
+  const report = getTool('runBusinessAssessment')(confirmedForm);
+
+  if (role === 'strategist') {
+    const leverGains: Record<string, number> = {};
+    for (const s of simulateLevers(confirmedForm, report)) {
+      leverGains[s.lever.id] = s.scoreGain;
+    }
+    return { totalScore: report.totalScore, leverGains };
+  }
+
+  if (role === 'interpreter') {
+    const validAnchors = [
+      ...(report.gates || []).map((g) => g.code),
+      ...(report.metrics || []).map((m) => m.key)
+    ];
+    return { totalScore: report.totalScore, validAnchors };
+  }
+
+  return { totalScore: report.totalScore };
 }

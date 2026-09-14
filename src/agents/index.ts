@@ -13,6 +13,8 @@ import { deepDiagnosisAgent } from './deepDiagnosis.js';
 import { revenueGapAgent } from './revenueGap.js';
 import { registrarAgent } from './registrar.js';
 import { strategistAgent } from './strategist.js';
+import { interpreterAgent } from './interpreter.js';
+import { trackerAgent } from './tracker.js';
 
 export const AGENTS = {
   consultation: consultationAgent,
@@ -20,7 +22,9 @@ export const AGENTS = {
   deepDiagnosis: deepDiagnosisAgent,
   revenueGap: revenueGapAgent,
   registrar: registrarAgent,
-  strategist: strategistAgent
+  strategist: strategistAgent,
+  interpreter: interpreterAgent,
+  tracker: trackerAgent
 } as const;
 
 export type AgentName = keyof typeof AGENTS;
@@ -49,4 +53,6 @@ export { setTraceSink } from './trace.js';
 export { listTools, getTool, TOOL_REGISTRY, TOOL_DATASETS } from './tools.js';
 export { ROLE_AGENTS, inputForRole } from './roles.js';
 export { LEVER_CATALOG, simulateLevers } from './levers.js';
+export { review as guardianReview, toAuditEntries } from './guardian.js';
+export type { GuardianVerdict, GuardianSubject } from './guardian.js';
 export type { Lever, SimulatedLever } from './levers.js';

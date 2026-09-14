@@ -10,6 +10,7 @@
 import type { AgentContext, AgentDefinition } from './types.js';
 import type { ProjectDossier } from './dossier.js';
 import { runAgent } from './runtime.js';
+import { review as guardianReview, type GuardianSubject, type GuardianVerdict } from './guardian.js';
 
 /** 用户此刻想做什么 —— 决定激活哪条链路 */
 export type CoachIntent = 'profile' | 'assess' | 'ask';
@@ -52,6 +53,12 @@ export interface CoachEnvelope {
   ran: string[];
   /** 计划中但尚未注册的角色（后续 Phase 会补上） */
   skipped: string[];
+  /**
+   * 被 Guardian 否决的角色产物。
+   * 【注意】被否决的产物是**整份丢弃**，不是被修改后放行 ——
+   * 能改内容的守门人就是又一个会幻觉的 Agent，而它的输出没有人再审。
+   */
+  blocked: Array<{ role: string; reasons: string[] }>;
   traces: Array<{ agent: string; mode: string; degraded: boolean; durationMs: number }>;
 }
 
@@ -60,6 +67,11 @@ export interface CoachDeps {
   agents: Record<string, AgentDefinition<any, any>>;
   /** 角色名 -> 从 Dossier 构造该角色输入 */
   inputFor: (role: string, dossier: ProjectDossier) => unknown;
+  /**
+   * 为 Guardian 提供校验依据（确定性引擎的权威数值）。
+   * 不提供时 Guardian 仍会做越界承诺与 PII 检查，只是跳过数值一致性比对。
+   */
+  authoritativeFor?: (role: string, dossier: ProjectDossier, output: unknown) => GuardianSubject['authoritative'];
 }
 
 /** 查出某阶段某意图该跑哪些角色 */
@@ -86,6 +98,7 @@ export async function runCoach(
 
   const ran: string[] = [];
   const skipped: string[] = [];
+  const blocked: CoachEnvelope['blocked'] = [];
   const artifacts: Record<string, unknown> = {};
   const traces: CoachEnvelope['traces'] = [];
 
@@ -105,15 +118,31 @@ export async function runCoach(
   );
 
   for (const r of results) {
-    ran.push(r.role);
-    artifacts[r.role] = r.output;
     traces.push({
       agent: r.trace.agent,
       mode: r.trace.mode,
       degraded: r.trace.degraded,
       durationMs: r.trace.durationMs
     });
+
+    // —— Guardian 旁路审查：放行或否决，绝不修改内容 ——
+    const verdict: GuardianVerdict = guardianReview({
+      agent: r.role,
+      claimType: deps.agents[r.role].claimType,
+      output: r.output,
+      authoritative: deps.authoritativeFor?.(r.role, dossier, r.output),
+      isSensitiveRegion: dossier.form.isSensitiveRegion
+    });
+
+    if (!verdict.pass) {
+      blocked.push({ role: r.role, reasons: verdict.reasons });
+      console.warn(`[guardian] blocked "${r.role}": ${verdict.reasons.join(' | ')}`);
+      continue;
+    }
+
+    ran.push(r.role);
+    artifacts[r.role] = r.output;
   }
 
-  return { stage, intent, artifacts, ran, skipped, traces };
+  return { stage, intent, artifacts, ran, skipped, blocked, traces };
 }

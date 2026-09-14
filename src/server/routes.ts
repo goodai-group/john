@@ -6,7 +6,7 @@
 import express from 'express';
 import { asyncHandler } from './http.js';
 import { AGENTS, listAgents } from '../agents/index.js';
-import { ROLE_AGENTS, inputForRole } from '../agents/roles.js';
+import { ROLE_AGENTS, inputForRole, authoritativeForRole } from '../agents/roles.js';
 import { dossierFromForm, applyProposals, pendingConfirmations } from '../agents/dossier.js';
 import { runCoach, type CoachIntent } from '../agents/coach.js';
 import { listTools } from '../agents/tools.js';
@@ -235,7 +235,8 @@ export function registerApiRoutes(app: express.Express): void {
 
       const envelope = await runCoach(dossier, intent, makeContext(req), {
         agents: ROLE_AGENTS,
-        inputFor: inputForRole
+        inputFor: inputForRole,
+        authoritativeFor: (role, d) => authoritativeForRole(role, d)
       });
 
       // 专家产出的提案统一由编排层写入 Dossier 的待确认区 ——
