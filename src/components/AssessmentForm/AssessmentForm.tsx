@@ -169,6 +169,7 @@ const DEFAULT_FORM_DATA: BusinessFormData = {
   visaFeeCost: { amount: 0, currency: 'USD' },
   visaFeeAmortizationMonths: 12,
   equipmentDepreciationCost: { amount: 0, currency: 'USD' },
+  dynamicEquipmentItems: [],
   existingDebtMonthlyPayment: { amount: 0, currency: 'USD' },
   cashAndLiquidAssets: { amount: 0, currency: 'USD' },
   inventoryValue: { amount: 0, currency: 'USD' },
@@ -257,6 +258,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
     formData.visaFeeCost,
     formData.visaFeeAmortizationMonths,
     formData.equipmentDepreciationCost,
+    formData.dynamicEquipmentItems,
     formData.baseCurrency,
     formData.customCurrencyCode,
     formData.hasMultipleRates,
@@ -305,6 +307,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
     formData.visaFeeCost,
     formData.visaFeeAmortizationMonths,
     formData.equipmentDepreciationCost,
+    formData.dynamicEquipmentItems,
     formData.initialInvestmentEstimate,
     formData.baseCurrency,
     formData.customCurrencyCode,
@@ -331,6 +334,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
       formData.visaFeeCost,
       formData.visaFeeAmortizationMonths,
       formData.equipmentDepreciationCost,
+      formData.dynamicEquipmentItems,
       formData.initialInvestmentEstimate,
       formData.baseCurrency,
       formData.customCurrencyCode,
@@ -503,6 +507,46 @@ export const AssessmentForm: React.FC<FormProps> = ({
       updatedAt: new Date().toISOString()
     }));
   };
+
+  // —— 动态设备清单（问题5：让用户逐台填「设备值 + 预计使用月数」，AI 自动求和算月度折旧，避免自己心算总设备值） ——
+  const updateDynamicEquipmentItem = (
+    id: string,
+    patch: Partial<{ label: string; value: number; usefulLifeMonths: number }>
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      dynamicEquipmentItems: (prev.dynamicEquipmentItems || []).map((it) =>
+        it.id === id ? { ...it, ...patch } : it
+      ),
+      updatedAt: new Date().toISOString()
+    }));
+  };
+  const addDynamicEquipmentItem = () => {
+    setFormData((prev) => ({
+      ...prev,
+      dynamicEquipmentItems: [
+        ...(prev.dynamicEquipmentItems || []),
+        {
+          id: `equip-${Date.now()}`,
+          label: language === 'en' ? 'New equipment' : '新增设备',
+          value: 0,
+          usefulLifeMonths: 12
+        }
+      ],
+      updatedAt: new Date().toISOString()
+    }));
+  };
+  const removeDynamicEquipmentItem = (id: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      dynamicEquipmentItems: (prev.dynamicEquipmentItems || []).filter((it) => it.id !== id),
+      updatedAt: new Date().toISOString()
+    }));
+  };
+  const dynamicEquipmentMonthlyTotal = (formData.dynamicEquipmentItems || []).reduce(
+    (sum, it) => sum + (Number(it.value) || 0) / Math.max(1, Math.round(Number(it.usefulLifeMonths) || 12)),
+    0
+  );
 
   // —— 行业自定义 / 币种自定义 处理 ——
   const handleIndustryChange = (value: string) => {
@@ -1579,7 +1623,9 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   </span>
                 </div>
 
-                {/* F10 COGS */}
+                {/* F10 COGS —— 只保留「按行业细分的物料成本细则」这一份录入，不再另设重复的总额白框，
+                    避免用户改了总额框、AI 分析却仍按细则计算、毫无变化的困惑。明细合计即月度变动成本，
+                    自动作为后续 AI 分析的数据来源。 */}
                 <div className="p-4 rounded-xl bg-white border border-slate-200 space-y-2 text-xs">
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <div>
@@ -1595,92 +1641,73 @@ export const AssessmentForm: React.FC<FormProps> = ({
                         {cogsFieldMeta.tip}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onOpenAiHelper?.(language === 'en' ? 'How is cost of goods sold (COGS) calculated? Does it include freight?' : '进货成本（COGS）怎么算？包含运费吗？')}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-700 text-[13px] font-bold transition-colors cursor-pointer"
+                    >
+                      <Sparkles className="w-3 h-3 text-teal-600" />
+                      <span>{language === 'en' ? 'Ask AI' : 'AI咨询'}</span>
+                    </button>
+                  </div>
+
+                  {/* 按行业细分的动态物料成本细则（AI 推断，可自由增删改） */}
+                  <div className="mt-1 p-3 rounded-xl bg-rose-50/50 border border-dashed border-rose-300 space-y-2">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <span className="text-[13px] font-black text-rose-900">
+                        {language === 'en' ? 'Industry-specific material cost line items (add/remove/edit)' : '按行业细分的物料成本细则（可增删改）'}
+                        {cogsTouched && (
+                          <span className="ml-1.5 inline-block text-[11px] px-1 py-0.5 rounded bg-amber-100 text-amber-700 font-bold align-middle">{language === 'en' ? 'Manually adjusted' : '已手动调整'}</span>
+                        )}
+                      </span>
                       <button
                         type="button"
-                        onClick={() => onOpenAiHelper?.(language === 'en' ? 'How is cost of goods sold (COGS) calculated? Does it include freight?' : '进货成本（COGS）怎么算？包含运费吗？')}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-700 text-[13px] font-bold transition-colors cursor-pointer"
+                        onClick={restoreAiSuggestion}
+                        className="text-[12px] px-2 py-0.5 rounded bg-rose-100 text-rose-700 font-bold hover:bg-rose-200 cursor-pointer"
                       >
-                        <Sparkles className="w-3 h-3 text-teal-600" />
-                        <span>{language === 'en' ? 'Ask AI' : 'AI咨询'}</span>
+                        <RefreshCw className="inline w-3 h-3 mr-0.5" />{language === 'en' ? 'Restore AI Suggestion' : '恢复 AI 建议'}
                       </button>
-                      <select
-                        value={formData.cogsCost.currency}
-                        onChange={(e) =>
-                          updateMoney('cogsCost', formData.cogsCost.amount, e.target.value as CurrencyCode)
-                        }
-                        className="px-2 py-1 rounded border border-slate-300 font-bold bg-white text-slate-700"
-                      >
-                        {SUPPORTED_CURRENCIES.map((c) => (
-                          <option key={c.code} value={c.code}>
-                            {c.code}
-                          </option>
-                        ))}
-                      </select>
                     </div>
-                  </div>
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    min={0}
-                    placeholder={language === 'en' ? 'e.g. 20000' : '例如 20000'}
-                    value={formData.cogsCost.amount || ''}
-                    onChange={(e) => updateMoney('cogsCost', Number(e.target.value))}
-                    className="w-full p-2.5 border border-slate-300 rounded-xl font-bold text-slate-900 bg-white"
-                  />
-
-                  {/* AI 推断的动态物料成本明细 */}
-                  {(formData.dynamicCogsItems || []).length > 0 && (
-                    <div className="mt-3 p-3 rounded-xl bg-rose-50/50 border border-dashed border-rose-300 space-y-2">
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <span className="text-[13px] font-black text-rose-900">
-                          {language === 'en' ? 'Industry-specific material cost breakdown (add/remove/edit)' : '按行业细分的物料成本明细（可增删改）'}
-                          {cogsTouched && (
-                            <span className="ml-1.5 inline-block text-[11px] px-1 py-0.5 rounded bg-amber-100 text-amber-700 font-bold align-middle">{language === 'en' ? 'Manually adjusted' : '已手动调整'}</span>
-                          )}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={restoreAiSuggestion}
-                          className="text-[12px] px-2 py-0.5 rounded bg-rose-100 text-rose-700 font-bold hover:bg-rose-200 cursor-pointer"
-                        >
-                          <RefreshCw className="inline w-3 h-3 mr-0.5" />{language === 'en' ? 'Restore AI Suggestion' : '恢复 AI 建议'}
+                    <span className="text-[12px] text-rose-700">{language === 'en' ? 'The total of the line items below is your monthly material (variable) cost, and is what feeds the AI analysis directly.' : '以下逐项合计即为每月物料（变动）成本，将直接用于 AI 分析。'}</span>
+                    {(formData.dynamicCogsItems || []).map((it) => (
+                      <div key={it.id} className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={it.label}
+                          onChange={(e) => updateDynamicCogsItem(it.id, { label: e.target.value })}
+                          className="flex-1 min-w-0 p-1.5 border border-rose-200 rounded-lg font-semibold text-slate-800"
+                        />
+                        <input
+                          type="number"
+                          value={it.value || ''}
+                          onChange={(e) => updateDynamicCogsItem(it.id, { value: Number(e.target.value) })}
+                          className="w-24 shrink-0 p-1.5 border border-rose-200 rounded-lg font-mono font-semibold text-right"
+                          placeholder={it.suggestedAmount ? `${language === 'en' ? 'AI suggests' : 'AI建议'} ${it.suggestedAmount}` : (language === 'en' ? 'Amount' : '金额')}
+                          title={it.suggestedAmount ? (language === 'en' ? `AI suggested reference amount: ${it.suggestedAmount} (for reference only, please fill in your real figure)` : `AI 建议参考金额：${it.suggestedAmount}（仅供参考，请填你的真实数字）`) : (language === 'en' ? 'Please fill in your real monthly amount' : '请填你的真实月度金额')}
+                        />
+                        <span className="text-[12px] text-rose-700 whitespace-nowrap shrink-0 pl-0.5">{formData.baseCurrency}/{language === 'en' ? 'mo' : '月'}</span>
+                        {it.suggestedAmount ? (
+                          <FieldProvenanceBadge
+                            confidence={isReviewedByUser(it) ? 'confirmed' : 'suggested'}
+                            language={language}
+                          />
+                        ) : null}
+                        <button type="button" onClick={() => removeDynamicCogsItem(it.id)} className="p-1 text-rose-500 hover:text-rose-700 cursor-pointer shrink-0">
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
-                      <span className="text-[12px] text-rose-700">{language === 'en' ? 'The line-item total is the total material cost; you may leave the total field above blank when using line items.' : '明细合计即物料总成本，使用细分项时上方总额框可留空'}</span>
-                      {(formData.dynamicCogsItems || []).map((it) => (
-                        <div key={it.id} className="flex items-center gap-2">
-                          <input
-                            type="text"
-                            value={it.label}
-                            onChange={(e) => updateDynamicCogsItem(it.id, { label: e.target.value })}
-                            className="flex-1 min-w-0 p-1.5 border border-rose-200 rounded-lg font-semibold text-slate-800"
-                          />
-                          <input
-                            type="number"
-                            value={it.value || ''}
-                            onChange={(e) => updateDynamicCogsItem(it.id, { value: Number(e.target.value) })}
-                            className="w-24 shrink-0 p-1.5 border border-rose-200 rounded-lg font-mono font-semibold text-right"
-                            placeholder={it.suggestedAmount ? `${language === 'en' ? 'AI suggests' : 'AI建议'} ${it.suggestedAmount}` : (language === 'en' ? 'Amount' : '金额')}
-                            title={it.suggestedAmount ? (language === 'en' ? `AI suggested reference amount: ${it.suggestedAmount} (for reference only, please fill in your real figure)` : `AI 建议参考金额：${it.suggestedAmount}（仅供参考，请填你的真实数字）`) : (language === 'en' ? 'Please fill in your real monthly amount' : '请填你的真实月度金额')}
-                          />
-                          <span className="text-[12px] text-rose-700 whitespace-nowrap shrink-0 pl-0.5">{formData.baseCurrency}/{language === 'en' ? 'mo' : '月'}</span>
-                          {it.suggestedAmount ? (
-                            <FieldProvenanceBadge
-                              confidence={isReviewedByUser(it) ? 'confirmed' : 'suggested'}
-                              language={language}
-                            />
-                          ) : null}
-                          <button type="button" onClick={() => removeDynamicCogsItem(it.id)} className="p-1 text-rose-500 hover:text-rose-700 cursor-pointer shrink-0">
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ))}
+                    ))}
+                    <div className="flex items-center justify-between flex-wrap gap-2 pt-1">
                       <button type="button" onClick={addDynamicCogsItem} className="text-[12px] px-2 py-1 rounded border border-rose-300 text-rose-700 font-bold hover:bg-rose-100 cursor-pointer">
                         {language === 'en' ? '+ Add material cost item' : '＋ 添加物料成本项'}
                       </button>
+                      <span className="text-[13px] font-black text-rose-900">
+                        {language === 'en' ? 'Total:' : '合计：'}{' '}
+                        {(formData.dynamicCogsItems || []).reduce((sum, it) => sum + (Number(it.value) || 0), 0)}{' '}
+                        {formData.baseCurrency}/{language === 'en' ? 'mo' : '月'}
+                      </span>
                     </div>
-                  )}
+                  </div>
                 </div>
 
                 {/* 固定开销网格 */}
@@ -1762,12 +1789,14 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   </div>
                 </div>
 
-                {/* AI 推断的动态运营开支明细 */}
+                {/* AI 按行业推断的运营开支补充项：上方白色栏目（房租/人工/水电）是各行业通用的固定成本，予以保留；
+                    这里不是对白色栏目的重复拆解，而是该行业在此基础上通常还会有的额外开支（如排烟维护、消杀等），
+                    两者相加计入总运营开支，不会互相覆盖。 */}
                 {(formData.dynamicOpexItems || []).length > 0 && (
                   <div className="p-3 rounded-xl bg-white border border-dashed border-slate-300 space-y-2 text-xs">
                     <div className="flex items-center justify-between gap-2 flex-wrap">
                       <span className="text-[13px] font-black text-slate-900">
-                        {language === 'en' ? 'Industry-specific operating expense breakdown (add/remove/edit)' : '按行业细分的运营开支明细（可增删改）'}
+                        {language === 'en' ? 'Industry-specific additional operating expenses, on top of the fields above (add/remove/edit)' : '在上方固定开销基础上，按行业补充的额外运营开支（可增删改）'}
                         {opexTouched && (
                           <span className="ml-1.5 inline-block text-[11px] px-1 py-0.5 rounded bg-amber-100 text-amber-700 font-bold align-middle">{language === 'en' ? 'Manually adjusted' : '已手动调整'}</span>
                         )}
@@ -1780,6 +1809,11 @@ export const AssessmentForm: React.FC<FormProps> = ({
                         <RefreshCw className="inline w-3 h-3 mr-0.5" />{language === 'en' ? 'Restore AI Suggestion' : '恢复 AI 建议'}
                       </button>
                     </div>
+                    <span className="text-[12px] text-slate-500">
+                      {language === 'en'
+                        ? 'These are added to Rent/Wages/Utilities above (not a re-breakdown of them) to form the total monthly operating expense used in the AI analysis.'
+                        : '以下条目会与上方「场地租金/员工工资/水电杂费」相加（而非重复拆解它们），合计构成 AI 分析所用的每月运营开支总额。'}
+                    </span>
                     {(formData.dynamicOpexItems || []).map((it) => (
                       <div key={it.id} className="flex items-center gap-2">
                         <input
@@ -1809,9 +1843,21 @@ export const AssessmentForm: React.FC<FormProps> = ({
                         </button>
                       </div>
                     ))}
-                    <button type="button" onClick={addDynamicOpexItem} className="text-[12px] px-2 py-1 rounded border border-teal-300 text-teal-700 font-bold hover:bg-teal-100 cursor-pointer">
-                      {language === 'en' ? '+ Add operating expense item' : '＋ 添加运营开支项'}
-                    </button>
+                    <div className="flex items-center justify-between flex-wrap gap-2 pt-1">
+                      <button type="button" onClick={addDynamicOpexItem} className="text-[12px] px-2 py-1 rounded border border-teal-300 text-teal-700 font-bold hover:bg-teal-100 cursor-pointer">
+                        {language === 'en' ? '+ Add operating expense item' : '＋ 添加运营开支项'}
+                      </button>
+                      <span className="text-[13px] font-black text-slate-900">
+                        {language === 'en' ? 'Rent+Wages+Utilities+Supplement total:' : '房租+工资+水电+补充项 合计：'}{' '}
+                        {(
+                          (Number(formData.rentCost.amount) || 0) +
+                          (Number(formData.laborCost.amount) || 0) +
+                          (Number(formData.utilityCost.amount) || 0) +
+                          (formData.dynamicOpexItems || []).reduce((sum, it) => sum + (Number(it.value) || 0), 0)
+                        )}{' '}
+                        {formData.baseCurrency}/{language === 'en' ? 'mo' : '月'}
+                      </span>
+                    </div>
                   </div>
                 )}
 
@@ -1829,7 +1875,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     {language === 'en' ? '. Below are AI reference estimates — update to your real figures:' : '。以下为 AI 参考估值，请核实后修改为你的真实数字：'}
                   </p>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {/* 公司注册/执照费用 */}
                     <div className="p-3 rounded-xl bg-violet-50/40 border border-violet-200 space-y-1.5">
                       <div className="flex items-center justify-between flex-wrap gap-1">
@@ -1904,25 +1950,79 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       </div>
                     </div>
 
-                    {/* 设备折旧费 */}
-                    <div className="p-3 rounded-xl bg-violet-50/40 border border-violet-200 space-y-1.5">
+                  </div>
+
+                  {/* 设备月度折旧费：问题5——避免用户自己心算「总设备值 ÷ 预计使用月数」，
+                      改为逐台填「设备值 + 预计使用月数」，AI 自动求和汇总月度折旧。 */}
+                  <div className="p-3 rounded-xl bg-violet-50/40 border border-violet-200 space-y-2">
+                    <label className="font-bold text-slate-800 text-[12px]">
+                      {language === 'en' ? 'Equipment Monthly Depreciation' : '设备月度折旧费'}
+                      <span className="text-[11px] text-slate-400 font-normal"> ({formData.equipmentDepreciationCost.currency}/{language === 'en' ? 'mo' : '月'})</span>
+                    </label>
+                    <p className="text-[11px] text-slate-500 leading-tight">
+                      {language === 'en'
+                        ? "Add each piece of equipment with its total value and estimated useful life — the monthly depreciation (value ÷ months) is summed for you."
+                        : '逐台填写设备值与预计使用月数，月度折旧（设备值 ÷ 使用月数）由系统自动求和，无需自己心算总设备值。'}
+                    </p>
+                    {(formData.dynamicEquipmentItems || []).map((it) => (
+                      <div key={it.id} className="flex items-center gap-2 flex-wrap">
+                        <input
+                          type="text"
+                          value={it.label}
+                          onChange={(e) => updateDynamicEquipmentItem(it.id, { label: e.target.value })}
+                          placeholder={language === 'en' ? 'e.g. Machine A' : '例如：机器A'}
+                          className="flex-1 min-w-[7rem] p-1.5 border border-violet-200 rounded-lg font-semibold text-slate-800 bg-white"
+                        />
+                        <div className="flex items-center gap-1 shrink-0">
+                          <span className="text-[11px] text-slate-500">{language === 'en' ? 'Value' : '设备值'}</span>
+                          <input
+                            type="number"
+                            min={0}
+                            value={it.value || ''}
+                            onChange={(e) => updateDynamicEquipmentItem(it.id, { value: Number(e.target.value) })}
+                            className="w-20 p-1.5 border border-violet-200 rounded-lg font-mono font-semibold text-right bg-white"
+                          />
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <span className="text-[11px] text-slate-500">÷</span>
+                          <input
+                            type="number"
+                            min={1}
+                            value={it.usefulLifeMonths || ''}
+                            onChange={(e) => updateDynamicEquipmentItem(it.id, { usefulLifeMonths: Math.max(1, Number(e.target.value) || 1) })}
+                            className="w-14 p-1.5 border border-violet-200 rounded-lg font-mono font-semibold text-right bg-white"
+                          />
+                          <span className="text-[11px] text-slate-500">{language === 'en' ? 'months' : '个月'}</span>
+                        </div>
+                        <button type="button" onClick={() => removeDynamicEquipmentItem(it.id)} className="p-1 text-violet-500 hover:text-violet-700 cursor-pointer shrink-0">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                    <button type="button" onClick={addDynamicEquipmentItem} className="text-[12px] px-2 py-1 rounded border border-violet-300 text-violet-700 font-bold hover:bg-violet-100 cursor-pointer">
+                      {language === 'en' ? '+ Add equipment' : '＋ 添加设备'}
+                    </button>
+
+                    <div className="pt-1 border-t border-violet-200/70 space-y-1">
                       <label className="font-bold text-slate-800 text-[12px]">
-                        {language === 'en' ? 'Equipment Depreciation / Mo' : '设备月度折旧费'}
-                        <span className="text-[11px] text-slate-400 font-normal"> ({formData.equipmentDepreciationCost.currency}/{language === 'en' ? 'mo' : '月'})</span>
+                        {language === 'en' ? 'Other depreciation (supplement, optional)' : '其他补充折旧（可选）'}
                       </label>
                       <input
                         type="number"
                         inputMode="numeric"
                         min={0}
-                        placeholder={language === 'en' ? 'e.g. equipment ÷ months' : '总设备值 ÷ 预计使用月数'}
+                        placeholder={language === 'en' ? 'For small tools not listed above' : '未逐台列出的零散小型设备'}
                         value={formData.equipmentDepreciationCost.amount || ''}
                         onChange={(e) => updateMoney('equipmentDepreciationCost', Number(e.target.value))}
                         className="w-full p-2 border border-violet-200 rounded-lg font-semibold text-slate-900 bg-white"
                       />
-                      <p className="text-[11px] text-slate-400 leading-tight">
-                        {language === 'en' ? 'Directly booked to monthly cost' : '按月计入运营成本'}
-                      </p>
                     </div>
+
+                    <p className="text-[13px] font-black text-violet-900 pt-1">
+                      {language === 'en' ? 'Total monthly depreciation:' : '设备月度折旧合计：'}{' '}
+                      {(dynamicEquipmentMonthlyTotal + (Number(formData.equipmentDepreciationCost.amount) || 0)).toFixed(2)}{' '}
+                      {formData.equipmentDepreciationCost.currency}/{language === 'en' ? 'mo' : '月'}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -2602,7 +2702,11 @@ export const AssessmentForm: React.FC<FormProps> = ({
                 <div>
                   <span className="text-slate-500 block">{language === 'en' ? 'Materials Purchasing (COGS):' : '原材料采购(COGS):'}</span>
                   <span className="font-bold">
-                    {formatMoney(formData.cogsCost.amount, formData.cogsCost.currency)}
+                    {formatMoney(
+                      (formData.dynamicCogsItems || []).reduce((sum, it) => sum + (Number(it.value) || 0), 0) ||
+                        formData.cogsCost.amount,
+                      formData.cogsCost.currency
+                    )}
                   </span>
                 </div>
               </div>

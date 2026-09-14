@@ -45,6 +45,7 @@ export function aggregateMonthlyCosts(
     | 'visaFeeCost'
     | 'visaFeeAmortizationMonths'
     | 'equipmentDepreciationCost'
+    | 'dynamicEquipmentItems'
   >,
   baseCurrency: CurrencyCode,
   customRateValue?: number,
@@ -63,11 +64,14 @@ export function aggregateMonthlyCosts(
   const rent = conv(formData.rentCost);
   const labor = conv(formData.laborCost);
   const utility = conv(formData.utilityCost);
+  // 固定开销的白色栏目（房租/人工/水电）对各行业都通用，予以保留；
+  // 动态明细项是"在此基础上按行业补充"的额外条目（如设备清洁、排烟维护等），二者相加而非互相覆盖——
+  // 否则用户改了白色栏目里的数字却发现 AI 分析结果毫无变化。
   const dynamicOpexTotal = (formData.dynamicOpexItems || []).reduce(
     (sum, it) => sum + (Number(it.value) || 0),
     0
   );
-  const fixedOpex = dynamicOpexTotal > 0 ? dynamicOpexTotal : rent + labor + utility;
+  const fixedOpex = rent + labor + utility + dynamicOpexTotal;
 
   const otherOpex = conv(formData.otherOpex);
   const tax = conv(formData.taxCost);
@@ -78,7 +82,13 @@ export function aggregateMonthlyCosts(
     formData.companyRegistrationAmortizationMonths
   );
   const visaMonthly = amortizeMonthly(conv(formData.visaFeeCost), formData.visaFeeAmortizationMonths);
-  const depreciationMonthly = conv(formData.equipmentDepreciationCost);
+  // 设备月度折旧 = 逐台填报的「设备值 ÷ 预计使用月数」求和，再加上未逐台拆分的补充折旧金额，
+  // 避免用户自己心算"总设备值"再手填一个数字。
+  const dynamicEquipmentMonthly = (formData.dynamicEquipmentItems || []).reduce(
+    (sum, it) => sum + (Number(it.value) || 0) / Math.max(1, Math.round(Number(it.usefulLifeMonths) || 12)),
+    0
+  );
+  const depreciationMonthly = conv(formData.equipmentDepreciationCost) + dynamicEquipmentMonthly;
   const regulatoryCosts = registrationMonthly + visaMonthly + depreciationMonthly;
 
   const totalOpex = fixedOpex + otherOpex + regulatoryCosts;
