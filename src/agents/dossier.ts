@@ -208,6 +208,7 @@ export function confirmedFormOnly(dossier: ProjectDossier): BusinessFormData {
 // 支持两种路径形态：
 //   'rentCost'                    顶层 MoneyField
 //   'dynamicCogsItems.cogs_1'     动态成本/开支明细项（按 id 定位）
+//   'monthlyBreakdowns.2025-03'   月度流水明细（按月份定位）
 // ============================================================
 
 const DYNAMIC_PREFIXES = ['dynamicCogsItems', 'dynamicOpexItems'] as const;
@@ -218,6 +219,15 @@ function isMoneyField(v: unknown): v is MoneyField {
 
 function writeFormField(form: BusinessFormData, path: string, value: number | string): boolean {
   const [head, id] = path.split('.');
+
+  if (head === 'monthlyBreakdowns' && id) {
+    const row = (form.monthlyBreakdowns || []).find((b) => b.month === id);
+    if (!row) return false;
+    row.revenue.amount = Number(value) || 0;
+    // 用户确认后不再是 AI 估算值，去掉估算标记
+    row.isEstimated = false;
+    return true;
+  }
 
   if (DYNAMIC_PREFIXES.includes(head as (typeof DYNAMIC_PREFIXES)[number]) && id) {
     const list = (form as any)[head] as Array<{ id: string; value: number }> | undefined;
@@ -242,6 +252,12 @@ function writeFormField(form: BusinessFormData, path: string, value: number | st
 function neutralizeFormField(form: BusinessFormData, path: string): void {
   const [head, id] = path.split('.');
 
+  if (head === 'monthlyBreakdowns' && id) {
+    const row = (form.monthlyBreakdowns || []).find((b) => b.month === id);
+    if (row) row.revenue.amount = 0;
+    return;
+  }
+
   if (DYNAMIC_PREFIXES.includes(head as (typeof DYNAMIC_PREFIXES)[number]) && id) {
     const list = (form as any)[head] as Array<{ id: string; value: number }> | undefined;
     const item = list?.find((it) => it.id === id);
@@ -255,4 +271,39 @@ function neutralizeFormField(form: BusinessFormData, path: string): void {
   }
   // 非金额字段（行业、币种等）不做中和：把它们清空只会让引擎拿到更坏的输入，
   // 而它们本身不直接参与加减运算。
+}
+
+// ============================================================
+// 提案通道
+//
+// Agent 保持纯函数：它们**返回**提案，而不是自己去改 Dossier。
+// 写入 Dossier 的动作统一由编排层（Coach）或路由完成 ——
+// 单一写入路径既便于 Guardian 审计，也让 Agent 可以被单独测试。
+// ============================================================
+
+export interface Proposal {
+  /** 字段路径，如 'rentCost' 或 'dynamicCogsItems.cogs_1' */
+  path: string;
+  value: number | string;
+  confidence: Exclude<ConfidenceLevel, 'confirmed'>;
+  note?: string;
+  sourceRef?: string;
+  asOf?: string;
+}
+
+/** 把一批提案写入 Dossier 的待确认区（不影响 form，不影响评分） */
+export function applyProposals(
+  dossier: ProjectDossier,
+  proposals: Proposal[],
+  source: ProvenanceSource
+): void {
+  for (const p of proposals) {
+    proposeValue(dossier, p.path, p.value, {
+      source,
+      confidence: p.confidence,
+      note: p.note,
+      sourceRef: p.sourceRef,
+      asOf: p.asOf
+    });
+  }
 }

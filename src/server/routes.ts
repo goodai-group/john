@@ -6,6 +6,9 @@
 import express from 'express';
 import { asyncHandler } from './http.js';
 import { AGENTS, listAgents } from '../agents/index.js';
+import { ROLE_AGENTS, inputForRole } from '../agents/roles.js';
+import { dossierFromForm, applyProposals, pendingConfirmations } from '../agents/dossier.js';
+import { runCoach, type CoachIntent } from '../agents/coach.js';
 import { listTools } from '../agents/tools.js';
 import { newRequestId, runAgent } from '../agents/runtime.js';
 import type { AgentContext, AgentDefinition } from '../agents/types.js';
@@ -202,6 +205,67 @@ export function registerApiRoutes(app: express.Express): void {
         geminiErrorKind
       });
       res.end();
+    })
+  );
+
+  // ============================================================
+  // 多 Agent 编排接口（Phase 1-2 新增，全部为新增路由）
+  // 既有四个 AI 接口保持原样，前端零改动。
+  // ============================================================
+
+  // 4. Coach 编排：按 businessStage 分流，激活相应角色并汇总产物
+  app.post(
+    '/api/coach/:intent',
+    asyncHandler(async (req, res) => {
+      const intent = req.params.intent as CoachIntent;
+      if (!['profile', 'assess', 'ask'].includes(intent)) {
+        return res.status(400).json({ error: `Unknown coach intent: ${intent}` });
+      }
+      const body: any = (req.body && typeof req.body === 'object' ? req.body : {}) || {};
+      if (!body.form) {
+        return res.status(400).json({ error: 'Form data is required' });
+      }
+
+      const dossier = dossierFromForm(
+        body.form,
+        body.provenance || {},
+        body.suggestions || {},
+        body.externalFacts || {}
+      );
+
+      const envelope = await runCoach(dossier, intent, makeContext(req), {
+        agents: ROLE_AGENTS,
+        inputFor: inputForRole
+      });
+
+      // 专家产出的提案统一由编排层写入 Dossier 的待确认区 ——
+      // 单一写入路径，Agent 自身保持纯函数。
+      for (const role of envelope.ran) {
+        const artifact = envelope.artifacts[role] as any;
+        if (artifact && Array.isArray(artifact.proposals)) {
+          applyProposals(dossier, artifact.proposals, `agent:${role}`);
+        }
+      }
+
+      return res.json({
+        ...envelope,
+        // 待确认清单随产物一起返回，供前端渲染三态
+        pendingConfirmations: pendingConfirmations(dossier),
+        suggestions: dossier.suggestions
+      });
+    })
+  );
+
+  // 5. 单个角色直调（便于联调与回归测试，不参与编排）
+  app.post(
+    '/api/agents/:name',
+    asyncHandler(async (req, res) => {
+      const agent = ROLE_AGENTS[req.params.name];
+      if (!agent) {
+        return res.status(404).json({ error: `Unknown agent role: ${req.params.name}` });
+      }
+      const { output } = await runAgent(agent, req.body, makeContext(req));
+      return res.json(output);
     })
   );
 

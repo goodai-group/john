@@ -11,12 +11,16 @@ import { consultationAgent } from './consultation.js';
 import { businessStructureAgent } from './businessStructure.js';
 import { deepDiagnosisAgent } from './deepDiagnosis.js';
 import { revenueGapAgent } from './revenueGap.js';
+import { registrarAgent } from './registrar.js';
+import { strategistAgent } from './strategist.js';
 
 export const AGENTS = {
   consultation: consultationAgent,
   businessStructure: businessStructureAgent,
   deepDiagnosis: deepDiagnosisAgent,
-  revenueGap: revenueGapAgent
+  revenueGap: revenueGapAgent,
+  registrar: registrarAgent,
+  strategist: strategistAgent
 } as const;
 
 export type AgentName = keyof typeof AGENTS;
@@ -43,3 +47,6 @@ export type { CoachIntent, CoachEnvelope, CoachDeps } from './coach.js';
 export { runAgent, newRequestId } from './runtime.js';
 export { setTraceSink } from './trace.js';
 export { listTools, getTool, TOOL_REGISTRY, TOOL_DATASETS } from './tools.js';
+export { ROLE_AGENTS, inputForRole } from './roles.js';
+export { LEVER_CATALOG, simulateLevers } from './levers.js';
+export type { Lever, SimulatedLever } from './levers.js';
