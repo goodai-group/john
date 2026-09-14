@@ -11,6 +11,7 @@ import { registrarAgent } from './registrar.js';
 import { strategistAgent } from './strategist.js';
 import { interpreterAgent } from './interpreter.js';
 import { trackerAgent } from './tracker.js';
+import { scoutAgent } from './scout.js';
 import { getTool } from './tools.js';
 import { simulateLevers } from './levers.js';
 
@@ -20,8 +21,9 @@ export const ROLE_AGENTS: Record<string, AgentDefinition<any, any>> = {
   registrar: registrarAgent,
   strategist: strategistAgent,
   interpreter: interpreterAgent,
-  tracker: trackerAgent
-  // scout 在 Phase 4 接入；guardian 是旁路校验器而非 Agent，见 coach 的审查环节
+  tracker: trackerAgent,
+  scout: scoutAgent
+  // guardian 是旁路校验器而非 Agent，见 coach 的审查环节
 };
 
 /**
@@ -82,7 +84,8 @@ export function inputForRole(role: string, dossier: ProjectDossier): unknown {
       return {
         projectName: dossier.form.projectName,
         regionCountry: dossier.form.regionCountry,
-        baseCurrency: dossier.form.baseCurrency
+        baseCurrency: dossier.form.baseCurrency,
+        language: 'zh'
       };
 
     case 'consultation':

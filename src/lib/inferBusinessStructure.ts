@@ -42,7 +42,7 @@ interface IndustryTemplate {
  *  未命中任何地区关键词时返回 undefined——调用方不应把"没有任何线索"当成"推断出 USD"，
  *  否则会把美国的税率/注册费/签证费标准错误地套用到一个完全没提及地区的项目名上
  *  （例如"阳光社区烘焙店"这类不含地名的中文店名，多数目标用户实际并不在美国）。 */
-function detectCountryCurrency(pLower: string): CurrencyCode | undefined {
+export function detectCountryCurrency(pLower: string): CurrencyCode | undefined {
   if (/肯尼亚|内罗毕|nairobi|kenya|kes/i.test(pLower)) return 'KES';
   if (/泰国|清迈|曼谷|thailand|chiang mai|bangkok|thb/i.test(pLower)) return 'THB';
   if (/越南|河内|胡志明|vietnam|ho chi minh|hanoi|vnd/i.test(pLower)) return 'VND';

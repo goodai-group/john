@@ -15,6 +15,7 @@ import { registrarAgent } from './registrar.js';
 import { strategistAgent } from './strategist.js';
 import { interpreterAgent } from './interpreter.js';
 import { trackerAgent } from './tracker.js';
+import { scoutAgent } from './scout.js';
 
 export const AGENTS = {
   consultation: consultationAgent,
@@ -24,7 +25,8 @@ export const AGENTS = {
   registrar: registrarAgent,
   strategist: strategistAgent,
   interpreter: interpreterAgent,
-  tracker: trackerAgent
+  tracker: trackerAgent,
+  scout: scoutAgent
 } as const;
 
 export type AgentName = keyof typeof AGENTS;
@@ -55,4 +57,6 @@ export { ROLE_AGENTS, inputForRole } from './roles.js';
 export { LEVER_CATALOG, simulateLevers } from './levers.js';
 export { review as guardianReview, toAuditEntries } from './guardian.js';
 export type { GuardianVerdict, GuardianSubject } from './guardian.js';
+export { setKnowledgeSource, curatedRegulatorySource } from './scout.js';
+export type { KnowledgeSource } from './scout.js';
 export type { Lever, SimulatedLever } from './levers.js';
