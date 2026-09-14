@@ -44,7 +44,6 @@ import { SUPPORTED_CURRENCIES, formatMoney, CUSTOM_CURRENCY_VALUE } from '../../
 import { INDUSTRY_BENCHMARKS } from '../../lib/industryBenchmarks';
 import { saveActiveDraft, clearActiveDraft, getActiveDraft } from '../../lib/storage';
 import {
-  inferBusinessStructureLocally,
   normalizeIndustryKey,
   getIndustryTemplateByKey,
   inferRegulatoryCosts,
@@ -731,18 +730,21 @@ export const AssessmentForm: React.FC<FormProps> = ({
     setInferState('loading');
     inferTimer.current = setTimeout(async () => {
       const reqId = ++inferReqId.current;
-      let result = await callInferBusinessStructure(name);
-      // 后端失败或返回空时，使用前端本地规则引擎兜底，避免"无法自动推算"
-      const isEmpty =
-        !result ||
-        (!result.inferredIndustryKey &&
-          !result.suggestedCurrency &&
-          !result.opexItems?.length &&
-          !result.cogsItems?.length);
-      if (isEmpty) {
-        result = inferBusinessStructureLocally(name, formData.baseCurrency);
-      }
+      const result = await callInferBusinessStructure(name);
       if (reqId !== inferReqId.current) return; // 丢弃过期请求
+      // 不再用写死的行业模板冒充推断结果——云端 AI 不可用或未返回有效结构时，
+      // 如实提示用户手动填写，而不是悄悄套上一份跟项目毫无关系的固定数字。
+      const isUsable =
+        !!result &&
+        (result as any).success !== false &&
+        (result.inferredIndustryKey ||
+          result.suggestedCurrency ||
+          result.opexItems?.length ||
+          result.cogsItems?.length);
+      if (!isUsable) {
+        setInferState('error');
+        return;
+      }
       applyInferResult(result);
       setInferState('done');
     }, 1200);
@@ -1073,7 +1075,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                 )}
                 {inferState === 'error' && (
                   <span className="text-amber-600 font-semibold">
-                    {language === 'en' ? 'Network or backend temporarily unavailable — check your connection or select the industry manually.' : '网络或后端暂时不可用，请检查连接或手动选择行业。'}
+                    {language === 'en' ? 'AI is temporarily unavailable — please select the industry manually and fill in the cost/revenue items yourself.' : 'AI 暂时不可用，请手动选择行业并自行填写成本与收入项目。'}
                     <button
                       type="button"
                       onClick={() => formData.projectName.trim().length >= 2 && handleProjectNameChange(formData.projectName)}

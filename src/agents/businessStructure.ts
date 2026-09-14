@@ -1,7 +1,11 @@
 // Business Structure Agent —— 从项目/店铺名称推断行业、币种与成本骨架
 //
 // 【Phase 0】原 server.ts 第 992-1107 行（/api/ai/infer-business-structure）。
-//            系统提示词与响应字段逐字保留，本地降级路径不变。
+//            系统提示词与响应字段逐字保留。
+//
+// 【降级路径变更】不再用写死的行业模板冒充 AI 推断结果——不同项目会被套上完全相同的
+// 固定数字，用户既分辨不出也没法信任。云端不可用时 fallback() 如实返回 unavailable，
+// 交由前端提示用户手动填写。
 // 【未来归属】Registrar 建档员（project_fact）。
 //            Phase 2 将与 revenueGap、anomalyDetection 合并为同一个建档员 ——
 //            三者产出同一类断言、走同一种校验方式（用户确认）、写同一批字段，拆开只会打架。
@@ -9,9 +13,8 @@
 // 禁止事项（角色边界）：
 //   ✕ 直接写入 confirmed 字段（产物只能是待确认草稿）
 //   ✕ 评价这门生意好不好（那是 Interpreter 的职责）
-import { AgentDefinition, AgentDegradedError, AgentInputError } from './types.js';
+import { AgentDefinition, AgentDegradedError, AgentInputError, DegradeReason } from './types.js';
 import { classifyGeminiError, generateGeminiContent, getGeminiClient } from '../server/gemini.js';
-import { getTool } from './tools.js';
 
 export interface BusinessStructureInput {
   projectName: string;
@@ -20,7 +23,10 @@ export interface BusinessStructureInput {
 }
 
 export interface BusinessStructureOutput {
-  success: true;
+  success: boolean;
+  /** true 表示本次云端 AI 不可用，且不再用写死模板冒充推断结果——前端应提示用户手动填写 */
+  unavailable?: boolean;
+  reason?: string | null;
   [key: string]: unknown;
 }
 
@@ -99,7 +105,7 @@ export const businessStructureAgent: AgentDefinition<
   name: 'businessStructure',
   claimType: 'project_fact',
   futureRole: 'Registrar 建档员',
-  tools: ['inferBusinessStructureLocally'],
+  tools: [],
   timeoutMs: 27000,
 
   parseInput(raw) {
@@ -129,10 +135,7 @@ export const businessStructureAgent: AgentDefinition<
         BUSINESS_STRUCTURE_SYSTEM_INSTRUCTION
       );
     } catch (err: any) {
-      console.warn(
-        'Gemini infer-business-structure failed, fallback to smart rule engine:',
-        err.message
-      );
+      console.warn('Gemini infer-business-structure failed:', err.message);
       const { message, kind } = classifyGeminiError(err);
       throw new AgentDegradedError(message, kind);
     }
@@ -141,14 +144,11 @@ export const businessStructureAgent: AgentDefinition<
     try {
       parsed = JSON.parse(replyText || '{}');
     } catch (err: any) {
-      console.warn(
-        'Gemini infer-business-structure failed, fallback to smart rule engine:',
-        err.message
-      );
+      console.warn('Gemini infer-business-structure returned malformed JSON:', err.message);
       throw new AgentDegradedError('Gemini returned malformed JSON', null);
     }
 
-    // 未能给出行业 key 视为推断失败，交给本地规则引擎兜底（与重构前一致）
+    // 未能给出行业 key 视为推断失败，走 fallback() 如实告知不可用
     if (!parsed.inferredIndustryKey) {
       throw new AgentDegradedError('Gemini returned no inferredIndustryKey', null);
     }
@@ -156,22 +156,13 @@ export const businessStructureAgent: AgentDefinition<
     return { success: true, ...parsed };
   },
 
-  fallback(input) {
-    // Deterministic fallback rule engine using shared helper
-    const inferLocally = getTool('inferBusinessStructureLocally');
-    const structure = inferLocally(input.projectName || input.currentIndustry, input.baseCurrency);
-
+  fallback(_input, _ctx, reason?: DegradeReason) {
+    // 不再用写死的行业模板冒充「AI 推断结果」——不同项目会被套上完全相同的固定数字，
+    // 用户既无法分辨也无法信任。云端不可用时如实告知，交由用户手动填写。
     return {
-      success: true,
-      inferredIndustryKey: structure.inferredIndustryKey,
-      industryDisplayName: structure.industryDisplayName,
-      customIndustryName: structure.customIndustryName,
-      suggestedCurrency: structure.suggestedCurrency,
-      revenueTip: structure.revenueTip,
-      estimatedMonthlyRevenue: structure.estimatedMonthlyRevenue,
-      cogsItems: structure.cogsItems,
-      opexItems: structure.opexItems,
-      benchmarkAdvice: structure.benchmarkAdvice
+      success: false,
+      unavailable: true,
+      reason: reason?.exposeToClient ? reason.message : null
     };
   }
 };
