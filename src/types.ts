@@ -1,6 +1,6 @@
 export type Language = 'zh' | 'en';
 
-export type ActiveTab = 'form' | 'report' | 'simulator' | 'standards' | 'projects' | 'learning';
+export type ActiveTab = 'form' | 'report' | 'feasibility' | 'simulator' | 'standards' | 'projects' | 'learning';
 
 export type CurrencyCode = string;
 

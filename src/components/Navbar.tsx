@@ -12,7 +12,8 @@ import {
   LogIn,
   Loader2,
   CheckCircle2,
-  GraduationCap
+  GraduationCap,
+  Compass
 } from 'lucide-react';
 import { Language, ActiveTab, AppUser } from '../types';
 
@@ -69,6 +70,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const navItems: { id: ActiveTab; label: string; icon: any }[] = [
     { id: 'form', label: language === 'zh' ? '快速体检' : 'Assessment', icon: FileText },
     { id: 'report', label: language === 'zh' ? '体检报告' : 'Report', icon: Sparkles },
+    { id: 'feasibility', label: language === 'zh' ? '开业测算' : 'Launch', icon: Compass },
     { id: 'simulator', label: language === 'zh' ? '沙盒试算' : 'Simulator', icon: Calculator },
     { id: 'standards', label: language === 'zh' ? '评分规则' : 'Rules', icon: BookOpen },
     { id: 'learning', label: language === 'zh' ? '商业学习' : 'Learn', icon: GraduationCap },

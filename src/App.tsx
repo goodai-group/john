@@ -20,6 +20,7 @@ import { AuthModal, AuthMode } from './components/AuthModal';
 import { LoginRequiredGate } from './components/LoginRequiredGate';
 import { ProjectsListPage } from './pages/ProjectsListPage';
 import { LearningCenterPage } from './pages/LearningCenterPage';
+import { FeasibilityBriefPage } from './pages/FeasibilityBriefPage';
 import {
   loadStoredProjects,
   saveStoredProjects,
@@ -896,6 +897,14 @@ export default function App() {
 
         {activeTab === 'standards' && (
           <PublicScoringStandards language={language} />
+        )}
+
+        {activeTab === 'feasibility' && (
+          <FeasibilityBriefPage
+            project={activeProject}
+            language={language}
+            onGoToForm={() => navigateTo('form')}
+          />
         )}
 
         {activeTab === 'learning' && <LearningCenterPage language={language} />}

@@ -284,7 +284,7 @@ export const strategistAgent: AgentDefinition<StrategistInput, StrategistOutput>
                 assumption:
                   months === null
                     ? 'The business can reach a positive monthly surplus at all under these costs.'
-                    : `The payback period of about ${months} months is acceptable to you and to whoever funded the initial investment.`,
+                    : `The payback period of about ${Math.round(months)} months is acceptable to you and to whoever funded the initial investment.`,
                 howToVerify:
                   'Write the monthly surplus figure on paper and check it against the minimum you need to live on and to repay any borrowed capital.',
                 estimatedCost: 'One evening'
@@ -306,7 +306,7 @@ export const strategistAgent: AgentDefinition<StrategistInput, StrategistOutput>
                 assumption:
                   months === null
                     ? '在这个成本结构下，这门生意每月到底能不能剩下钱。'
-                    : `约 ${months} 个月的回本周期，你本人和出本金的人都能接受。`,
+                    : `约 ${Math.round(months)} 个月的回本周期，你本人和出本金的人都能接受。`,
                 howToVerify:
                   '把每月净结余的数字写在纸上，对照你的生活最低开销和需要还的本金，看撑不撑得住。',
                 estimatedCost: '一个晚上'
