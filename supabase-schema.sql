@@ -63,6 +63,35 @@ CREATE TABLE IF NOT EXISTS public.audit_logs (
   timestamp TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- ============================================================
+-- agent_runs：Agent 执行追踪（多 Agent 架构 Phase 0 新增）
+-- 没有这张表，多 Agent 系统是调不动的：出问题时无法定位是哪个角色、哪一环，
+-- 也无法区分「云端产出」与「本地兜底产出」。
+-- Phase 0 先由 server 端以结构化日志输出；Phase 1 通过 setTraceSink() 落到本表。
+-- claim_type 取值：external_fact | project_fact | interpretation | action | change | conversation | gate
+-- mode 取值：gemini（云端产出） | rules（本地兜底） | deterministic（无云端路径，确定性计算）
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.agent_runs (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  request_id TEXT NOT NULL,
+  agent TEXT NOT NULL,
+  claim_type TEXT NOT NULL,
+  mode TEXT NOT NULL,
+  duration_ms INT,
+  degraded BOOLEAN DEFAULT FALSE,
+  error_kind TEXT,
+  error TEXT,
+  project_id TEXT,
+  owner_uid TEXT,
+  started_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS agent_runs_agent_started_idx
+  ON public.agent_runs (agent, started_at DESC);
+CREATE INDEX IF NOT EXISTS agent_runs_degraded_idx
+  ON public.agent_runs (degraded, started_at DESC);
+
 -- 如需按用户隔离数据（登录后只看到自己的数据），可取消下面注释启用：
 -- ALTER TABLE public.projects ENABLE ROW LEVEL SECURITY;
 -- CREATE POLICY "owner select" ON public.projects FOR SELECT USING (owner_uid = auth.uid() OR owner_uid IS NULL);

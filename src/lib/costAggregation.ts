@@ -1,5 +1,5 @@
-import { BusinessFormData, CurrencyCode, MoneyField } from '../types';
-import { convertToTargetCurrency } from './currencies';
+import { BusinessFormData, CurrencyCode, MoneyField } from '../types.js';
+import { convertToTargetCurrency } from './currencies.js';
 
 /**
  * 成本聚合的单一实现来源。此前 scoringEngine.ts / breakEvenCalculator.ts / anomalyDetection.ts

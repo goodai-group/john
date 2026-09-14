@@ -4,9 +4,9 @@ import {
   GateCheckResult,
   MetricScore,
   ProofType
-} from '../types';
-import { convertToTargetCurrency, CUSTOM_CURRENCY_VALUE } from './currencies';
-import { aggregateMonthlyCosts } from './costAggregation';
+} from '../types.js';
+import { convertToTargetCurrency, CUSTOM_CURRENCY_VALUE } from './currencies.js';
+import { aggregateMonthlyCosts } from './costAggregation.js';
 
 /** 与 AssessmentForm 中 CUSTOM_INDUSTRY_VALUE 保持一致的占位常量 */
 const CUSTOM_INDUSTRY_VALUE = '__CUSTOM__';

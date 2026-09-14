@@ -1,6 +1,6 @@
-import { BusinessFormData } from '../types';
-import { CUSTOM_CURRENCY_VALUE, convertToTargetCurrency } from './currencies';
-import { aggregateMonthlyCosts } from './costAggregation';
+import { BusinessFormData } from '../types.js';
+import { CUSTOM_CURRENCY_VALUE, convertToTargetCurrency } from './currencies.js';
+import { aggregateMonthlyCosts } from './costAggregation.js';
 
 /**
  * 第5点：回本时间（收回初始投资所需的时间），与盈亏平衡点（breakEvenCalculator）是两条不同的时间线：

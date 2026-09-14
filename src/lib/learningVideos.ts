@@ -1,4 +1,4 @@
-import { LearningVideo } from '../types';
+import { LearningVideo } from '../types.js';
 
 /**
  * 第4点：商业知识学习中心的视频清单。

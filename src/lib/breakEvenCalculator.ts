@@ -1,6 +1,6 @@
-import { BusinessFormData } from '../types';
-import { CUSTOM_CURRENCY_VALUE } from './currencies';
-import { aggregateMonthlyCosts } from './costAggregation';
+import { BusinessFormData } from '../types.js';
+import { CUSTOM_CURRENCY_VALUE } from './currencies.js';
+import { aggregateMonthlyCosts } from './costAggregation.js';
 
 /**
  * 第3点：用户先填成本，系统根据已填成本自动算出「每天至少要赚多少才不亏钱」，

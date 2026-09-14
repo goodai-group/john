@@ -1,6 +1,6 @@
-import { BusinessFormData, FormAnomalyWarning } from '../types';
-import { convertToTargetCurrency, CUSTOM_CURRENCY_VALUE } from './currencies';
-import { aggregateMonthlyCosts } from './costAggregation';
+import { BusinessFormData, FormAnomalyWarning } from '../types.js';
+import { convertToTargetCurrency, CUSTOM_CURRENCY_VALUE } from './currencies.js';
+import { aggregateMonthlyCosts } from './costAggregation.js';
 
 /**
  * 第2点：AI 自动识别用户填错的数值及类目并提醒。
