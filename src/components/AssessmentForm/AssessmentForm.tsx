@@ -52,6 +52,7 @@ import {
   REGULATORY_COUNTRY_OPTIONS
 } from '../../lib/inferBusinessStructure';
 import { State as StateLib } from 'country-state-city';
+import { SearchableSelect, type SearchableSelectOption } from './SearchableSelect';
 import { calculateBreakEvenRevenue } from '../../lib/breakEvenCalculator';
 import { calculatePaybackPeriod, calculateRequiredRevenueForTarget } from '../../lib/paybackCalculator';
 import { detectFormAnomalies } from '../../lib/anomalyDetection';
@@ -262,6 +263,46 @@ export const AssessmentForm: React.FC<FormProps> = ({
   const statesForRegionCountry = React.useMemo(
     () => (regionCountryIso2 ? StateLib.getStatesOfCountry(regionCountryIso2) : []),
     [regionCountryIso2]
+  );
+  const stateOptions: SearchableSelectOption[] = React.useMemo(
+    () => statesForRegionCountry.map((s) => ({ value: s.name, label: s.name })),
+    [statesForRegionCountry]
+  );
+
+  // 国家/币种选项都是几十上百项，下拉框换成带搜索的 SearchableSelect 时复用同一份 options，
+  // 避免每处调用现场各自重新 map 一遍。
+  const countryOptions: SearchableSelectOption[] = React.useMemo(
+    () =>
+      REGULATORY_COUNTRY_OPTIONS.map((o) => ({
+        value: o.countryLabel,
+        label: language === 'en' ? o.countryLabelEn : o.countryLabel
+      })),
+    [language]
+  );
+  const currencyOptions: SearchableSelectOption[] = React.useMemo(
+    () =>
+      SUPPORTED_CURRENCIES.map((c) => ({
+        value: c.code,
+        label: `${language === 'en' ? c.nameEn : c.nameZh} - ${c.symbol}`
+      })),
+    [language]
+  );
+  // 紧凑版币种选项：用于行内小型币种选择器（如每条金额旁边的币种下拉），显示 CODE (符号) 而非全名
+  const compactCurrencyOptions: SearchableSelectOption[] = React.useMemo(
+    () => SUPPORTED_CURRENCIES.map((c) => ({ value: c.code, label: `${c.code} (${c.symbol})` })),
+    []
+  );
+  // 更紧凑：只显示 3 字母代码，用于空间更窄的行内币种下拉，避免被截断
+  const codeOnlyCurrencyOptions: SearchableSelectOption[] = React.useMemo(
+    () => SUPPORTED_CURRENCIES.map((c) => ({ value: c.code, label: c.code })),
+    []
+  );
+  const industryOptions: SearchableSelectOption[] = React.useMemo(
+    () => [
+      ...INDUSTRY_BENCHMARKS.map((b) => ({ value: b.id, label: language === 'en' ? b.nameEn : b.nameZh })),
+      { value: CUSTOM_INDUSTRY_VALUE, label: language === 'en' ? 'Other industry (custom input)' : '其他行业（自定义输入）' }
+    ],
+    [language]
   );
 
   // —— 第3点：根据已填成本自动算出保本收入（每天/每月至少赚多少才不亏钱）——
@@ -1290,20 +1331,14 @@ export const AssessmentForm: React.FC<FormProps> = ({
                 <Building2 className="w-3.5 h-3.5 text-teal-600" />
                 <span>{language === 'en' ? 'Company Registration Country / Region' : '公司注册所在国家/地区'}</span>
               </label>
-              <select
-                value={REGULATORY_COUNTRY_OPTIONS.some((o) => o.countryLabel === formData.regionCountry) ? formData.regionCountry : ''}
-                onChange={(e) => handleRegionCountryChange(e.target.value)}
-                className="w-full p-3 border-2 border-teal-200 focus:border-teal-600 rounded-2xl font-bold text-slate-900 bg-white"
-              >
-                <option value="">
-                  {language === 'en' ? '-- Select where your company is registered --' : '-- 请选择公司注册所在国家/地区 --'}
-                </option>
-                {REGULATORY_COUNTRY_OPTIONS.map((o) => (
-                  <option key={o.code} value={o.countryLabel}>
-                    {language === 'en' ? o.countryLabelEn : o.countryLabel}
-                  </option>
-                ))}
-              </select>
+              <SearchableSelect
+                value={formData.regionCountry}
+                onChange={handleRegionCountryChange}
+                options={countryOptions}
+                placeholder={language === 'en' ? '-- Select where your company is registered --' : '-- 请选择公司注册所在国家/地区 --'}
+                controlClassName="w-full p-3 border-2 border-teal-200 rounded-2xl font-bold text-slate-900 bg-white"
+                isClearable
+              />
               <p className="text-[12px] text-slate-500 mt-1">
                 {language === 'en'
                   ? 'Determines your base currency and the tax/registration/visa reference values shown later — you can still override any of them yourself.'
@@ -1407,18 +1442,13 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       <label className="block text-slate-700 font-bold mb-1">
                         {language === 'en' ? 'Industry Type' : '所属行业类型'} <span className="text-rose-500">*</span>
                       </label>
-                      <select
+                      <SearchableSelect
                         value={formData.industry}
-                        onChange={(e) => handleIndustryChange(e.target.value)}
-                        className="w-full p-2.5 border border-slate-300 rounded-xl font-medium text-slate-800 bg-white"
-                      >
-                        {INDUSTRY_BENCHMARKS.map((b) => (
-                          <option key={b.id} value={b.id}>
-                            {language === 'en' ? b.nameEn : b.nameZh}
-                          </option>
-                        ))}
-                        <option value={CUSTOM_INDUSTRY_VALUE}>{language === 'en' ? 'Other industry (custom input)' : '其他行业（自定义输入）'}</option>
-                      </select>
+                        onChange={handleIndustryChange}
+                        options={industryOptions}
+                        placeholder={language === 'en' ? '-- Select industry --' : '-- 请选择行业 --'}
+                        controlClassName="w-full p-2.5 border border-slate-300 rounded-xl font-medium text-slate-800 bg-white"
+                      />
                       {formData.industry === CUSTOM_INDUSTRY_VALUE && (
                         <input
                           type="text"
@@ -1434,17 +1464,13 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       <label className="block text-slate-700 font-bold mb-1">
                         {language === 'en' ? 'Base Currency' : '主报告币种 (Base Currency)'} <span className="text-rose-500">*</span>
                       </label>
-                      <select
+                      <SearchableSelect
                         value={formData.baseCurrency}
-                        onChange={(e) => handleCurrencyChange(e.target.value)}
-                        className="w-full p-2.5 border border-slate-300 rounded-xl font-bold text-slate-800 bg-white"
-                      >
-                        {SUPPORTED_CURRENCIES.map((c) => (
-                          <option key={c.code} value={c.code}>
-                            {language === 'en' ? c.nameEn : c.nameZh} - {c.symbol}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={handleCurrencyChange}
+                        options={currencyOptions}
+                        placeholder={language === 'en' ? '-- Select currency --' : '-- 请选择币种 --'}
+                        controlClassName="w-full p-2.5 border border-slate-300 rounded-xl font-bold text-slate-800 bg-white"
+                      />
                       {formData.baseCurrency === CUSTOM_CURRENCY_VALUE && (
                         <input
                           type="text"
@@ -1664,23 +1690,13 @@ export const AssessmentForm: React.FC<FormProps> = ({
                           <BarChart3 className="w-3 h-3 text-emerald-700" />
                           <span>{language === 'en' ? 'Check Benchmarks' : '查基准'}</span>
                         </button>
-                        <select
+                        <SearchableSelect
                           value={formData.monthlyRevenue.currency}
-                          onChange={(e) =>
-                            updateMoney(
-                              'monthlyRevenue',
-                              formData.monthlyRevenue.amount,
-                              e.target.value as CurrencyCode
-                            )
-                          }
-                          className="px-2 py-1.5 rounded-lg border border-slate-300 font-bold bg-white text-slate-700 text-xs shadow-2xs"
-                        >
-                          {SUPPORTED_CURRENCIES.map((c) => (
-                            <option key={c.code} value={c.code}>
-                              {c.code} ({c.symbol})
-                            </option>
-                          ))}
-                        </select>
+                          onChange={(v) => updateMoney('monthlyRevenue', formData.monthlyRevenue.amount, v as CurrencyCode)}
+                          options={compactCurrencyOptions}
+                          placeholder={language === 'en' ? 'Currency' : '币种'}
+                          controlClassName="px-2 py-1.5 rounded-lg border border-slate-300 font-bold bg-white text-slate-700 text-xs shadow-2xs whitespace-nowrap"
+                        />
                       </div>
                     </div>
                     <NumberField
@@ -1710,23 +1726,15 @@ export const AssessmentForm: React.FC<FormProps> = ({
                             <InfoTooltip language={language} text={language === 'en' ? 'Business revenue truly paid by customers, excluding any loans from friends/family or relief subsidies.' : '排除任何亲友借款、救济补贴后，真正由客户买单带来的生意收入。'} />
                           </label>
                         </div>
-                        <select
+                        <SearchableSelect
                           value={formData.monthlyRealOperatingRevenue.currency}
-                          onChange={(e) =>
-                            updateMoney(
-                              'monthlyRealOperatingRevenue',
-                              formData.monthlyRealOperatingRevenue.amount,
-                              e.target.value as CurrencyCode
-                            )
+                          onChange={(v) =>
+                            updateMoney('monthlyRealOperatingRevenue', formData.monthlyRealOperatingRevenue.amount, v as CurrencyCode)
                           }
-                          className="px-2 py-1 rounded border border-emerald-300 font-bold bg-white text-emerald-900"
-                        >
-                          {SUPPORTED_CURRENCIES.map((c) => (
-                            <option key={c.code} value={c.code}>
-                              {c.code}
-                            </option>
-                          ))}
-                        </select>
+                          options={codeOnlyCurrencyOptions}
+                          placeholder={language === 'en' ? 'Currency' : '币种'}
+                          controlClassName="px-2 py-1 rounded border border-emerald-300 font-bold bg-white text-emerald-900 whitespace-nowrap"
+                        />
                       </div>
                       <NumberField
                         inputMode="numeric"
@@ -1745,23 +1753,15 @@ export const AssessmentForm: React.FC<FormProps> = ({
                             {language === 'en' ? 'Of which: external support / institutional grants' : '其中：外部支持款 / 机构赠款'}
                           </label>
                         </div>
-                        <select
+                        <SearchableSelect
                           value={formData.monthlyExternalGrants.currency}
-                          onChange={(e) =>
-                            updateMoney(
-                              'monthlyExternalGrants',
-                              formData.monthlyExternalGrants.amount,
-                              e.target.value as CurrencyCode
-                            )
+                          onChange={(v) =>
+                            updateMoney('monthlyExternalGrants', formData.monthlyExternalGrants.amount, v as CurrencyCode)
                           }
-                          className="px-2 py-1 rounded border border-amber-300 font-bold bg-white text-amber-900"
-                        >
-                          {SUPPORTED_CURRENCIES.map((c) => (
-                            <option key={c.code} value={c.code}>
-                              {c.code}
-                            </option>
-                          ))}
-                        </select>
+                          options={codeOnlyCurrencyOptions}
+                          placeholder={language === 'en' ? 'Currency' : '币种'}
+                          controlClassName="px-2 py-1 rounded border border-amber-300 font-bold bg-white text-amber-900 whitespace-nowrap"
+                        />
                       </div>
                       <NumberField
                         inputMode="numeric"
@@ -2122,20 +2122,14 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     <label className="block font-bold text-slate-800 mb-1">
                       {language === 'en' ? 'Country / Region Located' : '所在国家/地区'}
                     </label>
-                    <select
-                      value={REGULATORY_COUNTRY_OPTIONS.some((o) => o.countryLabel === formData.regionCountry) ? formData.regionCountry : ''}
-                      onChange={(e) => handleRegionCountryChange(e.target.value)}
-                      className="w-full p-2 border border-violet-300 rounded-lg font-semibold text-slate-900 bg-white"
-                    >
-                      <option value="">
-                        {language === 'en' ? '-- Select your country/region --' : '-- 请选择所在国家/地区 --'}
-                      </option>
-                      {REGULATORY_COUNTRY_OPTIONS.map((o) => (
-                        <option key={o.code} value={o.countryLabel}>
-                          {language === 'en' ? o.countryLabelEn : o.countryLabel}
-                        </option>
-                      ))}
-                    </select>
+                    <SearchableSelect
+                      value={formData.regionCountry}
+                      onChange={handleRegionCountryChange}
+                      options={countryOptions}
+                      placeholder={language === 'en' ? '-- Select your country/region --' : '-- 请选择所在国家/地区 --'}
+                      controlClassName="w-full p-2 border border-violet-300 rounded-lg font-semibold text-slate-900 bg-white"
+                      isClearable
+                    />
                     <p className="text-[12px] text-slate-500 mt-1">
                       {language === 'en'
                         ? 'Changing it here also switches your base currency to match — never affects your score, and you can still edit every number.'
@@ -2153,20 +2147,14 @@ export const AssessmentForm: React.FC<FormProps> = ({
                         {language === 'en' ? 'State / Province' : '省/州'}
                       </label>
                       {statesForRegionCountry.length > 0 ? (
-                        <select
+                        <SearchableSelect
                           value={formData.regionDetail}
-                          onChange={(e) => updateField('regionDetail', e.target.value)}
-                          className="w-full p-2 border border-violet-300 rounded-lg font-semibold text-slate-900 bg-white"
-                        >
-                          <option value="">
-                            {language === 'en' ? '-- Select state/province (optional) --' : '-- 请选择省/州（可选）--'}
-                          </option>
-                          {statesForRegionCountry.map((s) => (
-                            <option key={s.isoCode} value={s.name}>
-                              {s.name}
-                            </option>
-                          ))}
-                        </select>
+                          onChange={(v) => updateField('regionDetail', v)}
+                          options={stateOptions}
+                          placeholder={language === 'en' ? '-- Select state/province (optional) --' : '-- 请选择省/州（可选）--'}
+                          controlClassName="w-full p-2 border border-violet-300 rounded-lg font-semibold text-slate-900 bg-white"
+                          isClearable
+                        />
                       ) : (
                         <input
                           type="text"
