@@ -53,6 +53,7 @@ import { calculateBreakEvenRevenue } from '../../lib/breakEvenCalculator';
 import { calculatePaybackPeriod, calculateRequiredRevenueForTarget } from '../../lib/paybackCalculator';
 import { detectFormAnomalies } from '../../lib/anomalyDetection';
 import { FieldProvenanceBadge, PendingConfirmationsBar } from '../FieldProvenanceBadge';
+import { NumberField } from './NumberField';
 
 /** 行业枚举值集合，用于在 AI 返回值与可选项之间做映射 */
 const INDUSTRY_KEYS = INDUSTRY_BENCHMARKS.map((b) => b.id) as string[];
@@ -1318,13 +1319,10 @@ export const AssessmentForm: React.FC<FormProps> = ({
                           <label className="block text-slate-600 font-medium mb-1">
                             {language === 'en' ? 'Actual exchange rate (1 USD ≈ how much local currency)' : '实际兑换汇率数值 (1 USD ≈ 多少当地货币)'}
                           </label>
-                          <input
-                            type="number"
+                          <NumberField
                             placeholder=""
-                            value={formData.customExchangeRateValue || ''}
-                            onChange={(e) =>
-                              updateField('customExchangeRateValue', Number(e.target.value))
-                            }
+                            value={formData.customExchangeRateValue || 0}
+                            onChange={(v) => updateField('customExchangeRateValue', v)}
                             className="w-full p-2 border border-slate-300 rounded-lg font-bold text-slate-800 bg-white"
                           />
                         </div>
@@ -1524,13 +1522,12 @@ export const AssessmentForm: React.FC<FormProps> = ({
                         </select>
                       </div>
                     </div>
-                    <input
-                      type="number"
+                    <NumberField
                       inputMode="numeric"
                       min={0}
                       placeholder={language === 'en' ? 'e.g. 50000' : '例如 50000'}
-                      value={formData.monthlyRevenue.amount || ''}
-                      onChange={(e) => updateMoney('monthlyRevenue', Number(e.target.value))}
+                      value={formData.monthlyRevenue.amount}
+                      onChange={(v) => updateMoney('monthlyRevenue', v)}
                       className="w-full p-3 border-2 border-teal-200 focus:border-teal-600 rounded-xl font-black text-slate-900 text-base bg-white shadow-2xs"
                     />
                     {formData.monthlyRevenue.amount > 0 && (
@@ -1570,14 +1567,11 @@ export const AssessmentForm: React.FC<FormProps> = ({
                           ))}
                         </select>
                       </div>
-                      <input
-                        type="number"
+                      <NumberField
                         inputMode="numeric"
                         min={0}
-                        value={formData.monthlyRealOperatingRevenue.amount || ''}
-                        onChange={(e) =>
-                          updateMoney('monthlyRealOperatingRevenue', Number(e.target.value))
-                        }
+                        value={formData.monthlyRealOperatingRevenue.amount}
+                        onChange={(v) => updateMoney('monthlyRealOperatingRevenue', v)}
                         className="w-full p-2.5 border border-emerald-300 rounded-xl font-bold text-emerald-950 bg-white"
                       />
                     </div>
@@ -1608,13 +1602,12 @@ export const AssessmentForm: React.FC<FormProps> = ({
                           ))}
                         </select>
                       </div>
-                      <input
-                        type="number"
+                      <NumberField
                         inputMode="numeric"
                         min={0}
                         placeholder={language === 'en' ? 'Enter 0 if none' : '无则填 0'}
-                        value={formData.monthlyExternalGrants.amount || ''}
-                        onChange={(e) => updateMoney('monthlyExternalGrants', Number(e.target.value))}
+                        value={formData.monthlyExternalGrants.amount}
+                        onChange={(v) => updateMoney('monthlyExternalGrants', v)}
                         className="w-full p-2.5 border border-amber-300 rounded-xl font-bold text-amber-950 bg-white"
                       />
                       <p className="text-[12px] text-amber-700">
@@ -1694,10 +1687,9 @@ export const AssessmentForm: React.FC<FormProps> = ({
                           onChange={(e) => updateDynamicCogsItem(it.id, { label: e.target.value })}
                           className="flex-1 min-w-0 p-1.5 border border-rose-200 rounded-lg font-semibold text-slate-800"
                         />
-                        <input
-                          type="number"
-                          value={it.value || ''}
-                          onChange={(e) => updateDynamicCogsItem(it.id, { value: Number(e.target.value) })}
+                        <NumberField
+                          value={it.value}
+                          onChange={(v) => updateDynamicCogsItem(it.id, { value: v })}
                           className="w-24 shrink-0 p-1.5 border border-rose-200 rounded-lg font-mono font-semibold text-right"
                           placeholder={it.suggestedAmount ? `${language === 'en' ? 'AI suggests' : 'AI建议'} ${it.suggestedAmount}` : (language === 'en' ? 'Amount' : '金额')}
                           title={it.suggestedAmount ? (language === 'en' ? `AI suggested reference amount: ${it.suggestedAmount} (for reference only, please fill in your real figure)` : `AI 建议参考金额：${it.suggestedAmount}（仅供参考，请填你的真实数字）`) : (language === 'en' ? 'Please fill in your real monthly amount' : '请填你的真实月度金额')}
@@ -1734,12 +1726,11 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       <label className="font-bold text-slate-800">{language === 'en' ? 'Rent & Property' : '场地租金与物业'}</label>
                       <span className="text-[13px] text-slate-400">{formData.rentCost.currency}/{language === 'en' ? 'mo' : '月'}</span>
                     </div>
-                    <input
-                      type="number"
+                    <NumberField
                       inputMode="numeric"
                       min={0}
-                      value={formData.rentCost.amount || ''}
-                      onChange={(e) => updateMoney('rentCost', Number(e.target.value))}
+                      value={formData.rentCost.amount}
+                      onChange={(v) => updateMoney('rentCost', v)}
                       className="w-full p-2 border border-slate-300 rounded-lg font-semibold"
                     />
                   </div>
@@ -1749,12 +1740,11 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       <label className="font-bold text-slate-800">{language === 'en' ? 'Staff Wages & Labor Costs' : '员工工资与人工支出'}</label>
                       <span className="text-[13px] text-slate-400">{formData.laborCost.currency}/{language === 'en' ? 'mo' : '月'}</span>
                     </div>
-                    <input
-                      type="number"
+                    <NumberField
                       inputMode="numeric"
                       min={0}
-                      value={formData.laborCost.amount || ''}
-                      onChange={(e) => updateMoney('laborCost', Number(e.target.value))}
+                      value={formData.laborCost.amount}
+                      onChange={(v) => updateMoney('laborCost', v)}
                       className="w-full p-2 border border-slate-300 rounded-lg font-semibold"
                     />
                   </div>
@@ -1764,12 +1754,11 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       <label className="font-bold text-slate-800">{language === 'en' ? 'Utilities, Internet & Misc.' : '水电网络杂费'}</label>
                       <span className="text-[13px] text-slate-400">{formData.utilityCost.currency}/{language === 'en' ? 'mo' : '月'}</span>
                     </div>
-                    <input
-                      type="number"
+                    <NumberField
                       inputMode="numeric"
                       min={0}
-                      value={formData.utilityCost.amount || ''}
-                      onChange={(e) => updateMoney('utilityCost', Number(e.target.value))}
+                      value={formData.utilityCost.amount}
+                      onChange={(v) => updateMoney('utilityCost', v)}
                       className="w-full p-2 border border-slate-300 rounded-lg font-semibold"
                     />
                   </div>
@@ -1779,12 +1768,11 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       <label className="font-bold text-slate-800">{language === 'en' ? 'Taxes & Fees' : '税金及规费'}</label>
                       <span className="text-[13px] text-slate-400">{formData.taxCost.currency}/{language === 'en' ? 'mo' : '月'}</span>
                     </div>
-                    <input
-                      type="number"
+                    <NumberField
                       inputMode="numeric"
                       min={0}
-                      value={formData.taxCost.amount || ''}
-                      onChange={(e) => updateMoney('taxCost', Number(e.target.value))}
+                      value={formData.taxCost.amount}
+                      onChange={(v) => updateMoney('taxCost', v)}
                       className="w-full p-2 border border-slate-300 rounded-lg font-semibold"
                     />
                   </div>
@@ -1794,13 +1782,12 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       <label className="font-bold text-slate-800">{language === 'en' ? 'Monthly Debt Repayment (Principal & Interest)' : '每月偿还债务本息'}</label>
                       <span className="text-[13px] text-slate-400">{formData.existingDebtMonthlyPayment.currency}/{language === 'en' ? 'mo' : '月'}</span>
                     </div>
-                    <input
-                      type="number"
+                    <NumberField
                       inputMode="numeric"
                       min={0}
                       placeholder={language === 'en' ? 'Enter 0 if no debt' : '无债务填 0'}
-                      value={formData.existingDebtMonthlyPayment.amount || ''}
-                      onChange={(e) => updateMoney('existingDebtMonthlyPayment', Number(e.target.value))}
+                      value={formData.existingDebtMonthlyPayment.amount}
+                      onChange={(v) => updateMoney('existingDebtMonthlyPayment', v)}
                       className="w-full p-2 border border-slate-300 rounded-lg font-semibold"
                     />
                   </div>
@@ -1839,11 +1826,10 @@ export const AssessmentForm: React.FC<FormProps> = ({
                           onChange={(e) => updateDynamicOpexItem(it.id, { label: e.target.value })}
                           className="flex-1 min-w-0 p-1.5 border border-teal-200 rounded-lg font-semibold text-slate-800"
                         />
-                        <input
-                          type="number"
-                          min="0"
-                          value={it.value || ''}
-                          onChange={(e) => updateDynamicOpexItem(it.id, { value: Math.max(0, isNaN(Number(e.target.value)) ? 0 : Number(e.target.value)) })}
+                        <NumberField
+                          min={0}
+                          value={it.value}
+                          onChange={(v) => updateDynamicOpexItem(it.id, { value: Math.max(0, v) })}
                           className="w-24 shrink-0 p-1.5 border border-teal-200 rounded-lg font-mono font-semibold text-right"
                           placeholder={it.suggestedAmount ? `${language === 'en' ? 'AI suggests' : 'AI建议'} ${it.suggestedAmount}` : (language === 'en' ? 'Amount' : '金额')}
                           title={it.suggestedAmount ? (language === 'en' ? `AI suggested reference amount: ${it.suggestedAmount} (for reference only, please fill in your real figure)` : `AI 建议参考金额：${it.suggestedAmount}（仅供参考，请填你的真实数字）`) : (language === 'en' ? 'Please fill in your real monthly amount' : '请填你的真实月度金额')}
@@ -1908,22 +1894,20 @@ export const AssessmentForm: React.FC<FormProps> = ({
                           {language === 'en' ? 'Use AI value' : '填入AI估值'}
                         </button>
                       </div>
-                      <input
-                        type="number"
+                      <NumberField
                         inputMode="numeric"
                         min={0}
                         placeholder={`约 ${regulatoryEstimate.registrationLocal}`}
-                        value={formData.companyRegistrationCost.amount || ''}
-                        onChange={(e) => updateMoney('companyRegistrationCost', Number(e.target.value))}
+                        value={formData.companyRegistrationCost.amount}
+                        onChange={(v) => updateMoney('companyRegistrationCost', v)}
                         className="w-full p-2 border border-violet-200 rounded-lg font-semibold text-slate-900 bg-white"
                       />
                       <div className="flex items-center gap-1 text-[11px] text-slate-500">
                         <span>{language === 'en' ? 'Amortize over' : '分摊'}</span>
-                        <input
-                          type="number"
+                        <NumberField
                           min={1}
-                          value={formData.companyRegistrationAmortizationMonths || ''}
-                          onChange={(e) => updateField('companyRegistrationAmortizationMonths', Math.max(0, Number(e.target.value) || 0))}
+                          value={formData.companyRegistrationAmortizationMonths}
+                          onChange={(v) => updateField('companyRegistrationAmortizationMonths', v)}
                           className="w-12 p-0.5 border border-violet-200 rounded text-center bg-white font-bold"
                         />
                         <span>{language === 'en' ? 'months' : '个月'}</span>
@@ -1945,22 +1929,20 @@ export const AssessmentForm: React.FC<FormProps> = ({
                           {language === 'en' ? 'Use AI value' : '填入AI估值'}
                         </button>
                       </div>
-                      <input
-                        type="number"
+                      <NumberField
                         inputMode="numeric"
                         min={0}
                         placeholder={`约 ${regulatoryEstimate.visaLocal}`}
-                        value={formData.visaFeeCost.amount || ''}
-                        onChange={(e) => updateMoney('visaFeeCost', Number(e.target.value))}
+                        value={formData.visaFeeCost.amount}
+                        onChange={(v) => updateMoney('visaFeeCost', v)}
                         className="w-full p-2 border border-violet-200 rounded-lg font-semibold text-slate-900 bg-white"
                       />
                       <div className="flex items-center gap-1 text-[11px] text-slate-500">
                         <span>{language === 'en' ? 'Amortize over' : '分摊'}</span>
-                        <input
-                          type="number"
+                        <NumberField
                           min={1}
-                          value={formData.visaFeeAmortizationMonths || ''}
-                          onChange={(e) => updateField('visaFeeAmortizationMonths', Math.max(0, Number(e.target.value) || 0))}
+                          value={formData.visaFeeAmortizationMonths}
+                          onChange={(v) => updateField('visaFeeAmortizationMonths', v)}
                           className="w-12 p-0.5 border border-violet-200 rounded text-center bg-white font-bold"
                         />
                         <span>{language === 'en' ? 'months' : '个月'}</span>
@@ -1992,21 +1974,19 @@ export const AssessmentForm: React.FC<FormProps> = ({
                         />
                         <div className="flex items-center gap-1 shrink-0">
                           <span className="text-[11px] text-slate-500">{language === 'en' ? 'Value' : '设备值'}</span>
-                          <input
-                            type="number"
+                          <NumberField
                             min={0}
-                            value={it.value || ''}
-                            onChange={(e) => updateDynamicEquipmentItem(it.id, { value: Number(e.target.value) })}
+                            value={it.value}
+                            onChange={(v) => updateDynamicEquipmentItem(it.id, { value: v })}
                             className="w-20 p-1.5 border border-violet-200 rounded-lg font-mono font-semibold text-right bg-white"
                           />
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
                           <span className="text-[11px] text-slate-500">÷</span>
-                          <input
-                            type="number"
+                          <NumberField
                             min={1}
-                            value={it.usefulLifeMonths || ''}
-                            onChange={(e) => updateDynamicEquipmentItem(it.id, { usefulLifeMonths: Math.max(0, Number(e.target.value) || 0) })}
+                            value={it.usefulLifeMonths}
+                            onChange={(v) => updateDynamicEquipmentItem(it.id, { usefulLifeMonths: v })}
                             className="w-14 p-1.5 border border-violet-200 rounded-lg font-mono font-semibold text-right bg-white"
                           />
                           <span className="text-[11px] text-slate-500">{language === 'en' ? 'months' : '个月'}</span>
@@ -2024,13 +2004,12 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       <label className="font-bold text-slate-800 text-[12px]">
                         {language === 'en' ? 'Other depreciation (supplement, optional)' : '其他补充折旧（可选）'}
                       </label>
-                      <input
-                        type="number"
+                      <NumberField
                         inputMode="numeric"
                         min={0}
                         placeholder={language === 'en' ? 'For small tools not listed above' : '未逐台列出的零散小型设备'}
-                        value={formData.equipmentDepreciationCost.amount || ''}
-                        onChange={(e) => updateMoney('equipmentDepreciationCost', Number(e.target.value))}
+                        value={formData.equipmentDepreciationCost.amount}
+                        onChange={(v) => updateMoney('equipmentDepreciationCost', v)}
                         className="w-full p-2 border border-violet-200 rounded-lg font-semibold text-slate-900 bg-white"
                       />
                     </div>
@@ -2069,12 +2048,11 @@ export const AssessmentForm: React.FC<FormProps> = ({
                         {language === 'en' ? ' (balance, not periodic)' : '（当前余额，非周期性）'}
                       </span>
                     </div>
-                    <input
-                      type="number"
+                    <NumberField
                       inputMode="numeric"
                       min={0}
-                      value={formData.cashAndLiquidAssets.amount || ''}
-                      onChange={(e) => updateMoney('cashAndLiquidAssets', Number(e.target.value))}
+                      value={formData.cashAndLiquidAssets.amount}
+                      onChange={(v) => updateMoney('cashAndLiquidAssets', v)}
                       className="w-full p-2.5 border border-emerald-300 rounded-xl font-black text-emerald-900 text-base bg-white"
                     />
                     <p className="text-[12px] text-slate-500">
@@ -2096,13 +2074,12 @@ export const AssessmentForm: React.FC<FormProps> = ({
                         {language === 'en' ? ' (one-time)' : '（一次性）'}
                       </span>
                     </div>
-                    <input
-                      type="number"
+                    <NumberField
                       inputMode="numeric"
                       min={0}
                       placeholder={language === 'en' ? 'renovation + equipment + stock' : '例如：装修+设备+首批进货'}
-                      value={formData.initialInvestmentEstimate.amount || ''}
-                      onChange={(e) => updateMoney('initialInvestmentEstimate', Number(e.target.value))}
+                      value={formData.initialInvestmentEstimate.amount}
+                      onChange={(v) => updateMoney('initialInvestmentEstimate', v)}
                       className="w-full p-2.5 border border-amber-300 rounded-xl font-bold text-amber-900 bg-white"
                     />
                     <p className="text-[12px] text-amber-700">
@@ -2212,11 +2189,10 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     <div className="pt-2 border-t border-indigo-100 space-y-2">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-bold text-indigo-900">{language === 'en' ? 'Target payback period:' : '如果我想在'}</span>
-                        <input
-                          type="number"
+                        <NumberField
                           min={1}
-                          value={formData.targetPaybackMonths || ''}
-                          onChange={(e) => updateField('targetPaybackMonths', Number(e.target.value) || 0)}
+                          value={formData.targetPaybackMonths}
+                          onChange={(v) => updateField('targetPaybackMonths', v)}
                           className="w-20 p-1.5 border border-indigo-300 rounded-lg font-black text-indigo-900 text-center bg-white"
                         />
                         <span className="font-bold text-indigo-900">{language === 'en' ? 'months, required monthly revenue:' : '个月内回本，至少要赚多少？'}</span>
@@ -2394,10 +2370,9 @@ export const AssessmentForm: React.FC<FormProps> = ({
                           </div>
                           <div className="flex items-center gap-1">
                             <span className="text-xs text-slate-400">{formData.baseCurrency}</span>
-                            <input
-                              type="number"
-                              value={b.revenue.amount || ''}
-                              onChange={(e) => updateMonthlyBreakdown(idx, Number(e.target.value))}
+                            <NumberField
+                              value={b.revenue.amount}
+                              onChange={(v) => updateMonthlyBreakdown(idx, v)}
                               className="w-full p-1 border border-slate-300 rounded font-bold text-slate-800 bg-white"
                             />
                           </div>
@@ -2657,23 +2632,17 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
                     <div>
                       <label className="block font-bold text-slate-800 mb-1">{language === 'en' ? 'Months of Continuous Stable Operation' : '连续稳定经营月数'}</label>
-                      <input
-                        type="number"
-                        value={formData.operatingMonthsCount || ''}
-                        onChange={(e) =>
-                          updateField('operatingMonthsCount', Math.max(1, Number(e.target.value)))
-                        }
+                      <NumberField
+                        value={formData.operatingMonthsCount}
+                        onChange={(v) => updateField('operatingMonthsCount', v)}
                         className="w-full p-2.5 border border-slate-300 rounded-xl font-bold"
                       />
                     </div>
                     <div>
                       <label className="block font-bold text-slate-800 mb-1">{language === 'en' ? 'Number of Full-time/Part-time Employees' : '全职/兼职雇员人数'}</label>
-                      <input
-                        type="number"
-                        value={formData.fullTimeEmployeesCount || ''}
-                        onChange={(e) =>
-                          updateField('fullTimeEmployeesCount', Math.max(0, Number(e.target.value)))
-                        }
+                      <NumberField
+                        value={formData.fullTimeEmployeesCount}
+                        onChange={(v) => updateField('fullTimeEmployeesCount', v)}
                         className="w-full p-2.5 border border-slate-300 rounded-xl font-bold"
                       />
                     </div>
