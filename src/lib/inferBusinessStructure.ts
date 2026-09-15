@@ -309,21 +309,20 @@ export function getIndustryTemplateByKey(
  * 数值均为粗略区间估值（USD），仅供小微经营者填报前参考，实际以当地税务与移民主管部门为准，
  * 用户在表单中核实后可自由修改覆盖，不作为最终计算依据。
  */
-const REGULATORY_COST_TABLE: Record<
-  string,
-  {
-    countryLabel: string;
-    countryLabelEn: string;
-    taxHint: string;
-    taxHintEn: string;
-    registrationUsd: number;
-    visaUsd: number;
-    sourceNote: string;
-    sourceNoteEn: string;
-  }
-> = {
+interface RegulatoryTableEntry {
+  countryLabel: string;
+  countryLabelEn: string;
+  taxHint: string;
+  taxHintEn: string;
+  registrationUsd: number;
+  visaUsd: number;
+  sourceNote: string;
+  sourceNoteEn: string;
+}
+
+const REGULATORY_COST_TABLE: Record<string, RegulatoryTableEntry> = {
   KES: {
-    countryLabel: '肯尼亚 (Kenya)',
+    countryLabel: '肯尼亚',
     countryLabelEn: 'Kenya',
     taxHint: '小微个体户 Turnover Tax 约 1%-3%；有限公司企业所得税约 30%',
     taxHintEn: 'Micro sole-proprietor Turnover Tax approx. 1%-3%; limited company corporate tax approx. 30%',
@@ -333,7 +332,7 @@ const REGULATORY_COST_TABLE: Record<
     sourceNoteEn: 'Based on Kenya KRA micro-business tax rules and published eCitizen business registration fee ranges; verify against the current year\'s notices'
   },
   NGN: {
-    countryLabel: '尼日利亚 (Nigeria)',
+    countryLabel: '尼日利亚',
     countryLabelEn: 'Nigeria',
     taxHint: '小微企业（年营业额 < 2500万奈拉）通常免征企业所得税；否则约 20%-30%',
     taxHintEn: 'Small businesses (annual turnover < NGN 25M) are typically exempt from corporate tax; otherwise approx. 20%-30%',
@@ -343,7 +342,7 @@ const REGULATORY_COST_TABLE: Record<
     sourceNoteEn: 'Based on Nigeria CAC company registration fees and Federal Inland Revenue small-business incentive ranges'
   },
   EGP: {
-    countryLabel: '埃及 (Egypt)',
+    countryLabel: '埃及',
     countryLabelEn: 'Egypt',
     taxHint: '个体经营/中小企业所得税约 22.5%，另有增值税约 14%',
     taxHintEn: 'Sole trader/SME income tax approx. 22.5%, plus VAT approx. 14%',
@@ -353,7 +352,7 @@ const REGULATORY_COST_TABLE: Record<
     sourceNoteEn: 'Based on published fee ranges from the Egyptian Tax Authority and commercial registry'
   },
   ETB: {
-    countryLabel: '埃塞俄比亚 (Ethiopia)',
+    countryLabel: '埃塞俄比亚',
     countryLabelEn: 'Ethiopia',
     taxHint: '小微营业执照分级定额税，或按利润征收 10%-35% 累进税',
     taxHintEn: 'Tiered flat tax for micro business licenses, or a progressive 10%-35% tax on profit',
@@ -363,7 +362,7 @@ const REGULATORY_COST_TABLE: Record<
     sourceNoteEn: 'Based on the Ethiopian tax authority\'s tiered flat-tax schedule for micro businesses'
   },
   THB: {
-    countryLabel: '泰国 (Thailand)',
+    countryLabel: '泰国',
     countryLabelEn: 'Thailand',
     taxHint: '中小企业所得税分级约 0%-20%（净利前 30 万泰铢免税）',
     taxHintEn: 'SME income tax tiers approx. 0%-20% (first THB 300,000 net profit is tax-exempt)',
@@ -373,7 +372,7 @@ const REGULATORY_COST_TABLE: Record<
     sourceNoteEn: 'Based on Thailand Department of Business Development registration fees and published Non-Immigrant visa/work permit rates'
   },
   VND: {
-    countryLabel: '越南 (Vietnam)',
+    countryLabel: '越南',
     countryLabelEn: 'Vietnam',
     taxHint: '个体经营户定额税或企业所得税 20%，视经营形式而定',
     taxHintEn: 'Household business flat tax, or 20% corporate income tax, depending on business form',
@@ -383,7 +382,7 @@ const REGULATORY_COST_TABLE: Record<
     sourceNoteEn: 'Based on Vietnam Ministry of Planning and Investment registration fees and published work permit fee ranges'
   },
   IDR: {
-    countryLabel: '印度尼西亚 (Indonesia)',
+    countryLabel: '印度尼西亚',
     countryLabelEn: 'Indonesia',
     taxHint: '小微企业（年营业额 < 48 亿印尼盾）最终所得税约 0.5%',
     taxHintEn: 'Small businesses (annual turnover < IDR 4.8B) final income tax approx. 0.5%',
@@ -393,7 +392,7 @@ const REGULATORY_COST_TABLE: Record<
     sourceNoteEn: 'Based on Indonesia OSS single-window registration and published KITAS work permit fee ranges'
   },
   PHP: {
-    countryLabel: '菲律宾 (Philippines)',
+    countryLabel: '菲律宾',
     countryLabelEn: 'Philippines',
     taxHint: '小微企业（年营业额 < 300 万比索）可选 8% 简易所得税',
     taxHintEn: 'Small businesses (annual turnover < PHP 3M) may opt into a simplified 8% income tax',
@@ -403,7 +402,7 @@ const REGULATORY_COST_TABLE: Record<
     sourceNoteEn: 'Based on Philippines DTI/BIR registration fees and published 9(g) work visa fee ranges'
   },
   MMK: {
-    countryLabel: '缅甸 (Myanmar)',
+    countryLabel: '缅甸',
     countryLabelEn: 'Myanmar',
     taxHint: '小微商业执照定额税或利得税约 22%-25%',
     taxHintEn: 'Flat tax for micro business licenses, or profit tax approx. 22%-25%',
@@ -413,7 +412,7 @@ const REGULATORY_COST_TABLE: Record<
     sourceNoteEn: 'Based on published registration and visa fee ranges from Myanmar\'s Directorate of Investment and Company Administration'
   },
   KHR: {
-    countryLabel: '柬埔寨 (Cambodia)',
+    countryLabel: '柬埔寨',
     countryLabelEn: 'Cambodia',
     taxHint: '小微纳税人定额税，或年利润税 20%',
     taxHintEn: 'Flat tax for small taxpayers, or 20% annual profit tax',
@@ -423,7 +422,7 @@ const REGULATORY_COST_TABLE: Record<
     sourceNoteEn: 'Based on Cambodia Ministry of Commerce registration fees and published business visa/work permit fee ranges'
   },
   LAK: {
-    countryLabel: '老挝 (Laos)',
+    countryLabel: '老挝',
     countryLabelEn: 'Laos',
     taxHint: '小微企业利润税约 3%-7%（分级），一般企业所得税 20%',
     taxHintEn: 'Small business profit tax approx. 3%-7% (tiered); standard corporate income tax 20%',
@@ -433,7 +432,7 @@ const REGULATORY_COST_TABLE: Record<
     sourceNoteEn: 'Based on Laos Ministry of Industry and Commerce registration fees and published business visa fee ranges'
   },
   BDT: {
-    countryLabel: '孟加拉国 (Bangladesh)',
+    countryLabel: '孟加拉国',
     countryLabelEn: 'Bangladesh',
     taxHint: '小微企业所得税约 15%-25%（分级）',
     taxHintEn: 'Small business income tax approx. 15%-25% (tiered)',
@@ -443,7 +442,7 @@ const REGULATORY_COST_TABLE: Record<
     sourceNoteEn: 'Based on Bangladesh RJSC business registration fees and published business visa fee ranges'
   },
   LKR: {
-    countryLabel: '斯里兰卡 (Sri Lanka)',
+    countryLabel: '斯里兰卡',
     countryLabelEn: 'Sri Lanka',
     taxHint: '小微企业（利润 < 一定门槛）所得税 0%，超过部分 15%-30%',
     taxHintEn: 'Small businesses (profit below a threshold) pay 0% income tax; amounts above it are taxed at 15%-30%',
@@ -463,7 +462,7 @@ const REGULATORY_COST_TABLE: Record<
     sourceNoteEn: 'Based on mainland China\'s inclusive tax relief policies for small/micro businesses (business registration itself is usually free)'
   },
   USD: {
-    countryLabel: '美国 (United States)',
+    countryLabel: '美国',
     countryLabelEn: 'United States',
     taxHint: '联邦企业所得税 21%，另有州税与自雇税，视州与经营形式而定',
     taxHintEn: 'Federal corporate income tax 21%, plus state tax and self-employment tax depending on state and business form',
@@ -483,7 +482,7 @@ const REGULATORY_COST_TABLE: Record<
     sourceNoteEn: 'Based on published business registry fees across EU member states and long-stay Schengen visa fee ranges'
   },
   GBP: {
-    countryLabel: '英国 (United Kingdom)',
+    countryLabel: '英国',
     countryLabelEn: 'United Kingdom',
     taxHint: '小型企业企业所得税约 19%（利润 < 5 万英镑）',
     taxHintEn: 'Small business corporate tax approx. 19% (profit < GBP 50,000)',
@@ -494,16 +493,19 @@ const REGULATORY_COST_TABLE: Record<
   }
 };
 
-/** 供表单「所在国家/地区」下拉框使用的可选项列表，与属地成本参考表共用同一份数据源，
- *  避免下拉框选项和实际估值表各自维护、出现选了 A 国却仍显示 B 国参考值的不一致。 */
-export const REGULATORY_COUNTRY_OPTIONS: Array<{ code: string; countryLabel: string; countryLabelEn: string }> =
-  Object.entries(REGULATORY_COST_TABLE).map(([code, v]) => ({
-    code,
-    countryLabel: v.countryLabel,
-    countryLabelEn: v.countryLabelEn
+/** 供表单「公司注册所在国家/地区」下拉框使用的可选项列表：覆盖 SUPPORTED_CURRENCIES 里
+ *  的全部国家/地区（全球范围，而不仅限于下方已研究详细税率的十几个国家），code 直接就是
+ *  该国法定货币代码，选中后可直接联动主报告币种。没有详细税率数据的国家会在
+ *  inferRegulatoryCosts 里退回通用参考区间，但国家名称本身仍然准确。 */
+export const REGULATORY_COUNTRY_OPTIONS: Array<{ code: string; countryLabel: string; countryLabelEn: string; iso2?: string }> =
+  SUPPORTED_CURRENCIES.filter((c) => !c.isCustomOption && c.countryZh).map((c) => ({
+    code: c.code,
+    countryLabel: c.countryZh!,
+    countryLabelEn: c.countryEn || c.countryZh!,
+    iso2: c.iso2
   }));
 
-const DEFAULT_REGULATORY_ESTIMATE = {
+const DEFAULT_REGULATORY_ESTIMATE: RegulatoryTableEntry = {
   countryLabel: '通用/未识别地区',
   countryLabelEn: 'General / Unidentified Region',
   taxHint: '多数国家小微企业所得税区间约 10%-30%，具体请核对当地税务主管部门规定',
@@ -514,8 +516,26 @@ const DEFAULT_REGULATORY_ESTIMATE = {
   sourceNoteEn: 'Could not identify a specific country from the business name — the figures below are a general cross-region reference; please verify and adjust'
 };
 
+/** 已选定具体国家/地区、但该国暂无详细税率/注册/签证研究数据时使用：国家名称准确，
+ *  数值退回跨地区通用参考区间（与 DEFAULT_REGULATORY_ESTIMATE 的区间一致），并在来源说明里
+ *  如实标注"暂无该国详细数据"，而不是笼统地显示"未识别地区"。 */
+function genericEstimateForCountry(countryLabel: string, countryLabelEn: string): RegulatoryTableEntry {
+  return {
+    countryLabel,
+    countryLabelEn,
+    taxHint: DEFAULT_REGULATORY_ESTIMATE.taxHint,
+    taxHintEn: DEFAULT_REGULATORY_ESTIMATE.taxHintEn,
+    registrationUsd: DEFAULT_REGULATORY_ESTIMATE.registrationUsd,
+    visaUsd: DEFAULT_REGULATORY_ESTIMATE.visaUsd,
+    sourceNote: '暂无该国详细税率/注册/签证研究数据，以下为跨地区小微企业通用参考区间，请务必核实修改',
+    sourceNoteEn: 'No detailed tax/registration/visa research data for this country yet — the figures below are a general cross-region reference; please verify and adjust'
+  };
+}
+
 /**
- * 属地税收/公司注册/签证成本 AI 预估（第5点）：根据店名/地区关键词与当前主币种，
+ * 属地税收/公司注册/签证成本 AI 预估（第5点）：优先按用户在「公司注册所在国家/地区」下拉框
+ * 里选定的国家（与 REGULATORY_COUNTRY_OPTIONS 精确匹配，覆盖全球全部国家/地区），
+ * 找不到精确匹配时才退回按店名/地区关键词推断（仅覆盖十几个 BAM 重点地区），
  * 给出该地区大致企业税率区间说明 + 注册费用与签证费用的估值（已折算为主币种），
  * 供用户在表单中核实、并可自由修改覆盖，不直接参与最终打分计算。
  */
@@ -524,12 +544,21 @@ export function inferRegulatoryCosts(
   baseCurrency: CurrencyCode = 'USD',
   language: Language = 'zh'
 ): RegulatoryCostEstimate & { registrationLocal: number; visaLocal: number } {
-  const pLower = (projectNameOrCountry || '').toLowerCase();
-  // 只有当店名/地区文本里真的出现了可识别的地区关键词时，才使用该国的税率/注册/签证成本表；
-  // 否则一律回退到"通用/未识别地区"参考值，不能因为当前主币种恰好是 USD
-  // 就把美国的属地合规成本标准套到一个完全没提及地区的项目上。
-  const detectedCurrency = detectCountryCurrency(pLower);
-  const table = detectedCurrency ? REGULATORY_COST_TABLE[detectedCurrency] || DEFAULT_REGULATORY_ESTIMATE : DEFAULT_REGULATORY_ESTIMATE;
+  const raw = (projectNameOrCountry || '').trim();
+  const pLower = raw.toLowerCase();
+
+  // 用户从下拉框里选择时，传入的就是与某个选项完全一致的 countryLabel（无论界面语言，
+  // 下拉框的 value 始终是中文 label），精确匹配即可覆盖全部国家/地区，
+  // 不再受限于只认识十几个关键词的 detectCountryCurrency。
+  const exactOption = REGULATORY_COUNTRY_OPTIONS.find((o) => o.countryLabel === raw);
+  const detectedCurrency = exactOption ? (exactOption.code as CurrencyCode) : detectCountryCurrency(pLower);
+
+  const table: RegulatoryTableEntry =
+    (detectedCurrency && REGULATORY_COST_TABLE[detectedCurrency]) ||
+    (exactOption
+      ? genericEstimateForCountry(exactOption.countryLabel, exactOption.countryLabelEn)
+      : DEFAULT_REGULATORY_ESTIMATE);
+
   const rate = SUPPORTED_CURRENCIES.find((c) => c.code === baseCurrency)?.rateToUsd || 1;
   const toLocal = (usd: number) => Math.round(usd * rate);
   const isEn = language === 'en';

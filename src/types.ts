@@ -12,6 +12,10 @@ export interface CurrencyRate {
   rateToUsd: number; // 1 USD = X Local
   region?: string; // 洲际大区分类
   isCustomOption?: boolean; // 是否为"自定义币种"占位项
+  countryZh?: string; // 该货币对应的主要国家/地区名（中文），用于「公司注册所在国家/地区」下拉框
+  countryEn?: string; // 该货币对应的主要国家/地区名（英文）
+  iso2?: string; // 该国家的 ISO 3166-1 alpha-2 代码，供 country-state-city 库查询省/州列表；
+  // 多国共用的区域性货币（欧元/西非法郎/中非法郎）不对应单一国家，留空即可（不提供省/州下拉）
 }
 
 export type ProofType =
