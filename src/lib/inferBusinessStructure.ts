@@ -494,6 +494,15 @@ const REGULATORY_COST_TABLE: Record<
   }
 };
 
+/** 供表单「所在国家/地区」下拉框使用的可选项列表，与属地成本参考表共用同一份数据源，
+ *  避免下拉框选项和实际估值表各自维护、出现选了 A 国却仍显示 B 国参考值的不一致。 */
+export const REGULATORY_COUNTRY_OPTIONS: Array<{ code: string; countryLabel: string; countryLabelEn: string }> =
+  Object.entries(REGULATORY_COST_TABLE).map(([code, v]) => ({
+    code,
+    countryLabel: v.countryLabel,
+    countryLabelEn: v.countryLabelEn
+  }));
+
 const DEFAULT_REGULATORY_ESTIMATE = {
   countryLabel: '通用/未识别地区',
   countryLabelEn: 'General / Unidentified Region',

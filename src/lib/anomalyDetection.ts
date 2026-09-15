@@ -117,15 +117,39 @@ export function detectFormAnomalies(formData: BusinessFormData): FormAnomalyWarn
     });
   }
 
-  // 8) 税金及规费为 0 但已填其他大额开销：提醒别漏了这一项（呼应第1点，成本要算全）
-  // 注意：不用"总流水 > 某个绝对数值"做前置条件——不同币种下同样的业务规模数值差几个数量级
-  // （如 VND/IDR 动辄六位数、KWD 却不到 1），只要已经有真实的房租或人工开销，就值得提醒核实。
-  if (tax === 0 && (fixedOpex > 0 || labor > 0)) {
+  // 8) 税金及规费为 0：提醒别漏了这一项（呼应第1点，成本要算全）。
+  // 不再要求「已填其他大额开销」这个前置条件——多数地区小微经营本就会有营业执照年费、定额税
+  // 或增值税，税金填 0 本身就值得核实，不必等房租/人工也填了才提醒（对应反馈规则表 R6）。
+  if (tax === 0) {
     warnings.push({
       field: 'taxCost',
       severity: 'warning',
-      messageZh: '税金及规费填的是 0：多数地区小微经营也会有营业执照年费、定额税或增值税，建议核实清楚后填写，避免成本算漏。',
-      messageEn: 'Tax & regulatory fees are set to 0. Most regions still charge some license fee or flat tax for micro-businesses — please verify to avoid under-counting costs.'
+      messageZh: '未填写税金，实际经营中通常无法完全免税，请确认是否漏填。',
+      messageEn: 'Tax & regulatory fees are set to 0 — most businesses can\'t fully avoid tax in practice. Please confirm this wasn\'t left blank.'
+    });
+  } else if (revenue > 0 && tax > revenue * 0.3) {
+    // 8b) 税金及规费占总流水比例明显异常：多半是把年度税额误填成了月度（对应反馈规则表 R7）
+    warnings.push({
+      field: 'taxCost',
+      severity: 'warning',
+      messageZh: '税金及规费占营业额比例偏高，请确认是否误填了年度金额（如果是，可以直接除以 12 换算成月度）。',
+      messageEn: 'Tax & fees look high relative to revenue — please confirm this isn\'t an annual figure entered as monthly (if it is, divide by 12).'
+    });
+  }
+
+  // 8c) 启动资金不足以覆盖一次性投入：公司注册/签证/设备等一次性投入合计超过了填的启动资金，
+  // 意味着日常周转资金为负（对应反馈规则表 R4）。
+  const oneTimeInvestment =
+    conv(formData.companyRegistrationCost) +
+    conv(formData.visaFeeCost) +
+    (formData.dynamicEquipmentItems || []).reduce((s, it) => s + (Number(it.value) || 0), 0);
+  const startupCapital = conv(formData.initialInvestmentEstimate);
+  if (oneTimeInvestment > 0 && startupCapital > 0 && startupCapital < oneTimeInvestment) {
+    warnings.push({
+      field: 'initialInvestmentEstimate',
+      severity: 'warning',
+      messageZh: '你的启动资金不足以覆盖公司注册/签证/设备等一次性投入，日常周转资金将为负，请确认金额是否填对。',
+      messageEn: 'Your initial investment doesn\'t cover one-time costs (registration/visa/equipment) — working capital would be negative. Please confirm the figures.'
     });
   }
 
