@@ -27,7 +27,8 @@ import {
   Plane,
   Wrench,
   Target,
-  AlertOctagon
+  AlertOctagon,
+  Search
 } from 'lucide-react';
 import {
   BusinessFormData,
@@ -47,7 +48,8 @@ import {
   normalizeIndustryKey,
   getIndustryTemplateByKey,
   inferRegulatoryCosts,
-  InferredStructure
+  InferredStructure,
+  REGULATORY_COUNTRY_OPTIONS
 } from '../../lib/inferBusinessStructure';
 import { calculateBreakEvenRevenue } from '../../lib/breakEvenCalculator';
 import { calculatePaybackPeriod, calculateRequiredRevenueForTarget } from '../../lib/paybackCalculator';
@@ -139,7 +141,9 @@ const DEFAULT_FORM_DATA: BusinessFormData = {
   targetPaybackMonths: 12,
   anomalyOverrides: {},
   isSensitiveRegion: false,
-  regionCountry: '肯尼亚 (Kenya)',
+  // 留空而不是硬编码某个国家：一个没人选过的默认值会被当成真实选择去推算税率/注册/签证成本，
+  // 参见下方「所在国家/地区」下拉框——首次进入时应显示未选择，而不是悄悄把新用户判成肯尼亚。
+  regionCountry: '',
   regionDetail: '',
   contactChannel: '',
   anonymousOwnerName: '',
@@ -166,6 +170,7 @@ const DEFAULT_FORM_DATA: BusinessFormData = {
   laborCost: { amount: 0, currency: 'USD' },
   utilityCost: { amount: 0, currency: 'USD' },
   taxCost: { amount: 0, currency: 'USD' },
+  dynamicTaxItems: [],
   otherOpex: { amount: 0, currency: 'USD' },
   companyRegistrationCost: { amount: 0, currency: 'USD' },
   companyRegistrationAmortizationMonths: 12,
@@ -238,13 +243,13 @@ export const AssessmentForm: React.FC<FormProps> = ({
   const inferReqId = React.useRef(0);
 
   // —— 第5点：属地税收/公司注册/签证成本 AI 预估（可核实修改，不直接参与计算）——
-  // 注意：优先用项目名（与行业/币种推断同一信号源），不用 regionCountry——
-  // regionCountry 只在"敏感地区安全模式"开启时才会展示给用户填写，未开启时它要么是空字符串、
-  // 要么（首次进入、尚无任何项目时）取到表单默认值"肯尼亚 (Kenya)"，会让几乎所有新用户
-  // 在还没填任何信息前就被误判成肯尼亚，与实际所在国家/所选币种无关。
+  // 优先用用户在「全球化经营成本」区域明确选择的所在国家/地区（见下方 regionCountry 下拉框）；
+  // 只有用户还没选择时，才退回到用店名/项目名猜地区这条弱信号，避免几乎所有新用户在还没填
+  // 任何信息前就被悄悄套用某个不相关国家的税率/注册/签证费标准（反馈：全球化成本的AI估计值
+  // 数据来源不明——没有明确的地区输入，用户没法判断参考值是基于什么算出来的）。
   const regulatoryEstimate = React.useMemo(
-    () => inferRegulatoryCosts(formData.projectName, formData.baseCurrency, language),
-    [formData.projectName, formData.baseCurrency, language]
+    () => inferRegulatoryCosts(formData.regionCountry || formData.projectName, formData.baseCurrency, language),
+    [formData.regionCountry, formData.projectName, formData.baseCurrency, language]
   );
 
   // —— 第3点：根据已填成本自动算出保本收入（每天/每月至少赚多少才不亏钱）——
@@ -362,6 +367,45 @@ export const AssessmentForm: React.FC<FormProps> = ({
       delete next[field];
       return { ...prev, anomalyOverrides: next, updatedAt: new Date().toISOString() };
     });
+  };
+
+  // 反馈第6点「给开发的补充说明」：提醒应在对应字段旁就地展示，不要只集中到提交时统一弹窗——
+  // 用户填到后面才被告知前面有问题，返工成本很高。这里从已算好的 anomalyWarnings 里按字段取出，
+  // 就地渲染在该字段下方，和底部的汇总列表共用同一份数据、同一套"标注特殊理由"交互。
+  const renderInlineAnomalies = (fieldKey: string) => {
+    const matches = anomalyWarnings.filter((w) => w.field === fieldKey);
+    if (matches.length === 0) return null;
+    return (
+      <div className="mt-2 space-y-1.5">
+        {matches.map((w, idx) => (
+          <div
+            key={`${fieldKey}-inline-${idx}`}
+            className={`p-2 rounded-lg border flex items-start gap-1.5 text-[12px] ${
+              w.severity === 'error'
+                ? 'bg-rose-100/70 border-rose-300 text-rose-900'
+                : 'bg-amber-50/70 border-amber-300 text-amber-900'
+            }`}
+          >
+            <span className="font-bold shrink-0">{w.severity === 'error' ? '⚠️' : '💡'}</span>
+            <span className="flex-1 font-medium">{language === 'en' ? w.messageEn : w.messageZh}</span>
+            <button
+              type="button"
+              onClick={() => {
+                const reason = window.prompt(
+                  language === 'en'
+                    ? 'Is this value genuinely unusual? Briefly explain why:'
+                    : '这个数值确实特殊？简单说明原因（AI 只记录，不做判断）：'
+                );
+                if (reason && reason.trim()) setAnomalyOverride(w.field, reason.trim());
+              }}
+              className="text-[11px] shrink-0 px-1.5 py-0.5 rounded bg-white/80 border border-current font-bold hover:bg-white cursor-pointer"
+            >
+              {language === 'en' ? 'Note' : '标注理由'}
+            </button>
+          </div>
+        ))}
+      </div>
+    );
   };
 
   // Auto-save local draft on any change
@@ -552,6 +596,60 @@ export const AssessmentForm: React.FC<FormProps> = ({
     (sum, it) => sum + (Number(it.value) || 0) / Math.max(1, Math.round(Number(it.usefulLifeMonths) || 12)),
     0
   );
+
+  // 反馈问题4：设备清单只给一个「机器A」这样的占位示例，用户不知道该买什么型号、去哪买。
+  // 不做一份维护成本很高的"精选设备型号库"，而是给一个按行业+用户已填名称拼出的谷歌购物/
+  // 二手市场搜索链接，用户点开就能直接看到该类目下的具体型号与市场价，纯前端跳转，无需 AI 调用。
+  const openEquipmentSearch = (label: string) => {
+    const trimmed = (label || '').trim();
+    const placeholder = language === 'en' ? 'New equipment' : '新增设备';
+    const industryHint = cogsFieldMeta.badge;
+    const subject = trimmed && trimmed !== placeholder ? trimmed : `${industryHint}${language === 'en' ? ' equipment' : '常用设备'}`;
+    const query = language === 'en' ? `${subject} price used marketplace` : `${subject} 二手 价格`;
+    window.open(`https://www.google.com/search?tbm=shop&q=${encodeURIComponent(query)}`, '_blank', 'noopener,noreferrer');
+  };
+
+  // —— 税金及规费明细分项（反馈问题1：单个数字太草率，展开后可按增值税/附加税/所得税预估/
+  //     年度规费按月摊等逐项填写，合计自动替代单一数字，且用户能顺带看清自己到底要交哪些税）——
+  const updateDynamicTaxItem = (id: string, patch: Partial<{ label: string; value: number }>) => {
+    setFormData((prev) => ({
+      ...prev,
+      dynamicTaxItems: (prev.dynamicTaxItems || []).map((it) => (it.id === id ? { ...it, ...patch } : it)),
+      updatedAt: new Date().toISOString()
+    }));
+  };
+  const addDynamicTaxItem = (label?: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      dynamicTaxItems: [
+        ...(prev.dynamicTaxItems || []),
+        { id: `tax-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, label: label || (language === 'en' ? 'New tax/fee item' : '新增税费项'), value: 0 }
+      ],
+      updatedAt: new Date().toISOString()
+    }));
+  };
+  const removeDynamicTaxItem = (id: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      dynamicTaxItems: (prev.dynamicTaxItems || []).filter((it) => it.id !== id),
+      updatedAt: new Date().toISOString()
+    }));
+  };
+  const startTaxBreakdown = () => {
+    const labels = language === 'en'
+      ? ['VAT', 'Additional/surtax', 'Income tax estimate', 'Annual dues (amortized monthly)']
+      : ['增值税', '附加税', '所得税预估', '年度规费（按月摊）'];
+    setFormData((prev) => ({
+      ...prev,
+      dynamicTaxItems: labels.map((label, i) => ({
+        id: `tax-${Date.now()}-${i}`,
+        label,
+        value: i === 0 ? Number(prev.taxCost.amount) || 0 : 0
+      })),
+      updatedAt: new Date().toISOString()
+    }));
+  };
+  const dynamicTaxTotal = (formData.dynamicTaxItems || []).reduce((sum, it) => sum + (Number(it.value) || 0), 0);
 
   // —— 行业自定义 / 币种自定义 处理 ——
   const handleIndustryChange = (value: string) => {
@@ -1768,13 +1866,87 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       <label className="font-bold text-slate-800">{language === 'en' ? 'Taxes & Fees' : '税金及规费'}</label>
                       <span className="text-[13px] text-slate-400">{formData.taxCost.currency}/{language === 'en' ? 'mo' : '月'}</span>
                     </div>
-                    <NumberField
-                      inputMode="numeric"
-                      min={0}
-                      value={formData.taxCost.amount}
-                      onChange={(v) => updateMoney('taxCost', v)}
-                      className="w-full p-2 border border-slate-300 rounded-lg font-semibold"
-                    />
+
+                    {dynamicTaxTotal > 0 || (formData.dynamicTaxItems || []).length > 0 ? (
+                      <div className="space-y-1.5">
+                        {(formData.dynamicTaxItems || []).map((it) => (
+                          <div key={it.id} className="flex items-center gap-1.5">
+                            <input
+                              type="text"
+                              value={it.label}
+                              onChange={(e) => updateDynamicTaxItem(it.id, { label: e.target.value })}
+                              className="flex-1 min-w-0 p-1.5 border border-slate-200 rounded-lg text-[12px] font-semibold text-slate-800"
+                            />
+                            <NumberField
+                              value={it.value}
+                              onChange={(v) => updateDynamicTaxItem(it.id, { value: v })}
+                              className="w-20 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                            />
+                            <button type="button" onClick={() => removeDynamicTaxItem(it.id)} className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer shrink-0">
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                        <div className="flex items-center justify-between flex-wrap gap-1.5 pt-0.5">
+                          <button type="button" onClick={() => addDynamicTaxItem()} className="text-[11px] px-2 py-0.5 rounded border border-slate-300 text-slate-600 font-bold hover:bg-slate-100 cursor-pointer">
+                            {language === 'en' ? '+ Add item' : '＋ 添加分项'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { updateField('dynamicTaxItems', []); }}
+                            className="text-[11px] text-slate-400 underline hover:text-slate-600 cursor-pointer"
+                          >
+                            {language === 'en' ? 'Switch back to a single number' : '改回单一数字填写'}
+                          </button>
+                        </div>
+                        <div className="text-[12px] font-black text-slate-800 pt-0.5 border-t border-slate-100">
+                          {language === 'en' ? 'Total (used in analysis):' : '合计（计入分析）：'} {dynamicTaxTotal} {formData.taxCost.currency}/{language === 'en' ? 'mo' : '月'}
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <NumberField
+                          inputMode="numeric"
+                          min={0}
+                          value={formData.taxCost.amount}
+                          onChange={(v) => updateMoney('taxCost', v)}
+                          className="w-full p-2 border border-slate-300 rounded-lg font-semibold"
+                        />
+                        <div className="mt-1 flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={startTaxBreakdown}
+                            className="text-[11px] px-2 py-0.5 rounded border border-slate-300 text-slate-600 font-bold hover:bg-slate-100 cursor-pointer"
+                          >
+                            {language === 'en' ? '+ Break down (VAT / surtax / income tax / annual dues)' : '＋ 展开明细（增值税/附加税/所得税预估/年度规费按月摊）'}
+                          </button>
+                          {formData.taxCost.amount > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => updateMoney('taxCost', Math.round((Number(formData.taxCost.amount) || 0) / 12))}
+                              className="text-[11px] px-2 py-0.5 rounded border border-slate-300 text-slate-600 font-bold hover:bg-slate-100 cursor-pointer"
+                              title={language === 'en' ? 'I entered an annual amount — convert to monthly' : '我填的是年度金额，帮我换算成月度'}
+                            >
+                              {language === 'en' ? '÷12 (annual → monthly)' : '按年填的？÷12 换算成月度'}
+                            </button>
+                          )}
+                        </div>
+                      </>
+                    )}
+
+                    {/* 反馈问题1第1/3层：默认值应有来源标注，数据不全时诚实告知，而不是一个空白框；
+                        这里复用「全球化经营成本」区域已算好的 regulatoryEstimate，同一份数据、同一处地区选择。 */}
+                    <p className="text-[11px] text-slate-500 mt-1.5 leading-relaxed">
+                      {formData.regionCountry
+                        ? (language === 'en'
+                            ? `Reference for ${regulatoryEstimate.countryLabel}: ${regulatoryEstimate.corporateTaxRateHint}. ${regulatoryEstimate.sourceNote}`
+                            : `${regulatoryEstimate.countryLabel}参考：${regulatoryEstimate.corporateTaxRateHint}。${regulatoryEstimate.sourceNote}`)
+                        : (language === 'en'
+                            ? 'No local tax-rate data yet — pick your country/region below in "Global Operating Costs" for a reference range, or consult a local tax authority/accountant before filling this in.'
+                            : '暂无你所在地区的税率参考数据：请在下方「全球化经营成本」区域选择所在国家/地区查看参考区间，或直接咨询当地税务机构/会计师后填写。')}
+                    </p>
+
+                    {renderInlineAnomalies('taxCost')}
                   </div>
 
                   <div className="p-3.5 rounded-xl border border-slate-200 bg-white col-span-1 sm:col-span-2 lg:col-span-2">
@@ -1869,10 +2041,45 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   <div className="flex items-center gap-2">
                     <Building2 className="w-4 h-4 text-violet-600" />
                     <span className="font-black text-violet-950">{language === 'en' ? 'Global Operating Costs (Registration/Visa/Depreciation)' : '全球化经营成本（注册/签证/折旧）'}</span>
-                    <span className="text-[12px] bg-violet-200 text-violet-900 font-bold px-1.5 py-0.5 rounded">
-                      {language === 'en' ? `AI reference for ${regulatoryEstimate.countryLabel}` : `AI 已给出 ${regulatoryEstimate.countryLabel} 参考值`}
-                    </span>
+                    {formData.regionCountry ? (
+                      <span className="text-[12px] bg-violet-200 text-violet-900 font-bold px-1.5 py-0.5 rounded">
+                        {language === 'en' ? `AI reference for ${regulatoryEstimate.countryLabel}` : `AI 已给出 ${regulatoryEstimate.countryLabel} 参考值`}
+                      </span>
+                    ) : (
+                      <span className="text-[12px] bg-amber-200 text-amber-900 font-bold px-1.5 py-0.5 rounded">
+                        {language === 'en' ? 'Country not selected — showing generic reference' : '尚未选择国家 — 当前为通用参考值'}
+                      </span>
+                    )}
                   </div>
+
+                  {/* 反馈：以前完全没有让用户明确选所在国家/地区，只能靠猜店名，
+                      导致这里给出的税收/注册/签证参考值数据来源不透明。改为显式下拉选择，
+                      作为上面 regulatoryEstimate 的唯一权威信号源；不选时诚实标注"通用参考值"。 */}
+                  <div>
+                    <label className="block font-bold text-slate-800 mb-1">
+                      {language === 'en' ? 'Country / Region Located' : '所在国家/地区'}
+                    </label>
+                    <select
+                      value={REGULATORY_COUNTRY_OPTIONS.some((o) => o.countryLabel === formData.regionCountry) ? formData.regionCountry : ''}
+                      onChange={(e) => updateField('regionCountry', e.target.value)}
+                      className="w-full p-2 border border-violet-300 rounded-lg font-semibold text-slate-900 bg-white"
+                    >
+                      <option value="">
+                        {language === 'en' ? '-- Select your country/region --' : '-- 请选择所在国家/地区 --'}
+                      </option>
+                      {REGULATORY_COUNTRY_OPTIONS.map((o) => (
+                        <option key={o.code} value={o.countryLabel}>
+                          {language === 'en' ? o.countryLabelEn : o.countryLabel}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-[12px] text-slate-500 mt-1">
+                      {language === 'en'
+                        ? 'Used only to look up a tax/registration/visa reference range below — never affects your score, and you can still edit every number.'
+                        : '仅用于下方查找税收/注册/签证参考区间，绝不影响得分，所有数字你都可以核实后自由修改。'}
+                    </p>
+                  </div>
+
                   <p className="text-[13px] text-violet-700 leading-relaxed">
                     {regulatoryEstimate.corporateTaxRateHint}
                     {language === 'en' ? '. Below are AI reference estimates — update to your real figures:' : '。以下为 AI 参考估值，请核实后修改为你的真实数字：'}
@@ -1991,6 +2198,14 @@ export const AssessmentForm: React.FC<FormProps> = ({
                           />
                           <span className="text-[11px] text-slate-500">{language === 'en' ? 'months' : '个月'}</span>
                         </div>
+                        <button
+                          type="button"
+                          onClick={() => openEquipmentSearch(it.label)}
+                          title={language === 'en' ? 'Search this equipment online (Google Shopping / marketplace)' : '在网上搜索该设备（谷歌购物/二手市场）'}
+                          className="p-1 text-violet-500 hover:text-violet-700 cursor-pointer shrink-0"
+                        >
+                          <Search className="w-3.5 h-3.5" />
+                        </button>
                         <button type="button" onClick={() => removeDynamicEquipmentItem(it.id)} className="p-1 text-violet-500 hover:text-violet-700 cursor-pointer shrink-0">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -2087,6 +2302,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                         ? 'Used by AI to calculate payback period and target revenue below.'
                         : '填入此项后，下方 AI 会自动测算「回本时间」与「目标反推收入」。'}
                     </p>
+                    {renderInlineAnomalies('initialInvestmentEstimate')}
                   </div>
                 </div>
               </div>

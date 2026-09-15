@@ -39,6 +39,7 @@ export function aggregateMonthlyCosts(
     | 'otherOpex'
     | 'dynamicOpexItems'
     | 'taxCost'
+    | 'dynamicTaxItems'
     | 'existingDebtMonthlyPayment'
     | 'companyRegistrationCost'
     | 'companyRegistrationAmortizationMonths'
@@ -74,7 +75,13 @@ export function aggregateMonthlyCosts(
   const fixedOpex = rent + labor + utility + dynamicOpexTotal;
 
   const otherOpex = conv(formData.otherOpex);
-  const tax = conv(formData.taxCost);
+  // 税金明细（增值税/附加税/所得税预估/年度规费按月摊等）填了的话，用明细合计替代单一税费数字，
+  // 与 COGS 明细同一口径：明细存在即为权威数据源，避免用户改了明细、总数却纹丝不动。
+  const dynamicTaxTotal = (formData.dynamicTaxItems || []).reduce(
+    (sum, it) => sum + (Number(it.value) || 0),
+    0
+  );
+  const tax = dynamicTaxTotal > 0 ? dynamicTaxTotal : conv(formData.taxCost);
   const debtPayment = conv(formData.existingDebtMonthlyPayment);
 
   const registrationMonthly = amortizeMonthly(

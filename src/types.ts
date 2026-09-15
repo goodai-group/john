@@ -114,6 +114,9 @@ export interface BusinessFormData {
   dynamicCogsItems?: DynamicCostItem[];
   dynamicOpexItems?: DynamicOpexItem[];
   dynamicEquipmentItems?: DynamicEquipmentItem[]; // 按台填报的设备清单，月度折旧自动汇总
+  // 税金及规费明细分项（增值税/附加税/所得税预估/年度规费按月摊等），用户展开后填写；
+  // 有明细时其合计替代 taxCost 单一数字作为计算依据，避免用户自己心算一个笼统的总数。
+  dynamicTaxItems?: DynamicCostItem[];
 
   // 敏感地区数据安全模式
   isSensitiveRegion: boolean;
