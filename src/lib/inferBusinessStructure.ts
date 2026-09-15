@@ -497,11 +497,12 @@ const REGULATORY_COST_TABLE: Record<string, RegulatoryTableEntry> = {
  *  的全部国家/地区（全球范围，而不仅限于下方已研究详细税率的十几个国家），code 直接就是
  *  该国法定货币代码，选中后可直接联动主报告币种。没有详细税率数据的国家会在
  *  inferRegulatoryCosts 里退回通用参考区间，但国家名称本身仍然准确。 */
-export const REGULATORY_COUNTRY_OPTIONS: Array<{ code: string; countryLabel: string; countryLabelEn: string }> =
+export const REGULATORY_COUNTRY_OPTIONS: Array<{ code: string; countryLabel: string; countryLabelEn: string; iso2?: string }> =
   SUPPORTED_CURRENCIES.filter((c) => !c.isCustomOption && c.countryZh).map((c) => ({
     code: c.code,
     countryLabel: c.countryZh!,
-    countryLabelEn: c.countryEn || c.countryZh!
+    countryLabelEn: c.countryEn || c.countryZh!,
+    iso2: c.iso2
   }));
 
 const DEFAULT_REGULATORY_ESTIMATE: RegulatoryTableEntry = {

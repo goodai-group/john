@@ -51,6 +51,7 @@ import {
   InferredStructure,
   REGULATORY_COUNTRY_OPTIONS
 } from '../../lib/inferBusinessStructure';
+import { State as StateLib } from 'country-state-city';
 import { calculateBreakEvenRevenue } from '../../lib/breakEvenCalculator';
 import { calculatePaybackPeriod, calculateRequiredRevenueForTarget } from '../../lib/paybackCalculator';
 import { detectFormAnomalies } from '../../lib/anomalyDetection';
@@ -250,6 +251,17 @@ export const AssessmentForm: React.FC<FormProps> = ({
   const regulatoryEstimate = React.useMemo(
     () => inferRegulatoryCosts(formData.regionCountry || formData.projectName, formData.baseCurrency, language),
     [formData.regionCountry, formData.projectName, formData.baseCurrency, language]
+  );
+
+  // 已经选定「公司注册所在国家/地区」后，再用 country-state-city（成熟的现成省/州数据库，
+  // 而不是自己手写一份国家->省州列表）按该国 ISO2 代码查出省/州选项，供下方精确到省/州填写。
+  const regionCountryIso2 = React.useMemo(
+    () => REGULATORY_COUNTRY_OPTIONS.find((o) => o.countryLabel === formData.regionCountry)?.iso2,
+    [formData.regionCountry]
+  );
+  const statesForRegionCountry = React.useMemo(
+    () => (regionCountryIso2 ? StateLib.getStatesOfCountry(regionCountryIso2) : []),
+    [regionCountryIso2]
   );
 
   // —— 第3点：根据已填成本自动算出保本收入（每天/每月至少赚多少才不亏钱）——
@@ -775,13 +787,16 @@ export const AssessmentForm: React.FC<FormProps> = ({
         ...prev,
         ...syncMoneyFieldsToCurrency(prev, matched.code as CurrencyCode),
         regionCountry: value,
+        // 国家变了，此前选的省/州（regionDetail）就不再对应，清空避免残留成另一个国家的省份
+        regionDetail: prev.regionCountry === value ? prev.regionDetail : '',
         baseCurrency: matched.code as CurrencyCode,
         customCurrencyCode: undefined,
         updatedAt: new Date().toISOString()
       }));
       setCustomCurrencyCode('');
     } else {
-      updateField('regionCountry', value);
+      // 清空为「未选择」时，同样清掉不再对应任何国家的省/州
+      setFormData((prev) => ({ ...prev, regionCountry: value, regionDetail: '', updatedAt: new Date().toISOString() }));
     }
   };
 
@@ -2127,6 +2142,46 @@ export const AssessmentForm: React.FC<FormProps> = ({
                         : '在此修改也会同步切换主报告币种为该国货币——绝不影响得分，所有数字你都可以核实后自由修改。'}
                     </p>
                   </div>
+
+                  {/* 国家已经选好了，这里精确到省/州：用 country-state-city（现成的省/州数据库）
+                      按上面选定国家的 ISO2 代码查询，不用自己维护一份国家->省州的列表。
+                      该国在库里没有省/州细分数据时（如欧盟/西非法郎区这类跨国货币区），
+                      退化为自由文本填写，仍然写入同一个 regionDetail 字段。 */}
+                  {formData.regionCountry && (
+                    <div>
+                      <label className="block font-bold text-slate-800 mb-1">
+                        {language === 'en' ? 'State / Province' : '省/州'}
+                      </label>
+                      {statesForRegionCountry.length > 0 ? (
+                        <select
+                          value={formData.regionDetail}
+                          onChange={(e) => updateField('regionDetail', e.target.value)}
+                          className="w-full p-2 border border-violet-300 rounded-lg font-semibold text-slate-900 bg-white"
+                        >
+                          <option value="">
+                            {language === 'en' ? '-- Select state/province (optional) --' : '-- 请选择省/州（可选）--'}
+                          </option>
+                          {statesForRegionCountry.map((s) => (
+                            <option key={s.isoCode} value={s.name}>
+                              {s.name}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          type="text"
+                          value={formData.regionDetail}
+                          onChange={(e) => updateField('regionDetail', e.target.value)}
+                          placeholder={
+                            language === 'en'
+                              ? 'This region has no state/province list — enter manually (optional)'
+                              : '该地区暂无省/州列表，可手动填写（可选）'
+                          }
+                          className="w-full p-2 border border-violet-300 rounded-lg font-medium text-slate-900 bg-white"
+                        />
+                      )}
+                    </div>
+                  )}
 
                   <p className="text-[13px] text-violet-700 leading-relaxed">
                     {regulatoryEstimate.corporateTaxRateHint}
