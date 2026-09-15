@@ -765,6 +765,26 @@ export const AssessmentForm: React.FC<FormProps> = ({
     updateField('customCurrencyCode', code);
   };
 
+  // 公司注册所在国家/地区：第一步选定后直接联动主报告币种（该国法定货币），
+  // 并同步已录入的各明细币种，避免用户后面还要在「高级设置」里重复选一遍币种；
+  // 同一份 regionCountry 也是第5点属地税收/注册/签证参考值的唯一权威信号源。
+  const handleRegionCountryChange = (value: string) => {
+    const matched = REGULATORY_COUNTRY_OPTIONS.find((o) => o.countryLabel === value);
+    if (matched) {
+      setFormData((prev) => ({
+        ...prev,
+        ...syncMoneyFieldsToCurrency(prev, matched.code as CurrencyCode),
+        regionCountry: value,
+        baseCurrency: matched.code as CurrencyCode,
+        customCurrencyCode: undefined,
+        updatedAt: new Date().toISOString()
+      }));
+      setCustomCurrencyCode('');
+    } else {
+      updateField('regionCountry', value);
+    }
+  };
+
   // —— AI 推算：根据项目/店铺名称推断行业、币种与成本结构 ——
   const applyInferResult = (result: InferredStructure) => {
     const patch: Partial<BusinessFormData> = { updatedAt: new Date().toISOString() };
@@ -1246,6 +1266,34 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   </span>
                 )}
               </div>
+            </div>
+
+            {/* 公司注册所在国家/地区：放在第一步，因为它直接决定主报告币种，
+                并作为后面「全球化经营成本」区域税收/注册/签证参考值的唯一权威信号源。 */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
+                <Building2 className="w-3.5 h-3.5 text-teal-600" />
+                <span>{language === 'en' ? 'Company Registration Country / Region' : '公司注册所在国家/地区'}</span>
+              </label>
+              <select
+                value={REGULATORY_COUNTRY_OPTIONS.some((o) => o.countryLabel === formData.regionCountry) ? formData.regionCountry : ''}
+                onChange={(e) => handleRegionCountryChange(e.target.value)}
+                className="w-full p-3 border-2 border-teal-200 focus:border-teal-600 rounded-2xl font-bold text-slate-900 bg-white"
+              >
+                <option value="">
+                  {language === 'en' ? '-- Select where your company is registered --' : '-- 请选择公司注册所在国家/地区 --'}
+                </option>
+                {REGULATORY_COUNTRY_OPTIONS.map((o) => (
+                  <option key={o.code} value={o.countryLabel}>
+                    {language === 'en' ? o.countryLabelEn : o.countryLabel}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[12px] text-slate-500 mt-1">
+                {language === 'en'
+                  ? 'Determines your base currency and the tax/registration/visa reference values shown later — you can still override any of them yourself.'
+                  : '将决定主报告币种，以及后面「全球化经营成本」区域的税收/注册/签证参考值——你随时可以在下方自行修改覆盖。'}
+              </p>
             </div>
 
             {/* 所处阶段：决定后面是「填真实数字体检」还是「先估算未来」 */}
@@ -2061,7 +2109,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     </label>
                     <select
                       value={REGULATORY_COUNTRY_OPTIONS.some((o) => o.countryLabel === formData.regionCountry) ? formData.regionCountry : ''}
-                      onChange={(e) => updateField('regionCountry', e.target.value)}
+                      onChange={(e) => handleRegionCountryChange(e.target.value)}
                       className="w-full p-2 border border-violet-300 rounded-lg font-semibold text-slate-900 bg-white"
                     >
                       <option value="">
@@ -2075,8 +2123,8 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     </select>
                     <p className="text-[12px] text-slate-500 mt-1">
                       {language === 'en'
-                        ? 'Used only to look up a tax/registration/visa reference range below — never affects your score, and you can still edit every number.'
-                        : '仅用于下方查找税收/注册/签证参考区间，绝不影响得分，所有数字你都可以核实后自由修改。'}
+                        ? 'Changing it here also switches your base currency to match — never affects your score, and you can still edit every number.'
+                        : '在此修改也会同步切换主报告币种为该国货币——绝不影响得分，所有数字你都可以核实后自由修改。'}
                     </p>
                   </div>
 
