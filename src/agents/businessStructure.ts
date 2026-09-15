@@ -14,7 +14,12 @@
 //   ✕ 直接写入 confirmed 字段（产物只能是待确认草稿）
 //   ✕ 评价这门生意好不好（那是 Interpreter 的职责）
 import { AgentDefinition, AgentDegradedError, AgentInputError, DegradeReason } from './types.js';
-import { classifyGeminiError, generateGeminiContent, getGeminiClient } from '../server/gemini.js';
+import {
+  classifyGeminiError,
+  generateGeminiContent,
+  getGeminiClient,
+  isGeminiInQuotaCooldown
+} from '../server/gemini.js';
 
 export interface BusinessStructureInput {
   projectName: string;
@@ -43,7 +48,10 @@ export const BUSINESS_STRUCTURE_SYSTEM_INSTRUCTION = `
    此时 suggestedCurrency 字段必须省略（不要输出该字段，也不要输出 null 字符串），
    前端会保留用户当前已选择的币种，不做任何覆盖。
 3. 为该【特定行业与店铺类型】量身定制 2-4 个具体的【直接物料/采购成本填写项 (COGS)】（例如诊所是药品采购、敷料针剂；咖啡店是咖啡豆鲜奶、打包杯袋；语言中心是教材文具印制）。
-4. 为该店铺量身定制 3-5 个具体的【每月固定运营开支填写项 (OPEX)】（例如场地租金、员工薪酬与同工补贴、水电燃气与网络物业、设备折旧维护等）。
+4. 为该店铺量身定制 2-4 个具体的【每月补充运营开支填写项 (OPEX)】——仅限于场地租金、员工薪酬、水电燃气这三类【之外】的、该行业特有的额外固定开支
+   （例如设备折旧维护、保险、许可证年费、清洁与消杀、废物合规处置、软件订阅等）。
+   重要：绝对不要生成场地租金、员工薪酬/同工补贴、水电燃气/网络这三类开支——前端已有专门的固定字段单独填写这些金额，
+   若在 opexItems 中重复给出会导致这些开支被计算两次。
 5. 给出适合该币种和行业的合理默认参考数值。
 
 返回合法的 JSON 格式：
@@ -70,28 +78,22 @@ export const BUSINESS_STRUCTURE_SYSTEM_INSTRUCTION = `
   ],
   "opexItems": [
     {
-      "id": "opex_rent",
-      "name": "诊所临街场地租金",
-      "description": "月度固定支付给房东的铺面租金",
-      "amount": 4500
-    },
-    {
-      "id": "opex_labor",
-      "name": "本地护士与药剂同工补贴",
-      "description": "本地护士、助理与药房管理员薪资补贴",
-      "amount": 6000
-    },
-    {
-      "id": "opex_utility",
-      "name": "冷藏药柜电费、水费与网络",
-      "description": "药品冷藏冰箱、照明用电及宽带通讯",
+      "id": "opex_equipment",
+      "name": "医疗设备折旧与维护",
+      "description": "诊疗器械、冷藏设备的折旧与定期维保",
       "amount": 1200
     },
     {
-      "id": "opex_other",
-      "name": "医疗废物合规处置与杂支",
-      "description": "医疗固废清运与日常清洁耗损",
+      "id": "opex_compliance",
+      "name": "医疗废物合规处置",
+      "description": "医疗固废清运与消毒耗材",
       "amount": 800
+    },
+    {
+      "id": "opex_insurance",
+      "name": "执业保险与许可证年费",
+      "description": "诊所责任险及卫生许可证年费摊销",
+      "amount": 500
     }
   ],
   "benchmarkAdvice": "爱心门诊药品耗材直接成本约占总进账 30%-40%，建议常备 3.5 个月以上固定开支现金储备。"
@@ -126,6 +128,11 @@ export const businessStructureAgent: AgentDefinition<
     const ai = getGeminiClient();
     if (!ai) {
       throw new AgentDegradedError('Gemini API key not configured', null);
+    }
+    // 429 配额冷却期内：不发起注定失败的云端请求，直接如实告知前端稍后重试，
+    // 避免用户切换店铺名称触发第二次推断时立刻再次命中同一次 429。
+    if (isGeminiInQuotaCooldown()) {
+      throw new AgentDegradedError('Gemini 免费配额冷却中，请稍后再试', 'quota');
     }
 
     let replyText: string;

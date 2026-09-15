@@ -2,6 +2,10 @@ import { SUPPORTED_CURRENCIES } from './currencies.js';
 import type { CurrencyCode, Language, RegulatoryCostEstimate } from '../types.js';
 
 export interface InferredStructure {
+  success?: boolean;
+  /** true 表示云端 AI 当前不可用（如配额冷却中），reason 携带具体原因供前端展示 */
+  unavailable?: boolean;
+  reason?: string | null;
   inferredIndustryKey?: string;
   industryDisplayName?: string;
   customIndustryName?: string;
