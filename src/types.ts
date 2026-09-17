@@ -56,6 +56,8 @@ export interface DynamicCostItem {
   value: number;
   isFixed?: boolean;
   suggestedAmount?: number; // AI 推断的参考金额（仅用于占位提示，不参与计算）
+  quantity?: number; // 该项的进货量（选填）
+  unitCost?: number; // 该项的进货单价（选填）；与 quantity 同时填写时，value 自动按两者相乘算出
 }
 
 export interface DynamicOpexItem {
@@ -83,6 +85,16 @@ export interface MoneyField {
   lastEditedAt?: string;
   suggestedAmount?: number; // AI 按属地/行业给出的参考金额（仅占位提示，不参与计算，用户可核实修改）
   aiSourceNote?: string; // AI 给出该参考金额时的依据说明（如"肯尼亚小微企业营业执照年费区间"）
+}
+
+// 收入细节辅助输入（选填）：用「销量×单价」或「客流量×成交率×复购率」估算总流水；
+// 填写后估算结果直接作为「真实经营收入」与「总流水」写入（见 AssessmentForm.tsx 的 applyEstimatedRevenue）
+export interface RevenueDetailEstimate {
+  unitsSold?: number; // 月销售总量
+  avgUnitPrice?: number; // 平均单价/客单价
+  monthlyFootfall?: number; // 月客流量
+  conversionRatePercent?: number; // 成交率（%）
+  repeatPurchaseRatePercent?: number; // 复购率（%），按行业常见公式叠加复购贡献
 }
 
 export interface MonthlyBreakdown {
@@ -156,6 +168,7 @@ export interface BusinessFormData {
   monthlyRevenue: MoneyField; // F8 经营月均总流水
   monthlyRealOperatingRevenue: MoneyField; // 真实主营收入
   monthlyExternalGrants: MoneyField; // 外部支持/捐赠款 (分开填报)
+  revenueDetailEstimate?: RevenueDetailEstimate; // 收入细节辅助输入（选填，用于估算总流水，参见 applyEstimatedRevenue）
   cogsCost: MoneyField; // F10 原材料与直接采购成本
   rentCost: MoneyField; // F11 场地租金与物业
   laborCost: MoneyField; // F12 员工工资与人工支出

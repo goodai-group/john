@@ -39,10 +39,12 @@ import {
   MonthlyBreakdown,
   ProofType,
   proofTypeLabel,
-  ProofExtractedData
+  ProofExtractedData,
+  RevenueDetailEstimate
 } from '../../types';
-import { SUPPORTED_CURRENCIES, formatMoney, CUSTOM_CURRENCY_VALUE } from '../../lib/currencies';
-import { INDUSTRY_BENCHMARKS } from '../../lib/industryBenchmarks';
+import { SUPPORTED_CURRENCIES, formatMoney, convertToTargetCurrency, CUSTOM_CURRENCY_VALUE } from '../../lib/currencies';
+import { INDUSTRY_BENCHMARKS, getIndustryBenchmark } from '../../lib/industryBenchmarks';
+import { estimateMonthlyRevenue } from '../../lib/revenueEstimate';
 import { saveActiveDraft, clearActiveDraft, getActiveDraft } from '../../lib/storage';
 import {
   normalizeIndustryKey,
@@ -223,6 +225,10 @@ export const AssessmentForm: React.FC<FormProps> = ({
   // 折叠区：STEP 1 高级设置（币种/行业/汇率/安全模式）、STEP 2 更多设置（资金证明/经营时长/员工）
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showMore, setShowMore] = useState(false);
+  // 「查基准」：先展示一张按用户主报告币种换算好的基准数值卡片，而不是直接跳转 AI 问答
+  const [showBenchmarkPanel, setShowBenchmarkPanel] = useState(false);
+  // 「赚多少」辅助估算区（销量×单价 / 客流量×成交率×复购率）折叠状态
+  const [showRevenueEstimator, setShowRevenueEstimator] = useState(false);
 
   // —— AI 推算行业/币种/成本结构 相关状态 ——
   const [inferState, setInferState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
@@ -554,11 +560,20 @@ export const AssessmentForm: React.FC<FormProps> = ({
   }, [formData.industry, language]);
 
   // —— 动态成本项（COGS / OPEX）辅助函数 ——
-  const updateDynamicCogsItem = (id: string, patch: Partial<{ label: string; value: number; isFixed: boolean }>) => {
+  const updateDynamicCogsItem = (
+    id: string,
+    patch: Partial<{ label: string; value: number; isFixed: boolean; quantity: number; unitCost: number }>
+  ) => {
     setCogsTouched(true);
     setFormData((prev) => ({
       ...prev,
-      dynamicCogsItems: (prev.dynamicCogsItems || []).map((it) => (it.id === id ? { ...it, ...patch } : it)),
+      dynamicCogsItems: (prev.dynamicCogsItems || []).map((it) => {
+        if (it.id !== id) return it;
+        const merged = { ...it, ...patch };
+        // 该货物填了进货量与进货单价时，金额自动按两者相乘算出，不再需要再手动填一遍总额
+        const value = merged.quantity && merged.unitCost ? merged.quantity * merged.unitCost : merged.value;
+        return { ...merged, value };
+      }),
       updatedAt: new Date().toISOString()
     }));
   };
@@ -704,6 +719,35 @@ export const AssessmentForm: React.FC<FormProps> = ({
   };
   const dynamicTaxTotal = (formData.dynamicTaxItems || []).reduce((sum, it) => sum + (Number(it.value) || 0), 0);
 
+  // —— 收入细节辅助估算：销量×单价 / 客流量×成交率×复购率 ——
+  // 只要填了这些选填字段，估算结果就直接作为「真实经营收入」与「总流水」写入，
+  // 不必再让用户为了对比而重复手动填一遍总额；一旦用户手动改过总流水/真实经营收入，
+  // 后续估算变化就不再自动覆盖，改回自动套用可点「重新套用估算值」。
+  const updateRevenueDetail = (patch: Partial<RevenueDetailEstimate>) => {
+    setFormData((prev) => ({
+      ...prev,
+      revenueDetailEstimate: { ...prev.revenueDetailEstimate, ...patch },
+      updatedAt: new Date().toISOString()
+    }));
+  };
+  const estimatedRevenue = estimateMonthlyRevenue(formData.revenueDetailEstimate);
+  const applyEstimatedRevenue = (revenue: number) => {
+    setFormData((prev) => {
+      const grants = prev.monthlyExternalGrants?.amount || 0;
+      return {
+        ...prev,
+        monthlyRevenue: { ...prev.monthlyRevenue, amount: revenue + grants },
+        monthlyRealOperatingRevenue: { ...prev.monthlyRealOperatingRevenue, amount: revenue },
+        updatedAt: new Date().toISOString()
+      };
+    });
+  };
+  useEffect(() => {
+    if (revenueTouched || estimatedRevenue == null) return;
+    applyEstimatedRevenue(estimatedRevenue);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [estimatedRevenue, revenueTouched, formData.monthlyExternalGrants.amount]);
+
   // —— 行业自定义 / 币种自定义 处理 ——
   const handleIndustryChange = (value: string) => {
     if (value === CUSTOM_INDUSTRY_VALUE) {
@@ -816,6 +860,24 @@ export const AssessmentForm: React.FC<FormProps> = ({
     const code = value.trim().toUpperCase().slice(0, 3);
     setCustomCurrencyCode(code);
     updateField('customCurrencyCode', code);
+  };
+
+  // 「经营月均总流水」的币种下拉：与「高级设置」里的主报告币种走同一套同步逻辑，
+  // 确认后一次性把所有金额字段（成本/开支/现金等）都切到新币种，避免用户逐一手动改。
+  const handleRevenueCurrencyChange = (value: CurrencyCode) => {
+    if (value === formData.monthlyRevenue.currency) return;
+    const ok = window.confirm(
+      language === 'en'
+        ? `Also switch every other amount field (costs, expenses, cash, etc.) on this form to ${value}? Choose Cancel to change only Total Revenue's currency.`
+        : `是否将本表单其他所有金额字段（成本、开支、现金等）也一并切换为 ${value}？选择"取消"则只修改总流水这一项的币种。`
+    );
+    setFormData((prev) => ({
+      ...prev,
+      ...(ok ? syncMoneyFieldsToCurrency(prev, value) : {}),
+      monthlyRevenue: { ...prev.monthlyRevenue, currency: value },
+      baseCurrency: ok ? value : prev.baseCurrency,
+      updatedAt: new Date().toISOString()
+    }));
   };
 
   // 公司注册所在国家/地区：第一步选定后直接联动主报告币种（该国法定货币），
@@ -1031,7 +1093,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
     amount: number,
     currency?: CurrencyCode
   ) => {
-    if (fieldKey === 'monthlyRevenue') setRevenueTouched(true);
+    if (fieldKey === 'monthlyRevenue' || fieldKey === 'monthlyRealOperatingRevenue') setRevenueTouched(true);
 
     let warning = '';
     if (amount < 0) {
@@ -1684,7 +1746,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                         </button>
                         <button
                           type="button"
-                          onClick={() => onOpenAiHelper?.(language === 'en' ? 'What are the average revenue and profit benchmarks across industries?' : '各行业大数据平均流水与利润基准是多少？')}
+                          onClick={() => setShowBenchmarkPanel((v) => !v)}
                           className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-[13px] font-bold transition-colors cursor-pointer"
                         >
                           <BarChart3 className="w-3 h-3 text-emerald-700" />
@@ -1692,7 +1754,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                         </button>
                         <SearchableSelect
                           value={formData.monthlyRevenue.currency}
-                          onChange={(v) => updateMoney('monthlyRevenue', formData.monthlyRevenue.amount, v as CurrencyCode)}
+                          onChange={(v) => handleRevenueCurrencyChange(v as CurrencyCode)}
                           options={compactCurrencyOptions}
                           placeholder={language === 'en' ? 'Currency' : '币种'}
                           controlClassName="px-2 py-1.5 rounded-lg border border-slate-300 font-bold bg-white text-slate-700 text-xs shadow-2xs whitespace-nowrap"
@@ -1714,6 +1776,39 @@ export const AssessmentForm: React.FC<FormProps> = ({
                           : `真实经营收入已自动同步为 ${formatMoney(formData.monthlyRealOperatingRevenue.amount, formData.monthlyRealOperatingRevenue.currency)}（总流水 − 外部赠款）`}
                       </p>
                     )}
+
+                    {showBenchmarkPanel && (() => {
+                      const benchmark = getIndustryBenchmark(formData.industry);
+                      const [lowUsd, highUsd] = benchmark.typicalMonthlyRevenueUsdRange;
+                      const low = convertToTargetCurrency({ amount: lowUsd, currency: 'USD' }, formData.baseCurrency);
+                      const high = convertToTargetCurrency({ amount: highUsd, currency: 'USD' }, formData.baseCurrency);
+                      return (
+                        <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[13px] font-black text-emerald-900">
+                              {language === 'en' ? benchmark.nameEn : benchmark.nameZh}
+                            </span>
+                            <button type="button" onClick={() => onOpenAiHelper?.(language === 'en' ? 'What are the average revenue and profit benchmarks across industries?' : '各行业大数据平均流水与利润基准是多少？')} className="text-[12px] text-emerald-700 underline cursor-pointer">
+                              {language === 'en' ? 'Ask AI for details' : 'AI 详细解答'}
+                            </button>
+                          </div>
+                          <p className="text-[13px] text-emerald-800">
+                            {language === 'en' ? 'Typical monthly revenue: ' : '同行月均流水参考区间：'}
+                            <span className="font-bold">{formatMoney(low, formData.baseCurrency)} – {formatMoney(high, formData.baseCurrency)}</span>
+                          </p>
+                          <p className="text-[12px] text-emerald-700">
+                            {language === 'en'
+                              ? `Gross margin ${benchmark.typicalGrossMargin} · Opex ratio ${benchmark.typicalOpexRatio} · Net margin ${benchmark.typicalNetMargin} · Cash runway ${benchmark.typicalCashRunway}`
+                              : `毛利率 ${benchmark.typicalGrossMargin} · 费用率 ${benchmark.typicalOpexRatio} · 净利率 ${benchmark.typicalNetMargin} · 现金跑道 ${benchmark.typicalCashRunway}`}
+                          </p>
+                          <p className="text-[11px] text-emerald-600">
+                            {language === 'en'
+                              ? `Converted from a USD reference range at an approximate rate — for directional comparison only, not an audited figure.`
+                              : `按近似汇率从美元参考区间换算为 ${formData.baseCurrency} 展示，仅供方向性参考，非精确审计数字。`}
+                          </p>
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1749,8 +1844,11 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     <div className="p-4 rounded-xl bg-white border border-amber-200 space-y-2 text-xs">
                       <div className="flex items-center justify-between">
                         <div>
-                          <label className="font-bold text-amber-950">
-                            {language === 'en' ? 'Of which: external support / institutional grants' : '其中：外部支持款 / 机构赠款'}
+                          <label className="font-bold text-amber-950 flex items-center gap-1.5">
+                            <span>{language === 'en' ? 'Of which: external support / institutional grants' : '其中：外部支持款 / 机构赠款'}</span>
+                            <InfoTooltip language={language} text={language === 'en'
+                              ? 'In most places this is not taxable business revenue. It is only netted out of "Total Revenue" here to compute real operating revenue — it is NOT automatically excluded from the "Taxes & Fees" figure below. Please confirm your local tax rules yourself before filling in Taxes & Fees.'
+                              : '在大多数地区，这笔钱不属于应税营业收入。这里只用它从「总流水」中扣出「真实经营收入」，并不会自动从下方「税金及规费」里扣除。请自行核实当地税法规则后再填写税金一栏。'} />
                           </label>
                         </div>
                         <SearchableSelect
@@ -1777,6 +1875,74 @@ export const AssessmentForm: React.FC<FormProps> = ({
                           : '教会补助、慈善捐赠或救济资金单独列出，不会误计为真实经营占比。'}
                       </p>
                     </div>
+                  </div>
+
+                  {/* 辅助估算：销量×单价 / 客流量×成交率×复购率（全部选填，仅用于估算与核对，不覆盖上方手动填写的总流水） */}
+                  <div className="p-4 rounded-xl bg-slate-50 border border-dashed border-slate-300 space-y-2.5">
+                    <button
+                      type="button"
+                      onClick={() => setShowRevenueEstimator((v) => !v)}
+                      className="w-full flex items-center justify-between text-left cursor-pointer"
+                    >
+                      <span className="text-[13px] font-black text-slate-700 flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-slate-500" />
+                        {language === 'en' ? 'Not sure how much you earn? Estimate from sales volume / foot traffic' : '不清楚流水怎么算？按销量或客流量估算一下'}
+                      </span>
+                      <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${showRevenueEstimator ? 'rotate-180' : ''}`} />
+                    </button>
+                    {showRevenueEstimator && (
+                      <div className="space-y-3 pt-1">
+                        <p className="text-[12px] text-slate-500">
+                          {language === 'en'
+                            ? 'All fields below are optional — fill in whichever you know. Once filled, the estimate below is used directly as your total revenue and real operating revenue, so you don’t need to type the total again separately.'
+                            : '以下字段均为选填，填你知道的即可。一旦填写，下方估算结果会直接作为「总流水」与「真实经营收入」写入，不需要再单独手动填一遍总额。'}
+                        </p>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+                          <div>
+                            <label className="text-[12px] font-bold text-slate-600">{language === 'en' ? 'Units sold / mo' : '月销售总量'}</label>
+                            <NumberField inputMode="numeric" min={0} value={formData.revenueDetailEstimate?.unitsSold || 0} onChange={(v) => updateRevenueDetail({ unitsSold: v || undefined })} className="w-full p-2 border border-slate-300 rounded-lg font-semibold" />
+                          </div>
+                          <div>
+                            <label className="text-[12px] font-bold text-slate-600">{language === 'en' ? 'Avg unit price' : '平均单价/客单价'}</label>
+                            <NumberField inputMode="numeric" min={0} value={formData.revenueDetailEstimate?.avgUnitPrice || 0} onChange={(v) => updateRevenueDetail({ avgUnitPrice: v || undefined })} className="w-full p-2 border border-slate-300 rounded-lg font-semibold" />
+                          </div>
+                          <div>
+                            <label className="text-[12px] font-bold text-slate-600">{language === 'en' ? 'Monthly foot traffic' : '月客流量'}</label>
+                            <NumberField inputMode="numeric" min={0} value={formData.revenueDetailEstimate?.monthlyFootfall || 0} onChange={(v) => updateRevenueDetail({ monthlyFootfall: v || undefined })} className="w-full p-2 border border-slate-300 rounded-lg font-semibold" />
+                          </div>
+                          <div>
+                            <label className="text-[12px] font-bold text-slate-600">{language === 'en' ? 'Conversion rate %' : '成交率(%)'}</label>
+                            <NumberField inputMode="numeric" min={0} value={formData.revenueDetailEstimate?.conversionRatePercent || 0} onChange={(v) => updateRevenueDetail({ conversionRatePercent: v || undefined })} className="w-full p-2 border border-slate-300 rounded-lg font-semibold" />
+                          </div>
+                          <div>
+                            <label className="text-[12px] font-bold text-slate-600">{language === 'en' ? 'Repeat purchase rate %' : '复购率(%)'}</label>
+                            <NumberField inputMode="numeric" min={0} value={formData.revenueDetailEstimate?.repeatPurchaseRatePercent || 0} onChange={(v) => updateRevenueDetail({ repeatPurchaseRatePercent: v || undefined })} className="w-full p-2 border border-slate-300 rounded-lg font-semibold" />
+                          </div>
+                        </div>
+                        {estimatedRevenue != null && (
+                          <div className="flex items-center justify-between flex-wrap gap-2">
+                            <p className="text-[13px] font-semibold text-teal-700">
+                              {revenueTouched
+                                ? (language === 'en'
+                                    ? `Estimated revenue: ${formatMoney(estimatedRevenue, formData.monthlyRevenue.currency)} (not applied — you've edited the total manually)`
+                                    : `估算真实经营收入约为：${formatMoney(estimatedRevenue, formData.monthlyRevenue.currency)}（未自动套用，因为你手动改过总流水/真实经营收入）`)
+                                : (language === 'en'
+                                    ? `Applied: real operating revenue set to ${formatMoney(estimatedRevenue, formData.monthlyRevenue.currency)}, total revenue updated accordingly.`
+                                    : `已自动套用：真实经营收入已设为 ${formatMoney(estimatedRevenue, formData.monthlyRevenue.currency)}，总流水已同步更新。`)}
+                            </p>
+                            {revenueTouched && (
+                              <button
+                                type="button"
+                                onClick={() => { setRevenueTouched(false); applyEstimatedRevenue(estimatedRevenue); }}
+                                className="text-[12px] px-2 py-1 rounded border border-teal-300 text-teal-700 font-bold hover:bg-teal-50 cursor-pointer shrink-0"
+                              >
+                                {language === 'en' ? 'Re-apply estimate' : '重新套用估算值'}
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1839,21 +2005,38 @@ export const AssessmentForm: React.FC<FormProps> = ({
                         <RefreshCw className="inline w-3 h-3 mr-0.5" />{language === 'en' ? 'Restore AI Suggestion' : '恢复 AI 建议'}
                       </button>
                     </div>
-                    <span className="text-[12px] text-rose-700">{language === 'en' ? 'The total of the line items below is your monthly material (variable) cost, and is what feeds the AI analysis directly.' : '以下逐项合计即为每月物料（变动）成本，将直接用于 AI 分析。'}</span>
+                    <span className="text-[12px] text-rose-700">{language === 'en' ? 'The total of the line items below is your monthly material (variable) cost, and is what feeds the AI analysis directly. Fill in a purchase quantity + unit cost for a good and its amount is calculated for you.' : '以下逐项合计即为每月物料（变动）成本，将直接用于 AI 分析。某一货物填了进货量+进货单价后，金额会自动按两者相乘算出。'}</span>
                     {(formData.dynamicCogsItems || []).map((it) => (
-                      <div key={it.id} className="flex items-center gap-2">
+                      <div key={it.id} className="flex items-center gap-1.5 flex-wrap">
                         <input
                           type="text"
                           value={it.label}
                           onChange={(e) => updateDynamicCogsItem(it.id, { label: e.target.value })}
-                          className="flex-1 min-w-0 p-1.5 border border-rose-200 rounded-lg font-semibold text-slate-800"
+                          className="flex-1 min-w-[7rem] p-1.5 border border-rose-200 rounded-lg font-semibold text-slate-800"
                         />
+                        <NumberField
+                          value={it.quantity || 0}
+                          onChange={(v) => updateDynamicCogsItem(it.id, { quantity: v || undefined })}
+                          className="w-16 shrink-0 p-1.5 border border-rose-200 rounded-lg font-mono text-right"
+                          placeholder={language === 'en' ? 'Qty' : '进货量'}
+                          title={language === 'en' ? 'Purchase quantity (optional)' : '进货量（选填）'}
+                        />
+                        <span className="text-[11px] text-rose-700 shrink-0">×</span>
+                        <NumberField
+                          value={it.unitCost || 0}
+                          onChange={(v) => updateDynamicCogsItem(it.id, { unitCost: v || undefined })}
+                          className="w-20 shrink-0 p-1.5 border border-rose-200 rounded-lg font-mono text-right"
+                          placeholder={language === 'en' ? 'Unit cost' : '进货单价'}
+                          title={language === 'en' ? 'Unit purchase cost (optional)' : '进货单价（选填）'}
+                        />
+                        <span className="text-[11px] text-rose-700 shrink-0">=</span>
                         <NumberField
                           value={it.value}
                           onChange={(v) => updateDynamicCogsItem(it.id, { value: v })}
-                          className="w-24 shrink-0 p-1.5 border border-rose-200 rounded-lg font-mono font-semibold text-right"
+                          disabled={Boolean(it.quantity && it.unitCost)}
+                          className="w-24 shrink-0 p-1.5 border border-rose-200 rounded-lg font-mono font-semibold text-right disabled:bg-rose-50 disabled:text-rose-700"
                           placeholder={it.suggestedAmount ? `${language === 'en' ? 'AI suggests' : 'AI建议'} ${it.suggestedAmount}` : (language === 'en' ? 'Amount' : '金额')}
-                          title={it.suggestedAmount ? (language === 'en' ? `AI suggested reference amount: ${it.suggestedAmount} (for reference only, please fill in your real figure)` : `AI 建议参考金额：${it.suggestedAmount}（仅供参考，请填你的真实数字）`) : (language === 'en' ? 'Please fill in your real monthly amount' : '请填你的真实月度金额')}
+                          title={it.suggestedAmount ? (language === 'en' ? `AI suggested reference amount: ${it.suggestedAmount} (for reference only, please fill in your real figure)` : `AI 建议参考金额：${it.suggestedAmount}（仅供参考，请填你的真实数字）`) : (language === 'en' ? 'Please fill in your real monthly amount, or fill quantity × unit cost above' : '请填你的真实月度金额，或改为在左边填进货量×进货单价')}
                         />
                         <span className="text-[12px] text-rose-700 whitespace-nowrap shrink-0 pl-0.5">{formData.baseCurrency}/{language === 'en' ? 'mo' : '月'}</span>
                         {it.suggestedAmount ? (
@@ -1878,6 +2061,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       </span>
                     </div>
                   </div>
+
                 </div>
 
                 {/* 固定开销网格 */}
