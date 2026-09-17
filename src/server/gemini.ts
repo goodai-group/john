@@ -51,6 +51,20 @@ export function isGeminiInQuotaCooldown(): boolean {
 // 因此只保留 3.6-flash，避免回退到不可用的旧模型引发误导性的 404 错误。
 export const GEMINI_MODELS = ['gemini-3.6-flash'];
 
+// 503 UNAVAILABLE（"currently experiencing high demand"）是 Gemini 官方文档明确标注的
+// 瞬时性错误，建议短暂退避后重试；与配额耗尽（429）、鉴权失败等永久性错误不同，
+// 不应立刻降级走 fallback。
+function isRetryableGeminiError(err: unknown): boolean {
+  const message = ((err as any)?.message || String(err) || '');
+  return /503|UNAVAILABLE|overloaded/i.test(message);
+}
+
+const GEMINI_RETRY_DELAYS_MS = [500, 1500];
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function generateGeminiContent(
   contents: string,
   systemInstruction: string,
@@ -61,26 +75,40 @@ export async function generateGeminiContent(
 
   let lastError: unknown = null;
   for (const model of GEMINI_MODELS) {
-    try {
-      const response = await Promise.race([
-        ai.models.generateContent({
-          model,
-          contents,
-          config: {
-            systemInstruction,
-            responseMimeType: 'application/json'
-          }
-        }),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error(`Gemini "${model}" timed out after ${timeoutMs}ms`)), timeoutMs)
-        )
-      ]);
-      const text = response.text || '';
-      if (!text.trim()) throw new Error(`Gemini "${model}" returned an empty response`);
-      return text;
-    } catch (err: any) {
-      lastError = err;
-      console.warn(`Gemini model "${model}" failed:`, err?.message || err);
+    // 单次尝试 + 最多两次针对瞬时性 503 的退避重试，仍共享调用方的整体超时预算
+    // （外层 Agent 调度器已对 def.run 施加了统一超时，这里不再单独放大预算）。
+    for (let attempt = 0; attempt <= GEMINI_RETRY_DELAYS_MS.length; attempt++) {
+      try {
+        const response = await Promise.race([
+          ai.models.generateContent({
+            model,
+            contents,
+            config: {
+              systemInstruction,
+              responseMimeType: 'application/json'
+            }
+          }),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error(`Gemini "${model}" timed out after ${timeoutMs}ms`)), timeoutMs)
+          )
+        ]);
+        const text = response.text || '';
+        if (!text.trim()) throw new Error(`Gemini "${model}" returned an empty response`);
+        return text;
+      } catch (err: any) {
+        lastError = err;
+        const retryDelay = GEMINI_RETRY_DELAYS_MS[attempt];
+        if (retryDelay !== undefined && isRetryableGeminiError(err)) {
+          console.warn(
+            `Gemini model "${model}" hit a transient error, retrying in ${retryDelay}ms:`,
+            err?.message || err
+          );
+          await delay(retryDelay);
+          continue;
+        }
+        console.warn(`Gemini model "${model}" failed:`, err?.message || err);
+        break;
+      }
     }
   }
   throw lastError instanceof Error ? lastError : new Error('All Gemini models failed');
