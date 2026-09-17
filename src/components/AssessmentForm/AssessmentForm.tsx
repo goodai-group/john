@@ -33,7 +33,6 @@ import {
 import {
   BusinessFormData,
   BusinessStage,
-  CogsUnitPricing,
   CurrencyCode,
   Language,
   MoneyField,
@@ -45,7 +44,7 @@ import {
 } from '../../types';
 import { SUPPORTED_CURRENCIES, formatMoney, convertToTargetCurrency, CUSTOM_CURRENCY_VALUE } from '../../lib/currencies';
 import { INDUSTRY_BENCHMARKS, getIndustryBenchmark } from '../../lib/industryBenchmarks';
-import { estimateUnitsSold, estimateMonthlyRevenue, estimateCogs } from '../../lib/revenueEstimate';
+import { estimateMonthlyRevenue } from '../../lib/revenueEstimate';
 import { saveActiveDraft, clearActiveDraft, getActiveDraft } from '../../lib/storage';
 import {
   normalizeIndustryKey,
@@ -561,11 +560,20 @@ export const AssessmentForm: React.FC<FormProps> = ({
   }, [formData.industry, language]);
 
   // —— 动态成本项（COGS / OPEX）辅助函数 ——
-  const updateDynamicCogsItem = (id: string, patch: Partial<{ label: string; value: number; isFixed: boolean }>) => {
+  const updateDynamicCogsItem = (
+    id: string,
+    patch: Partial<{ label: string; value: number; isFixed: boolean; quantity: number; unitCost: number }>
+  ) => {
     setCogsTouched(true);
     setFormData((prev) => ({
       ...prev,
-      dynamicCogsItems: (prev.dynamicCogsItems || []).map((it) => (it.id === id ? { ...it, ...patch } : it)),
+      dynamicCogsItems: (prev.dynamicCogsItems || []).map((it) => {
+        if (it.id !== id) return it;
+        const merged = { ...it, ...patch };
+        // 该货物填了进货量与进货单价时，金额自动按两者相乘算出，不再需要再手动填一遍总额
+        const value = merged.quantity && merged.unitCost ? merged.quantity * merged.unitCost : merged.value;
+        return { ...merged, value };
+      }),
       updatedAt: new Date().toISOString()
     }));
   };
@@ -711,8 +719,10 @@ export const AssessmentForm: React.FC<FormProps> = ({
   };
   const dynamicTaxTotal = (formData.dynamicTaxItems || []).reduce((sum, it) => sum + (Number(it.value) || 0), 0);
 
-  // —— 收入细节辅助估算（销量×单价 / 客流量×成交率×复购率）与 COGS 单件进价联动 ——
-  // 全部字段选填，只用于估算/核对提示，不改写用户手动填写的总流水与 COGS。
+  // —— 收入细节辅助估算：销量×单价 / 客流量×成交率×复购率 ——
+  // 只要填了这些选填字段，估算结果就直接作为「真实经营收入」与「总流水」写入，
+  // 不必再让用户为了对比而重复手动填一遍总额；一旦用户手动改过总流水/真实经营收入，
+  // 后续估算变化就不再自动覆盖，改回自动套用可点「重新套用估算值」。
   const updateRevenueDetail = (patch: Partial<RevenueDetailEstimate>) => {
     setFormData((prev) => ({
       ...prev,
@@ -720,54 +730,23 @@ export const AssessmentForm: React.FC<FormProps> = ({
       updatedAt: new Date().toISOString()
     }));
   };
-  const updateCogsUnitPricing = (patch: Partial<CogsUnitPricing>) => {
-    setFormData((prev) => ({
-      ...prev,
-      cogsUnitPricing: { ...prev.cogsUnitPricing, ...patch },
-      updatedAt: new Date().toISOString()
-    }));
-  };
-  const addCogsTier = () => {
-    setFormData((prev) => ({
-      ...prev,
-      cogsUnitPricing: {
-        ...prev.cogsUnitPricing,
-        tiers: [
-          ...(prev.cogsUnitPricing?.tiers || []),
-          { id: `tier-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, minQuantity: 0, unitCost: 0 }
-        ]
-      },
-      updatedAt: new Date().toISOString()
-    }));
-  };
-  const updateCogsTier = (id: string, patch: Partial<{ minQuantity: number; unitCost: number }>) => {
-    setFormData((prev) => ({
-      ...prev,
-      cogsUnitPricing: {
-        ...prev.cogsUnitPricing,
-        tiers: (prev.cogsUnitPricing?.tiers || []).map((t) => (t.id === id ? { ...t, ...patch } : t))
-      },
-      updatedAt: new Date().toISOString()
-    }));
-  };
-  const removeCogsTier = (id: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      cogsUnitPricing: {
-        ...prev.cogsUnitPricing,
-        tiers: (prev.cogsUnitPricing?.tiers || []).filter((t) => t.id !== id)
-      },
-      updatedAt: new Date().toISOString()
-    }));
-  };
-  const estimatedUnitsSold = estimateUnitsSold(formData.revenueDetailEstimate);
   const estimatedRevenue = estimateMonthlyRevenue(formData.revenueDetailEstimate);
-  const estimatedCogs = estimateCogs(estimatedUnitsSold, formData.cogsUnitPricing);
-  /** 估算值与用户手动填写值差异超过阈值（±15%）时提示核对，而不是强制覆盖 */
-  const diffExceedsThreshold = (estimated: number | null, manual: number): boolean => {
-    if (estimated == null || manual <= 0) return false;
-    return Math.abs(estimated - manual) / manual > 0.15;
+  const applyEstimatedRevenue = (revenue: number) => {
+    setFormData((prev) => {
+      const grants = prev.monthlyExternalGrants?.amount || 0;
+      return {
+        ...prev,
+        monthlyRevenue: { ...prev.monthlyRevenue, amount: revenue + grants },
+        monthlyRealOperatingRevenue: { ...prev.monthlyRealOperatingRevenue, amount: revenue },
+        updatedAt: new Date().toISOString()
+      };
+    });
   };
+  useEffect(() => {
+    if (revenueTouched || estimatedRevenue == null) return;
+    applyEstimatedRevenue(estimatedRevenue);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [estimatedRevenue, revenueTouched, formData.monthlyExternalGrants.amount]);
 
   // —— 行业自定义 / 币种自定义 处理 ——
   const handleIndustryChange = (value: string) => {
@@ -1114,7 +1093,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
     amount: number,
     currency?: CurrencyCode
   ) => {
-    if (fieldKey === 'monthlyRevenue') setRevenueTouched(true);
+    if (fieldKey === 'monthlyRevenue' || fieldKey === 'monthlyRealOperatingRevenue') setRevenueTouched(true);
 
     let warning = '';
     if (amount < 0) {
@@ -1915,8 +1894,8 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       <div className="space-y-3 pt-1">
                         <p className="text-[12px] text-slate-500">
                           {language === 'en'
-                            ? 'All fields below are optional — fill in whichever you know. Used only to estimate/cross-check the total revenue above, never to overwrite it automatically.'
-                            : '以下字段均为选填，填你知道的即可，仅用于估算/核对上方总流水，不会自动覆盖你的手动填写。'}
+                            ? 'All fields below are optional — fill in whichever you know. Once filled, the estimate below is used directly as your total revenue and real operating revenue, so you don’t need to type the total again separately.'
+                            : '以下字段均为选填，填你知道的即可。一旦填写，下方估算结果会直接作为「总流水」与「真实经营收入」写入，不需要再单独手动填一遍总额。'}
                         </p>
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
                           <div>
@@ -1941,18 +1920,26 @@ export const AssessmentForm: React.FC<FormProps> = ({
                           </div>
                         </div>
                         {estimatedRevenue != null && (
-                          <p className={`text-[13px] font-semibold ${diffExceedsThreshold(estimatedRevenue, formData.monthlyRevenue.amount) ? 'text-amber-700' : 'text-slate-600'}`}>
-                            {language === 'en'
-                              ? `Estimated total revenue: ${formatMoney(estimatedRevenue, formData.monthlyRevenue.currency)}`
-                              : `按以上数字估算的总流水约为：${formatMoney(estimatedRevenue, formData.monthlyRevenue.currency)}`}
-                            {diffExceedsThreshold(estimatedRevenue, formData.monthlyRevenue.amount) && (
-                              <span className="ml-1">
-                                {language === 'en'
-                                  ? `— differs from your manual entry by more than 15%, please double-check.`
-                                  : `—— 与你手动填写的总流水相差超过 15%，建议核对一下。`}
-                              </span>
+                          <div className="flex items-center justify-between flex-wrap gap-2">
+                            <p className="text-[13px] font-semibold text-teal-700">
+                              {revenueTouched
+                                ? (language === 'en'
+                                    ? `Estimated revenue: ${formatMoney(estimatedRevenue, formData.monthlyRevenue.currency)} (not applied — you've edited the total manually)`
+                                    : `估算真实经营收入约为：${formatMoney(estimatedRevenue, formData.monthlyRevenue.currency)}（未自动套用，因为你手动改过总流水/真实经营收入）`)
+                                : (language === 'en'
+                                    ? `Applied: real operating revenue set to ${formatMoney(estimatedRevenue, formData.monthlyRevenue.currency)}, total revenue updated accordingly.`
+                                    : `已自动套用：真实经营收入已设为 ${formatMoney(estimatedRevenue, formData.monthlyRevenue.currency)}，总流水已同步更新。`)}
+                            </p>
+                            {revenueTouched && (
+                              <button
+                                type="button"
+                                onClick={() => { setRevenueTouched(false); applyEstimatedRevenue(estimatedRevenue); }}
+                                className="text-[12px] px-2 py-1 rounded border border-teal-300 text-teal-700 font-bold hover:bg-teal-50 cursor-pointer shrink-0"
+                              >
+                                {language === 'en' ? 'Re-apply estimate' : '重新套用估算值'}
+                              </button>
                             )}
-                          </p>
+                          </div>
                         )}
                       </div>
                     )}
@@ -2018,21 +2005,38 @@ export const AssessmentForm: React.FC<FormProps> = ({
                         <RefreshCw className="inline w-3 h-3 mr-0.5" />{language === 'en' ? 'Restore AI Suggestion' : '恢复 AI 建议'}
                       </button>
                     </div>
-                    <span className="text-[12px] text-rose-700">{language === 'en' ? 'The total of the line items below is your monthly material (variable) cost, and is what feeds the AI analysis directly.' : '以下逐项合计即为每月物料（变动）成本，将直接用于 AI 分析。'}</span>
+                    <span className="text-[12px] text-rose-700">{language === 'en' ? 'The total of the line items below is your monthly material (variable) cost, and is what feeds the AI analysis directly. Fill in a purchase quantity + unit cost for a good and its amount is calculated for you.' : '以下逐项合计即为每月物料（变动）成本，将直接用于 AI 分析。某一货物填了进货量+进货单价后，金额会自动按两者相乘算出。'}</span>
                     {(formData.dynamicCogsItems || []).map((it) => (
-                      <div key={it.id} className="flex items-center gap-2">
+                      <div key={it.id} className="flex items-center gap-1.5 flex-wrap">
                         <input
                           type="text"
                           value={it.label}
                           onChange={(e) => updateDynamicCogsItem(it.id, { label: e.target.value })}
-                          className="flex-1 min-w-0 p-1.5 border border-rose-200 rounded-lg font-semibold text-slate-800"
+                          className="flex-1 min-w-[7rem] p-1.5 border border-rose-200 rounded-lg font-semibold text-slate-800"
                         />
+                        <NumberField
+                          value={it.quantity || 0}
+                          onChange={(v) => updateDynamicCogsItem(it.id, { quantity: v || undefined })}
+                          className="w-16 shrink-0 p-1.5 border border-rose-200 rounded-lg font-mono text-right"
+                          placeholder={language === 'en' ? 'Qty' : '进货量'}
+                          title={language === 'en' ? 'Purchase quantity (optional)' : '进货量（选填）'}
+                        />
+                        <span className="text-[11px] text-rose-700 shrink-0">×</span>
+                        <NumberField
+                          value={it.unitCost || 0}
+                          onChange={(v) => updateDynamicCogsItem(it.id, { unitCost: v || undefined })}
+                          className="w-20 shrink-0 p-1.5 border border-rose-200 rounded-lg font-mono text-right"
+                          placeholder={language === 'en' ? 'Unit cost' : '进货单价'}
+                          title={language === 'en' ? 'Unit purchase cost (optional)' : '进货单价（选填）'}
+                        />
+                        <span className="text-[11px] text-rose-700 shrink-0">=</span>
                         <NumberField
                           value={it.value}
                           onChange={(v) => updateDynamicCogsItem(it.id, { value: v })}
-                          className="w-24 shrink-0 p-1.5 border border-rose-200 rounded-lg font-mono font-semibold text-right"
+                          disabled={Boolean(it.quantity && it.unitCost)}
+                          className="w-24 shrink-0 p-1.5 border border-rose-200 rounded-lg font-mono font-semibold text-right disabled:bg-rose-50 disabled:text-rose-700"
                           placeholder={it.suggestedAmount ? `${language === 'en' ? 'AI suggests' : 'AI建议'} ${it.suggestedAmount}` : (language === 'en' ? 'Amount' : '金额')}
-                          title={it.suggestedAmount ? (language === 'en' ? `AI suggested reference amount: ${it.suggestedAmount} (for reference only, please fill in your real figure)` : `AI 建议参考金额：${it.suggestedAmount}（仅供参考，请填你的真实数字）`) : (language === 'en' ? 'Please fill in your real monthly amount' : '请填你的真实月度金额')}
+                          title={it.suggestedAmount ? (language === 'en' ? `AI suggested reference amount: ${it.suggestedAmount} (for reference only, please fill in your real figure)` : `AI 建议参考金额：${it.suggestedAmount}（仅供参考，请填你的真实数字）`) : (language === 'en' ? 'Please fill in your real monthly amount, or fill quantity × unit cost above' : '请填你的真实月度金额，或改为在左边填进货量×进货单价')}
                         />
                         <span className="text-[12px] text-rose-700 whitespace-nowrap shrink-0 pl-0.5">{formData.baseCurrency}/{language === 'en' ? 'mo' : '月'}</span>
                         {it.suggestedAmount ? (
@@ -2058,63 +2062,6 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     </div>
                   </div>
 
-                  {/* COGS 单件进价 / 阶梯采购价：依赖上方「赚多少」估算出的销量，反推估算 COGS，仅供核对，不覆盖上方明细合计 */}
-                  <div className="mt-1 p-3 rounded-xl bg-slate-50 border border-dashed border-slate-300 space-y-2">
-                    <span className="text-[13px] font-black text-slate-700">
-                      {language === 'en' ? 'Unit cost / tiered wholesale pricing (optional, cross-check only)' : '单件进价 / 批发阶梯价（选填，仅用于核对）'}
-                    </span>
-                    {estimatedUnitsSold == null ? (
-                      <p className="text-[12px] text-slate-500">
-                        {language === 'en'
-                          ? 'Fill in units sold under "Revenue" above first, then set a unit cost here to estimate COGS automatically.'
-                          : '请先在上方「赚多少」里填写销量估算，再在这里填单件进价，即可自动估算 COGS。'}
-                      </p>
-                    ) : (
-                      <p className="text-[12px] text-slate-500">
-                        {language === 'en'
-                          ? `Estimated units sold (from Revenue section): ${Math.round(estimatedUnitsSold)}`
-                          : `估算月销量（取自上方「赚多少」）：约 ${Math.round(estimatedUnitsSold)} 件`}
-                      </p>
-                    )}
-                    <div className="flex items-center gap-2 text-xs">
-                      <label className="font-bold text-slate-600 shrink-0">{language === 'en' ? 'Unit cost' : '单件进价'}</label>
-                      <NumberField
-                        inputMode="numeric"
-                        min={0}
-                        value={formData.cogsUnitPricing?.unitCost || 0}
-                        onChange={(v) => updateCogsUnitPricing({ unitCost: v || undefined })}
-                        className="w-28 p-1.5 border border-slate-300 rounded-lg font-semibold"
-                      />
-                      <span className="text-[12px] text-slate-500">{formData.baseCurrency}/{language === 'en' ? 'unit' : '件'}</span>
-                    </div>
-                    <div className="space-y-1.5">
-                      <span className="text-[12px] font-bold text-slate-600">
-                        {language === 'en' ? 'Or set tiered wholesale pricing (higher volume → lower unit cost):' : '或设置批发阶梯价（采购量越大单价越低）：'}
-                      </span>
-                      {(formData.cogsUnitPricing?.tiers || []).map((tier) => (
-                        <div key={tier.id} className="flex items-center gap-1.5 text-xs">
-                          <span className="text-[12px] text-slate-500 shrink-0">{language === 'en' ? '≥' : '满'}</span>
-                          <NumberField inputMode="numeric" min={0} value={tier.minQuantity} onChange={(v) => updateCogsTier(tier.id, { minQuantity: v })} className="w-20 p-1.5 border border-slate-300 rounded-lg font-semibold" />
-                          <span className="text-[12px] text-slate-500 shrink-0">{language === 'en' ? 'units →' : '件 →'}</span>
-                          <NumberField inputMode="numeric" min={0} value={tier.unitCost} onChange={(v) => updateCogsTier(tier.id, { unitCost: v })} className="w-20 p-1.5 border border-slate-300 rounded-lg font-semibold" />
-                          <span className="text-[12px] text-slate-500 shrink-0">{formData.baseCurrency}/{language === 'en' ? 'unit' : '件'}</span>
-                          <button type="button" onClick={() => removeCogsTier(tier.id)} className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer shrink-0">
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ))}
-                      <button type="button" onClick={addCogsTier} className="text-[12px] px-2 py-0.5 rounded border border-slate-300 text-slate-600 font-bold hover:bg-slate-100 cursor-pointer">
-                        {language === 'en' ? '+ Add tier' : '＋ 添加阶梯档位'}
-                      </button>
-                    </div>
-                    {estimatedCogs != null && (
-                      <p className={`text-[13px] font-semibold ${diffExceedsThreshold(estimatedCogs, (formData.dynamicCogsItems || []).reduce((sum, it) => sum + (Number(it.value) || 0), 0) || formData.cogsCost.amount) ? 'text-amber-700' : 'text-slate-600'}`}>
-                        {language === 'en'
-                          ? `Estimated COGS: ${formatMoney(estimatedCogs, formData.baseCurrency)}`
-                          : `按销量与进价估算的 COGS 约为：${formatMoney(estimatedCogs, formData.baseCurrency)}`}
-                      </p>
-                    )}
-                  </div>
                 </div>
 
                 {/* 固定开销网格 */}
