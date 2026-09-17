@@ -85,6 +85,28 @@ export interface MoneyField {
   aiSourceNote?: string; // AI 给出该参考金额时的依据说明（如"肯尼亚小微企业营业执照年费区间"）
 }
 
+// 阶梯采购价的一档：达到 minQuantity 件（含）起，按 unitCost 单价采购
+export interface CostTier {
+  id: string;
+  minQuantity: number; // 该档位起始采购/销售数量（含）
+  unitCost: number; // 该档位对应的单件进价
+}
+
+// 收入细节辅助输入（选填）：用「销量×单价」或「客流量×成交率×复购率」估算/核对总流水，不参与主计算引擎
+export interface RevenueDetailEstimate {
+  unitsSold?: number; // 月销售总量
+  avgUnitPrice?: number; // 平均单价/客单价
+  monthlyFootfall?: number; // 月客流量
+  conversionRatePercent?: number; // 成交率（%）
+  repeatPurchaseRatePercent?: number; // 复购率（%），按行业常见公式叠加复购贡献
+}
+
+// COGS 单件进价与阶梯采购价（选填）：依赖 RevenueDetailEstimate 估算出的销量，反推 COGS 估算值
+export interface CogsUnitPricing {
+  unitCost?: number; // 单件进价（未设置阶梯价时使用）
+  tiers?: CostTier[]; // 阶梯采购价：按采购量区间对应不同单价，按估算销量自动匹配
+}
+
 export interface MonthlyBreakdown {
   month: string; // e.g. "2025-01"
   revenue: MoneyField;
@@ -156,7 +178,9 @@ export interface BusinessFormData {
   monthlyRevenue: MoneyField; // F8 经营月均总流水
   monthlyRealOperatingRevenue: MoneyField; // 真实主营收入
   monthlyExternalGrants: MoneyField; // 外部支持/捐赠款 (分开填报)
+  revenueDetailEstimate?: RevenueDetailEstimate; // 收入细节辅助输入（选填，用于估算/核对总流水）
   cogsCost: MoneyField; // F10 原材料与直接采购成本
+  cogsUnitPricing?: CogsUnitPricing; // COGS 单件进价/阶梯采购价（选填，用于估算/核对 COGS）
   rentCost: MoneyField; // F11 场地租金与物业
   laborCost: MoneyField; // F12 员工工资与人工支出
   utilityCost: MoneyField; // F13 水电网络杂费
