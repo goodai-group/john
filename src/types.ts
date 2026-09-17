@@ -76,6 +76,17 @@ export interface DynamicEquipmentItem {
   usefulLifeMonths: number; // 预计统计/使用月数
 }
 
+// 公司注册/执照相关费用逐项填报：区分一次性费用（如首次注册/牌照工本费，按用户自定月数分摊）
+// 与年度费用（如执照年检费，性质上每年都要再付一次，固定按 12 个月分摊），
+// 避免把两类现金流性质完全不同的费用混在一个笼统数字里填报。
+export interface DynamicRegistrationCostItem {
+  id: string;
+  label: string;
+  amount: number;
+  feeType: 'one_time' | 'annual';
+  amortizationMonths: number; // 仅 feeType 为 one_time 时生效；annual 固定按 12 个月分摊（此字段被忽略）
+}
+
 export interface MoneyField {
   amount: number;
   currency: CurrencyCode;
@@ -176,8 +187,11 @@ export interface BusinessFormData {
   taxCost: MoneyField; // F16 税金及规费
   otherOpex: MoneyField; // 其他日常经营费用
   // —— 全球化经营成本补充项（税收/签证/折旧/注册费用全部纳入成本）——
-  companyRegistrationCost: MoneyField; // 公司注册/年检/执照一次性或年度费用总额
-  companyRegistrationAmortizationMonths: number; // 该笔费用分摊到经营的月数（默认 12 个月）
+  // 逐项填报的注册/执照相关费用（区分一次性 vs 年度，见 DynamicRegistrationCostItem）；
+  // companyRegistrationCost 保留作为未逐项列出时的补充/AI 预估单一数字（口径与 equipmentDepreciationCost 一致）。
+  dynamicRegistrationCostItems?: DynamicRegistrationCostItem[];
+  companyRegistrationCost: MoneyField; // 未逐项列出的补充注册/执照费用总额
+  companyRegistrationAmortizationMonths: number; // 该笔补充费用分摊到经营的月数（默认 12 个月）
   visaFeeCost: MoneyField; // 经营者/员工签证与工作许可费用总额
   visaFeeAmortizationMonths: number; // 签证费用分摊月数（默认 12 个月）
   equipmentDepreciationCost: MoneyField; // 设备月度折旧费（直接按月计入成本）

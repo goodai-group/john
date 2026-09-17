@@ -51,6 +51,7 @@ export function calculateBreakEvenRevenue(
     | 'existingDebtMonthlyPayment'
     | 'companyRegistrationCost'
     | 'companyRegistrationAmortizationMonths'
+    | 'dynamicRegistrationCostItems'
     | 'visaFeeCost'
     | 'visaFeeAmortizationMonths'
     | 'equipmentDepreciationCost'

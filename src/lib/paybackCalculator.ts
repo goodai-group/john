@@ -45,6 +45,7 @@ type PaybackFormFields = Pick<
   | 'existingDebtMonthlyPayment'
   | 'companyRegistrationCost'
   | 'companyRegistrationAmortizationMonths'
+  | 'dynamicRegistrationCostItems'
   | 'visaFeeCost'
   | 'visaFeeAmortizationMonths'
   | 'equipmentDepreciationCost'

@@ -56,6 +56,7 @@ import {
 import { State as StateLib } from 'country-state-city';
 import { SearchableSelect, type SearchableSelectOption } from './SearchableSelect';
 import { calculateBreakEvenRevenue } from '../../lib/breakEvenCalculator';
+import { amortizeMonthly } from '../../lib/costAggregation';
 import { calculatePaybackPeriod, calculateRequiredRevenueForTarget } from '../../lib/paybackCalculator';
 import { detectFormAnomalies } from '../../lib/anomalyDetection';
 import { FieldProvenanceBadge, PendingConfirmationsBar } from '../FieldProvenanceBadge';
@@ -326,6 +327,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
     formData.existingDebtMonthlyPayment,
     formData.companyRegistrationCost,
     formData.companyRegistrationAmortizationMonths,
+    formData.dynamicRegistrationCostItems,
     formData.visaFeeCost,
     formData.visaFeeAmortizationMonths,
     formData.equipmentDepreciationCost,
@@ -375,6 +377,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
     formData.existingDebtMonthlyPayment,
     formData.companyRegistrationCost,
     formData.companyRegistrationAmortizationMonths,
+    formData.dynamicRegistrationCostItems,
     formData.visaFeeCost,
     formData.visaFeeAmortizationMonths,
     formData.equipmentDepreciationCost,
@@ -402,6 +405,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
       formData.existingDebtMonthlyPayment,
       formData.companyRegistrationCost,
       formData.companyRegistrationAmortizationMonths,
+      formData.dynamicRegistrationCostItems,
       formData.visaFeeCost,
       formData.visaFeeAmortizationMonths,
       formData.equipmentDepreciationCost,
@@ -666,6 +670,48 @@ export const AssessmentForm: React.FC<FormProps> = ({
     (sum, it) => sum + (Number(it.value) || 0) / Math.max(1, Math.round(Number(it.usefulLifeMonths) || 12)),
     0
   );
+
+  // —— 动态注册/执照费用清单：区分一次性费用（按自定月数分摊）与年度费用（固定按12个月分摊），
+  // 让用户逐项添加/删除，而不是把两类现金流性质完全不同的费用挤在同一个笼统数字里 ——
+  const updateDynamicRegistrationItem = (
+    id: string,
+    patch: Partial<{ label: string; amount: number; feeType: 'one_time' | 'annual'; amortizationMonths: number }>
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      dynamicRegistrationCostItems: (prev.dynamicRegistrationCostItems || []).map((it) =>
+        it.id === id ? { ...it, ...patch } : it
+      ),
+      updatedAt: new Date().toISOString()
+    }));
+  };
+  const addDynamicRegistrationItem = () => {
+    setFormData((prev) => ({
+      ...prev,
+      dynamicRegistrationCostItems: [
+        ...(prev.dynamicRegistrationCostItems || []),
+        {
+          id: `regcost-${Date.now()}`,
+          label: language === 'en' ? 'New registration/license fee' : '新增注册/执照费用',
+          amount: 0,
+          feeType: 'one_time' as const,
+          amortizationMonths: 12
+        }
+      ],
+      updatedAt: new Date().toISOString()
+    }));
+  };
+  const removeDynamicRegistrationItem = (id: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      dynamicRegistrationCostItems: (prev.dynamicRegistrationCostItems || []).filter((it) => it.id !== id),
+      updatedAt: new Date().toISOString()
+    }));
+  };
+  const dynamicRegistrationMonthlyTotal = (formData.dynamicRegistrationCostItems || []).reduce((sum, it) => {
+    const months = it.feeType === 'annual' ? 12 : Math.max(1, Math.round(Number(it.amortizationMonths) || 12));
+    return sum + (Number(it.amount) || 0) / months;
+  }, 0);
 
   // 反馈问题4：设备清单只给一个「机器A」这样的占位示例，用户不知道该买什么型号、去哪买。
   // 不做一份维护成本很高的"精选设备型号库"，而是给一个按行业+用户已填名称拼出的谷歌购物/
@@ -2258,13 +2304,76 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     {language === 'en' ? '. Below are AI reference estimates — update to your real figures:' : '。以下为 AI 参考估值，请核实后修改为你的真实数字：'}
                   </p>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {/* 公司注册/执照费用 */}
-                    <div className="p-3 rounded-xl bg-violet-50/40 border border-violet-200 space-y-1.5">
+                  {/* 公司注册/执照相关费用：区分一次性费用（如首次注册工本费，按自定月数分摊）与
+                      年度费用（如执照年检费，每年都要再付一次，固定按12个月分摊），逐项填写、可增删，
+                      避免把两类现金流性质完全不同的费用挤在同一个笼统数字里。 */}
+                  <div className="p-3 rounded-xl bg-violet-50/40 border border-violet-200 space-y-2">
+                    <label className="font-bold text-slate-800 text-[12px]">
+                      {language === 'en' ? 'Registration / License Fees' : '公司注册/执照相关费用'}
+                      <span className="text-[11px] text-slate-400 font-normal"> ({formData.companyRegistrationCost.currency})</span>
+                    </label>
+                    <p className="text-[11px] text-slate-500 leading-tight">
+                      {language === 'en'
+                        ? 'Add each fee separately and mark it one-time (e.g. first-time registration) or annual (e.g. license renewal) — one-time fees amortize over the months you set, annual fees always amortize over 12 months.'
+                        : '逐项添加费用并标注「一次性」（如首次注册工本费）或「年度」（如执照年检费）——一次性费用按你设定的月数分摊，年度费用固定按12个月分摊。'}
+                    </p>
+                    {(formData.dynamicRegistrationCostItems || []).map((it) => (
+                      <div key={it.id} className="flex items-center gap-2 flex-wrap">
+                        <input
+                          type="text"
+                          value={it.label}
+                          onChange={(e) => updateDynamicRegistrationItem(it.id, { label: e.target.value })}
+                          placeholder={language === 'en' ? 'e.g. Business license' : '例如：营业执照'}
+                          className="flex-1 min-w-[7rem] p-1.5 border border-violet-200 rounded-lg font-semibold text-slate-800 bg-white"
+                        />
+                        <div className="flex items-center gap-1 shrink-0">
+                          <span className="text-[11px] text-slate-500">{language === 'en' ? 'Amount' : '金额'}</span>
+                          <NumberField
+                            min={0}
+                            value={it.amount}
+                            onChange={(v) => updateDynamicRegistrationItem(it.id, { amount: v })}
+                            className="w-20 p-1.5 border border-violet-200 rounded-lg font-mono font-semibold text-right bg-white"
+                          />
+                        </div>
+                        <select
+                          value={it.feeType}
+                          onChange={(e) =>
+                            updateDynamicRegistrationItem(it.id, { feeType: e.target.value as 'one_time' | 'annual' })
+                          }
+                          className="p-1.5 border border-violet-200 rounded-lg font-semibold text-slate-800 bg-white shrink-0"
+                        >
+                          <option value="one_time">{language === 'en' ? 'One-time' : '一次性'}</option>
+                          <option value="annual">{language === 'en' ? 'Annual' : '年度'}</option>
+                        </select>
+                        {it.feeType === 'one_time' ? (
+                          <div className="flex items-center gap-1 shrink-0">
+                            <span className="text-[11px] text-slate-500">÷</span>
+                            <NumberField
+                              min={1}
+                              value={it.amortizationMonths}
+                              onChange={(v) => updateDynamicRegistrationItem(it.id, { amortizationMonths: v })}
+                              className="w-14 p-1.5 border border-violet-200 rounded-lg font-mono font-semibold text-right bg-white"
+                            />
+                            <span className="text-[11px] text-slate-500">{language === 'en' ? 'months' : '个月'}</span>
+                          </div>
+                        ) : (
+                          <span className="text-[11px] text-slate-500 shrink-0">
+                            {language === 'en' ? '÷ 12 months' : '÷ 12 个月'}
+                          </span>
+                        )}
+                        <button type="button" onClick={() => removeDynamicRegistrationItem(it.id)} className="p-1 text-violet-500 hover:text-violet-700 cursor-pointer shrink-0">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                    <button type="button" onClick={addDynamicRegistrationItem} className="text-[12px] px-2 py-1 rounded border border-violet-300 text-violet-700 font-bold hover:bg-violet-100 cursor-pointer">
+                      {language === 'en' ? '+ Add fee item' : '＋ 添加费用项目'}
+                    </button>
+
+                    <div className="pt-1 border-t border-violet-200/70 space-y-1.5">
                       <div className="flex items-center justify-between flex-wrap gap-1">
                         <label className="font-bold text-slate-800 text-[12px]">
-                          {language === 'en' ? 'Registration/License Fee' : '公司注册/执照年检费'}
-                          <span className="text-[11px] text-slate-400 font-normal"> ({formData.companyRegistrationCost.currency}, {language === 'en' ? 'one-time/annual' : '一次性/年度'})</span>
+                          {language === 'en' ? 'Other registration fee (supplement, optional)' : '其他补充注册/执照费用（可选）'}
                         </label>
                         <button
                           type="button"
@@ -2294,41 +2403,49 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       </div>
                     </div>
 
-                    {/* 签证与工作许可费用 */}
-                    <div className="p-3 rounded-xl bg-violet-50/40 border border-violet-200 space-y-1.5">
-                      <div className="flex items-center justify-between flex-wrap gap-1">
-                        <label className="font-bold text-slate-800 text-[12px]">
-                          {language === 'en' ? 'Visa & Work Permits' : '签证与工作许可费用'}
-                          <span className="text-[11px] text-slate-400 font-normal"> ({formData.visaFeeCost.currency}, {language === 'en' ? 'total' : '总额'})</span>
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => updateMoney('visaFeeCost', regulatoryEstimate.visaLocal)}
-                          className="text-[11px] underline text-violet-700 font-bold hover:text-violet-900 cursor-pointer"
-                        >
-                          {language === 'en' ? 'Use AI value' : '填入AI估值'}
-                        </button>
-                      </div>
-                      <NumberField
-                        inputMode="numeric"
-                        min={0}
-                        placeholder={`约 ${regulatoryEstimate.visaLocal}`}
-                        value={formData.visaFeeCost.amount}
-                        onChange={(v) => updateMoney('visaFeeCost', v)}
-                        className="w-full p-2 border border-violet-200 rounded-lg font-semibold text-slate-900 bg-white"
-                      />
-                      <div className="flex items-center gap-1 text-[11px] text-slate-500">
-                        <span>{language === 'en' ? 'Amortize over' : '分摊'}</span>
-                        <NumberField
-                          min={1}
-                          value={formData.visaFeeAmortizationMonths}
-                          onChange={(v) => updateField('visaFeeAmortizationMonths', v)}
-                          className="w-12 p-0.5 border border-violet-200 rounded text-center bg-white font-bold"
-                        />
-                        <span>{language === 'en' ? 'months' : '个月'}</span>
-                      </div>
-                    </div>
+                    <p className="text-[13px] font-black text-violet-900 pt-1">
+                      {language === 'en' ? 'Total monthly registration cost:' : '注册/执照费用月度合计：'}{' '}
+                      {(
+                        dynamicRegistrationMonthlyTotal +
+                        amortizeMonthly(formData.companyRegistrationCost.amount, formData.companyRegistrationAmortizationMonths)
+                      ).toFixed(2)}{' '}
+                      {formData.companyRegistrationCost.currency}/{language === 'en' ? 'mo' : '月'}
+                    </p>
+                  </div>
 
+                  {/* 签证与工作许可费用 */}
+                  <div className="p-3 rounded-xl bg-violet-50/40 border border-violet-200 space-y-1.5">
+                    <div className="flex items-center justify-between flex-wrap gap-1">
+                      <label className="font-bold text-slate-800 text-[12px]">
+                        {language === 'en' ? 'Visa & Work Permits' : '签证与工作许可费用'}
+                        <span className="text-[11px] text-slate-400 font-normal"> ({formData.visaFeeCost.currency}, {language === 'en' ? 'total' : '总额'})</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => updateMoney('visaFeeCost', regulatoryEstimate.visaLocal)}
+                        className="text-[11px] underline text-violet-700 font-bold hover:text-violet-900 cursor-pointer"
+                      >
+                        {language === 'en' ? 'Use AI value' : '填入AI估值'}
+                      </button>
+                    </div>
+                    <NumberField
+                      inputMode="numeric"
+                      min={0}
+                      placeholder={`约 ${regulatoryEstimate.visaLocal}`}
+                      value={formData.visaFeeCost.amount}
+                      onChange={(v) => updateMoney('visaFeeCost', v)}
+                      className="w-full p-2 border border-violet-200 rounded-lg font-semibold text-slate-900 bg-white"
+                    />
+                    <div className="flex items-center gap-1 text-[11px] text-slate-500">
+                      <span>{language === 'en' ? 'Amortize over' : '分摊'}</span>
+                      <NumberField
+                        min={1}
+                        value={formData.visaFeeAmortizationMonths}
+                        onChange={(v) => updateField('visaFeeAmortizationMonths', v)}
+                        className="w-12 p-0.5 border border-violet-200 rounded text-center bg-white font-bold"
+                      />
+                      <span>{language === 'en' ? 'months' : '个月'}</span>
+                    </div>
                   </div>
 
                   {/* 设备月度折旧费：问题5——避免用户自己心算「总设备值 ÷ 预计使用月数」，

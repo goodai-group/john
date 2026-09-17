@@ -140,8 +140,14 @@ export function detectFormAnomalies(formData: BusinessFormData): FormAnomalyWarn
 
   // 8c) 启动资金不足以覆盖一次性投入：公司注册/签证/设备等一次性投入合计超过了填的启动资金，
   // 意味着日常周转资金为负（对应反馈规则表 R4）。
+  // 注：逐项注册费用中年度性质的部分（如执照年检）是每年都要再付一次的经常性开支，
+  // 不属于一次性资本投入，故只计入 feeType 为 one_time 的部分。
+  const oneTimeRegistrationItems = (formData.dynamicRegistrationCostItems || [])
+    .filter((it) => it.feeType === 'one_time')
+    .reduce((s, it) => s + (Number(it.amount) || 0), 0);
   const oneTimeInvestment =
     conv(formData.companyRegistrationCost) +
+    oneTimeRegistrationItems +
     conv(formData.visaFeeCost) +
     (formData.dynamicEquipmentItems || []).reduce((s, it) => s + (Number(it.value) || 0), 0);
   const startupCapital = conv(formData.initialInvestmentEstimate);
