@@ -32,7 +32,7 @@ export function getGeminiClient(): GoogleGenAI | null {
   return aiClient;
 }
 
-// Gemini 429 配额冷却：免费层对每个模型每天有请求上限（如 gemini-3.6-flash 为 20 次/日）。
+// Gemini 429 配额冷却：免费层对每个模型每天有请求上限（如 gemini-3.1-flash-lite 为 20 次/日）。
 // 收到 429 配额超限后的一段时间内直接走本地规则库，避免每次提问都白等一次注定失败的云端请求，
 // 冷却结束后自动恢复云端 AI。
 let geminiQuotaCooldownUntil = 0;
@@ -47,9 +47,10 @@ export function isGeminiInQuotaCooldown(): boolean {
 // 2026-09 现状：
 //   - gemini-2.0-flash：已全局下线（404 "no longer available"）
 //   - gemini-2.5-flash：仅对早期账号开放（对当前新账号返回 "no longer available to new users"）
-//   - gemini-3.6-flash：当前默认且对所有账号开放
-// 因此只保留 3.6-flash，避免回退到不可用的旧模型引发误导性的 404 错误。
-export const GEMINI_MODELS = ['gemini-3.6-flash'];
+//   - gemini-3.6-flash：曾经常遇到 503 UNAVAILABLE（"experiencing high demand"）
+//   - gemini-3.1-flash-lite：当前默认，轻量级模型，配额更宽松、响应更快
+// 全应用统一改用 3.1-flash-lite，避免混用多个模型版本。
+export const GEMINI_MODELS = ['gemini-3.1-flash-lite'];
 
 // 503 UNAVAILABLE（"currently experiencing high demand"）是 Gemini 官方文档明确标注的
 // 瞬时性错误，建议短暂退避后重试；与配额耗尽（429）、鉴权失败等永久性错误不同，
