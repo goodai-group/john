@@ -1,6 +1,7 @@
 import { BusinessFormData, FormAnomalyWarning } from '../types.js';
 import { convertToTargetCurrency, CUSTOM_CURRENCY_VALUE } from './currencies.js';
 import { aggregateMonthlyCosts } from './costAggregation.js';
+import { footfallPathIsPartial, pathsConflict, unitsFromDirectSales, unitsFromFootfall } from './revenueEstimate.js';
 
 /**
  * 第2点：AI 自动识别用户填错的数值及类目并提醒。
@@ -150,6 +151,28 @@ export function detectFormAnomalies(formData: BusinessFormData): FormAnomalyWarn
       severity: 'warning',
       messageZh: '你的启动资金不足以覆盖公司注册/签证/设备等一次性投入，日常周转资金将为负，请确认金额是否填对。',
       messageEn: 'Your initial investment doesn\'t cover one-time costs (registration/visa/equipment) — working capital would be negative. Please confirm the figures.'
+    });
+  }
+
+  // 10) 「月客流量」「成交率」只填了其中一个：两者要配对才能算出月成单数
+  if (footfallPathIsPartial(formData.revenueDetailEstimate)) {
+    warnings.push({
+      field: 'revenueDetailEstimate',
+      severity: 'warning',
+      messageZh: '「月客流量」和「成交率」需要两个都填才能算出月成单数：月客流量是本月进店/咨询的总人次，成交率是其中实际下单付款的比例，两者相乘＝月成单数。请补齐另一项，或改用「月销售总量」直接填。',
+      messageEn: '"Monthly foot traffic" and "conversion rate" must both be filled to compute monthly orders: foot traffic is total visits/inquiries this month, conversion rate is the share that actually paid. Fill in the missing one, or use "units sold" instead.'
+    });
+  }
+
+  // 11) 「月销售总量」与「月客流量×成交率」都填了，但算出的月成单数对不上
+  if (pathsConflict(formData.revenueDetailEstimate)) {
+    const direct = unitsFromDirectSales(formData.revenueDetailEstimate);
+    const viaFootfall = unitsFromFootfall(formData.revenueDetailEstimate);
+    warnings.push({
+      field: 'revenueDetailEstimate',
+      severity: 'error',
+      messageZh: `「月销售总量」填的是 ${direct} 件，但按「月客流量×成交率」算出来是约 ${Math.round(viaFootfall || 0)} 件，两者对不上。请修改其中一个，或者只保留一种算法，两者一致后这条提醒才会消失。`,
+      messageEn: `"Units sold" is ${direct}, but "foot traffic × conversion rate" computes to about ${Math.round(viaFootfall || 0)}. These don't match — please adjust one of them, or keep only one method, until they agree.`
     });
   }
 

@@ -87,14 +87,14 @@ export interface MoneyField {
   aiSourceNote?: string; // AI 给出该参考金额时的依据说明（如"肯尼亚小微企业营业执照年费区间"）
 }
 
-// 收入细节辅助输入（选填）：用「销量×单价」或「客流量×成交率×复购率」估算总流水；
-// 填写后估算结果直接作为「真实经营收入」与「总流水」写入（见 AssessmentForm.tsx 的 applyEstimatedRevenue）
+// 收入细节输入（必填其中一条路径）：用「月销售总量」或「月客流量×成交率」算出月成单数，
+// 乘以客单价得到「真实经营收入」，替代原先的手动总额输入（见 AssessmentForm.tsx 的 applyEstimatedRevenue）。
+// 月客流量×成交率已经代表月成单数，不再叠加复购率。
 export interface RevenueDetailEstimate {
-  unitsSold?: number; // 月销售总量
-  avgUnitPrice?: number; // 平均单价/客单价
-  monthlyFootfall?: number; // 月客流量
-  conversionRatePercent?: number; // 成交率（%）
-  repeatPurchaseRatePercent?: number; // 复购率（%），按行业常见公式叠加复购贡献
+  unitsSold?: number; // 月销售总量（路径A）
+  avgUnitPrice?: number; // 平均单价/客单价（两条路径共用）
+  monthlyFootfall?: number; // 月客流量（路径B）
+  conversionRatePercent?: number; // 成交率（%）（路径B）
 }
 
 export interface MonthlyBreakdown {
