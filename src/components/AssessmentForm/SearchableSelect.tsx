@@ -60,7 +60,12 @@ export function SearchableSelect({
       classNames={{
         control: ({ isFocused }) =>
           `${controlClassName} ${isFocused ? 'ring-1 ring-teal-500' : ''} cursor-text`,
-        valueContainer: () => 'overflow-visible',
+        // react-select 默认把已选中文字（singleValue）和搜索输入框用 grid 叠在同一格里，
+        // 未输入时输入框是空的，光标会画在格子最前面，看起来像是停在"美国"这类已选文字
+        // 前面而不是后面。改成一行式排列（singleValue 先渲染，输入框紧跟在后面）后，
+        // 空输入框的光标自然落在文字右边；用 !important 是因为要压过 react-select 自带的
+        // 内联 grid 布局。
+        valueContainer: () => '!flex !items-center overflow-visible',
         placeholder: () => 'text-slate-400 font-normal whitespace-nowrap',
         input: () => 'text-inherit',
         singleValue: () => 'text-inherit whitespace-nowrap',
