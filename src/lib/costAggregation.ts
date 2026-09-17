@@ -43,6 +43,7 @@ export function aggregateMonthlyCosts(
     | 'existingDebtMonthlyPayment'
     | 'companyRegistrationCost'
     | 'companyRegistrationAmortizationMonths'
+    | 'dynamicRegistrationCostItems'
     | 'visaFeeCost'
     | 'visaFeeAmortizationMonths'
     | 'equipmentDepreciationCost'
@@ -84,10 +85,15 @@ export function aggregateMonthlyCosts(
   const tax = dynamicTaxTotal > 0 ? dynamicTaxTotal : conv(formData.taxCost);
   const debtPayment = conv(formData.existingDebtMonthlyPayment);
 
-  const registrationMonthly = amortizeMonthly(
-    conv(formData.companyRegistrationCost),
-    formData.companyRegistrationAmortizationMonths
-  );
+  // 逐项注册/执照费用：一次性按用户自定月数分摊，年度费用固定按 12 个月分摊
+  // （年度性质的费用每年都要再付一次，不应套用用户为其他一次性项目设的分摊月数）。
+  const dynamicRegistrationMonthly = (formData.dynamicRegistrationCostItems || []).reduce((sum, it) => {
+    const months = it.feeType === 'annual' ? 12 : Math.max(1, Math.round(Number(it.amortizationMonths) || 12));
+    return sum + (Number(it.amount) || 0) / months;
+  }, 0);
+  const registrationMonthly =
+    amortizeMonthly(conv(formData.companyRegistrationCost), formData.companyRegistrationAmortizationMonths) +
+    dynamicRegistrationMonthly;
   const visaMonthly = amortizeMonthly(conv(formData.visaFeeCost), formData.visaFeeAmortizationMonths);
   // 设备月度折旧 = 逐台填报的「设备值 ÷ 预计使用月数」求和，再加上未逐台拆分的补充折旧金额，
   // 避免用户自己心算"总设备值"再手填一个数字。
