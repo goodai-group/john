@@ -26,6 +26,12 @@ const STORAGE_KEY_INITIAL_SEEDED = 'bam_cloud_seeded_v14';
 // 删除墓碑：记录用户已删除的云端数据 id，防止同步合并时被云端旧数据"复活"
 const STORAGE_KEY_DELETED_PROJECTS = 'bam_deleted_projects_v1';
 const STORAGE_KEY_DELETED_REPORTS = 'bam_deleted_reports_v1';
+// 待云端删除队列：与上面的墓碑分工不同。墓碑永久保留，只负责过滤云端回流数据；
+// 这里只保留"云端尚未确认删除"的 id，负责重试，删除成功即出队。
+// 两者若合用一份列表，每次同步都会把历史上删过的所有 id 全量重放一遍 DELETE，
+// 请求量随使用时间单调增长且永不收敛（删成功的也照样年复一年重发）。
+const STORAGE_KEY_PENDING_CLOUD_DELETE_PROJECTS = 'bam_pending_cloud_delete_projects_v1';
+const STORAGE_KEY_PENDING_CLOUD_DELETE_REPORTS = 'bam_pending_cloud_delete_reports_v1';
 // 商业知识学习中心：本地记录每个视频的观看进度（第4点）
 const STORAGE_KEY_LEARNING_PROGRESS = 'bam_learning_progress_v1';
 
@@ -54,11 +60,39 @@ function writeDeletedIds(key: string, ids: string[]): void {
 }
 export const getDeletedProjectIds = (): string[] => readDeletedIds(STORAGE_KEY_DELETED_PROJECTS);
 export const getDeletedReportIds = (): string[] => readDeletedIds(STORAGE_KEY_DELETED_REPORTS);
+const getPendingCloudDeleteProjectIds = (): string[] =>
+  readDeletedIds(STORAGE_KEY_PENDING_CLOUD_DELETE_PROJECTS);
+const getPendingCloudDeleteReportIds = (): string[] =>
+  readDeletedIds(STORAGE_KEY_PENDING_CLOUD_DELETE_REPORTS);
 function markDeleted(list: string[], id: string): string[] {
   return list.includes(id) ? list : [...list, id];
 }
 function unmarkDeleted(list: string[], id: string): string[] {
   return list.filter((x) => x !== id);
+}
+
+// 重放待删除队列，并把云端已确认删除的 id 出队，使队列最终收敛为空。
+// 失败的 id 留在队列里，下次同步继续重试。
+async function flushPendingCloudDeletes(): Promise<boolean> {
+  const projectIds = getPendingCloudDeleteProjectIds();
+  const reportIds = getPendingCloudDeleteReportIds();
+  if (projectIds.length === 0 && reportIds.length === 0) return true;
+
+  const [projectResults, reportResults] = await Promise.all([
+    Promise.all(projectIds.map((id) => deleteAssessmentFromCloud(id))),
+    Promise.all(reportIds.map((id) => deleteReportFromCloud(id)))
+  ]);
+
+  writeDeletedIds(
+    STORAGE_KEY_PENDING_CLOUD_DELETE_PROJECTS,
+    projectIds.filter((_, i) => !projectResults[i])
+  );
+  writeDeletedIds(
+    STORAGE_KEY_PENDING_CLOUD_DELETE_REPORTS,
+    reportIds.filter((_, i) => !reportResults[i])
+  );
+
+  return projectResults.every(Boolean) && reportResults.every(Boolean);
 }
 
 export const INITIAL_PRESET_PROJECTS: BusinessFormData[] = [];
@@ -125,8 +159,13 @@ export function getStoredProjects(): BusinessFormData[] {
 const pendingProjectCloudSync = new Map<string, Promise<boolean>>();
 
 export function saveProject(project: BusinessFormData): void {
-  // 重新保存即视为"存活"，从删除墓碑中移除（避免同 id 数据被墓碑误拦）
+  // 重新保存即视为"存活"，从删除墓碑中移除（避免同 id 数据被墓碑误拦）；
+  // 同时撤销排队中的云端删除，否则下次同步会把刚保存的这条记录从云端删掉
   writeDeletedIds(STORAGE_KEY_DELETED_PROJECTS, unmarkDeleted(getDeletedProjectIds(), project.id));
+  writeDeletedIds(
+    STORAGE_KEY_PENDING_CLOUD_DELETE_PROJECTS,
+    unmarkDeleted(getPendingCloudDeleteProjectIds(), project.id)
+  );
   const current = getStoredProjects();
   const index = current.findIndex((p) => p.id === project.id && p.version === project.version);
   if (index >= 0) {
@@ -170,19 +209,24 @@ export function deleteProjectAndReports(projectId: string, explicitReportIds?: s
   writeDeletedIds(STORAGE_KEY_DELETED_PROJECTS, markDeleted(getDeletedProjectIds(), projectId));
   writeDeletedIds(STORAGE_KEY_DELETED_REPORTS, allDeletedReportIds);
 
+  // 入队等待云端删除；删除成功后由 flushPendingCloudDeletes 出队
+  writeDeletedIds(
+    STORAGE_KEY_PENDING_CLOUD_DELETE_PROJECTS,
+    markDeleted(getPendingCloudDeleteProjectIds(), projectId)
+  );
+  writeDeletedIds(
+    STORAGE_KEY_PENDING_CLOUD_DELETE_REPORTS,
+    Array.from(new Set([...getPendingCloudDeleteReportIds(), ...reportIdsToDelete]))
+  );
+
   // Remove from Cloud (Supabase) Tables
   if (!isCloudDatabaseAvailable()) {
     return Promise.resolve(true);
   }
-  return Promise.all([
-    deleteAssessmentFromCloud(projectId),
-    ...reportIdsToDelete.map((id) => deleteReportFromCloud(id))
-  ])
-    .then((results) => results.every(Boolean))
-    .catch((err) => {
-      console.warn('Cloud delete failed (本地已删除，墓碑会拦截云端旧数据回流):', err);
-      return false;
-    });
+  return flushPendingCloudDeletes().catch((err) => {
+    console.warn('Cloud delete failed (本地已删除，墓碑会拦截云端旧数据回流):', err);
+    return false;
+  });
 }
 
 export function getAllReports(): AssessmentReport[] {
@@ -197,8 +241,12 @@ export function getAllReports(): AssessmentReport[] {
 }
 
 export function saveReport(report: AssessmentReport): void {
-  // 重新保存即视为"存活"，从删除墓碑中移除
+  // 重新保存即视为"存活"，从删除墓碑与待删除队列中移除
   writeDeletedIds(STORAGE_KEY_DELETED_REPORTS, unmarkDeleted(getDeletedReportIds(), report.id));
+  writeDeletedIds(
+    STORAGE_KEY_PENDING_CLOUD_DELETE_REPORTS,
+    unmarkDeleted(getPendingCloudDeleteReportIds(), report.id)
+  );
   const current = getAllReports();
   const index = current.findIndex((r) => r.id === report.id);
   if (index >= 0) {
@@ -293,6 +341,8 @@ export function clearAllLocalUserData(): void {
     localStorage.removeItem(STORAGE_KEY_DRAFT);
     localStorage.removeItem(STORAGE_KEY_DELETED_PROJECTS);
     localStorage.removeItem(STORAGE_KEY_DELETED_REPORTS);
+    localStorage.removeItem(STORAGE_KEY_PENDING_CLOUD_DELETE_PROJECTS);
+    localStorage.removeItem(STORAGE_KEY_PENDING_CLOUD_DELETE_REPORTS);
     localStorage.removeItem(STORAGE_KEY_INITIAL_SEEDED);
   } catch (e) {
     console.warn('Failed to clear local user data on logout:', e);
@@ -374,14 +424,11 @@ async function performCloudSync(currentUser?: AppUser | null): Promise<void> {
   const deletedReportIds = getDeletedReportIds();
 
   try {
-    // 0. 先重试把"已删除墓碑"对应的云端记录彻底删干净
+    // 0. 先重试把"尚未确认删除"的云端记录彻底删干净
     //    （上次删除失败/未完成时，这里补删，从根上消灭刷新"复活"）
-    if (deletedProjectIds.length > 0 || deletedReportIds.length > 0) {
-      await Promise.all([
-        ...deletedProjectIds.map((id) => deleteAssessmentFromCloud(id)),
-        ...deletedReportIds.map((id) => deleteReportFromCloud(id))
-      ]);
-    }
+    //    注意只重放待删除队列，不是整份墓碑：墓碑只增不减，拿它重放会让每次同步
+    //    都把历史上删过的所有 id 重发一遍 DELETE，请求量无限增长。
+    await flushPendingCloudDeletes();
 
     const [cloudProjects, cloudReports, cloudQuestions] = await Promise.all([
       fetchAssessmentsFromCloud(currentUser),
