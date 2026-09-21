@@ -56,7 +56,6 @@ import {
 import { State as StateLib } from 'country-state-city';
 import { SearchableSelect, type SearchableSelectOption } from './SearchableSelect';
 import { calculateBreakEvenRevenue } from '../../lib/breakEvenCalculator';
-import { amortizeMonthly } from '../../lib/costAggregation';
 import { calculatePaybackPeriod, calculateRequiredRevenueForTarget } from '../../lib/paybackCalculator';
 import { detectFormAnomalies } from '../../lib/anomalyDetection';
 import { FieldProvenanceBadge, PendingConfirmationsBar } from '../FieldProvenanceBadge';
@@ -250,11 +249,10 @@ export const AssessmentForm: React.FC<FormProps> = ({
   // 公司注册费/签证费是否被用户手动改过：没改过时，切换国家应自动刷新 AI 估值
   const [companyRegCostTouched, setCompanyRegCostTouched] = useState(false);
   const [visaFeeCostTouched, setVisaFeeCostTouched] = useState(false);
-  const inferTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const inferReqId = React.useRef(0);
 
   // —— 第5点：属地税收/公司注册/签证成本 AI 预估（可核实修改，不直接参与计算）——
-  // 优先用用户在「全球化经营成本」区域明确选择的所在国家/地区（见下方 regionCountry 下拉框）；
+  // 优先用用户在「花费清单」里明确选择的所在国家/地区（见下方 regionCountry 下拉框）；
   // 只有用户还没选择时，才退回到用店名/项目名猜地区这条弱信号，避免几乎所有新用户在还没填
   // 任何信息前就被悄悄套用某个不相关国家的税率/注册/签证费标准（反馈：全球化成本的AI估计值
   // 数据来源不明——没有明确的地区输入，用户没法判断参考值是基于什么算出来的）。
@@ -315,28 +313,12 @@ export const AssessmentForm: React.FC<FormProps> = ({
   );
 
   // —— 第3点：根据已填成本自动算出保本收入（每天/每月至少赚多少才不亏钱）——
-  const breakEven = React.useMemo(() => calculateBreakEvenRevenue(formData), [
-    formData.cogsCost,
-    formData.dynamicCogsItems,
-    formData.rentCost,
-    formData.laborCost,
-    formData.utilityCost,
-    formData.otherOpex,
-    formData.dynamicOpexItems,
-    formData.taxCost,
-    formData.existingDebtMonthlyPayment,
-    formData.companyRegistrationCost,
-    formData.companyRegistrationAmortizationMonths,
-    formData.dynamicRegistrationCostItems,
-    formData.visaFeeCost,
-    formData.visaFeeAmortizationMonths,
-    formData.equipmentDepreciationCost,
-    formData.dynamicEquipmentItems,
-    formData.baseCurrency,
-    formData.customCurrencyCode,
-    formData.hasMultipleRates,
-    formData.customExchangeRateValue
-  ]);
+  // 依赖数组改为直接依赖整个 formData（而非逐字段列举）：calculateBreakEvenRevenue 内部经
+  // aggregateMonthlyCosts 读取的字段集合此前曾与这里手动维护的依赖列表出现过漏项（如遗漏
+  // dynamicTaxItems），导致某些字段改了、这里的数字却纹丝不动——用整个 formData 作为唯一依赖
+  // 从根上消除这类"计算函数读了但依赖数组没列"的隐性 bug，formData 本身每次改动都是新引用，
+  // 不会因此丢失变更。
+  const breakEven = React.useMemo(() => calculateBreakEvenRevenue(formData), [formData]);
 
   // —— 第2点：AI 自动识别用户填错的数值及类目并提醒（本地规则化，仅提醒不阻断）——
   const rawAnomalyWarnings = React.useMemo(() => detectFormAnomalies(formData), [formData]);
@@ -363,59 +345,13 @@ export const AssessmentForm: React.FC<FormProps> = ({
   const overriddenAnomalyWarnings = rawAnomalyWarnings.filter((w) => formData.anomalyOverrides?.[w.field]);
 
   // —— 第5点：回本时间（收回初始投资所需时间），与盈亏平衡点是两条独立时间线，避免混为一谈 ——
-  const payback = React.useMemo(() => calculatePaybackPeriod(formData), [
-    formData.monthlyRevenue,
-    formData.monthlyRealOperatingRevenue,
-    formData.cogsCost,
-    formData.dynamicCogsItems,
-    formData.rentCost,
-    formData.laborCost,
-    formData.utilityCost,
-    formData.otherOpex,
-    formData.dynamicOpexItems,
-    formData.taxCost,
-    formData.existingDebtMonthlyPayment,
-    formData.companyRegistrationCost,
-    formData.companyRegistrationAmortizationMonths,
-    formData.dynamicRegistrationCostItems,
-    formData.visaFeeCost,
-    formData.visaFeeAmortizationMonths,
-    formData.equipmentDepreciationCost,
-    formData.dynamicEquipmentItems,
-    formData.initialInvestmentEstimate,
-    formData.baseCurrency,
-    formData.customCurrencyCode,
-    formData.hasMultipleRates,
-    formData.customExchangeRateValue
-  ]);
+  // 同上，依赖整个 formData，避免逐字段依赖列表漏项导致数字不跟着变。
+  const payback = React.useMemo(() => calculatePaybackPeriod(formData), [formData]);
 
   // —— 第6点：按用户设定的目标回本时间反推所需月/日收入 ——
   const reverseTarget = React.useMemo(
     () => calculateRequiredRevenueForTarget(formData, formData.targetPaybackMonths || 12),
-    [
-      formData.targetPaybackMonths,
-      formData.cogsCost,
-      formData.dynamicCogsItems,
-      formData.rentCost,
-      formData.laborCost,
-      formData.utilityCost,
-      formData.otherOpex,
-      formData.dynamicOpexItems,
-      formData.taxCost,
-      formData.existingDebtMonthlyPayment,
-      formData.companyRegistrationCost,
-      formData.companyRegistrationAmortizationMonths,
-      formData.dynamicRegistrationCostItems,
-      formData.visaFeeCost,
-      formData.visaFeeAmortizationMonths,
-      formData.equipmentDepreciationCost,
-      formData.dynamicEquipmentItems,
-      formData.initialInvestmentEstimate,
-      formData.baseCurrency,
-      formData.customCurrencyCode,
-      formData.hasMultipleRates,
-      formData.customExchangeRateValue
-    ]
+    [formData]
   );
 
   const setAnomalyOverride = (field: string, reason: string) => {
@@ -666,11 +602,6 @@ export const AssessmentForm: React.FC<FormProps> = ({
       updatedAt: new Date().toISOString()
     }));
   };
-  const dynamicEquipmentMonthlyTotal = (formData.dynamicEquipmentItems || []).reduce(
-    (sum, it) => sum + (Number(it.value) || 0) / Math.max(1, Math.round(Number(it.usefulLifeMonths) || 12)),
-    0
-  );
-
   // —— 动态注册/执照费用清单：区分一次性费用（按自定月数分摊）与年度费用（固定按12个月分摊），
   // 让用户逐项添加/删除，而不是把两类现金流性质完全不同的费用挤在同一个笼统数字里 ——
   const updateDynamicRegistrationItem = (
@@ -708,10 +639,6 @@ export const AssessmentForm: React.FC<FormProps> = ({
       updatedAt: new Date().toISOString()
     }));
   };
-  const dynamicRegistrationMonthlyTotal = (formData.dynamicRegistrationCostItems || []).reduce((sum, it) => {
-    const months = it.feeType === 'annual' ? 12 : Math.max(1, Math.round(Number(it.amortizationMonths) || 12));
-    return sum + (Number(it.amount) || 0) / months;
-  }, 0);
 
   // 反馈问题4：设备清单只给一个「机器A」这样的占位示例，用户不知道该买什么型号、去哪买。
   // 不做一份维护成本很高的"精选设备型号库"，而是给一个按行业+用户已填名称拼出的谷歌购物/
@@ -1003,40 +930,55 @@ export const AssessmentForm: React.FC<FormProps> = ({
     });
   };
 
+  /**
+   * 反馈：以前每敲一下项目/店铺名称、停顿 1.2 秒就会自动触发一次 AI 推算并弹出
+   * 「AI 已自动预填」，用户还在打字阶段就被打断。改为只在这里更新输入值本身，
+   * 真正发起推算的时机挪到用户点击「下一步：赚多少、花多少」时（见 runBusinessInference
+   * 与该按钮的 onClick）。nameDirtyRef 标记「名称改过、还没推算过」，避免用户没碰过名称
+   * 字段时（比如打开一个已有项目）点下一步也误触发一次推算、覆盖掉已有的真实数据。
+   */
+  const nameDirtyRef = React.useRef(false);
+
   const handleProjectNameChange = (value: string) => {
     updateField('projectName', value);
     if (value.trim()) setNameError(null);
-    if (inferTimer.current) clearTimeout(inferTimer.current);
     const name = value.trim();
     if (name.length < 2) {
       setInferState('idle');
       setInferErrorReason(null);
+      nameDirtyRef.current = false;
       return;
     }
+    nameDirtyRef.current = true;
+    setInferState('idle');
+    setInferErrorReason(null);
+  };
+
+  /** 真正发起一次 AI 推算（不再防抖，因为调用时机已经是用户的一次明确操作：点下一步，或点“重新推算”）。 */
+  const runBusinessInference = async (name: string): Promise<void> => {
     setInferState('loading');
     setInferErrorReason(null);
-    inferTimer.current = setTimeout(async () => {
-      const reqId = ++inferReqId.current;
-      const result = await callInferBusinessStructure(name);
-      if (reqId !== inferReqId.current) return; // 丢弃过期请求
-      // 不再用写死的行业模板冒充推断结果——云端 AI 不可用或未返回有效结构时，
-      // 如实提示用户手动填写，而不是悄悄套上一份跟项目毫无关系的固定数字。
-      const isUsable =
-        !!result &&
-        (result as any).success !== false &&
-        (result.inferredIndustryKey ||
-          result.suggestedCurrency ||
-          result.opexItems?.length ||
-          result.cogsItems?.length);
-      if (!isUsable) {
-        setInferErrorReason((result as any)?.unavailable ? (result as any).reason ?? null : null);
-        setInferState('error');
-        return;
-      }
-      setInferErrorReason(null);
-      applyInferResult(result);
-      setInferState('done');
-    }, 1200);
+    const reqId = ++inferReqId.current;
+    const result = await callInferBusinessStructure(name);
+    if (reqId !== inferReqId.current) return; // 丢弃过期请求
+    // 不再用写死的行业模板冒充推断结果——云端 AI 不可用或未返回有效结构时，
+    // 如实提示用户手动填写，而不是悄悄套上一份跟项目毫无关系的固定数字。
+    const isUsable =
+      !!result &&
+      (result as any).success !== false &&
+      (result.inferredIndustryKey ||
+        result.suggestedCurrency ||
+        result.opexItems?.length ||
+        result.cogsItems?.length);
+    if (!isUsable) {
+      setInferErrorReason((result as any)?.unavailable ? (result as any).reason ?? null : null);
+      setInferState('error');
+      return;
+    }
+    setInferErrorReason(null);
+    applyInferResult(result);
+    setInferState('done');
+    nameDirtyRef.current = false;
   };
 
   /** 将动态成本项恢复为 AI 上次建议的结构（含预估金额） */
@@ -1386,7 +1328,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       : (language === 'en' ? 'AI is temporarily unavailable — please select the industry manually and fill in the cost/revenue items yourself.' : 'AI 暂时不可用，请手动选择行业并自行填写成本与收入项目。')}
                     <button
                       type="button"
-                      onClick={() => formData.projectName.trim().length >= 2 && handleProjectNameChange(formData.projectName)}
+                      onClick={() => formData.projectName.trim().length >= 2 && runBusinessInference(formData.projectName.trim())}
                       className="ml-1 underline font-bold hover:text-amber-700 cursor-pointer"
                     >
                       {language === 'en' ? 'Retry' : '重新推算'}
@@ -1397,7 +1339,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
             </div>
 
             {/* 公司注册所在国家/地区：放在第一步，因为它直接决定主报告币种，
-                并作为后面「全球化经营成本」区域税收/注册/签证参考值的唯一权威信号源。 */}
+                并作为后面「花费清单」里税收/注册/签证参考值的唯一权威信号源。 */}
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
                 <Building2 className="w-3.5 h-3.5 text-teal-600" />
@@ -1414,7 +1356,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
               <p className="text-[12px] text-slate-500 mt-1">
                 {language === 'en'
                   ? 'Determines your base currency and the tax/registration/visa reference values shown later — you can still override any of them yourself.'
-                  : '将决定主报告币种，以及后面「全球化经营成本」区域的税收/注册/签证参考值——你随时可以在下方自行修改覆盖。'}
+                  : '将决定主报告币种，以及后面「花费清单」里的税收/注册/签证参考值——你随时可以在下方自行修改覆盖。'}
               </p>
             </div>
 
@@ -1674,8 +1616,10 @@ export const AssessmentForm: React.FC<FormProps> = ({
 
           <div className="flex justify-end flex-col items-end gap-2">
             <button
-              onClick={() => {
-                if (!formData.projectName.trim()) {
+              disabled={inferState === 'loading'}
+              onClick={async () => {
+                const name = formData.projectName.trim();
+                if (!name) {
                   setNameError(
                     language === 'en'
                       ? 'Please enter project / business name'
@@ -1684,11 +1628,20 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   return;
                 }
                 setNameError(null);
+                // AI 推算只在这里（用户明确点了「下一步」）触发一次，而不是每敲一个字就触发——
+                // nameDirtyRef 确保名称没改过时（如打开一个已有项目）不会误触发，覆盖已有数据。
+                if (nameDirtyRef.current && name.length >= 2) {
+                  await runBusinessInference(name);
+                }
                 setCurrentStep(2);
               }}
-              className="flex items-center gap-1.5 px-6 py-2.5 bg-teal-600 hover:bg-teal-500 text-white rounded-xl text-xs font-bold shadow-md shadow-teal-600/20 transition-all cursor-pointer"
+              className="flex items-center gap-1.5 px-6 py-2.5 bg-teal-600 hover:bg-teal-500 disabled:opacity-60 disabled:cursor-wait text-white rounded-xl text-xs font-bold shadow-md shadow-teal-600/20 transition-all cursor-pointer"
             >
-              <span>{language === 'en' ? 'Next: Revenue & Expenses' : '下一步：赚多少、花多少'}</span>
+              <span>
+                {inferState === 'loading'
+                  ? (language === 'en' ? 'AI is inferring…' : 'AI 正在推算…')
+                  : (language === 'en' ? 'Next: Revenue & Expenses' : '下一步：赚多少、花多少')}
+              </span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -1935,43 +1888,28 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   </span>
                 </div>
 
-                {/* F10 COGS —— 只保留「按行业细分的物料成本细则」这一份录入，不再另设重复的总额白框，
-                    避免用户改了总额框、AI 分析却仍按细则计算、毫无变化的困惑。明细合计即月度变动成本，
-                    自动作为后续 AI 分析的数据来源。 */}
+                {/* 花费清单：所有成本/开支项目（材料、房租、人工、水电、税金、还贷、注册、签证、设备折旧……）
+                    统一放进同一份可增删改的清单里逐行展示，不再按类目拆成一个个独立分区/白框——
+                    反馈原文：这些都不应该分类列出，应该直接在花费清单里展示。
+                    固定类目（房租/人工/水电/税金/还贷）结构上始终存在，「删除」即把金额清零；
+                    动态类目（材料/其他开支/注册/设备）可随时整行新增或删除。 */}
                 <div className="p-4 rounded-xl bg-white border border-slate-200 space-y-2 text-xs">
                   <div className="flex items-center justify-between flex-wrap gap-2">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <label className="font-bold text-slate-900">
-                          {cogsFieldMeta.label}
-                        </label>
-                        <span className="text-[12px] bg-slate-200 text-slate-700 font-bold px-1.5 py-0.5 rounded">
-                          {cogsFieldMeta.badge}
-                        </span>
-                      </div>
-                      <p className="text-[13px] text-slate-500">
-                        {cogsFieldMeta.tip}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => onOpenAiHelper?.(language === 'en' ? 'How should I estimate my purchasing/material cost? Does it include freight?' : '进货成本大概怎么算？包含运费吗？')}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-700 text-[13px] font-bold transition-colors cursor-pointer"
-                    >
-                      <Sparkles className="w-3 h-3 text-teal-600" />
-                      <span>{language === 'en' ? 'Ask AI' : 'AI咨询'}</span>
-                    </button>
-                  </div>
-
-                  {/* 按行业细分的动态物料成本细则（AI 推断，可自由增删改） */}
-                  <div className="mt-1 p-3 rounded-xl bg-rose-50/50 border border-dashed border-rose-300 space-y-2">
-                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <span className="text-[13px] font-black text-rose-900">
-                        {language === 'en' ? 'Your expense items (add/remove/edit)' : '你的花费清单（可增删改）'}
-                        {cogsTouched && (
-                          <span className="ml-1.5 inline-block text-[11px] px-1 py-0.5 rounded bg-amber-100 text-amber-700 font-bold align-middle">{language === 'en' ? 'Manually adjusted' : '已手动调整'}</span>
-                        )}
-                      </span>
+                    <span className="text-[13px] font-black text-slate-900">
+                      {language === 'en' ? 'Your expense items (add/remove/edit)' : '你的花费清单（可增删改）'}
+                      {(cogsTouched || opexTouched) && (
+                        <span className="ml-1.5 inline-block text-[11px] px-1 py-0.5 rounded bg-amber-100 text-amber-700 font-bold align-middle">{language === 'en' ? 'Manually adjusted' : '已手动调整'}</span>
+                      )}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => onOpenAiHelper?.(language === 'en' ? 'How should I estimate my purchasing/material cost? Does it include freight?' : '进货成本大概怎么算？包含运费吗？')}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-700 text-[13px] font-bold transition-colors cursor-pointer"
+                      >
+                        <Sparkles className="w-3 h-3 text-teal-600" />
+                        <span>{language === 'en' ? 'Ask AI' : 'AI咨询'}</span>
+                      </button>
                       <button
                         type="button"
                         onClick={restoreAiSuggestion}
@@ -1980,307 +1918,403 @@ export const AssessmentForm: React.FC<FormProps> = ({
                         <RefreshCw className="inline w-3 h-3 mr-0.5" />{language === 'en' ? 'Restore AI Suggestion' : '恢复 AI 建议'}
                       </button>
                     </div>
-                    <span className="text-[12px] text-rose-700">{language === 'en' ? 'The total of the line items below feeds directly into the AI analysis. Fill in a purchase quantity + unit cost for a good and its amount is calculated for you.' : '以下逐项合计会直接用于 AI 分析。某一货物填了进货量+进货单价后，金额会自动按两者相乘算出。'}</span>
-                    <p className="text-[12px] text-rose-800 bg-rose-100 border border-rose-300 rounded-lg p-1.5 font-semibold">
-                      {resolvedUnitsSold(formData.revenueDetailEstimate) != null
-                        ? (language === 'en'
-                            ? `Tip: estimate each good's monthly purchase quantity based on the ${Math.round(resolvedUnitsSold(formData.revenueDetailEstimate) || 0)} units/mo you entered above under "How much do you earn" — if unsure, just use that sales figure directly.`
-                            : `提示：请根据你在上方「赚多少」里填写的月销量（约 ${Math.round(resolvedUnitsSold(formData.revenueDetailEstimate) || 0)} 件）估计每种货物的每月进货量，如果不确定，建议直接使用销售量。`)
-                        : (language === 'en'
-                            ? 'Tip: estimate each good\'s monthly purchase quantity based on the monthly sales volume you enter under "How much do you earn" above — if unsure, just use that sales figure directly.'
-                            : '提示：请根据上方「赚多少」里填写的月销量估计每种货物的每月进货量，如果不确定，建议直接使用销售量。')}
-                    </p>
-                    {(formData.dynamicCogsItems || []).map((it) => (
-                      <div key={it.id} className="flex items-center gap-1.5 flex-wrap">
-                        <input
-                          type="text"
-                          value={it.label}
-                          onChange={(e) => updateDynamicCogsItem(it.id, { label: e.target.value })}
-                          className="flex-1 min-w-[7rem] p-1.5 border border-rose-200 rounded-lg font-semibold text-slate-800"
-                        />
-                        <NumberField
-                          value={it.quantity || 0}
-                          onChange={(v) => updateDynamicCogsItem(it.id, { quantity: v || undefined })}
-                          className="w-16 shrink-0 p-1.5 border border-rose-200 rounded-lg font-mono text-right"
-                          placeholder={language === 'en' ? 'Qty' : '进货量'}
-                          title={language === 'en' ? 'Purchase quantity (optional)' : '进货量（选填）'}
-                        />
-                        <span className="text-[11px] text-rose-700 shrink-0">×</span>
-                        <NumberField
-                          value={it.unitCost || 0}
-                          onChange={(v) => updateDynamicCogsItem(it.id, { unitCost: v || undefined })}
-                          className="w-20 shrink-0 p-1.5 border border-rose-200 rounded-lg font-mono text-right"
-                          placeholder={language === 'en' ? 'Unit cost' : '进货单价'}
-                          title={language === 'en' ? 'Unit purchase cost (optional)' : '进货单价（选填）'}
-                        />
-                        <span className="text-[11px] text-rose-700 shrink-0">=</span>
-                        <NumberField
-                          value={it.value}
-                          onChange={(v) => updateDynamicCogsItem(it.id, { value: v })}
-                          disabled={Boolean(it.quantity && it.unitCost)}
-                          className="w-24 shrink-0 p-1.5 border border-rose-200 rounded-lg font-mono font-semibold text-right disabled:bg-rose-50 disabled:text-rose-700"
-                          placeholder={it.suggestedAmount ? `${language === 'en' ? 'AI suggests' : 'AI建议'} ${it.suggestedAmount}` : (language === 'en' ? 'Amount' : '金额')}
-                          title={it.suggestedAmount ? (language === 'en' ? `AI suggested reference amount: ${it.suggestedAmount} (for reference only, please fill in your real figure)` : `AI 建议参考金额：${it.suggestedAmount}（仅供参考，请填你的真实数字）`) : (language === 'en' ? 'Please fill in your real monthly amount, or fill quantity × unit cost above' : '请填你的真实月度金额，或改为在左边填进货量×进货单价')}
-                        />
-                        <span className="text-[12px] text-rose-700 whitespace-nowrap shrink-0 pl-0.5">{formData.baseCurrency}/{language === 'en' ? 'mo' : '月'}</span>
-                        {it.suggestedAmount ? (
-                          <FieldProvenanceBadge
-                            confidence={isReviewedByUser(it) ? 'confirmed' : 'suggested'}
-                            language={language}
-                          />
-                        ) : null}
-                        <button type="button" onClick={() => removeDynamicCogsItem(it.id)} className="p-1 text-rose-500 hover:text-rose-700 cursor-pointer shrink-0">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    ))}
-                    <div className="flex items-center justify-between flex-wrap gap-2 pt-1">
-                      <button type="button" onClick={addDynamicCogsItem} className="text-[12px] px-2 py-1 rounded border border-rose-300 text-rose-700 font-bold hover:bg-rose-100 cursor-pointer">
-                        {language === 'en' ? '+ Add material cost item' : '＋ 添加物料成本项'}
-                      </button>
-                      <span className="text-[13px] font-black text-rose-900">
-                        {language === 'en' ? 'Total:' : '合计：'}{' '}
-                        {(formData.dynamicCogsItems || []).reduce((sum, it) => sum + (Number(it.value) || 0), 0)}{' '}
-                        {formData.baseCurrency}/{language === 'en' ? 'mo' : '月'}
-                      </span>
-                    </div>
                   </div>
+                  <p className="text-[12px] text-slate-500">{cogsFieldMeta.tip}</p>
+                  <p className="text-[12px] text-rose-800 bg-rose-50 border border-rose-200 rounded-lg p-1.5 font-semibold">
+                    {resolvedUnitsSold(formData.revenueDetailEstimate) != null
+                      ? (language === 'en'
+                          ? `Tip: for a material item, fill in monthly purchase quantity + unit cost and the amount is calculated for you — estimate quantity based on the ${Math.round(resolvedUnitsSold(formData.revenueDetailEstimate) || 0)} units/mo you entered above under "How much do you earn".`
+                          : `提示：材料类条目填了每月进货量+进货单价后，金额会自动按两者相乘算出——进货量可参考你在上方「赚多少」里填写的月销量（约 ${Math.round(resolvedUnitsSold(formData.revenueDetailEstimate) || 0)} 件）估计。`)
+                      : (language === 'en'
+                          ? 'Tip: for a material item, fill in monthly purchase quantity + unit cost and the amount is calculated for you — estimate quantity based on the monthly sales volume you enter under "How much do you earn" above.'
+                          : '提示：材料类条目填了每月进货量+进货单价后，金额会自动按两者相乘算出——进货量可参考上方「赚多少」里填写的月销量估计。')}
+                  </p>
 
-                </div>
-
-                {/* 固定开销网格 */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
-                  <div className="p-3.5 rounded-xl border border-slate-200 bg-white">
-                    <div className="flex justify-between mb-1">
-                      <label className="font-bold text-slate-800">{language === 'en' ? 'Rent & Property' : '场地租金与物业'}</label>
-                      <span className="text-[13px] text-slate-400">{formData.rentCost.currency}/{language === 'en' ? 'mo' : '月'}</span>
+                  {/* 材料/教学耗材类条目（AI 按行业推断，可自由增删改） */}
+                  {(formData.dynamicCogsItems || []).map((it) => (
+                    <div key={it.id} className="flex items-center gap-1.5 flex-wrap">
+                      <input
+                        type="text"
+                        value={it.label}
+                        onChange={(e) => updateDynamicCogsItem(it.id, { label: e.target.value })}
+                        className="flex-1 min-w-[7rem] p-1.5 border border-slate-200 rounded-lg font-semibold text-slate-800"
+                      />
+                      <NumberField
+                        value={it.quantity || 0}
+                        onChange={(v) => updateDynamicCogsItem(it.id, { quantity: v || undefined })}
+                        className="w-16 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono text-right"
+                        placeholder={language === 'en' ? 'Qty' : '进货量'}
+                        title={language === 'en' ? 'Purchase quantity (optional)' : '进货量（选填）'}
+                      />
+                      <span className="text-[11px] text-slate-500 shrink-0">×</span>
+                      <NumberField
+                        value={it.unitCost || 0}
+                        onChange={(v) => updateDynamicCogsItem(it.id, { unitCost: v || undefined })}
+                        className="w-20 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono text-right"
+                        placeholder={language === 'en' ? 'Unit cost' : '进货单价'}
+                        title={language === 'en' ? 'Unit purchase cost (optional)' : '进货单价（选填）'}
+                      />
+                      <span className="text-[11px] text-slate-500 shrink-0">=</span>
+                      <NumberField
+                        value={it.value}
+                        onChange={(v) => updateDynamicCogsItem(it.id, { value: v })}
+                        disabled={Boolean(it.quantity && it.unitCost)}
+                        className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right disabled:bg-slate-50 disabled:text-slate-500"
+                        placeholder={it.suggestedAmount ? `${language === 'en' ? 'AI suggests' : 'AI建议'} ${it.suggestedAmount}` : (language === 'en' ? 'Amount' : '金额')}
+                        title={it.suggestedAmount ? (language === 'en' ? `AI suggested reference amount: ${it.suggestedAmount} (for reference only, please fill in your real figure)` : `AI 建议参考金额：${it.suggestedAmount}（仅供参考，请填你的真实数字）`) : (language === 'en' ? 'Please fill in your real monthly amount, or fill quantity × unit cost above' : '请填你的真实月度金额，或改为在左边填进货量×进货单价')}
+                      />
+                      <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.baseCurrency}/{language === 'en' ? 'mo' : '月'}</span>
+                      {it.suggestedAmount ? (
+                        <FieldProvenanceBadge
+                          confidence={isReviewedByUser(it) ? 'confirmed' : 'suggested'}
+                          language={language}
+                        />
+                      ) : null}
+                      <button type="button" onClick={() => removeDynamicCogsItem(it.id)} className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer shrink-0">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
+                  ))}
+
+                  {/* 固定类目：场地租金/员工工资/水电网络/税金及规费/偿还债务——结构上始终存在，
+                      「删除」即把金额清零，与其他条目共用同一份清单展示，不再单独分栏。 */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="flex-1 min-w-[7rem] p-1.5 font-semibold text-slate-800">{language === 'en' ? 'Rent & Property' : '场地租金与物业'}</span>
                     <NumberField
                       inputMode="numeric"
                       min={0}
                       value={formData.rentCost.amount}
                       onChange={(v) => updateMoney('rentCost', v)}
-                      className="w-full p-2 border border-slate-300 rounded-lg font-semibold"
+                      className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
                     />
+                    <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.rentCost.currency}/{language === 'en' ? 'mo' : '月'}</span>
+                    <button type="button" onClick={() => updateMoney('rentCost', 0)} className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer shrink-0">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
 
-                  <div className="p-3.5 rounded-xl border border-slate-200 bg-white">
-                    <div className="flex justify-between mb-1">
-                      <label className="font-bold text-slate-800">{language === 'en' ? 'Staff Wages & Labor Costs' : '员工工资与人工支出'}</label>
-                      <span className="text-[13px] text-slate-400">{formData.laborCost.currency}/{language === 'en' ? 'mo' : '月'}</span>
-                    </div>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="flex-1 min-w-[7rem] p-1.5 font-semibold text-slate-800">{language === 'en' ? 'Staff Wages & Labor Costs' : '员工工资与人工支出'}</span>
                     <NumberField
                       inputMode="numeric"
                       min={0}
                       value={formData.laborCost.amount}
                       onChange={(v) => updateMoney('laborCost', v)}
-                      className="w-full p-2 border border-slate-300 rounded-lg font-semibold"
+                      className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
                     />
+                    <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.laborCost.currency}/{language === 'en' ? 'mo' : '月'}</span>
+                    <button type="button" onClick={() => updateMoney('laborCost', 0)} className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer shrink-0">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
 
-                  <div className="p-3.5 rounded-xl border border-slate-200 bg-white">
-                    <div className="flex justify-between mb-1">
-                      <label className="font-bold text-slate-800">{language === 'en' ? 'Utilities, Internet & Misc.' : '水电网络杂费'}</label>
-                      <span className="text-[13px] text-slate-400">{formData.utilityCost.currency}/{language === 'en' ? 'mo' : '月'}</span>
-                    </div>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="flex-1 min-w-[7rem] p-1.5 font-semibold text-slate-800">{language === 'en' ? 'Utilities, Internet & Misc.' : '水电网络杂费'}</span>
                     <NumberField
                       inputMode="numeric"
                       min={0}
                       value={formData.utilityCost.amount}
                       onChange={(v) => updateMoney('utilityCost', v)}
-                      className="w-full p-2 border border-slate-300 rounded-lg font-semibold"
+                      className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
                     />
+                    <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.utilityCost.currency}/{language === 'en' ? 'mo' : '月'}</span>
+                    <button type="button" onClick={() => updateMoney('utilityCost', 0)} className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer shrink-0">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
 
-                  <div className="p-3.5 rounded-xl border border-slate-200 bg-white">
-                    <div className="flex justify-between mb-1">
-                      <label className="font-bold text-slate-800">{language === 'en' ? 'Taxes & Fees' : '税金及规费'}</label>
-                      <span className="text-[13px] text-slate-400">{formData.taxCost.currency}/{language === 'en' ? 'mo' : '月'}</span>
-                    </div>
-
-                    <NumberField
-                      inputMode="numeric"
-                      min={0}
-                      value={formData.taxCost.amount}
-                      onChange={(v) => updateMoney('taxCost', v)}
-                      className="w-full p-2 border border-slate-300 rounded-lg font-semibold"
-                    />
-                    {formData.taxCost.amount > 0 && (
-                      <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="flex-1 min-w-[7rem] p-1.5 font-semibold text-slate-800">{language === 'en' ? 'Taxes & Fees' : '税金及规费'}</span>
+                      <NumberField
+                        inputMode="numeric"
+                        min={0}
+                        value={formData.taxCost.amount}
+                        onChange={(v) => updateMoney('taxCost', v)}
+                        className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                      />
+                      <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.taxCost.currency}/{language === 'en' ? 'mo' : '月'}</span>
+                      <button type="button" onClick={() => updateMoney('taxCost', 0)} className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer shrink-0">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                      {formData.taxCost.amount > 0 && (
                         <button
                           type="button"
                           onClick={() => updateMoney('taxCost', Math.round((Number(formData.taxCost.amount) || 0) / 12))}
-                          className="text-[11px] px-2 py-0.5 rounded border border-slate-300 text-slate-600 font-bold hover:bg-slate-100 cursor-pointer"
+                          className="text-[11px] px-2 py-0.5 rounded border border-slate-300 text-slate-600 font-bold hover:bg-slate-100 cursor-pointer shrink-0"
                           title={language === 'en' ? 'I entered an annual amount — convert to monthly' : '我填的是年度金额，帮我换算成月度'}
                         >
-                          {language === 'en' ? '÷12 (annual → monthly)' : '按年填的？÷12 换算成月度'}
+                          {language === 'en' ? '÷12 (annual → monthly)' : '按年填的？÷12'}
                         </button>
-                      </div>
-                    )}
-
-                    {/* 反馈问题1第1/3层：默认值应有来源标注，数据不全时诚实告知，而不是一个空白框；
-                        这里复用「全球化经营成本」区域已算好的 regulatoryEstimate，同一份数据、同一处地区选择。 */}
-                    <p className="text-[11px] text-slate-500 mt-1.5 leading-relaxed">
+                      )}
+                    </div>
+                    {/* 反馈问题1第1/3层：默认值应有来源标注，数据不全时诚实告知，而不是一个空白框 */}
+                    <p className="text-[11px] text-slate-500 pl-1.5 leading-relaxed">
                       {formData.regionCountry
                         ? (language === 'en'
                             ? `Reference for ${regulatoryEstimate.countryLabel}: ${regulatoryEstimate.corporateTaxRateHint}. ${regulatoryEstimate.sourceNote}`
                             : `${regulatoryEstimate.countryLabel}参考：${regulatoryEstimate.corporateTaxRateHint}。${regulatoryEstimate.sourceNote}`)
                         : (language === 'en'
-                            ? 'No local tax-rate data yet — pick your country/region below in "Global Operating Costs" for a reference range, or consult a local tax authority/accountant before filling this in.'
-                            : '暂无你所在地区的税率参考数据：请在下方「全球化经营成本」区域选择所在国家/地区查看参考区间，或直接咨询当地税务机构/会计师后填写。')}
+                            ? 'No local tax-rate data yet — pick your country/region below for a reference range, or consult a local tax authority/accountant before filling this in.'
+                            : '暂无你所在地区的税率参考数据：请在下方选择所在国家/地区查看参考区间，或直接咨询当地税务机构/会计师后填写。')}
                     </p>
                     {formData.monthlyExternalGrants.amount > 0 && (
-                      <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-1.5 mt-1.5 leading-relaxed font-semibold">
+                      <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-1.5 ml-1.5 leading-relaxed font-semibold">
                         {language === 'en'
                           ? `You entered ${formatMoney(formData.monthlyExternalGrants.amount, formData.monthlyExternalGrants.currency)} of external support/grants above — that amount is usually not taxable, but it is NOT auto-excluded from the number here. Please confirm your local rules before filling in tax.`
                           : `你在上方填了 ${formatMoney(formData.monthlyExternalGrants.amount, formData.monthlyExternalGrants.currency)} 的外部支持款/机构赠款——这笔钱通常不算应税收入，但不会自动从这里的数字里扣除，请自行核实当地规则后再填税金。`}
                       </p>
                     )}
-
                     {renderInlineAnomalies('taxCost')}
                   </div>
 
-                  <div className="p-3.5 rounded-xl border border-slate-200 bg-white col-span-1 sm:col-span-2 lg:col-span-2">
-                    <div className="flex justify-between mb-1">
-                      <label className="font-bold text-slate-800">{language === 'en' ? 'Monthly Debt Repayment (Principal & Interest)' : '每月偿还债务本息'}</label>
-                      <span className="text-[13px] text-slate-400">{formData.existingDebtMonthlyPayment.currency}/{language === 'en' ? 'mo' : '月'}</span>
-                    </div>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="flex-1 min-w-[7rem] p-1.5 font-semibold text-slate-800">{language === 'en' ? 'Monthly Debt Repayment (Principal & Interest)' : '每月偿还债务本息'}</span>
                     <NumberField
                       inputMode="numeric"
                       min={0}
                       placeholder={language === 'en' ? 'Enter 0 if no debt' : '无债务填 0'}
                       value={formData.existingDebtMonthlyPayment.amount}
                       onChange={(v) => updateMoney('existingDebtMonthlyPayment', v)}
-                      className="w-full p-2 border border-slate-300 rounded-lg font-semibold"
+                      className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
                     />
+                    <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.existingDebtMonthlyPayment.currency}/{language === 'en' ? 'mo' : '月'}</span>
+                    <button type="button" onClick={() => updateMoney('existingDebtMonthlyPayment', 0)} className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer shrink-0">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
-                </div>
 
-                {/* AI 按行业推断的运营开支补充项：上方白色栏目（房租/人工/水电）是各行业通用的固定成本，予以保留；
-                    这里不是对白色栏目的重复拆解，而是该行业在此基础上通常还会有的额外开支（如排烟维护、消杀等），
-                    两者相加计入总运营开支，不会互相覆盖。 */}
-                {(formData.dynamicOpexItems || []).length > 0 && (
-                  <div className="p-3 rounded-xl bg-white border border-dashed border-slate-300 space-y-2 text-xs">
-                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <span className="text-[13px] font-black text-slate-900">
-                        {language === 'en' ? 'Other expense items on top of the fields above (add/remove/edit)' : '在上方基础上，AI 补充的其他花费项（可增删改）'}
-                        {opexTouched && (
-                          <span className="ml-1.5 inline-block text-[11px] px-1 py-0.5 rounded bg-amber-100 text-amber-700 font-bold align-middle">{language === 'en' ? 'Manually adjusted' : '已手动调整'}</span>
-                        )}
-                      </span>
+                  {/* AI 按行业推断的其他开支补充项（可自由增删改） */}
+                  {(formData.dynamicOpexItems || []).map((it) => (
+                    <div key={it.id} className="flex items-center gap-1.5 flex-wrap">
+                      <input
+                        type="text"
+                        value={it.label}
+                        onChange={(e) => updateDynamicOpexItem(it.id, { label: e.target.value })}
+                        className="flex-1 min-w-[7rem] p-1.5 border border-slate-200 rounded-lg font-semibold text-slate-800"
+                      />
+                      <NumberField
+                        min={0}
+                        value={it.value}
+                        onChange={(v) => updateDynamicOpexItem(it.id, { value: Math.max(0, v) })}
+                        className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                        placeholder={it.suggestedAmount ? `${language === 'en' ? 'AI suggests' : 'AI建议'} ${it.suggestedAmount}` : (language === 'en' ? 'Amount' : '金额')}
+                        title={it.suggestedAmount ? (language === 'en' ? `AI suggested reference amount: ${it.suggestedAmount} (for reference only, please fill in your real figure)` : `AI 建议参考金额：${it.suggestedAmount}（仅供参考，请填你的真实数字）`) : (language === 'en' ? 'Please fill in your real monthly amount' : '请填你的真实月度金额')}
+                      />
+                      <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.baseCurrency}/{language === 'en' ? 'mo' : '月'}</span>
+                      {it.suggestedAmount ? (
+                        <FieldProvenanceBadge
+                          confidence={isReviewedByUser(it) ? 'confirmed' : 'suggested'}
+                          language={language}
+                        />
+                      ) : null}
+                      <button type="button" onClick={() => removeDynamicOpexItem(it.id)} className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer shrink-0">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+
+                  {/* 注册/执照费用：逐项区分一次性（按自定月数分摊）与年度（固定按12个月分摊），
+                      与上面的条目共用同一份清单展示。 */}
+                  {(formData.dynamicRegistrationCostItems || []).map((it) => (
+                    <div key={it.id} className="flex items-center gap-1.5 flex-wrap">
+                      <input
+                        type="text"
+                        value={it.label}
+                        onChange={(e) => updateDynamicRegistrationItem(it.id, { label: e.target.value })}
+                        placeholder={language === 'en' ? 'e.g. Business license' : '例如：营业执照'}
+                        className="flex-1 min-w-[7rem] p-1.5 border border-slate-200 rounded-lg font-semibold text-slate-800"
+                      />
+                      <NumberField
+                        min={0}
+                        value={it.amount}
+                        onChange={(v) => updateDynamicRegistrationItem(it.id, { amount: v })}
+                        className="w-20 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                      />
+                      <select
+                        value={it.feeType}
+                        onChange={(e) =>
+                          updateDynamicRegistrationItem(it.id, { feeType: e.target.value as 'one_time' | 'annual' })
+                        }
+                        className="p-1.5 border border-slate-200 rounded-lg font-semibold text-slate-800 bg-white shrink-0"
+                      >
+                        <option value="one_time">{language === 'en' ? 'One-time' : '一次性'}</option>
+                        <option value="annual">{language === 'en' ? 'Annual' : '年度'}</option>
+                      </select>
+                      {it.feeType === 'one_time' ? (
+                        <div className="flex items-center gap-1 shrink-0">
+                          <span className="text-[11px] text-slate-500">÷</span>
+                          <NumberField
+                            min={1}
+                            value={it.amortizationMonths}
+                            onChange={(v) => updateDynamicRegistrationItem(it.id, { amortizationMonths: v })}
+                            className="w-14 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                          />
+                          <span className="text-[11px] text-slate-500">{language === 'en' ? 'months' : '个月'}</span>
+                        </div>
+                      ) : (
+                        <span className="text-[11px] text-slate-500 shrink-0">{language === 'en' ? '÷ 12 months' : '÷ 12 个月'}</span>
+                      )}
+                      <button type="button" onClick={() => removeDynamicRegistrationItem(it.id)} className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer shrink-0">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="flex-1 min-w-[7rem] p-1.5 font-semibold text-slate-800">
+                      {language === 'en' ? 'Other registration/license fee' : '其他补充注册/执照费用'}
                       <button
                         type="button"
-                        onClick={restoreAiSuggestion}
-                        className="text-[12px] px-2 py-0.5 rounded bg-teal-100 text-teal-700 font-bold hover:bg-teal-200 cursor-pointer"
+                        onClick={() => updateMoney('companyRegistrationCost', regulatoryEstimate.registrationLocal)}
+                        className="ml-2 text-[11px] underline text-teal-700 font-bold hover:text-teal-900 cursor-pointer"
                       >
-                        <RefreshCw className="inline w-3 h-3 mr-0.5" />{language === 'en' ? 'Restore AI Suggestion' : '恢复 AI 建议'}
+                        {language === 'en' ? 'Use AI value' : '填入AI估值'}
                       </button>
-                    </div>
-                    <span className="text-[12px] text-slate-500">
-                      {language === 'en'
-                        ? 'These are added to Rent/Wages/Utilities above (not a re-breakdown of them) to form the total monthly operating expense used in the AI analysis.'
-                        : '以下条目会与上方「场地租金/员工工资/水电杂费」相加（而非重复拆解它们），合计构成 AI 分析所用的每月运营开支总额。'}
                     </span>
-                    {(formData.dynamicOpexItems || []).map((it) => (
-                      <div key={it.id} className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          value={it.label}
-                          onChange={(e) => updateDynamicOpexItem(it.id, { label: e.target.value })}
-                          className="flex-1 min-w-0 p-1.5 border border-teal-200 rounded-lg font-semibold text-slate-800"
-                        />
-                        <NumberField
-                          min={0}
-                          value={it.value}
-                          onChange={(v) => updateDynamicOpexItem(it.id, { value: Math.max(0, v) })}
-                          className="w-24 shrink-0 p-1.5 border border-teal-200 rounded-lg font-mono font-semibold text-right"
-                          placeholder={it.suggestedAmount ? `${language === 'en' ? 'AI suggests' : 'AI建议'} ${it.suggestedAmount}` : (language === 'en' ? 'Amount' : '金额')}
-                          title={it.suggestedAmount ? (language === 'en' ? `AI suggested reference amount: ${it.suggestedAmount} (for reference only, please fill in your real figure)` : `AI 建议参考金额：${it.suggestedAmount}（仅供参考，请填你的真实数字）`) : (language === 'en' ? 'Please fill in your real monthly amount' : '请填你的真实月度金额')}
-                        />
-                        <span className="text-[12px] text-teal-700 whitespace-nowrap shrink-0 pl-0.5">{formData.baseCurrency}/{language === 'en' ? 'mo' : '月'}</span>
-                        {it.suggestedAmount ? (
-                          <FieldProvenanceBadge
-                            confidence={isReviewedByUser(it) ? 'confirmed' : 'suggested'}
-                            language={language}
-                          />
-                        ) : null}
-                        <button type="button" onClick={() => removeDynamicOpexItem(it.id)} className="p-1 text-teal-500 hover:text-teal-700 cursor-pointer shrink-0">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    ))}
-                    <div className="flex items-center justify-between flex-wrap gap-2 pt-1">
-                      <button type="button" onClick={addDynamicOpexItem} className="text-[12px] px-2 py-1 rounded border border-teal-300 text-teal-700 font-bold hover:bg-teal-100 cursor-pointer">
-                        {language === 'en' ? '+ Add operating expense item' : '＋ 添加运营开支项'}
-                      </button>
-                      <span className="text-[13px] font-black text-slate-900">
-                        {language === 'en' ? 'Rent+Wages+Utilities+Supplement total:' : '房租+工资+水电+补充项 合计：'}{' '}
-                        {(
-                          (Number(formData.rentCost.amount) || 0) +
-                          (Number(formData.laborCost.amount) || 0) +
-                          (Number(formData.utilityCost.amount) || 0) +
-                          (formData.dynamicOpexItems || []).reduce((sum, it) => sum + (Number(it.value) || 0), 0)
-                        )}{' '}
-                        {formData.baseCurrency}/{language === 'en' ? 'mo' : '月'}
-                      </span>
+                    <NumberField
+                      inputMode="numeric"
+                      min={0}
+                      placeholder={`约 ${regulatoryEstimate.registrationLocal}`}
+                      value={formData.companyRegistrationCost.amount}
+                      onChange={(v) => updateMoney('companyRegistrationCost', v)}
+                      className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                    />
+                    <div className="flex items-center gap-1 text-[11px] text-slate-500 shrink-0">
+                      <span>÷</span>
+                      <NumberField
+                        min={1}
+                        value={formData.companyRegistrationAmortizationMonths}
+                        onChange={(v) => updateField('companyRegistrationAmortizationMonths', v)}
+                        className="w-12 p-0.5 border border-slate-200 rounded text-center font-bold"
+                      />
+                      <span>{language === 'en' ? 'months' : '个月'}</span>
                     </div>
-                  </div>
-                )}
-
-                {/* 全球化经营成本——税收/签证/设备折旧/公司注册 */}
-                <div className="p-4 rounded-2xl bg-white border border-violet-200 space-y-3 text-xs">
-                  <div className="flex items-center gap-2">
-                    <Building2 className="w-4 h-4 text-violet-600" />
-                    <span className="font-black text-violet-950">{language === 'en' ? 'Other Common Expenses (Registration, Visa, Equipment...)' : '其他常见花费（注册、签证、设备使用费等）'}</span>
-                    {formData.regionCountry ? (
-                      <span className="text-[12px] bg-violet-200 text-violet-900 font-bold px-1.5 py-0.5 rounded">
-                        {language === 'en' ? `AI reference for ${regulatoryEstimate.countryLabel}` : `AI 已给出 ${regulatoryEstimate.countryLabel} 参考值`}
-                      </span>
-                    ) : (
-                      <span className="text-[12px] bg-amber-200 text-amber-900 font-bold px-1.5 py-0.5 rounded">
-                        {language === 'en' ? 'Country not selected — showing generic reference' : '尚未选择国家 — 当前为通用参考值'}
-                      </span>
-                    )}
+                    <button type="button" onClick={() => updateMoney('companyRegistrationCost', 0)} className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer shrink-0">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
 
-                  {/* 反馈：以前完全没有让用户明确选所在国家/地区，只能靠猜店名，
-                      导致这里给出的税收/注册/签证参考值数据来源不透明。改为显式下拉选择，
-                      作为上面 regulatoryEstimate 的唯一权威信号源；不选时诚实标注"通用参考值"。 */}
-                  <div>
-                    <label className="block font-bold text-slate-800 mb-1">
-                      {language === 'en' ? 'Country / Region Located' : '所在国家/地区'}
-                    </label>
+                  {/* 签证与工作许可费用 */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="flex-1 min-w-[7rem] p-1.5 font-semibold text-slate-800">
+                      {language === 'en' ? 'Visa & Work Permits' : '签证与工作许可费用'}
+                      <button
+                        type="button"
+                        onClick={() => updateMoney('visaFeeCost', regulatoryEstimate.visaLocal)}
+                        className="ml-2 text-[11px] underline text-teal-700 font-bold hover:text-teal-900 cursor-pointer"
+                      >
+                        {language === 'en' ? 'Use AI value' : '填入AI估值'}
+                      </button>
+                    </span>
+                    <NumberField
+                      inputMode="numeric"
+                      min={0}
+                      placeholder={`约 ${regulatoryEstimate.visaLocal}`}
+                      value={formData.visaFeeCost.amount}
+                      onChange={(v) => updateMoney('visaFeeCost', v)}
+                      className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                    />
+                    <div className="flex items-center gap-1 text-[11px] text-slate-500 shrink-0">
+                      <span>÷</span>
+                      <NumberField
+                        min={1}
+                        value={formData.visaFeeAmortizationMonths}
+                        onChange={(v) => updateField('visaFeeAmortizationMonths', v)}
+                        className="w-12 p-0.5 border border-slate-200 rounded text-center font-bold"
+                      />
+                      <span>{language === 'en' ? 'months' : '个月'}</span>
+                    </div>
+                    <button type="button" onClick={() => updateMoney('visaFeeCost', 0)} className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer shrink-0">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {/* 设备月度折旧：逐台填「设备值 + 预计使用月数」，月度折旧（设备值÷使用月数）自动求和 */}
+                  {(formData.dynamicEquipmentItems || []).map((it) => (
+                    <div key={it.id} className="flex items-center gap-1.5 flex-wrap">
+                      <input
+                        type="text"
+                        value={it.label}
+                        onChange={(e) => updateDynamicEquipmentItem(it.id, { label: e.target.value })}
+                        placeholder={language === 'en' ? 'e.g. Machine A' : '例如：机器A'}
+                        className="flex-1 min-w-[7rem] p-1.5 border border-slate-200 rounded-lg font-semibold text-slate-800"
+                      />
+                      <NumberField
+                        min={0}
+                        value={it.value}
+                        onChange={(v) => updateDynamicEquipmentItem(it.id, { value: v })}
+                        className="w-20 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                      />
+                      <div className="flex items-center gap-1 shrink-0">
+                        <span className="text-[11px] text-slate-500">÷</span>
+                        <NumberField
+                          min={1}
+                          value={it.usefulLifeMonths}
+                          onChange={(v) => updateDynamicEquipmentItem(it.id, { usefulLifeMonths: v })}
+                          className="w-14 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                        />
+                        <span className="text-[11px] text-slate-500">{language === 'en' ? 'months' : '个月'}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => openEquipmentSearch(it.label)}
+                        title={language === 'en' ? 'Search this equipment online (Google Shopping / marketplace)' : '在网上搜索该设备（谷歌购物/二手市场）'}
+                        className="p-1 text-slate-400 hover:text-teal-600 cursor-pointer shrink-0"
+                      >
+                        <Search className="w-3.5 h-3.5" />
+                      </button>
+                      <button type="button" onClick={() => removeDynamicEquipmentItem(it.id)} className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer shrink-0">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="flex-1 min-w-[7rem] p-1.5 font-semibold text-slate-800">{language === 'en' ? 'Other equipment depreciation' : '其他补充设备折旧'}</span>
+                    <NumberField
+                      inputMode="numeric"
+                      min={0}
+                      placeholder={language === 'en' ? 'For small tools not listed above' : '未逐台列出的零散小型设备'}
+                      value={formData.equipmentDepreciationCost.amount}
+                      onChange={(v) => updateMoney('equipmentDepreciationCost', v)}
+                      className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                    />
+                    <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.equipmentDepreciationCost.currency}/{language === 'en' ? 'mo' : '月'}</span>
+                    <button type="button" onClick={() => updateMoney('equipmentDepreciationCost', 0)} className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer shrink-0">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {/* 所在国家/地区：驱动上面税金/注册/签证的 AI 参考值，放在清单末尾（改了立即联动，不影响已填条目） */}
+                  <div className="pt-2 border-t border-slate-100 space-y-1.5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Building2 className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                      <label className="font-bold text-slate-800">{language === 'en' ? 'Country / Region Located' : '所在国家/地区'}</label>
+                      {formData.regionCountry ? (
+                        <span className="text-[11px] bg-teal-100 text-teal-800 font-bold px-1.5 py-0.5 rounded">
+                          {language === 'en' ? `AI reference for ${regulatoryEstimate.countryLabel}` : `AI 已给出 ${regulatoryEstimate.countryLabel} 参考值`}
+                        </span>
+                      ) : (
+                        <span className="text-[11px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.5 rounded">
+                          {language === 'en' ? 'Country not selected — showing generic reference' : '尚未选择国家 — 当前为通用参考值'}
+                        </span>
+                      )}
+                    </div>
                     <SearchableSelect
                       value={formData.regionCountry}
                       onChange={handleRegionCountryChange}
                       options={countryOptions}
                       placeholder={language === 'en' ? '-- Select your country/region --' : '-- 请选择所在国家/地区 --'}
-                      controlClassName="w-full p-2 border border-violet-300 rounded-lg font-semibold text-slate-900 bg-white"
+                      controlClassName="w-full p-2 border border-slate-200 rounded-lg font-semibold text-slate-900 bg-white"
                       isClearable
                     />
-                    <p className="text-[12px] text-slate-500 mt-1">
-                      {language === 'en'
-                        ? 'Changing it here also switches your base currency to match — never affects your score, and you can still edit every number.'
-                        : '在此修改也会同步切换主报告币种为该国货币——绝不影响得分，所有数字你都可以核实后自由修改。'}
-                    </p>
-                  </div>
-
-                  {/* 国家已经选好了，这里精确到省/州：用 country-state-city（现成的省/州数据库）
-                      按上面选定国家的 ISO2 代码查询，不用自己维护一份国家->省州的列表。
-                      该国在库里没有省/州细分数据时（如欧盟/西非法郎区这类跨国货币区），
-                      退化为自由文本填写，仍然写入同一个 regionDetail 字段。 */}
-                  {formData.regionCountry && (
-                    <div>
-                      <label className="block font-bold text-slate-800 mb-1">
-                        {language === 'en' ? 'State / Province' : '省/州'}
-                      </label>
-                      {statesForRegionCountry.length > 0 ? (
+                    {formData.regionCountry && (
+                      statesForRegionCountry.length > 0 ? (
                         <SearchableSelect
                           value={formData.regionDetail}
                           onChange={(v) => updateField('regionDetail', v)}
                           options={stateOptions}
                           placeholder={language === 'en' ? '-- Select state/province (optional) --' : '-- 请选择省/州（可选）--'}
-                          controlClassName="w-full p-2 border border-violet-300 rounded-lg font-semibold text-slate-900 bg-white"
+                          controlClassName="w-full p-2 border border-slate-200 rounded-lg font-semibold text-slate-900 bg-white"
                           isClearable
                         />
                       ) : (
@@ -2293,237 +2327,24 @@ export const AssessmentForm: React.FC<FormProps> = ({
                               ? 'This region has no state/province list — enter manually (optional)'
                               : '该地区暂无省/州列表，可手动填写（可选）'
                           }
-                          className="w-full p-2 border border-violet-300 rounded-lg font-medium text-slate-900 bg-white"
+                          className="w-full p-2 border border-slate-200 rounded-lg font-medium text-slate-900 bg-white"
                         />
-                      )}
-                    </div>
-                  )}
-
-                  <p className="text-[13px] text-violet-700 leading-relaxed">
-                    {regulatoryEstimate.corporateTaxRateHint}
-                    {language === 'en' ? '. Below are AI reference estimates — update to your real figures:' : '。以下为 AI 参考估值，请核实后修改为你的真实数字：'}
-                  </p>
-
-                  {/* 公司注册/执照相关费用：区分一次性费用（如首次注册工本费，按自定月数分摊）与
-                      年度费用（如执照年检费，每年都要再付一次，固定按12个月分摊），逐项填写、可增删，
-                      避免把两类现金流性质完全不同的费用挤在同一个笼统数字里。 */}
-                  <div className="p-3 rounded-xl bg-violet-50/40 border border-violet-200 space-y-2">
-                    <label className="font-bold text-slate-800 text-[12px]">
-                      {language === 'en' ? 'Registration / License Fees' : '公司注册/执照相关费用'}
-                      <span className="text-[11px] text-slate-400 font-normal"> ({formData.companyRegistrationCost.currency})</span>
-                    </label>
-                    <p className="text-[11px] text-slate-500 leading-tight">
-                      {language === 'en'
-                        ? 'Add each fee separately and mark it one-time (e.g. first-time registration) or annual (e.g. license renewal) — one-time fees amortize over the months you set, annual fees always amortize over 12 months.'
-                        : '逐项添加费用并标注「一次性」（如首次注册工本费）或「年度」（如执照年检费）——一次性费用按你设定的月数分摊，年度费用固定按12个月分摊。'}
-                    </p>
-                    {(formData.dynamicRegistrationCostItems || []).map((it) => (
-                      <div key={it.id} className="flex items-center gap-2 flex-wrap">
-                        <input
-                          type="text"
-                          value={it.label}
-                          onChange={(e) => updateDynamicRegistrationItem(it.id, { label: e.target.value })}
-                          placeholder={language === 'en' ? 'e.g. Business license' : '例如：营业执照'}
-                          className="flex-1 min-w-[7rem] p-1.5 border border-violet-200 rounded-lg font-semibold text-slate-800 bg-white"
-                        />
-                        <div className="flex items-center gap-1 shrink-0">
-                          <span className="text-[11px] text-slate-500">{language === 'en' ? 'Amount' : '金额'}</span>
-                          <NumberField
-                            min={0}
-                            value={it.amount}
-                            onChange={(v) => updateDynamicRegistrationItem(it.id, { amount: v })}
-                            className="w-20 p-1.5 border border-violet-200 rounded-lg font-mono font-semibold text-right bg-white"
-                          />
-                        </div>
-                        <select
-                          value={it.feeType}
-                          onChange={(e) =>
-                            updateDynamicRegistrationItem(it.id, { feeType: e.target.value as 'one_time' | 'annual' })
-                          }
-                          className="p-1.5 border border-violet-200 rounded-lg font-semibold text-slate-800 bg-white shrink-0"
-                        >
-                          <option value="one_time">{language === 'en' ? 'One-time' : '一次性'}</option>
-                          <option value="annual">{language === 'en' ? 'Annual' : '年度'}</option>
-                        </select>
-                        {it.feeType === 'one_time' ? (
-                          <div className="flex items-center gap-1 shrink-0">
-                            <span className="text-[11px] text-slate-500">÷</span>
-                            <NumberField
-                              min={1}
-                              value={it.amortizationMonths}
-                              onChange={(v) => updateDynamicRegistrationItem(it.id, { amortizationMonths: v })}
-                              className="w-14 p-1.5 border border-violet-200 rounded-lg font-mono font-semibold text-right bg-white"
-                            />
-                            <span className="text-[11px] text-slate-500">{language === 'en' ? 'months' : '个月'}</span>
-                          </div>
-                        ) : (
-                          <span className="text-[11px] text-slate-500 shrink-0">
-                            {language === 'en' ? '÷ 12 months' : '÷ 12 个月'}
-                          </span>
-                        )}
-                        <button type="button" onClick={() => removeDynamicRegistrationItem(it.id)} className="p-1 text-violet-500 hover:text-violet-700 cursor-pointer shrink-0">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    ))}
-                    <button type="button" onClick={addDynamicRegistrationItem} className="text-[12px] px-2 py-1 rounded border border-violet-300 text-violet-700 font-bold hover:bg-violet-100 cursor-pointer">
-                      {language === 'en' ? '+ Add fee item' : '＋ 添加费用项目'}
-                    </button>
-
-                    <div className="pt-1 border-t border-violet-200/70 space-y-1.5">
-                      <div className="flex items-center justify-between flex-wrap gap-1">
-                        <label className="font-bold text-slate-800 text-[12px]">
-                          {language === 'en' ? 'Other registration fee (supplement, optional)' : '其他补充注册/执照费用（可选）'}
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => updateMoney('companyRegistrationCost', regulatoryEstimate.registrationLocal)}
-                          className="text-[11px] underline text-violet-700 font-bold hover:text-violet-900 cursor-pointer"
-                        >
-                          {language === 'en' ? 'Use AI value' : '填入AI估值'}
-                        </button>
-                      </div>
-                      <NumberField
-                        inputMode="numeric"
-                        min={0}
-                        placeholder={`约 ${regulatoryEstimate.registrationLocal}`}
-                        value={formData.companyRegistrationCost.amount}
-                        onChange={(v) => updateMoney('companyRegistrationCost', v)}
-                        className="w-full p-2 border border-violet-200 rounded-lg font-semibold text-slate-900 bg-white"
-                      />
-                      <div className="flex items-center gap-1 text-[11px] text-slate-500">
-                        <span>{language === 'en' ? 'Amortize over' : '分摊'}</span>
-                        <NumberField
-                          min={1}
-                          value={formData.companyRegistrationAmortizationMonths}
-                          onChange={(v) => updateField('companyRegistrationAmortizationMonths', v)}
-                          className="w-12 p-0.5 border border-violet-200 rounded text-center bg-white font-bold"
-                        />
-                        <span>{language === 'en' ? 'months' : '个月'}</span>
-                      </div>
-                    </div>
-
-                    <p className="text-[13px] font-black text-violet-900 pt-1">
-                      {language === 'en' ? 'Total monthly registration cost:' : '注册/执照费用月度合计：'}{' '}
-                      {(
-                        dynamicRegistrationMonthlyTotal +
-                        amortizeMonthly(formData.companyRegistrationCost.amount, formData.companyRegistrationAmortizationMonths)
-                      ).toFixed(2)}{' '}
-                      {formData.companyRegistrationCost.currency}/{language === 'en' ? 'mo' : '月'}
+                      )
+                    )}
+                    <p className="text-[12px] text-slate-500">
+                      {regulatoryEstimate.corporateTaxRateHint}
+                      {language === 'en' ? '. Changing it here also switches your base currency to match — never affects your score.' : '。在此修改也会同步切换主报告币种为该国货币——绝不影响得分，所有数字你都可以核实后自由修改。'}
                     </p>
                   </div>
 
-                  {/* 签证与工作许可费用 */}
-                  <div className="p-3 rounded-xl bg-violet-50/40 border border-violet-200 space-y-1.5">
-                    <div className="flex items-center justify-between flex-wrap gap-1">
-                      <label className="font-bold text-slate-800 text-[12px]">
-                        {language === 'en' ? 'Visa & Work Permits' : '签证与工作许可费用'}
-                        <span className="text-[11px] text-slate-400 font-normal"> ({formData.visaFeeCost.currency}, {language === 'en' ? 'total' : '总额'})</span>
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => updateMoney('visaFeeCost', regulatoryEstimate.visaLocal)}
-                        className="text-[11px] underline text-violet-700 font-bold hover:text-violet-900 cursor-pointer"
-                      >
-                        {language === 'en' ? 'Use AI value' : '填入AI估值'}
-                      </button>
-                    </div>
-                    <NumberField
-                      inputMode="numeric"
-                      min={0}
-                      placeholder={`约 ${regulatoryEstimate.visaLocal}`}
-                      value={formData.visaFeeCost.amount}
-                      onChange={(v) => updateMoney('visaFeeCost', v)}
-                      className="w-full p-2 border border-violet-200 rounded-lg font-semibold text-slate-900 bg-white"
-                    />
-                    <div className="flex items-center gap-1 text-[11px] text-slate-500">
-                      <span>{language === 'en' ? 'Amortize over' : '分摊'}</span>
-                      <NumberField
-                        min={1}
-                        value={formData.visaFeeAmortizationMonths}
-                        onChange={(v) => updateField('visaFeeAmortizationMonths', v)}
-                        className="w-12 p-0.5 border border-violet-200 rounded text-center bg-white font-bold"
-                      />
-                      <span>{language === 'en' ? 'months' : '个月'}</span>
-                    </div>
-                  </div>
-
-                  {/* 设备月度折旧费：问题5——避免用户自己心算「总设备值 ÷ 预计使用月数」，
-                      改为逐台填「设备值 + 预计使用月数」，AI 自动求和汇总月度折旧。 */}
-                  <div className="p-3 rounded-xl bg-violet-50/40 border border-violet-200 space-y-2">
-                    <label className="font-bold text-slate-800 text-[12px]">
-                      {language === 'en' ? 'Equipment Monthly Depreciation' : '设备月度折旧费'}
-                      <span className="text-[11px] text-slate-400 font-normal"> ({formData.equipmentDepreciationCost.currency}/{language === 'en' ? 'mo' : '月'})</span>
-                    </label>
-                    <p className="text-[11px] text-slate-500 leading-tight">
-                      {language === 'en'
-                        ? "Add each piece of equipment with its total value and estimated useful life — the monthly depreciation (value ÷ months) is summed for you."
-                        : '逐台填写设备值与预计使用月数，月度折旧（设备值 ÷ 使用月数）由系统自动求和，无需自己心算总设备值。'}
-                    </p>
-                    {(formData.dynamicEquipmentItems || []).map((it) => (
-                      <div key={it.id} className="flex items-center gap-2 flex-wrap">
-                        <input
-                          type="text"
-                          value={it.label}
-                          onChange={(e) => updateDynamicEquipmentItem(it.id, { label: e.target.value })}
-                          placeholder={language === 'en' ? 'e.g. Machine A' : '例如：机器A'}
-                          className="flex-1 min-w-[7rem] p-1.5 border border-violet-200 rounded-lg font-semibold text-slate-800 bg-white"
-                        />
-                        <div className="flex items-center gap-1 shrink-0">
-                          <span className="text-[11px] text-slate-500">{language === 'en' ? 'Value' : '设备值'}</span>
-                          <NumberField
-                            min={0}
-                            value={it.value}
-                            onChange={(v) => updateDynamicEquipmentItem(it.id, { value: v })}
-                            className="w-20 p-1.5 border border-violet-200 rounded-lg font-mono font-semibold text-right bg-white"
-                          />
-                        </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <span className="text-[11px] text-slate-500">÷</span>
-                          <NumberField
-                            min={1}
-                            value={it.usefulLifeMonths}
-                            onChange={(v) => updateDynamicEquipmentItem(it.id, { usefulLifeMonths: v })}
-                            className="w-14 p-1.5 border border-violet-200 rounded-lg font-mono font-semibold text-right bg-white"
-                          />
-                          <span className="text-[11px] text-slate-500">{language === 'en' ? 'months' : '个月'}</span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => openEquipmentSearch(it.label)}
-                          title={language === 'en' ? 'Search this equipment online (Google Shopping / marketplace)' : '在网上搜索该设备（谷歌购物/二手市场）'}
-                          className="p-1 text-violet-500 hover:text-violet-700 cursor-pointer shrink-0"
-                        >
-                          <Search className="w-3.5 h-3.5" />
-                        </button>
-                        <button type="button" onClick={() => removeDynamicEquipmentItem(it.id)} className="p-1 text-violet-500 hover:text-violet-700 cursor-pointer shrink-0">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    ))}
-                    <button type="button" onClick={addDynamicEquipmentItem} className="text-[12px] px-2 py-1 rounded border border-violet-300 text-violet-700 font-bold hover:bg-violet-100 cursor-pointer">
-                      {language === 'en' ? '+ Add equipment' : '＋ 添加设备'}
+                  <div className="flex items-center justify-between flex-wrap gap-2 pt-2 border-t border-slate-200">
+                    <button type="button" onClick={addDynamicOpexItem} className="text-[12px] px-2 py-1 rounded border border-slate-300 text-slate-700 font-bold hover:bg-slate-100 cursor-pointer">
+                      {language === 'en' ? '+ Add expense item' : '＋ 添加花费项'}
                     </button>
-
-                    <div className="pt-1 border-t border-violet-200/70 space-y-1">
-                      <label className="font-bold text-slate-800 text-[12px]">
-                        {language === 'en' ? 'Other depreciation (supplement, optional)' : '其他补充折旧（可选）'}
-                      </label>
-                      <NumberField
-                        inputMode="numeric"
-                        min={0}
-                        placeholder={language === 'en' ? 'For small tools not listed above' : '未逐台列出的零散小型设备'}
-                        value={formData.equipmentDepreciationCost.amount}
-                        onChange={(v) => updateMoney('equipmentDepreciationCost', v)}
-                        className="w-full p-2 border border-violet-200 rounded-lg font-semibold text-slate-900 bg-white"
-                      />
-                    </div>
-
-                    <p className="text-[13px] font-black text-violet-900 pt-1">
-                      {language === 'en' ? 'Total monthly depreciation:' : '设备月度折旧合计：'}{' '}
-                      {(dynamicEquipmentMonthlyTotal + (Number(formData.equipmentDepreciationCost.amount) || 0)).toFixed(2)}{' '}
-                      {formData.equipmentDepreciationCost.currency}/{language === 'en' ? 'mo' : '月'}
-                    </p>
+                    <span className="text-[13px] font-black text-slate-900">
+                      {language === 'en' ? 'Total monthly expense:' : '花费清单合计：'}{' '}
+                      {formatMoney(breakEven.monthlyCostTotal, formData.baseCurrency)}
+                    </span>
                   </div>
                 </div>
               </div>
