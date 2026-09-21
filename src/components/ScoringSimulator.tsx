@@ -265,7 +265,7 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
             <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
               <div className="flex justify-between text-xs font-bold text-neutral-800 mb-2">
                 <span className="flex items-center space-x-1">
-                  <span>{language === 'zh' ? 'COGS 原材料与直接进货成本占比' : 'COGS Materials & Direct Sourcing Ratio'}</span>
+                  <span>{language === 'zh' ? '原材料与直接进货成本占比' : 'Materials & Direct Sourcing Cost Ratio'}</span>
                   <span className="text-neutral-400 font-normal text-[13px]">
                     [{language === 'zh' ? '毛利率' : 'Gross Margin'}: {grossMargin.toFixed(1)}%]
                   </span>

@@ -180,7 +180,7 @@ export const INDUSTRY_BIG_DATA = [
 
 const FAQ_PRESETS = [
   '经营流水是什么意思？和赚到手的钱有什么区别？',
-  '进货成本（COGS）怎么算？包含运费吗？',
+  '进货成本怎么算？包含运费吗？',
   '只有手写记账本和微信收款截图，打分会吃亏吗？',
   '账上备用金要留几个月才算安全？',
   '季节性生意（休渔期没进账）该怎么填？'
@@ -188,7 +188,7 @@ const FAQ_PRESETS = [
 
 const FAQ_PRESETS_EN = [
   'What does "monthly revenue" mean, and how is it different from take-home profit?',
-  'How is cost of goods sold (COGS) calculated? Does it include shipping?',
+  'How is purchasing/material cost calculated? Does it include shipping?',
   'I only have a handwritten ledger and payment-app screenshots — will my score suffer?',
   'How many months of reserve funds count as safe?',
   'How do I report a seasonal business (no income during the off-season)?'
@@ -330,7 +330,7 @@ export const AiRuleConsultationDrawer: React.FC<AiDrawerProps> = ({
 
 我可以帮您：
 
-1️⃣ 商业财务大白话解析：经营月均总流水、进货成本（COGS）、毛利、房租人工固定开销（OPEX）、应急备用金/现金跑道、自报汇率、凭证同权规则等；
+1️⃣ 商业财务大白话解析：经营月均总流水、进货成本、毛利、房租人工固定开销、应急备用金/现金跑道、自报汇率、凭证同权规则等；
 2️⃣ 行业大数据基准对标：餐饮、零售、外贸、生活服务、工坊、农业等行业平均流水与利润基准；
 3️⃣ 实用小工具：币种换算、简单计算、日期时间等；
 4️⃣ 平台规则指引：5 维雷达打分公式、4 大门槛红线与边缘疑难情况的保守填报路径。`;
@@ -431,9 +431,9 @@ ${a} ${opSymbol} ${b} = ${Number.isInteger(result) ? result : result.toFixed(2)}
     } else if (/毛利|进货|成本|cogs|原材料|采购/i.test(text)) {
       category = '进货成本与毛利空间解析';
       suggestedAction = '进货成本只填购买原料与商品的直接款项，勿重复计入房租与工资';
-      answer = `【大白话：进货采购成本（COGS）与毛利润】
+      answer = `【大白话：进货采购成本与毛利润】
 
-1. 什么是进货成本（COGS）？
+1. 什么是进货成本？
 直接用于进货进料的花费（如饭店买米面油肉、超市进烟酒副食、服装店批衣服）。包含采购直接相关的长途运费。
 
 2. 什么是毛利润与毛利率？
@@ -447,8 +447,8 @@ ${a} ${opSymbol} ${b} = ${Number.isInteger(result) ? result : result.toFixed(2)}
 • 毛利率 55%~75%：特色餐饮与高附加值手艺服务健康区间。`;
     } else if (/房租|工资|人工|opex|固定开销|水电|租金/i.test(text)) {
       category = '固定经营开销解析';
-      suggestedAction = '将每月雷打不动必须付出的租金、员工底薪与物业水电合计填入 OPEX';
-      answer = `【大白话：房租与工人工资（固定开销 OPEX）】
+      suggestedAction = '将每月雷打不动必须付出的租金、员工底薪与物业水电合计填入固定开销';
+      answer = `【大白话：房租与工人工资（固定开销）】
 
 1. 一句话本质：
 每月不管开不开门、有没有生意，雷打不动一定要付出去的硬性开支。
