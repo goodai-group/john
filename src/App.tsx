@@ -102,7 +102,9 @@ export default function App() {
 
   // User Authentication State
   const [currentUser, setCurrentUser] = useState<AppUser | null>(() => {
-    if (typeof window !== 'undefined' && window.location.search.includes('mockUser=1')) {
+    // 仅本地 `npm run dev` 生效：import.meta.env.DEV 在生产构建（含 Vercel 部署与预览）中恒为 false，
+    // 这段判断会被打包器整体剔除，因此 ?mockUser=1 在线上/预览环境不存在，也无法被触发。
+    if (import.meta.env.DEV && typeof window !== 'undefined' && window.location.search.includes('mockUser=1')) {
       return { uid: 'mock-123', email: 'test@example.com', displayName: '测试主理人', photoURL: '' };
     }
     return null;
@@ -185,7 +187,7 @@ export default function App() {
 
   // Subscribe to Supabase Google Auth state
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.location.search.includes('mockUser=1')) {
+    if (import.meta.env.DEV && typeof window !== 'undefined' && window.location.search.includes('mockUser=1')) {
       return;
     }
     const unsubscribe = subscribeToAuthChanges(async (user, event) => {
