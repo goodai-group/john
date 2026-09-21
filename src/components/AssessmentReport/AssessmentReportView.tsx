@@ -119,7 +119,10 @@ export const AssessmentReportView: React.FC<ReportViewProps> = ({
     actionableAdvices?: string[];
     potentialGrowthAreas?: string[];
   } | null>(null);
-  const [completedActions, setCompletedActions] = useState<Record<number, boolean>>({});
+  // 修复：改为按建议文本本身（而非数组下标）记录勾选状态——此前按下标记录时，点击
+  // 「获取Gemini AI实时深度战略诊断」会重新生成/重新排序行动清单，导致已勾选的那条
+  // 建议因为换到了别的下标而"被取消勾选"，而排到原下标的全新建议却"平白无故显示已完成"。
+  const [completedActions, setCompletedActions] = useState<Record<string, boolean>>({});
   const [showVersionDiff, setShowVersionDiff] = useState(false);
 
   // 切到 EN 后此前顶部导航之外几乎全是中文（报告正文/按钮/标题一句没翻）。
@@ -131,16 +134,25 @@ export const AssessmentReportView: React.FC<ReportViewProps> = ({
   const {
     monthlyGrossRevenue,
     monthlyRealRevenue,
+    monthlyExternalGrants,
     monthlyCogs,
     monthlyOpex,
     grossProfit,
     grossMarginPercent,
+    operatingProfit,
     netProfit,
     netProfitMarginPercent,
     opexRatioPercent,
     cashRunwayMonths,
     debtServiceCoverageRatio
   } = report.normalizedFinancials;
+
+  // 真实收入占比：引擎里用来判定 Gate-1 的同一个公式，专业明细页此前从未把这个具体百分比
+  // 数字显示出来（只显示 Gate-1 通过/不通过），用户想核实这条红线到底算出多少分需要自己重算。
+  const realRevenueRatioPercent =
+    monthlyRealRevenue + monthlyExternalGrants > 0
+      ? Number(((monthlyRealRevenue / (monthlyRealRevenue + monthlyExternalGrants)) * 100).toFixed(1))
+      : 100;
 
   const baseCurr = report.baseCurrency;
 
@@ -182,10 +194,10 @@ export const AssessmentReportView: React.FC<ReportViewProps> = ({
 Overall Health Score: ${report.totalScore} (${reportGrade})
 Gate Compliance: ${report.gatePassed ? `All passed (${report.gates.length}/${report.gates.length})` : `Not all passed (${(report.failedGates || report.gates.filter((g) => g.status !== 'PASS')).length}/${report.gates.length} gate(s) triggered)`}
 
-Core Operations & Ministry Data Overview:
-- Monthly clinic/tuition revenue: ${formatMoney(monthlyRealRevenue, baseCurr)}
+Core Operations Data Overview:
+- Monthly real operating revenue: ${formatMoney(monthlyRealRevenue, baseCurr)}
 - Monthly net profit: ${formatMoney(netProfit, baseCurr)} (net margin ${netProfitMarginPercent}%)
-- Medicine/supplies procurement cost: ${formatMoney(monthlyCogs, baseCurr)} (gross margin ${grossMarginPercent}%)
+- Materials/purchasing cost (COGS): ${formatMoney(monthlyCogs, baseCurr)} (gross margin ${grossMarginPercent}%)
 - Monthly rent & staff cost: ${formatMoney(monthlyOpex, baseCurr)} (${opexRatioPercent}% of revenue)
 - Emergency cash reserve: covers ${cashRunwayMonths} months of fixed costs
 ${
@@ -210,10 +222,10 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
 综合健康得分：${report.totalScore}分 (${reportGrade})
 红线合规：${report.gatePassed ? `全部通过 (${report.gates.length}/${report.gates.length})` : `未通过 (${(report.failedGates || report.gates.filter((g) => g.status !== 'PASS')).length}/${report.gates.length} 项触发警示)`}
 
-核心经营与服事数据概览：
-- 每月门诊/学费进账：${formatMoney(monthlyRealRevenue, baseCurr)}
+核心经营数据概览：
+- 每月真实经营收入：${formatMoney(monthlyRealRevenue, baseCurr)}
 - 每月结余净产出：${formatMoney(netProfit, baseCurr)} (净利润率 ${netProfitMarginPercent}%)
-- 药品耗材采购花销：${formatMoney(monthlyCogs, baseCurr)} (毛利率 ${grossMarginPercent}%)
+- 原材料/进货采购花销：${formatMoney(monthlyCogs, baseCurr)} (毛利率 ${grossMarginPercent}%)
 - 每月租金与同工支出：${formatMoney(monthlyOpex, baseCurr)} (占进账 ${opexRatioPercent}%)
 - 应急储备金水库：能支撑 ${cashRunwayMonths} 个月固定开销
 ${
@@ -241,10 +253,10 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
     setTimeout(() => setCopiedSummary(false), 2500);
   };
 
-  const toggleActionCompleted = (index: number) => {
+  const toggleActionCompleted = (adviceKey: string) => {
     setCompletedActions((prev) => ({
       ...prev,
-      [index]: !prev[index]
+      [adviceKey]: !prev[adviceKey]
     }));
   };
 
@@ -358,14 +370,30 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
   };
 
   const handleExportJson = () => {
-    const dataStr =
-      'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(report, null, 2));
+    // 修复：此前用 data:text/json URI + <a download> 触发下载，文件名回退成通用的"download"。
+    // 实测定位到真正根因：不是 data: URI 本身的问题（换成 Blob + URL.createObjectURL 后问题依旧
+    // 复现），而是 Chromium 的下载管理器不认 <a download> 属性里的非 ASCII 字符（本产品用户群体
+    // 多为非英语母语地区，项目名几乎必然含中文/泰文/阿姆哈拉文等非 ASCII 字符）——一旦文件名含
+    // 非 ASCII 字符，无论 URI 用哪种方案，Chromium 都会静默丢弃预设文件名。
+    // 换成 Blob 仍然保留（避免 data URI 的体积限制，是更标准的下载触发方式），另外把文件名转成
+    // ASCII 安全版本：先按 Unicode 规范分解去掉音调符号（保留带音标的拉丁字母语言，如越南语项目名
+    // 里的实际字母），再剔除其余非 ASCII 字符；纯表意文字（中文/泰文等）会被完全剔除，此时退回
+    // "Business-Project" 占位词，保证文件名不会变回完全无意义的"download"。
+    const asciiSafeName =
+      report.projectName
+        .normalize('NFKD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^A-Za-z0-9._-]+/g, '_')
+        .replace(/^_+|_+$/g, '') || 'Business-Project';
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json;charset=utf-8' });
+    const blobUrl = URL.createObjectURL(blob);
     const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute('href', dataStr);
-    downloadAnchor.setAttribute('download', `${report.projectName}-Assessment-Report-v${report.version}.json`);
+    downloadAnchor.setAttribute('href', blobUrl);
+    downloadAnchor.setAttribute('download', `${asciiSafeName}-Assessment-Report-v${report.version}.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
+    URL.revokeObjectURL(blobUrl);
   };
 
   // Radar chart points generator for 5 dimensions (for detailed view)
@@ -1022,13 +1050,13 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                 // 已达标的红线不算行动项，剔除后剩下的才是真正需要跟进的清单。
                 (report.aiActionableAdvice || []).filter((a) => !a.includes('恭喜') && !a.includes('全部达标'))
               ).slice(0, 3).map((advice, i) => {
-                const isDone = completedActions[i];
+                const isDone = completedActions[advice];
                 const { title, priority } = deriveActionMeta(advice, i, language);
                 const priorityStyle = ACTION_PRIORITY_STYLE[priority];
                 return (
                   <div
                     key={`action-${i}-${advice}`}
-                    onClick={() => toggleActionCompleted(i)}
+                    onClick={() => toggleActionCompleted(advice)}
                     className={`p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between space-y-3 ${
                       isDone
                         ? 'bg-emerald-950/40 border-emerald-500/50 text-emerald-100'
@@ -1226,6 +1254,9 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                     <p className="text-xs text-neutral-600 leading-relaxed font-medium">
                       {g.plainDescription}
                     </p>
+                    <p className="text-[11px] font-mono font-bold text-neutral-500">
+                      {t('实测值', 'Actual')}: {g.currentValue} · {t('门槛', 'Threshold')}: {g.threshold}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -1402,6 +1433,22 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                   {cashRunwayMonths} {t('个月', 'months')}
                 </div>
                 <div className="text-[13px] text-neutral-500 mt-0.5">{t('安全底线为 ≥ 3.0 月', 'Safe threshold is ≥ 3.0 months')}</div>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-neutral-50 border border-neutral-200">
+                <div className="text-[12px] text-neutral-400 font-mono font-bold uppercase">{t('税前利润 (PBT)', 'Pre-Tax Profit (PBT)')}</div>
+                <div className="text-xl font-mono font-black text-neutral-900 mt-1">
+                  {formatMoney(operatingProfit, baseCurr)}
+                </div>
+                <div className="text-[13px] text-neutral-500 mt-0.5">{t('毛利润 − 运营开销总额', 'Gross profit − total OPEX')}</div>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-neutral-50 border border-neutral-200">
+                <div className="text-[12px] text-neutral-400 font-mono font-bold uppercase">{t('真实收入占比', 'Real Revenue Ratio')}</div>
+                <div className="text-xl font-mono font-black text-neutral-900 mt-1">
+                  {realRevenueRatioPercent}%
+                </div>
+                <div className="text-[13px] text-neutral-500 mt-0.5">{t('红线安全底线为 ≥ 60%', 'Safe threshold is ≥ 60%')}</div>
               </div>
             </div>
           </div>

@@ -582,10 +582,13 @@ export default function App() {
     navigateTo('form');
   };
 
-  // Create new project
-  const handleNewProject = () => {
+  // 抽出一份全新空白草稿的构造逻辑，供「新建项目」与「沙盒试算带入正式申报表」共用——
+  // 后者此前在用户还没有任何项目时（activeProject 为 undefined）会把模拟数据合并到 undefined
+  // 上，导致草稿既没有 id 也没有被写入 projects/activeProjectId，新挂载的表单直接忽略这份数据，
+  // 表现为「点击带入正式申报表后表单一片空白，滑块调好的数字全部消失」。
+  const createBlankDraft = (): BusinessFormData => {
     const newId = `proj-${Date.now()}`;
-    const newDraft: BusinessFormData = {
+    return {
       id: newId,
       version: 1,
       createdAt: new Date().toISOString(),
@@ -642,25 +645,36 @@ export default function App() {
       isSubmitted: false,
       isDraft: true
     };
+  };
 
+  // Create new project
+  const handleNewProject = () => {
+    const newDraft = createBlankDraft();
     const updatedProjects = [newDraft, ...projects];
     setProjects(updatedProjects);
     saveStoredProjects(updatedProjects);
-    setActiveProjectId(newId);
+    setActiveProjectId(newDraft.id);
     navigateTo('form');
   };
 
   // Apply simulator values into form
   const handleApplySimulatorToForm = (simulatedData: Partial<BusinessFormData>) => {
+    // 没有任何已有项目时（如全新账号第一次使用沙盒试算器），activeProject 为 undefined，
+    // 必须先造一份全新草稿并把它正式加入 projects/activeProjectId，模拟数据才不会成为
+    // 一份没有归属、不会被表单读取的孤儿数据。
+    const base = activeProject || createBlankDraft();
     const updated = {
-      ...activeProject,
+      ...base,
       ...simulatedData,
+      id: base.id,
       updatedAt: new Date().toISOString()
     };
     saveActiveDraft(updated);
-    const updatedList = projects.map((p) => (p.id === updated.id ? updated : p));
+    const isNewProject = !projects.some((p) => p.id === updated.id);
+    const updatedList = isNewProject ? [updated, ...projects] : projects.map((p) => (p.id === updated.id ? updated : p));
     setProjects(updatedList);
     saveStoredProjects(updatedList);
+    if (isNewProject) setActiveProjectId(updated.id);
     navigateTo('form');
   };
 

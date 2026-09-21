@@ -1061,7 +1061,15 @@ export const AssessmentForm: React.FC<FormProps> = ({
   // 反馈：切换「公司注册所在国家/地区」后，公司注册费/签证费的 AI 估值还停留在旧国家，
   // 要用户再手动点一次「填入AI估值」才更新，容易漏改。改成国家变化时自动刷新——
   // 仅当用户还没手动改过这两个字段时才覆盖，避免覆盖用户已核实填写的真实数字。
+  //
+  // 修复：必须同时要求用户已明确选择「公司注册所在国家/地区」，否则不允许自动写入——
+  // 此前只要 regulatoryEstimate 变化（哪怕是从项目名弱信号猜出来的、用户尚未选择任何国家、
+  // 也没做过任何操作）就会把非零的 AI 参考值悄悄写进这两个字段，且与用户真实手填的数字在
+  // 界面上完全没有区别（占位提示"约 XX"一旦被写入具体数字就会消失），与「评分规则100%透明、
+  // 所有数字用户可自行核实」的产品承诺相悖。只有用户主动选定国家后才算一次明确操作，
+  // 此时自动刷新是合理的；用户还没选国家前，这两个字段应保持为 0，交由占位提示展示参考值。
   useEffect(() => {
+    if (!formData.regionCountry) return;
     if (companyRegCostTouched && visaFeeCostTouched) return;
     setFormData((prev) => {
       const patch: Partial<BusinessFormData> = {};
@@ -1975,6 +1983,15 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       </button>
                     </div>
                   ))}
+
+                  {/* 修复：此前 COGS 明细只能靠「AI结构推断成功」或在高级设置里重新选一次行业模板
+                      才能生成条目，没有像 OPEX 明细那样的手动新增入口——本地没配置 AI 密钥时
+                      AI 推断必定失败，普通用户实际上完全没有办法给 COGS 添加自定义行项目。
+                      addDynamicCogsItem 函数本就存在，这里补上对应按钮，与下方 OPEX 的
+                      「＋添加花费项」保持一致，两者对称。 */}
+                  <button type="button" onClick={addDynamicCogsItem} className="text-[12px] px-2 py-1 rounded border border-slate-300 text-slate-700 font-bold hover:bg-slate-100 cursor-pointer">
+                    {language === 'en' ? '+ Add material cost item' : '＋ 添加物料成本项'}
+                  </button>
 
                   {/* 固定类目：场地租金/员工工资/水电网络/税金及规费/偿还债务——结构上始终存在，
                       「删除」即把金额清零，与其他条目共用同一份清单展示，不再单独分栏。 */}
