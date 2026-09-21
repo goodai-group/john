@@ -500,7 +500,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
     switch (formData.industry) {
       case 'food_beverage':
         return {
-          label: language === 'en' ? 'Food & Beverage Ingredient Cost (COGS)' : '食材与饮品原料成本 (COGS)',
+          label: language === 'en' ? 'Food & Beverage Ingredient Cost' : '食材与饮品原料成本',
           badge: language === 'en' ? 'Coffee / Bakery / Food Ingredients' : '咖啡/烘焙/餐食原料',
           tip: language === 'en'
             ? 'Direct food cost such as coffee beans, milk, flour, meat & vegetables, sauces, and disposable eco tableware (excludes rent and labor).'
@@ -508,7 +508,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
         };
       case 'medical_health':
         return {
-          label: language === 'en' ? 'Medicine & Medical Supplies Cost (COGS)' : '药品与医用耗材成本 (COGS)',
+          label: language === 'en' ? 'Medicine & Medical Supplies Cost' : '药品与医用耗材成本',
           badge: language === 'en' ? 'Medicine & Supplies' : '药品与耗材',
           tip: language === 'en'
             ? 'Direct purchasing cost for Western/traditional medicine, syringes, dressings/gauze, disinfectant supplies, etc. (excludes rent and labor).'
@@ -516,7 +516,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
         };
       case 'retail_store':
         return {
-          label: language === 'en' ? 'Merchandise Purchasing Cost (COGS)' : '商品进货与采购成本 (COGS)',
+          label: language === 'en' ? 'Merchandise Purchasing Cost' : '商品进货与采购成本',
           badge: language === 'en' ? 'Purchasing Cost' : '进货本钱',
           tip: language === 'en'
             ? 'Cost of daily goods, food seasonings, digital appliances, etc. purchased from wholesalers (includes long-haul freight, excludes rent and labor).'
@@ -524,7 +524,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
         };
       case 'education_training':
         return {
-          label: language === 'en' ? 'Teaching Materials & Supplies Cost (COGS)' : '教材与教学耗材成本 (COGS)',
+          label: language === 'en' ? 'Teaching Materials & Supplies Cost' : '教材与教学耗材成本',
           badge: language === 'en' ? 'Teaching Materials' : '教学资料',
           tip: language === 'en'
             ? 'Direct teaching materials such as textbooks, handouts, workbooks, stationery/teaching aids, online platforms (excludes rent and labor).'
@@ -532,7 +532,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
         };
       case 'vocational_training':
         return {
-          label: language === 'en' ? 'Hands-on Training Materials & Tools (COGS)' : '实训原料与工具耗材 (COGS)',
+          label: language === 'en' ? 'Hands-on Training Materials & Tools' : '实训原料与工具耗材',
           badge: language === 'en' ? 'Materials & Tools' : '材料与工具',
           tip: language === 'en'
             ? 'Materials for hands-on training such as wood, leather, fabric, solder/hardware fittings, etc. (excludes rent and labor).'
@@ -540,7 +540,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
         };
       case 'agriculture':
         return {
-          label: language === 'en' ? 'Seeds, Fertilizer & Farm Inputs Cost (COGS)' : '种苗肥料与农资成本 (COGS)',
+          label: language === 'en' ? 'Seeds, Fertilizer & Farm Inputs Cost' : '种苗肥料与农资成本',
           badge: language === 'en' ? 'Agricultural Inputs' : '农业生产资料',
           tip: language === 'en'
             ? 'Direct agricultural inputs such as seeds/seedlings, organic fertilizer, biopesticides, preservation packaging (excludes rent and labor).'
@@ -548,7 +548,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
         };
       case 'child_care':
         return {
-          label: language === 'en' ? "Children's Meals & Teaching Supplies Cost (COGS)" : '儿童膳食与教具耗材 (COGS)',
+          label: language === 'en' ? "Children's Meals & Teaching Supplies Cost" : '儿童膳食与教具耗材',
           badge: language === 'en' ? 'Meals & Supplies' : '餐食与用品',
           tip: language === 'en'
             ? "Children's daily nutritional food, milk, educational aids, drawing supplies, hygiene products, etc. (excludes rent and labor)."
@@ -556,7 +556,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
         };
       default:
         return {
-          label: language === 'en' ? 'Raw Materials & Direct Purchasing Cost (COGS)' : '原材料与直接采购成本 (COGS)',
+          label: language === 'en' ? 'Raw Materials & Direct Purchasing Cost' : '原材料与直接采购成本',
           badge: language === 'en' ? 'Purchasing Cost' : '进货本钱',
           tip: language === 'en'
             ? 'Direct purchasing cost such as goods payment, fresh food ingredients, etc. (includes long-haul freight, excludes rent and staff wages).'
@@ -1955,7 +1955,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     </div>
                     <button
                       type="button"
-                      onClick={() => onOpenAiHelper?.(language === 'en' ? 'How is cost of goods sold (COGS) calculated? Does it include freight?' : '进货成本（COGS）怎么算？包含运费吗？')}
+                      onClick={() => onOpenAiHelper?.(language === 'en' ? 'How should I estimate my purchasing/material cost? Does it include freight?' : '进货成本大概怎么算？包含运费吗？')}
                       className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-700 text-[13px] font-bold transition-colors cursor-pointer"
                     >
                       <Sparkles className="w-3 h-3 text-teal-600" />
@@ -1967,7 +1967,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   <div className="mt-1 p-3 rounded-xl bg-rose-50/50 border border-dashed border-rose-300 space-y-2">
                     <div className="flex items-center justify-between gap-2 flex-wrap">
                       <span className="text-[13px] font-black text-rose-900">
-                        {language === 'en' ? 'Industry-specific material cost line items (add/remove/edit)' : '按行业细分的物料成本细则（可增删改）'}
+                        {language === 'en' ? 'Your expense items (add/remove/edit)' : '你的花费清单（可增删改）'}
                         {cogsTouched && (
                           <span className="ml-1.5 inline-block text-[11px] px-1 py-0.5 rounded bg-amber-100 text-amber-700 font-bold align-middle">{language === 'en' ? 'Manually adjusted' : '已手动调整'}</span>
                         )}
@@ -1980,7 +1980,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                         <RefreshCw className="inline w-3 h-3 mr-0.5" />{language === 'en' ? 'Restore AI Suggestion' : '恢复 AI 建议'}
                       </button>
                     </div>
-                    <span className="text-[12px] text-rose-700">{language === 'en' ? 'The total of the line items below is your monthly material (variable) cost, and is what feeds the AI analysis directly. Fill in a purchase quantity + unit cost for a good and its amount is calculated for you.' : '以下逐项合计即为每月物料（变动）成本，将直接用于 AI 分析。某一货物填了进货量+进货单价后，金额会自动按两者相乘算出。'}</span>
+                    <span className="text-[12px] text-rose-700">{language === 'en' ? 'The total of the line items below feeds directly into the AI analysis. Fill in a purchase quantity + unit cost for a good and its amount is calculated for you.' : '以下逐项合计会直接用于 AI 分析。某一货物填了进货量+进货单价后，金额会自动按两者相乘算出。'}</span>
                     <p className="text-[12px] text-rose-800 bg-rose-100 border border-rose-300 rounded-lg p-1.5 font-semibold">
                       {resolvedUnitsSold(formData.revenueDetailEstimate) != null
                         ? (language === 'en'
@@ -2163,7 +2163,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   <div className="p-3 rounded-xl bg-white border border-dashed border-slate-300 space-y-2 text-xs">
                     <div className="flex items-center justify-between gap-2 flex-wrap">
                       <span className="text-[13px] font-black text-slate-900">
-                        {language === 'en' ? 'Industry-specific additional operating expenses, on top of the fields above (add/remove/edit)' : '在上方固定开销基础上，按行业补充的额外运营开支（可增删改）'}
+                        {language === 'en' ? 'Other expense items on top of the fields above (add/remove/edit)' : '在上方基础上，AI 补充的其他花费项（可增删改）'}
                         {opexTouched && (
                           <span className="ml-1.5 inline-block text-[11px] px-1 py-0.5 rounded bg-amber-100 text-amber-700 font-bold align-middle">{language === 'en' ? 'Manually adjusted' : '已手动调整'}</span>
                         )}
@@ -2231,7 +2231,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                 <div className="p-4 rounded-2xl bg-white border border-violet-200 space-y-3 text-xs">
                   <div className="flex items-center gap-2">
                     <Building2 className="w-4 h-4 text-violet-600" />
-                    <span className="font-black text-violet-950">{language === 'en' ? 'Global Operating Costs (Registration/Visa/Depreciation)' : '全球化经营成本（注册/签证/折旧）'}</span>
+                    <span className="font-black text-violet-950">{language === 'en' ? 'Other Common Expenses (Registration, Visa, Equipment...)' : '其他常见花费（注册、签证、设备使用费等）'}</span>
                     {formData.regionCountry ? (
                       <span className="text-[12px] bg-violet-200 text-violet-900 font-bold px-1.5 py-0.5 rounded">
                         {language === 'en' ? `AI reference for ${regulatoryEstimate.countryLabel}` : `AI 已给出 ${regulatoryEstimate.countryLabel} 参考值`}
@@ -2620,7 +2620,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                         language={language}
                         text={
                           language === 'en'
-                            ? `Based on monthly cost of ${formatMoney(breakEven.monthlyCostTotal, formData.baseCurrency)} (purchasing + opex + taxes + debt repayment + amortizations), calculated over ${breakEven.operatingDaysPerMonth} operating days.`
+                            ? `Based on monthly cost of ${formatMoney(breakEven.monthlyCostTotal, formData.baseCurrency)} (purchasing + rent/wages + taxes + debt repayment + amortizations), calculated over ${breakEven.operatingDaysPerMonth} operating days.`
                             : `根据你已填的进货、房租人工、税金、还贷与折旧/许可成本合计 ${formatMoney(breakEven.monthlyCostTotal, formData.baseCurrency)} / 月，按每月经营 ${breakEven.operatingDaysPerMonth} 天估算。`
                         }
                       />
@@ -3192,7 +3192,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block">{language === 'en' ? 'Materials Purchasing (COGS):' : '原材料采购(COGS):'}</span>
+                  <span className="text-slate-500 block">{language === 'en' ? 'Materials Purchasing:' : '原材料采购:'}</span>
                   <span className="font-bold">
                     {formatMoney(
                       (formData.dynamicCogsItems || []).reduce((sum, it) => sum + (Number(it.value) || 0), 0) ||

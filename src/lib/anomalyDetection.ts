@@ -47,14 +47,14 @@ export function detectFormAnomalies(formData: BusinessFormData): FormAnomalyWarn
       field: 'cogsCost',
       severity: 'error',
       messageZh: '原材料/进货成本已经超过了你填的总流水，多半是把「年度成本」填成了「月成本」，或者类目/单位填反了，请核对。',
-      messageEn: 'Your COGS exceeds total monthly revenue — likely an annual figure entered as monthly, or a mismatched category. Please double-check.'
+      messageEn: 'Your materials/purchasing cost exceeds total monthly revenue — likely an annual figure entered as monthly, or a mismatched item. Please double-check.'
     });
   } else if (revenue > 0 && cogs / revenue >= 0.8) {
     warnings.push({
       field: 'cogsCost',
       severity: 'warning',
       messageZh: '进货成本占总流水的比例超过 80%，明显偏高，建议确认是否漏填收入或多算了成本。',
-      messageEn: 'COGS is over 80% of revenue — unusually high. Please verify revenue is complete and costs are correctly scoped.'
+      messageEn: 'Materials/purchasing cost is over 80% of revenue — unusually high. Please verify revenue is complete and costs are correctly scoped.'
     });
   }
 
