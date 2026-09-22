@@ -14,6 +14,7 @@ import {
   FileSpreadsheet,
   Camera,
   Trash2,
+  Eraser,
   RefreshCw,
   BarChart3,
   Settings2,
@@ -697,17 +698,22 @@ export const AssessmentForm: React.FC<FormProps> = ({
       const tpl = getIndustryTemplateByKey(value, formData.baseCurrency);
       const rate = SUPPORTED_CURRENCIES.find((c) => c.code === formData.baseCurrency)?.rateToUsd || 1;
       const toLocal = (usd: number) => Math.round(usd * rate);
+      // 修复：此前 value 直接填入模板金额（Number(it.amount)），用户只要切换一次行业，
+      // 花费清单总额就会被这些"看不见操作、却真实计入计算"的数字悄悄推高——反馈原话是
+      // "为什么我填的150最后清单总结是450"，多出来的 300 正是这里的模板金额。
+      // value 改为 0，suggestedAmount 保留（已有的占位提示 placeholder="AI建议 $X" 与
+      // FieldProvenanceBadge 机制会展示这个参考值），用户需要自己确认后填写，不会被悄悄计入。
       const newCogs = (tpl.cogsItems || []).map((it) => ({
         id: `cogs-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         label: it.name || (language === 'en' ? 'Material cost item' : '物料成本项'),
-        value: Number(it.amount) || 0,
+        value: 0,
         suggestedAmount: Number(it.amount) || 0,
         isFixed: false
       }));
       const newOpex = (tpl.opexItems || []).map((it) => ({
         id: `opex-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         label: it.name || (language === 'en' ? 'Operating expense item' : '运营开支项'),
-        value: Number(it.amount) || 0,
+        value: 0,
         suggestedAmount: Number(it.amount) || 0,
         isFixed: false
       }));
@@ -715,14 +721,14 @@ export const AssessmentForm: React.FC<FormProps> = ({
         ...prev,
         dynamicCogsItems: prev.dynamicCogsItems?.length ? prev.dynamicCogsItems : newCogs,
         dynamicOpexItems: prev.dynamicOpexItems?.length ? prev.dynamicOpexItems : newOpex,
-        cogsCost: prev.cogsCost?.amount
-          ? prev.cogsCost
-          : { amount: newCogs.reduce((s, it) => s + it.value, 0), currency: prev.baseCurrency },
         updatedAt: new Date().toISOString()
       }));
+      // aiSuggested 单独保留真实的模板参考金额（suggestedAmount），供用户点击「恢复 AI 建议」
+      // 时显式恢复——与上面自动写入表单的 value:0 是两码事：一个是"用户没做任何操作就被计入
+      // 计算的数字"（已修复为 0），一个是"用户主动点击确认后才套用的参考值"（保留原样）。
       setAiSuggested({
-        cogs: newCogs.map((it) => ({ label: it.label, amount: it.value, suggestedAmount: it.suggestedAmount })),
-        opex: newOpex.map((it) => ({ label: it.label, amount: it.value, suggestedAmount: it.suggestedAmount }))
+        cogs: newCogs.map((it) => ({ label: it.label, amount: it.suggestedAmount, suggestedAmount: it.suggestedAmount })),
+        opex: newOpex.map((it) => ({ label: it.label, amount: it.suggestedAmount, suggestedAmount: it.suggestedAmount }))
       });
     }
   };
@@ -884,36 +890,37 @@ export const AssessmentForm: React.FC<FormProps> = ({
       ? rawOpex.map((it) => ({ label: it.name!, amount: Number(it.amount) || 0, suggestedAmount: Number(it.amount) || 0 }))
       : (result.suggestedOpex || []).map((label) => ({ label, amount: 0, suggestedAmount: 0 }));
 
+    // 修复：value 此前直接填入 AI 推断出的金额，用户只要触发一次 AI 结构推断（点击「下一步」
+    // 就会自动发生），花费清单总额就会被这些数字悄悄推高，用户完全没有意识到自己"填了"这些钱
+    // ——与「所有分数用户可自行核实」的产品承诺相悖。value 改为 0，真实的 AI 参考值只保留在
+    // suggestedAmount 里，驱动输入框的占位提示文字，用户需自己确认后才会变成计入计算的真实值。
     const cogsItems = finalCogs.map((it) => ({
       id: `cogs-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       label: it.label,
-      value: it.amount,
+      value: 0,
       suggestedAmount: it.suggestedAmount,
       isFixed: false
     }));
     const opexItems = finalOpex.map((it) => ({
       id: `opex-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       label: it.label,
-      value: it.amount,
+      value: 0,
       suggestedAmount: it.suggestedAmount,
       isFixed: false
     }));
 
-    // —— 用 AI 估算同步进货总额，清除旧草稿残留值 ——
-    // 明细项完全脱节，导致进货占比算出 100% 或畸形比例。
-    // 仅当用户尚未手动改过对应字段时才覆盖（避免覆盖用户真实数据）。
-    // 注：不再用 AI 估算笼统写入总流水/真实经营收入——这两项现在必须由用户在
-    // 「赚多少」里填写销量×单价或客流量×成交率算出，AI 给不出这个拆分，写入一个
-    // 笼统数字反而会被必填校验判定为未完成，徒增困惑。
-    const aiCogs = (result.cogsItems || []).reduce((s, it) => s + (Number(it.amount) || 0), 0);
     // 金额币种：优先用本次推断出的币种，否则沿用表单当前币种（不再写死 USD）
     const inferCurrency = (patch.baseCurrency as any) || formData.baseCurrency || 'USD';
 
+    // 修复：此前这里会把 aiCogs（AI 推断出的 COGS 合计）写入 cogsCost.amount 作为"清除旧草稿
+    // 残留值"的手段，但由于 dynamicCogsItems 的 value 已经改成 0，一旦仍把 cogsCost.amount
+    // 设为非零的 aiCogs，aggregateMonthlyCosts 里"明细合计为0时退回cogsCost"的兜底逻辑会让
+    // 这笔钱从另一个入口重新溜回总额——只把 dynamicCogsItems 清零、不动 cogsCost 才是真正清零。
     // 成本：明细 + 总额一起写入（动态模式下评分以明细合计为准，不会重复计算）
     setAiSuggested({ cogs: finalCogs, opex: finalOpex });
     if (!cogsTouched) {
       patch.dynamicCogsItems = cogsItems;
-      patch.cogsCost = { amount: aiCogs, currency: inferCurrency };
+      patch.cogsCost = { amount: 0, currency: inferCurrency };
     }
     if (!opexTouched) {
       patch.dynamicOpexItems = opexItems;
@@ -1928,15 +1935,6 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     </div>
                   </div>
                   <p className="text-[12px] text-slate-500">{cogsFieldMeta.tip}</p>
-                  <p className="text-[12px] text-rose-800 bg-rose-50 border border-rose-200 rounded-lg p-1.5 font-semibold">
-                    {resolvedUnitsSold(formData.revenueDetailEstimate) != null
-                      ? (language === 'en'
-                          ? `Tip: for a material item, fill in monthly purchase quantity + unit cost and the amount is calculated for you — estimate quantity based on the ${Math.round(resolvedUnitsSold(formData.revenueDetailEstimate) || 0)} units/mo you entered above under "How much do you earn".`
-                          : `提示：材料类条目填了每月进货量+进货单价后，金额会自动按两者相乘算出——进货量可参考你在上方「赚多少」里填写的月销量（约 ${Math.round(resolvedUnitsSold(formData.revenueDetailEstimate) || 0)} 件）估计。`)
-                      : (language === 'en'
-                          ? 'Tip: for a material item, fill in monthly purchase quantity + unit cost and the amount is calculated for you — estimate quantity based on the monthly sales volume you enter under "How much do you earn" above.'
-                          : '提示：材料类条目填了每月进货量+进货单价后，金额会自动按两者相乘算出——进货量可参考上方「赚多少」里填写的月销量估计。')}
-                  </p>
 
                   {/* 材料/教学耗材类条目（AI 按行业推断，可自由增删改） */}
                   {(formData.dynamicCogsItems || []).map((it) => (
@@ -2005,8 +2003,8 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
                     />
                     <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.rentCost.currency}/{language === 'en' ? 'mo' : '月'}</span>
-                    <button type="button" onClick={() => updateMoney('rentCost', 0)} className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer shrink-0">
-                      <Trash2 className="w-3.5 h-3.5" />
+                    <button type="button" onClick={() => updateMoney('rentCost', 0)} title={language === 'en' ? 'Reset to 0 (fixed category, cannot remove the row)' : '清零该项（此为固定类目，不可整行移除）'} className="p-1 text-slate-400 hover:text-amber-600 cursor-pointer shrink-0">
+                      <Eraser className="w-3.5 h-3.5" />
                     </button>
                   </div>
 
@@ -2020,8 +2018,8 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
                     />
                     <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.laborCost.currency}/{language === 'en' ? 'mo' : '月'}</span>
-                    <button type="button" onClick={() => updateMoney('laborCost', 0)} className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer shrink-0">
-                      <Trash2 className="w-3.5 h-3.5" />
+                    <button type="button" onClick={() => updateMoney('laborCost', 0)} title={language === 'en' ? 'Reset to 0 (fixed category, cannot remove the row)' : '清零该项（此为固定类目，不可整行移除）'} className="p-1 text-slate-400 hover:text-amber-600 cursor-pointer shrink-0">
+                      <Eraser className="w-3.5 h-3.5" />
                     </button>
                   </div>
 
@@ -2035,8 +2033,8 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
                     />
                     <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.utilityCost.currency}/{language === 'en' ? 'mo' : '月'}</span>
-                    <button type="button" onClick={() => updateMoney('utilityCost', 0)} className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer shrink-0">
-                      <Trash2 className="w-3.5 h-3.5" />
+                    <button type="button" onClick={() => updateMoney('utilityCost', 0)} title={language === 'en' ? 'Reset to 0 (fixed category, cannot remove the row)' : '清零该项（此为固定类目，不可整行移除）'} className="p-1 text-slate-400 hover:text-amber-600 cursor-pointer shrink-0">
+                      <Eraser className="w-3.5 h-3.5" />
                     </button>
                   </div>
 
@@ -2051,8 +2049,8 @@ export const AssessmentForm: React.FC<FormProps> = ({
                         className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
                       />
                       <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.taxCost.currency}/{language === 'en' ? 'mo' : '月'}</span>
-                      <button type="button" onClick={() => updateMoney('taxCost', 0)} className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer shrink-0">
-                        <Trash2 className="w-3.5 h-3.5" />
+                      <button type="button" onClick={() => updateMoney('taxCost', 0)} title={language === 'en' ? 'Reset to 0 (fixed category, cannot remove the row)' : '清零该项（此为固定类目，不可整行移除）'} className="p-1 text-slate-400 hover:text-amber-600 cursor-pointer shrink-0">
+                        <Eraser className="w-3.5 h-3.5" />
                       </button>
                       {formData.taxCost.amount > 0 && (
                         <button
@@ -2096,40 +2094,10 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
                     />
                     <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.existingDebtMonthlyPayment.currency}/{language === 'en' ? 'mo' : '月'}</span>
-                    <button type="button" onClick={() => updateMoney('existingDebtMonthlyPayment', 0)} className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer shrink-0">
-                      <Trash2 className="w-3.5 h-3.5" />
+                    <button type="button" onClick={() => updateMoney('existingDebtMonthlyPayment', 0)} title={language === 'en' ? 'Reset to 0 (fixed category, cannot remove the row)' : '清零该项（此为固定类目，不可整行移除）'} className="p-1 text-slate-400 hover:text-amber-600 cursor-pointer shrink-0">
+                      <Eraser className="w-3.5 h-3.5" />
                     </button>
                   </div>
-
-                  {/* AI 按行业推断的其他开支补充项（可自由增删改） */}
-                  {(formData.dynamicOpexItems || []).map((it) => (
-                    <div key={it.id} className="flex items-center gap-1.5 flex-wrap">
-                      <input
-                        type="text"
-                        value={it.label}
-                        onChange={(e) => updateDynamicOpexItem(it.id, { label: e.target.value })}
-                        className="flex-1 min-w-[7rem] p-1.5 border border-slate-200 rounded-lg font-semibold text-slate-800"
-                      />
-                      <NumberField
-                        min={0}
-                        value={it.value}
-                        onChange={(v) => updateDynamicOpexItem(it.id, { value: Math.max(0, v) })}
-                        className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
-                        placeholder={it.suggestedAmount ? `${language === 'en' ? 'AI suggests' : 'AI建议'} ${it.suggestedAmount}` : (language === 'en' ? 'Amount' : '金额')}
-                        title={it.suggestedAmount ? (language === 'en' ? `AI suggested reference amount: ${it.suggestedAmount} (for reference only, please fill in your real figure)` : `AI 建议参考金额：${it.suggestedAmount}（仅供参考，请填你的真实数字）`) : (language === 'en' ? 'Please fill in your real monthly amount' : '请填你的真实月度金额')}
-                      />
-                      <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.baseCurrency}/{language === 'en' ? 'mo' : '月'}</span>
-                      {it.suggestedAmount ? (
-                        <FieldProvenanceBadge
-                          confidence={isReviewedByUser(it) ? 'confirmed' : 'suggested'}
-                          language={language}
-                        />
-                      ) : null}
-                      <button type="button" onClick={() => removeDynamicOpexItem(it.id)} className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer shrink-0">
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))}
 
                   {/* 注册/执照费用：逐项区分一次性（按自定月数分摊）与年度（固定按12个月分摊），
                       与上面的条目共用同一份清单展示。 */}
@@ -2206,8 +2174,8 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       />
                       <span>{language === 'en' ? 'months' : '个月'}</span>
                     </div>
-                    <button type="button" onClick={() => updateMoney('companyRegistrationCost', 0)} className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer shrink-0">
-                      <Trash2 className="w-3.5 h-3.5" />
+                    <button type="button" onClick={() => updateMoney('companyRegistrationCost', 0)} title={language === 'en' ? 'Reset to 0 (fixed category, cannot remove the row)' : '清零该项（此为固定类目，不可整行移除）'} className="p-1 text-slate-400 hover:text-amber-600 cursor-pointer shrink-0">
+                      <Eraser className="w-3.5 h-3.5" />
                     </button>
                   </div>
 
@@ -2241,8 +2209,8 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       />
                       <span>{language === 'en' ? 'months' : '个月'}</span>
                     </div>
-                    <button type="button" onClick={() => updateMoney('visaFeeCost', 0)} className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer shrink-0">
-                      <Trash2 className="w-3.5 h-3.5" />
+                    <button type="button" onClick={() => updateMoney('visaFeeCost', 0)} title={language === 'en' ? 'Reset to 0 (fixed category, cannot remove the row)' : '清零该项（此为固定类目，不可整行移除）'} className="p-1 text-slate-400 hover:text-amber-600 cursor-pointer shrink-0">
+                      <Eraser className="w-3.5 h-3.5" />
                     </button>
                   </div>
 
@@ -2296,8 +2264,8 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
                     />
                     <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.equipmentDepreciationCost.currency}/{language === 'en' ? 'mo' : '月'}</span>
-                    <button type="button" onClick={() => updateMoney('equipmentDepreciationCost', 0)} className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer shrink-0">
-                      <Trash2 className="w-3.5 h-3.5" />
+                    <button type="button" onClick={() => updateMoney('equipmentDepreciationCost', 0)} title={language === 'en' ? 'Reset to 0 (fixed category, cannot remove the row)' : '清零该项（此为固定类目，不可整行移除）'} className="p-1 text-slate-400 hover:text-amber-600 cursor-pointer shrink-0">
+                      <Eraser className="w-3.5 h-3.5" />
                     </button>
                   </div>
 
@@ -2306,15 +2274,6 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     <div className="flex items-center gap-2 flex-wrap">
                       <Building2 className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                       <label className="font-bold text-slate-800">{language === 'en' ? 'Country / Region Located' : '所在国家/地区'}</label>
-                      {formData.regionCountry ? (
-                        <span className="text-[11px] bg-teal-100 text-teal-800 font-bold px-1.5 py-0.5 rounded">
-                          {language === 'en' ? `AI reference for ${regulatoryEstimate.countryLabel}` : `AI 已给出 ${regulatoryEstimate.countryLabel} 参考值`}
-                        </span>
-                      ) : (
-                        <span className="text-[11px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.5 rounded">
-                          {language === 'en' ? 'Country not selected — showing generic reference' : '尚未选择国家 — 当前为通用参考值'}
-                        </span>
-                      )}
                     </div>
                     <SearchableSelect
                       value={formData.regionCountry}
@@ -2353,6 +2312,38 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       {language === 'en' ? '. Changing it here also switches your base currency to match — never affects your score.' : '。在此修改也会同步切换主报告币种为该国货币——绝不影响得分，所有数字你都可以核实后自由修改。'}
                     </p>
                   </div>
+
+                  {/* 反馈：新增花费项此前渲染在固定类目中间（每月偿还债务本息之后），离底下的
+                      「＋ 添加花费项」按钮很远，用户点击新增后要往上翻才能找到刚加的那一行。
+                      移到这里——紧挨着触发它的按钮，点了就在眼前，不用滚动查找。 */}
+                  {(formData.dynamicOpexItems || []).map((it) => (
+                    <div key={it.id} className="flex items-center gap-1.5 flex-wrap">
+                      <input
+                        type="text"
+                        value={it.label}
+                        onChange={(e) => updateDynamicOpexItem(it.id, { label: e.target.value })}
+                        className="flex-1 min-w-[7rem] p-1.5 border border-slate-200 rounded-lg font-semibold text-slate-800"
+                      />
+                      <NumberField
+                        min={0}
+                        value={it.value}
+                        onChange={(v) => updateDynamicOpexItem(it.id, { value: Math.max(0, v) })}
+                        className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                        placeholder={it.suggestedAmount ? `${language === 'en' ? 'AI suggests' : 'AI建议'} ${it.suggestedAmount}` : (language === 'en' ? 'Amount' : '金额')}
+                        title={it.suggestedAmount ? (language === 'en' ? `AI suggested reference amount: ${it.suggestedAmount} (for reference only, please fill in your real figure)` : `AI 建议参考金额：${it.suggestedAmount}（仅供参考，请填你的真实数字）`) : (language === 'en' ? 'Please fill in your real monthly amount' : '请填你的真实月度金额')}
+                      />
+                      <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.baseCurrency}/{language === 'en' ? 'mo' : '月'}</span>
+                      {it.suggestedAmount ? (
+                        <FieldProvenanceBadge
+                          confidence={isReviewedByUser(it) ? 'confirmed' : 'suggested'}
+                          language={language}
+                        />
+                      ) : null}
+                      <button type="button" onClick={() => removeDynamicOpexItem(it.id)} className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer shrink-0">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
 
                   <div className="flex items-center justify-between flex-wrap gap-2 pt-2 border-t border-slate-200">
                     <button type="button" onClick={addDynamicOpexItem} className="text-[12px] px-2 py-1 rounded border border-slate-300 text-slate-700 font-bold hover:bg-slate-100 cursor-pointer">
