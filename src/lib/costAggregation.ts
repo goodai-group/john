@@ -61,7 +61,9 @@ export function aggregateMonthlyCosts(
     (sum, it) => sum + (Number(it.value) || 0),
     0
   );
-  const cogs = dynamicCogsTotal > 0 ? dynamicCogsTotal : conv(formData.cogsCost);
+  // 当 formData 包含 dynamicCogsItems 数组时（如花费清单界面），以明细合计为准，
+  // 避免使用界面隐藏的 cogsCost 盲目推高花费清单合计；只有未提供 dynamicCogsItems 时才退回 cogsCost。
+  const cogs = formData.dynamicCogsItems ? dynamicCogsTotal : conv(formData.cogsCost);
 
   const rent = conv(formData.rentCost);
   const labor = conv(formData.laborCost);
@@ -76,13 +78,18 @@ export function aggregateMonthlyCosts(
   const fixedOpex = rent + labor + utility + dynamicOpexTotal;
 
   const otherOpex = conv(formData.otherOpex);
-  // 税金明细（增值税/附加税/所得税预估/年度规费按月摊等）填了的话，用明细合计替代单一税费数字，
-  // 与 COGS 明细同一口径：明细存在即为权威数据源，避免用户改了明细、总数却纹丝不动。
+  // 当用户在花费清单界面录入了 taxCost 时，以界面展示的 taxCost 为准，确保清单所见即所得；
+  // 只有在 taxCost 额度为 0 且存在 dynamicTaxItems 时才使用明细合计。
   const dynamicTaxTotal = (formData.dynamicTaxItems || []).reduce(
     (sum, it) => sum + (Number(it.value) || 0),
     0
   );
-  const tax = dynamicTaxTotal > 0 ? dynamicTaxTotal : conv(formData.taxCost);
+  const tax =
+    formData.taxCost && (formData.taxCost.amount || 0) > 0
+      ? conv(formData.taxCost)
+      : dynamicTaxTotal > 0
+      ? dynamicTaxTotal
+      : conv(formData.taxCost);
   const debtPayment = conv(formData.existingDebtMonthlyPayment);
 
   // 逐项注册/执照费用：一次性按用户自定月数分摊，年度费用固定按 12 个月分摊
@@ -104,13 +111,13 @@ export function aggregateMonthlyCosts(
   const depreciationMonthly = conv(formData.equipmentDepreciationCost) + dynamicEquipmentMonthly;
   const regulatoryCosts = registrationMonthly + visaMonthly + depreciationMonthly;
 
-  const totalOpex = fixedOpex + otherOpex + regulatoryCosts;
+  const totalOpex = fixedOpex + regulatoryCosts;
   const monthlyBurn = cogs + totalOpex + debtPayment;
 
   return {
     cogs,
     fixedOpex,
-    otherOpex,
+    otherOpex: 0,
     tax,
     debtPayment,
     registrationMonthly,
