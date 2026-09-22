@@ -505,6 +505,36 @@ export const REGULATORY_COUNTRY_OPTIONS: Array<{ code: string; countryLabel: str
     iso2: c.iso2
   }));
 
+/** 美国分州属地税收细化（第5点延伸）：REGULATORY_COST_TABLE.USD 只能给出联邦层面的通用提示
+ *  （"另有州税与自雇税，视州与经营形式而定"）——一旦用户在下方省/州下拉框里选定了具体的州，
+ *  这句话里"视州而定"的部分就有了确切答案，理应直接给出该州的数字，而不是继续留一句空泛的免责声明。
+ *  州名 key 来自 country-state-city 库返回的英文州名（regionDetail 存的就是这个值，与界面语言无关），
+ *  逐州补充时直接在此对象里新增条目即可，未收录的州会退回 REGULATORY_COST_TABLE.USD 的通用提示。 */
+interface UsStateRegulatoryEntry {
+  stateLabel: string;
+  stateLabelEn: string;
+  stateCorporateTaxHint: string;
+  stateCorporateTaxHintEn: string;
+  registrationUsd: number;
+  sourceNote: string;
+  sourceNoteEn: string;
+}
+
+const US_STATE_REGULATORY_TABLE: Record<string, UsStateRegulatoryEntry> = {
+  Alabama: {
+    stateLabel: '阿拉巴马州',
+    stateLabelEn: 'Alabama',
+    stateCorporateTaxHint:
+      '阿拉巴马州企业所得税为单一税率 6.5%（按州内应纳税所得额计征）；以个人身份纳税的个体户/合伙企业则按阿拉巴马州个人所得税 2%-5% 累进税率计征',
+    stateCorporateTaxHintEn:
+      "Alabama levies a flat 6.5% state corporate income tax on Alabama taxable income; sole proprietors/partnerships taxed as individuals instead pay Alabama's graduated personal income tax rate of 2%-5%",
+    registrationUsd: 236,
+    sourceNote: '阿拉巴马州部分参考州税务厅企业所得税税率与州务卿 LLC/公司名称预留及注册费公开区间（2026年）',
+    sourceNoteEn:
+      "Alabama-specific figures based on the Alabama Department of Revenue's corporate income tax rate and the Alabama Secretary of State's published LLC/corporation name-reservation and formation fee ranges (2026)"
+  }
+};
+
 const DEFAULT_REGULATORY_ESTIMATE: RegulatoryTableEntry = {
   countryLabel: '通用/未识别地区',
   countryLabelEn: 'General / Unidentified Region',
@@ -542,7 +572,8 @@ function genericEstimateForCountry(countryLabel: string, countryLabelEn: string)
 export function inferRegulatoryCosts(
   projectNameOrCountry: string,
   baseCurrency: CurrencyCode = 'USD',
-  language: Language = 'zh'
+  language: Language = 'zh',
+  regionDetail?: string
 ): RegulatoryCostEstimate & { registrationLocal: number; visaLocal: number } {
   const raw = (projectNameOrCountry || '').trim();
   const pLower = raw.toLowerCase();
@@ -562,6 +593,35 @@ export function inferRegulatoryCosts(
   const rate = SUPPORTED_CURRENCIES.find((c) => c.code === baseCurrency)?.rateToUsd || 1;
   const toLocal = (usd: number) => Math.round(usd * rate);
   const isEn = language === 'en';
+
+  // 美国分州细化：country-state-city 返回的州名（regionDetail）与界面语言无关，始终是英文，
+  // 直接作为 key 去查 US_STATE_REGULATORY_TABLE；命中则把联邦通用提示里"视州而定"的部分
+  // 换成该州的确切税率与注册费，未命中的州继续沿用联邦层面的通用提示。
+  const stateEntry =
+    detectedCurrency === 'USD' && regionDetail ? US_STATE_REGULATORY_TABLE[regionDetail.trim()] : undefined;
+
+  if (stateEntry) {
+    const countryLabel = isEn
+      ? `${table.countryLabelEn} – ${stateEntry.stateLabelEn}`
+      : `${table.countryLabel} - ${stateEntry.stateLabel}`;
+    const corporateTaxRateHint = isEn
+      ? `Federal corporate income tax 21%; ${stateEntry.stateCorporateTaxHintEn}. Self-employed individuals/sole proprietors also owe federal self-employment tax (Social Security + Medicare) of approximately 15.3%.`
+      : `联邦企业所得税 21%；${stateEntry.stateCorporateTaxHint}；个体经营者/自雇人士还需缴纳联邦自雇税（社保+医保）约 15.3%。`;
+    const sourceNote = isEn
+      ? `${table.sourceNoteEn}. ${stateEntry.sourceNoteEn}`
+      : `${table.sourceNote}；${stateEntry.sourceNote}`;
+    const registrationUsd = stateEntry.registrationUsd;
+
+    return {
+      countryLabel,
+      corporateTaxRateHint,
+      companyRegistrationCostEstimateUsd: registrationUsd,
+      visaFeeCostEstimateUsd: table.visaUsd,
+      sourceNote,
+      registrationLocal: toLocal(registrationUsd),
+      visaLocal: toLocal(table.visaUsd)
+    };
+  }
 
   return {
     countryLabel: isEn ? table.countryLabelEn : table.countryLabel,

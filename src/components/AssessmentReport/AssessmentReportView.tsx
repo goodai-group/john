@@ -37,7 +37,8 @@ import {
   Copy,
   CheckCheck,
   GitCompare,
-  MoreVertical
+  MoreVertical,
+  Calculator
 } from 'lucide-react';
 import { formatMoney } from '../../lib/currencies';
 
@@ -137,6 +138,7 @@ export const AssessmentReportView: React.FC<ReportViewProps> = ({
     monthlyExternalGrants,
     monthlyCogs,
     monthlyOpex,
+    monthlyBurn,
     grossProfit,
     grossMarginPercent,
     operatingProfit,
@@ -146,6 +148,12 @@ export const AssessmentReportView: React.FC<ReportViewProps> = ({
     cashRunwayMonths,
     debtServiceCoverageRatio
   } = report.normalizedFinancials;
+
+  // 税金及规费金额本身未单独存于 normalizedFinancials（只存了 PBT 与 PAT），
+  // 但 净利润(PAT) = 税前利润(PBT) − 税金，两项都已知，反推即可，且与评分引擎的算法完全一致，
+  // 不是另一套估算逻辑——用于下方「计算方法与过程」区块逐步展示税金这一步的代入过程。
+  const taxAmountDerived = Math.max(0, operatingProfit - netProfit);
+  const gate5 = report.gates.find((g) => g.code === 'GATE-5');
 
   // 真实收入占比：引擎里用来判定 Gate-1 的同一个公式，专业明细页此前从未把这个具体百分比
   // 数字显示出来（只显示 Gate-1 通过/不通过），用户想核实这条红线到底算出多少分需要自己重算。
@@ -1450,6 +1458,208 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                 </div>
                 <div className="text-[13px] text-neutral-500 mt-0.5">{t('红线安全底线为 ≥ 60%', 'Safe threshold is ≥ 60%')}</div>
               </div>
+            </div>
+          </div>
+
+          {/* Section 5: 计算方法与计算过程说明——报告最后必须逐项列出所有数值的算法与代入过程，
+              任何人拿这份报告都能不依赖系统本身、自己重新核对一遍每一个数字是怎么来的。 */}
+          <div className="bg-white border-2 border-neutral-200 rounded-3xl p-6 sm:p-8 shadow-xs space-y-5">
+            <div>
+              <h3 className="text-base font-black text-neutral-900 flex items-center gap-2">
+                <Calculator className="w-4 h-4 text-teal-700 shrink-0" />
+                <span>{t('计算方法与计算过程说明', 'Calculation Methods & Process')}</span>
+              </h3>
+              <p className="text-xs text-neutral-500 font-medium mt-1">
+                {t(
+                  '本报告涉及的每一个数值都按下方公式与代入过程逐项算出，公式与判定规则完全公开，你可以自行逐步核对。',
+                  'Every figure in this report is derived from the formulas and substitution steps below — the formulas and thresholds are fully public so you can verify each step yourself.'
+                )}
+              </p>
+            </div>
+
+            {/* 5.1 核心财务指标：公式 + 本项目实际代入数字 */}
+            <div className="space-y-2">
+              <h4 className="text-[13px] font-black text-neutral-800 uppercase tracking-wide">
+                {t('一、核心财务指标的算法', '1. Core Financial Metric Formulas')}
+              </h4>
+              <div className="space-y-2">
+                {[
+                  {
+                    label: t('毛利润 Gross Profit', 'Gross Profit'),
+                    formula: t('毛利润 = 月真实主营收入 − 月进货/直接成本 COGS', 'Gross Profit = Monthly Real Operating Revenue − COGS'),
+                    substitution: `${formatMoney(monthlyRealRevenue, baseCurr)} − ${formatMoney(monthlyCogs, baseCurr)} = ${formatMoney(grossProfit, baseCurr)}`
+                  },
+                  {
+                    label: t('毛利率 Gross Margin', 'Gross Margin'),
+                    formula: t('毛利率 = 毛利润 ÷ 月真实主营收入 × 100%', 'Gross Margin = Gross Profit ÷ Monthly Real Operating Revenue × 100%'),
+                    substitution: `${formatMoney(grossProfit, baseCurr)} ÷ ${formatMoney(monthlyRealRevenue, baseCurr)} × 100% = ${grossMarginPercent}%`
+                  },
+                  {
+                    label: t('税前利润 PBT', 'Pre-Tax Profit (PBT)'),
+                    formula: t('税前利润 = 毛利润 − 月运营开销 OPEX（房租/人工/水电等固定支出）', 'PBT = Gross Profit − Monthly OPEX (rent, labor, utilities, etc.)'),
+                    substitution: `${formatMoney(grossProfit, baseCurr)} − ${formatMoney(monthlyOpex, baseCurr)} = ${formatMoney(operatingProfit, baseCurr)}`
+                  },
+                  {
+                    label: t('税金及规费', 'Taxes & Levies'),
+                    formula: t('由税前利润与净利润反推：税金 = 税前利润 − 净利润', 'Derived from PBT and Net Profit: Tax = PBT − Net Profit'),
+                    substitution: `${formatMoney(operatingProfit, baseCurr)} − ${formatMoney(netProfit, baseCurr)} = ${formatMoney(taxAmountDerived, baseCurr)}`
+                  },
+                  {
+                    label: t('净利润 PAT', 'Net Profit (PAT)'),
+                    formula: t('净利润 = 税前利润 − 税金及规费', 'Net Profit = PBT − Taxes & Levies'),
+                    substitution: `${formatMoney(operatingProfit, baseCurr)} − ${formatMoney(taxAmountDerived, baseCurr)} = ${formatMoney(netProfit, baseCurr)}`
+                  },
+                  {
+                    label: t('净利润率', 'Net Margin'),
+                    formula: t('净利润率 = 净利润 ÷ 月真实主营收入 × 100%', 'Net Margin = Net Profit ÷ Monthly Real Operating Revenue × 100%'),
+                    substitution: `${formatMoney(netProfit, baseCurr)} ÷ ${formatMoney(monthlyRealRevenue, baseCurr)} × 100% = ${netProfitMarginPercent}%`
+                  },
+                  {
+                    label: t('固定开销占比 OPEX Ratio', 'OPEX Ratio'),
+                    formula: t('OPEX 占比 = 月运营开销 ÷ 月真实主营收入 × 100%', 'OPEX Ratio = Monthly OPEX ÷ Monthly Real Operating Revenue × 100%'),
+                    substitution: `${formatMoney(monthlyOpex, baseCurr)} ÷ ${formatMoney(monthlyRealRevenue, baseCurr)} × 100% = ${opexRatioPercent}%`
+                  },
+                  {
+                    label: t('真实收入占比', 'Real Revenue Ratio'),
+                    formula: t('真实收入占比 = 月真实主营收入 ÷（月真实主营收入 + 月外部捐赠/补贴）× 100%', 'Real Revenue Ratio = Monthly Real Revenue ÷ (Monthly Real Revenue + Monthly External Grants) × 100%'),
+                    substitution: `${formatMoney(monthlyRealRevenue, baseCurr)} ÷ (${formatMoney(monthlyRealRevenue, baseCurr)} + ${formatMoney(monthlyExternalGrants, baseCurr)}) × 100% = ${realRevenueRatioPercent}%`
+                  },
+                  {
+                    label: t('现金储备可支撑月数', 'Cash Runway (Months)'),
+                    formula: t('储备月数 = 可用流动资金（现金+速动资产）÷ 每月现金消耗（COGS + OPEX + 每月还贷本息，不含税）', 'Runway = Available Cash & Liquid Assets ÷ Monthly Cash Burn (COGS + OPEX + Debt Payment, excluding tax)'),
+                    substitution: t(
+                      `本项目每月现金消耗合计 ${formatMoney(monthlyBurn, baseCurr)}，结果为 ${cashRunwayMonths} 个月（超过 60 个月一律按 60 个月封顶展示）`,
+                      `This project's total monthly cash burn is ${formatMoney(monthlyBurn, baseCurr)}, giving a runway of ${cashRunwayMonths} months (capped for display at 60 months)`
+                    )
+                  },
+                  {
+                    label: t('债务偿付安全倍数 DSCR', 'Debt Service Coverage Ratio (DSCR)'),
+                    formula: t('DSCR = max(0, 税前利润 PBT) ÷ 每月还贷本息；无负债则视为安全无需计算', 'DSCR = max(0, PBT) ÷ Monthly Debt Payment; treated as safe with no calculation when debt-free'),
+                    substitution: gate5
+                      ? t(`本项目结果：${gate5.currentValue}（安全线 ≥ 1.25x，详见上方 GATE-5 红线判定）`, `This project's result: ${gate5.currentValue} (safe threshold ≥ 1.25x — see GATE-5 above)`)
+                      : `${debtServiceCoverageRatio}x`
+                  }
+                ].map((row, i) => (
+                  <div key={`calc-core-${i}`} className="p-3 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-1">
+                    <div className="text-xs font-black text-neutral-900">{row.label}</div>
+                    <div className="text-[12px] text-neutral-500">{row.formula}</div>
+                    <div className="text-[12px] font-mono text-teal-700 font-bold break-all">{row.substitution}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 5.2 综合得分：逐项加权求和的完整过程 */}
+            <div className="space-y-2">
+              <h4 className="text-[13px] font-black text-neutral-800 uppercase tracking-wide">
+                {t('二、综合得分的加权求和过程', '2. Weighted Total Score Calculation')}
+              </h4>
+              <p className="text-[12px] text-neutral-500">
+                {t('综合得分 = Σ（单项得分 × 权重）÷ 100，逐项得分与权重如下：', 'Total Score = Σ (item score × weight) ÷ 100. Each item:')}
+              </p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-[12px] border-collapse">
+                  <thead>
+                    <tr className="text-left text-neutral-400 font-mono uppercase text-[11px]">
+                      <th className="py-1.5 pr-2 font-bold">{t('维度', 'Dimension')}</th>
+                      <th className="py-1.5 pr-2 font-bold text-right">{t('单项得分', 'Score')}</th>
+                      <th className="py-1.5 pr-2 font-bold text-right">{t('权重', 'Weight')}</th>
+                      <th className="py-1.5 pr-2 font-bold text-right">{t('加权得分', 'Weighted')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {report.metrics.map((m) => (
+                      <tr key={`calc-metric-${m.key}`} className="border-t border-neutral-100">
+                        <td className="py-1.5 pr-2 font-semibold text-neutral-800">{m.plainName || m.name}</td>
+                        <td className="py-1.5 pr-2 text-right font-mono text-neutral-700">{m.score}</td>
+                        <td className="py-1.5 pr-2 text-right font-mono text-neutral-700">{m.weight}%</td>
+                        <td className="py-1.5 pr-2 text-right font-mono font-bold text-teal-700">
+                          {((m.score * m.weight) / 100).toFixed(1)}
+                        </td>
+                      </tr>
+                    ))}
+                    <tr className="border-t-2 border-neutral-300">
+                      <td className="py-1.5 pr-2 font-black text-neutral-900" colSpan={3}>
+                        {t('加权求和（四舍五入）', 'Weighted Sum (rounded)')}
+                      </td>
+                      <td className="py-1.5 pr-2 text-right font-mono font-black text-neutral-900">
+                        {report.metrics.reduce((acc, m) => acc + (m.score * m.weight) / 100, 0).toFixed(1)} ≈ {Math.min(report.totalScore, Math.round(report.metrics.reduce((acc, m) => acc + (m.score * m.weight) / 100, 0)))}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-[12px] text-neutral-500">
+                {report.gatePassed
+                  ? t(
+                      `本项目全部红线达标，最终综合得分直接采用加权求和结果，取整后为 ${report.totalScore} 分，对照等级区间得出评级 ${report.tier}。`,
+                      `All gates passed, so the final score is the rounded weighted sum, ${report.totalScore}, which maps to tier ${report.tier} below.`
+                    )
+                  : t(
+                      `本项目存在未通过的红线，按规则综合得分强制封顶在 54 分以内（min(加权求和取整值, 54)），最终为 ${report.totalScore} 分，评级直接判定为 REJECT，不再对照下方等级区间。`,
+                      `This project has at least one failed gate, so per the rules the score is capped at 54 (min(rounded weighted sum, 54)), giving a final score of ${report.totalScore} and an automatic REJECT tier, bypassing the tier table below.`
+                    )}
+              </p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-[12px] border-collapse">
+                  <thead>
+                    <tr className="text-left text-neutral-400 font-mono uppercase text-[11px]">
+                      <th className="py-1.5 pr-2 font-bold">{t('条件', 'Condition')}</th>
+                      <th className="py-1.5 pr-2 font-bold">{t('评级', 'Tier')}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-neutral-700 font-mono">
+                    <tr className="border-t border-neutral-100"><td className="py-1">{t('任一红线未通过', 'Any gate fails')}</td><td className="py-1 font-bold">REJECT</td></tr>
+                    <tr className="border-t border-neutral-100"><td className="py-1">{t('全部通过 且 总分 ≥ 88', 'All pass & score ≥ 88')}</td><td className="py-1 font-bold">AAA</td></tr>
+                    <tr className="border-t border-neutral-100"><td className="py-1">{t('全部通过 且 总分 ≥ 80', 'All pass & score ≥ 80')}</td><td className="py-1 font-bold">AA</td></tr>
+                    <tr className="border-t border-neutral-100"><td className="py-1">{t('全部通过 且 总分 ≥ 70', 'All pass & score ≥ 70')}</td><td className="py-1 font-bold">A</td></tr>
+                    <tr className="border-t border-neutral-100"><td className="py-1">{t('全部通过 且 总分 ≥ 60', 'All pass & score ≥ 60')}</td><td className="py-1 font-bold">BBB</td></tr>
+                    <tr className="border-t border-neutral-100"><td className="py-1">{t('全部通过 且 总分 < 60', 'All pass & score < 60')}</td><td className="py-1 font-bold">BB</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* 5.3 五维雷达得分公式（每项满分 100，仅用于雷达图直观展示，不直接参与上方加权总分） */}
+            <div className="space-y-2">
+              <h4 className="text-[13px] font-black text-neutral-800 uppercase tracking-wide">
+                {t('三、5 维雷达图各维度算法', '3. 5-Dimension Radar Score Formulas')}
+              </h4>
+              <p className="text-[12px] text-neutral-500">
+                {t(
+                  '雷达图用于直观呈现相对强弱分布，公式独立于上方综合得分，不重复计入总分：',
+                  'The radar chart visualizes relative strengths and is calculated independently of the total score above — it is not added into it:'
+                )}
+              </p>
+              <div className="space-y-1.5">
+                {[
+                  t('商业盈利能力 = min(100, max(10, round(净利润率 × 3.5 + 20)))', 'Market & Profitability = min(100, max(10, round(Net Margin × 3.5 + 20)))'),
+                  t('成本开销管控 = min(100, max(10, round(100 − OPEX占比 + 毛利率 × 0.5)))', 'Cost Control = min(100, max(10, round(100 − OPEX Ratio + Gross Margin × 0.5)))'),
+                  t('现金流与抗风险 = min(100, max(10, round(现金储备月数 × 20)))', 'Cashflow Resilience = min(100, max(10, round(Cash Runway × 20)))'),
+                  t('负债偿付安全性 = 无负债则 95，否则 min(100, max(15, round(DSCR × 35)))', 'Solvency & Debt Buffer = 95 if debt-free, else min(100, max(15, round(DSCR × 35)))'),
+                  t('持续经营稳定性 = min(100, max(20, round(已运营月数 × 6 + 15)))', 'Continuity & Transparency = min(100, max(20, round(Operating Months × 6 + 15)))')
+                ].map((line, i) => (
+                  <div key={`radar-formula-${i}`} className="text-[12px] font-mono text-neutral-700 bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-1.5">
+                    {line}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 5.4 币种与汇率折算说明 */}
+            <div className="space-y-1.5">
+              <h4 className="text-[13px] font-black text-neutral-800 uppercase tracking-wide">
+                {t('四、币种折算口径', '4. Currency Conversion Basis')}
+              </h4>
+              <p className="text-[12px] text-neutral-500">
+                {t(
+                  `以上所有金额均先按各字段自己选择的币种折算为本报告的主币种 ${baseCurr} 后再相加/相减，不会出现不同币种数字直接混算的情况；`,
+                  `Every amount above is first converted from its own field's currency into this report's base currency (${baseCurr}) before any addition or subtraction — figures in different currencies are never mixed directly;`
+                )}
+                {report.customRateNotice
+                  ? report.customRateNotice
+                  : t('本项目未使用自定义汇率，按系统内置参考汇率折算。', 'This project used the built-in reference exchange rate, not a custom rate.')}
+              </p>
             </div>
           </div>
         </div>

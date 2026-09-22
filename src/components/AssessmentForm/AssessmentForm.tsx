@@ -258,8 +258,14 @@ export const AssessmentForm: React.FC<FormProps> = ({
   // 任何信息前就被悄悄套用某个不相关国家的税率/注册/签证费标准（反馈：全球化成本的AI估计值
   // 数据来源不明——没有明确的地区输入，用户没法判断参考值是基于什么算出来的）。
   const regulatoryEstimate = React.useMemo(
-    () => inferRegulatoryCosts(formData.regionCountry || formData.projectName, formData.baseCurrency, language),
-    [formData.regionCountry, formData.projectName, formData.baseCurrency, language]
+    () =>
+      inferRegulatoryCosts(
+        formData.regionCountry || formData.projectName,
+        formData.baseCurrency,
+        language,
+        formData.regionDetail
+      ),
+    [formData.regionCountry, formData.regionDetail, formData.projectName, formData.baseCurrency, language]
   );
 
   // 已经选定「公司注册所在国家/地区」后，再用 country-state-city（成熟的现成省/州数据库，
@@ -463,9 +469,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
         return {
           label: language === 'en' ? 'Teaching Materials & Supplies Cost' : '教材与教学耗材成本',
           badge: language === 'en' ? 'Teaching Materials' : '教学资料',
-          tip: language === 'en'
-            ? 'Direct teaching materials such as textbooks, handouts, workbooks, stationery/teaching aids, online platforms (excludes rent and labor).'
-            : '教材讲义、练习册、文具教具、在线平台等直接教学耗材（不含房租人工）。'
+          tip: ''
         };
       case 'vocational_training':
         return {
@@ -1934,7 +1938,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       </button>
                     </div>
                   </div>
-                  <p className="text-[12px] text-slate-500">{cogsFieldMeta.tip}</p>
+                  {cogsFieldMeta.tip && <p className="text-[12px] text-slate-500">{cogsFieldMeta.tip}</p>}
 
                   {/* 材料/教学耗材类条目（AI 按行业推断，可自由增删改） */}
                   {(formData.dynamicCogsItems || []).map((it) => (
