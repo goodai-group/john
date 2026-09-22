@@ -499,9 +499,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
         return {
           label: language === 'en' ? 'Raw Materials & Direct Purchasing Cost' : '原材料与直接采购成本',
           badge: language === 'en' ? 'Purchasing Cost' : '进货本钱',
-          tip: language === 'en'
-            ? 'Direct purchasing cost such as goods payment, fresh food ingredients, etc. (includes long-haul freight, excludes rent and staff wages).'
-            : '进货货款、生鲜食材原料等直接买货成本（包含长途运费，不含房租和员工工资）。'
+          tip: ''
         };
     }
   }, [formData.industry, language]);
@@ -1377,6 +1375,30 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   ? 'Determines your base currency and the tax/registration/visa reference values shown later — you can still override any of them yourself.'
                   : '将决定主报告币种，以及后面「花费清单」里的税收/注册/签证参考值——你随时可以在下方自行修改覆盖。'}
               </p>
+              {formData.regionCountry && (
+                statesForRegionCountry.length > 0 ? (
+                  <SearchableSelect
+                    value={formData.regionDetail}
+                    onChange={(v) => updateField('regionDetail', v)}
+                    options={stateOptions}
+                    placeholder={language === 'en' ? '-- Select state/province (optional) --' : '-- 请选择省/州（可选）--'}
+                    controlClassName="w-full p-2 mt-1.5 border border-slate-200 rounded-lg font-semibold text-slate-900 bg-white"
+                    isClearable
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    value={formData.regionDetail}
+                    onChange={(e) => updateField('regionDetail', e.target.value)}
+                    placeholder={
+                      language === 'en'
+                        ? 'This region has no state/province list — enter manually (optional)'
+                        : '该地区暂无省/州列表，可手动填写（可选）'
+                    }
+                    className="w-full p-2 mt-1.5 border border-slate-200 rounded-lg font-medium text-slate-900 bg-white"
+                  />
+                )
+              )}
             </div>
 
             {/* 所处阶段：决定后面是「填真实数字体检」还是「先估算未来」 */}
@@ -2271,50 +2293,6 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     <button type="button" onClick={() => updateMoney('equipmentDepreciationCost', 0)} title={language === 'en' ? 'Reset to 0 (fixed category, cannot remove the row)' : '清零该项（此为固定类目，不可整行移除）'} className="p-1 text-slate-400 hover:text-amber-600 cursor-pointer shrink-0">
                       <Eraser className="w-3.5 h-3.5" />
                     </button>
-                  </div>
-
-                  {/* 所在国家/地区：驱动上面税金/注册/签证的 AI 参考值，放在清单末尾（改了立即联动，不影响已填条目） */}
-                  <div className="pt-2 border-t border-slate-100 space-y-1.5">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Building2 className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                      <label className="font-bold text-slate-800">{language === 'en' ? 'Country / Region Located' : '所在国家/地区'}</label>
-                    </div>
-                    <SearchableSelect
-                      value={formData.regionCountry}
-                      onChange={handleRegionCountryChange}
-                      options={countryOptions}
-                      placeholder={language === 'en' ? '-- Select your country/region --' : '-- 请选择所在国家/地区 --'}
-                      controlClassName="w-full p-2 border border-slate-200 rounded-lg font-semibold text-slate-900 bg-white"
-                      isClearable
-                    />
-                    {formData.regionCountry && (
-                      statesForRegionCountry.length > 0 ? (
-                        <SearchableSelect
-                          value={formData.regionDetail}
-                          onChange={(v) => updateField('regionDetail', v)}
-                          options={stateOptions}
-                          placeholder={language === 'en' ? '-- Select state/province (optional) --' : '-- 请选择省/州（可选）--'}
-                          controlClassName="w-full p-2 border border-slate-200 rounded-lg font-semibold text-slate-900 bg-white"
-                          isClearable
-                        />
-                      ) : (
-                        <input
-                          type="text"
-                          value={formData.regionDetail}
-                          onChange={(e) => updateField('regionDetail', e.target.value)}
-                          placeholder={
-                            language === 'en'
-                              ? 'This region has no state/province list — enter manually (optional)'
-                              : '该地区暂无省/州列表，可手动填写（可选）'
-                          }
-                          className="w-full p-2 border border-slate-200 rounded-lg font-medium text-slate-900 bg-white"
-                        />
-                      )
-                    )}
-                    <p className="text-[12px] text-slate-500">
-                      {regulatoryEstimate.corporateTaxRateHint}
-                      {language === 'en' ? '. Changing it here also switches your base currency to match — never affects your score.' : '。在此修改也会同步切换主报告币种为该国货币——绝不影响得分，所有数字你都可以核实后自由修改。'}
-                    </p>
                   </div>
 
                   {/* 反馈：新增花费项此前渲染在固定类目中间（每月偿还债务本息之后），离底下的
