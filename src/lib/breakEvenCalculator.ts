@@ -48,6 +48,7 @@ export function calculateBreakEvenRevenue(
     | 'otherOpex'
     | 'dynamicOpexItems'
     | 'taxCost'
+    | 'dynamicTaxItems'
     | 'existingDebtMonthlyPayment'
     | 'companyRegistrationCost'
     | 'companyRegistrationAmortizationMonths'
