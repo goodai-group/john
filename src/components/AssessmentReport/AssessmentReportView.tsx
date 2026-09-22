@@ -119,6 +119,10 @@ export const AssessmentReportView: React.FC<ReportViewProps> = ({
     plainExplanation?: string;
     actionableAdvices?: string[];
     potentialGrowthAreas?: string[];
+    // 后端 Guardian 合规官复核后附带的元信息：是否审过、过滤掉了几条越界内容——
+    // 报告要如实呈现"这段 AI 文字经过审核"，而不是悄悄把过滤动作藏起来。
+    guardianReviewed?: boolean;
+    guardianBlockedCount?: number;
   } | null>(null);
   // 修复：改为按建议文本本身（而非数组下标）记录勾选状态——此前按下标记录时，点击
   // 「获取Gemini AI实时深度战略诊断」会重新生成/重新排序行动清单，导致已勾选的那条
@@ -1047,6 +1051,19 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                       </span>
                     ))}
                   </div>
+                )}
+                {/* Guardian 合规官复核披露：如实告知这段 AI 文字经过审核，越界内容已被摘除，
+                    而不是悄悄改写或藏起过滤动作——与报告"规则100%透明"的一贯原则一致。 */}
+                {aiCustomDiagnosis.guardianReviewed && (
+                  <p className="pt-1.5 border-t border-amber-800/40 text-[11px] text-amber-200/70 flex items-center gap-1">
+                    <ShieldCheck className="w-3 h-3 shrink-0" />
+                    {aiCustomDiagnosis.guardianBlockedCount
+                      ? t(
+                          `以上内容已由 Guardian 合规官复核；已过滤 ${aiCustomDiagnosis.guardianBlockedCount} 条越界表述（如投资/收益承诺），其余建议原样保留。`,
+                          `Reviewed by the Guardian compliance check; ${aiCustomDiagnosis.guardianBlockedCount} out-of-bounds statement(s) (e.g. investment/return promises) were filtered — the rest is shown as generated.`
+                        )
+                      : t('以上内容已由 Guardian 合规官复核，未发现越界表述。', 'Reviewed by the Guardian compliance check — no out-of-bounds statements found.')}
+                  </p>
                 )}
               </div>
             )}

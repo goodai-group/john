@@ -9,6 +9,7 @@ import { AGENTS, listAgents } from '../agents/index.js';
 import { ROLE_AGENTS, inputForRole, authoritativeForRole } from '../agents/roles.js';
 import { dossierFromForm, applyProposals, pendingConfirmations } from '../agents/dossier.js';
 import { runCoach, type CoachIntent } from '../agents/coach.js';
+import { review as guardianReview, toAuditEntries as guardianAuditEntries } from '../agents/guardian.js';
 import { listTools } from '../agents/tools.js';
 import { newRequestId, runAgent } from '../agents/runtime.js';
 import type { AgentContext, AgentDefinition } from '../agents/types.js';
@@ -47,6 +48,54 @@ function jsonAgentRoute(agent: AgentDefinition<any, any>) {
     const { output } = await runAgent(agent, req.body, makeContext(req));
     return res.json(output);
   });
+}
+
+/**
+ * 把 Guardian 的否决结果套用到深度诊断产物上：按 violation.path 精确定位到
+ * 具体是哪条建议/哪个字段越界，只摘掉那一条，其余内容原样保留——
+ * 而不是一votes否决整份诊断，也不是像 Guardian 自己说的那样去"改写"违规文字
+ * （Guardian 本身只判定，不生成替换内容，真正的编辑动作在这里、由确定性代码完成，
+ * 不会引入第二个可能幻觉的 Agent）。
+ * summaryHeadline/plainExplanation 是必填的整体定性文案，删不得，命中时退回固定安全文案。
+ */
+function applyGuardianVerdict(
+  output: Record<string, unknown>,
+  violations: Array<{ rule: string; detail: string; path?: string }>
+): Record<string, unknown> {
+  if (violations.length === 0) return output;
+
+  const blockedArrayIndex: Record<string, Set<number>> = {};
+  let blockedSummaryHeadline = false;
+  let blockedPlainExplanation = false;
+
+  for (const v of violations) {
+    const path = v.path || '';
+    const arrayMatch = path.match(/^(actionableAdvices|potentialGrowthAreas)\[(\d+)\]$/);
+    if (arrayMatch) {
+      const [, field, idx] = arrayMatch;
+      (blockedArrayIndex[field] ||= new Set()).add(Number(idx));
+    } else if (path === 'summaryHeadline') {
+      blockedSummaryHeadline = true;
+    } else if (path === 'plainExplanation') {
+      blockedPlainExplanation = true;
+    }
+  }
+
+  const sanitized: Record<string, unknown> = { ...output };
+  for (const field of ['actionableAdvices', 'potentialGrowthAreas'] as const) {
+    const blocked = blockedArrayIndex[field];
+    const list = output[field];
+    if (blocked && Array.isArray(list)) {
+      sanitized[field] = list.filter((_, i) => !blocked.has(i));
+    }
+  }
+  if (blockedSummaryHeadline) {
+    sanitized.summaryHeadline = '内容审核已过滤本次诊断中的一句越界表述，其余结论仍照常呈现。';
+  }
+  if (blockedPlainExplanation) {
+    sanitized.plainExplanation = '本次 AI 诊断的部分措辞未通过合规审核，已被移除；请以下方保留的建议与报告本身的数值为准。';
+  }
+  return sanitized;
 }
 
 export function registerApiRoutes(app: express.Express): void {
@@ -274,7 +323,41 @@ export function registerApiRoutes(app: express.Express): void {
   app.post('/api/ai/infer-business-structure', jsonAgentRoute(AGENTS.businessStructure));
 
   // 3. AI Deep Diagnosis for Assessment Report
-  app.post('/api/ai/deep-diagnosis', jsonAgentRoute(AGENTS.deepDiagnosis));
+  //
+  // 这是报告页唯一真正下发给用户的、由大模型自由生成的文字（其余核心数值全部来自
+  // 确定性引擎 scoringEngine.ts，不经过任何 Agent）。生成后必须先过 Guardian 合规官
+  // 复核（越界投资/收益承诺、敏感地区模式下的 PII 泄露），再把审核后的版本交给用户——
+  // Guardian 只判定不改写，真正的过滤/替换由 applyGuardianVerdict 完成，
+  // 避免用一个可能幻觉的 Agent 去"修正"另一个 Agent 的幻觉。
+  app.post(
+    '/api/ai/deep-diagnosis',
+    asyncHandler(async (req, res) => {
+      const { output } = await runAgent(AGENTS.deepDiagnosis, req.body, makeContext(req));
+
+      const body: any = (req.body && typeof req.body === 'object' ? req.body : {}) || {};
+      const isSensitiveRegion = Boolean(body.report?.isSensitiveRegion);
+
+      const verdict = guardianReview({
+        agent: 'deepDiagnosis',
+        claimType: AGENTS.deepDiagnosis.claimType,
+        output,
+        isSensitiveRegion
+      });
+
+      if (!verdict.pass) {
+        for (const entry of guardianAuditEntries('deepDiagnosis', verdict)) {
+          console.warn(`[guardian] ${entry.detail}`);
+        }
+      }
+
+      const sanitized = applyGuardianVerdict(output as Record<string, unknown>, verdict.violations);
+      return res.json({
+        ...sanitized,
+        guardianReviewed: true,
+        guardianBlockedCount: verdict.violations.length
+      });
+    })
+  );
 
   // 3.1 AI Broken-Stream Gap Detection & Completion
   // 对外 URL 保持 /api/ai/ocr-estimate 不变（前端零改动），内部已更名为 revenueGap ——
