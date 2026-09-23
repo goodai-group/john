@@ -24,8 +24,14 @@ export function runBusinessAssessment(formData: BusinessFormData): AssessmentRep
     convertToTargetCurrency(field, baseCurrency, customRateVal, customRateCode);
 
   const monthlyGrossRev = conv(formData.monthlyRevenue);
-  const monthlyRealRev = conv(formData.monthlyRealOperatingRevenue) || monthlyGrossRev;
   const monthlyGrants = conv(formData.monthlyExternalGrants);
+  // 修复：未填"真实主营收入"细项时，此前直接退回"经营月均总流水"(monthlyGrossRev)，
+  // 但总流水本身可能已经包含外部捐赠款（见 monthlyRevenue = monthlyRealOperatingRevenue +
+  // monthlyExternalGrants 这条前端维护的恒等式），会把 Gate-1"真实收入占比"算在被
+  // 污染过的分子上，红线可能失效而不自知。改为退回"总流水扣除已知捐赠款"，
+  // 即便真实收入细项没填，也不会让捐赠款被误算进"真实收入"。
+  const monthlyRealRev =
+    conv(formData.monthlyRealOperatingRevenue) || Math.max(0, monthlyGrossRev - monthlyGrants);
   const liquidCash = conv(formData.cashAndLiquidAssets);
   const inventory = conv(formData.inventoryValue);
 
@@ -41,7 +47,10 @@ export function runBusinessAssessment(formData: BusinessFormData): AssessmentRep
   } = aggregateMonthlyCosts(formData, baseCurrency, customRateVal, customRateCode);
 
   // 毛利 (Gross Profit) = 真实主营收入 - COGS
-  const grossProfit = Math.max(0, monthlyRealRev - cogs);
+  // 修复：此前用 Math.max(0, ...) 强制不低于0，导致进货成本倒挂（COGS > 真实收入）时
+  // 真实的负毛利被静默拉平成0，再传导进 PBT/PAT 会让亏损被系统性低估。负毛利应如实
+  // 传导到下游，毛利率允许为负数展示（真实反映"倒挂"这一风险状态）。
+  const grossProfit = monthlyRealRev - cogs;
   const grossMarginPercent =
     monthlyRealRev > 0 ? Number(((grossProfit / monthlyRealRev) * 100).toFixed(1)) : 0;
 

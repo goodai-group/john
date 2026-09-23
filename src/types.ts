@@ -87,6 +87,56 @@ export interface DynamicRegistrationCostItem {
   amortizationMonths: number; // 仅 feeType 为 one_time 时生效；annual 固定按 12 个月分摊（此字段被忽略）
 }
 
+// 花费/收入的自由录入行：用户只填名称、金额、周期，具体记到哪个会计科目由
+// CPA 分类 Agent（见 src/agents/ledgerClassifier.ts）判断，用户对分类过程基本无感知，
+// 只在低置信度/高风险项目上做轻量确认。与既有结构化字段（rentCost/cogsCost 等）并存，
+// 不替换——分类结果最终通过 src/lib/ledgerMapping.ts 写入这些既有字段。
+export type BillingCycle = 'monthly' | 'quarterly' | 'annual' | 'one_time';
+
+export const BILLING_CYCLE_LABELS: Record<BillingCycle, { zh: string; en: string }> = {
+  monthly: { zh: '每月', en: 'Monthly' },
+  quarterly: { zh: '每季度', en: 'Quarterly' },
+  annual: { zh: '每年', en: 'Annual' },
+  one_time: { zh: '一次性', en: 'One-time' }
+};
+
+export interface LedgerItem {
+  id: string;
+  type: 'income' | 'expense';
+  name: string;
+  amount: number;
+  currency: CurrencyCode;
+  cycle: BillingCycle; // 默认 'monthly'
+  /** 仅当 cycle 为 'one_time' 且被判定为应摊销的资本性支出时使用（如设备/装修） */
+  amortizationMonths?: number;
+}
+
+// CPA 分类 Agent 的输出科目——固定枚举而非自由文本桶，保证不同行业/不同用户填的
+// 流水，最终都落在同一套口径上，可横向比较（此前按行业模板关键词猜的自由文本桶做不到这点）。
+export type LedgerCategory =
+  | 'COGS' // 原材料/直接采购成本
+  | 'OPEX_FIXED_RENT' // 固定开销 - 房租
+  | 'OPEX_FIXED_LABOR' // 固定开销 - 人工
+  | 'OPEX_FIXED_UTILITY' // 固定开销 - 水电网络
+  | 'OPEX_VARIABLE' // 其他日常经营费用
+  | 'TAX' // 税金及规费
+  | 'DEBT_SERVICE' // 还本付息（现金流指标专用，不计入损益）
+  | 'CAPEX_DEPRECIATION' // 资本性支出，按月折旧计入 OPEX
+  | 'ONE_TIME_STARTUP' // 真正一次性、不重复发生，不计入月度经营指标
+  | 'REAL_REVENUE' // 真实经营收入
+  | 'EXTERNAL_GRANT'; // 外部捐赠/资助/非经常性收入
+
+/** CPA 分类 Agent 的产物：只做判断，不做金额换算/周期折算——那部分是确定性代码的职责 */
+export interface LedgerClassification {
+  id: string; // 对应 LedgerItem.id
+  category: LedgerCategory;
+  confidence: number; // 0-1
+  reasoning: string;
+  needsUserConfirmation: boolean;
+  /** 仅当判定为应摊销的一次性资本性支出时给出（月数） */
+  suggestedAmortizationMonths?: number;
+}
+
 export interface MoneyField {
   amount: number;
   currency: CurrencyCode;
@@ -144,6 +194,11 @@ export interface BusinessFormData {
   // 税金及规费明细分项（增值税/附加税/所得税预估/年度规费按月摊等），用户展开后填写；
   // 有明细时其合计替代 taxCost 单一数字作为计算依据，避免用户自己心算一个笼统的总数。
   dynamicTaxItems?: DynamicCostItem[];
+  // 一次性、不摊销的启动支出（如开业活动费、一次性咨询费）：CPA 分类 Agent 判定为
+  // ONE_TIME_STARTUP 的条目落在这里，不计入月度毛利/OPEX占比/Gate判定等经营指标，
+  // 只用于评估"这个项目起步需要多少启动资金"。与真正应摊销的资本性支出（走
+  // dynamicEquipmentItems 按月折旧）是两种不同处理方式，见 ledgerMapping.ts。
+  oneTimeStartupItems?: DynamicCostItem[];
 
   // 敏感地区数据安全模式
   isSensitiveRegion: boolean;

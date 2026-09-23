@@ -34,6 +34,7 @@ type PaybackFormFields = Pick<
   BusinessFormData,
   | 'monthlyRevenue'
   | 'monthlyRealOperatingRevenue'
+  | 'monthlyExternalGrants'
   | 'cogsCost'
   | 'dynamicCogsItems'
   | 'rentCost'
@@ -80,7 +81,10 @@ export function calculatePaybackPeriod(formData: PaybackFormFields): PaybackResu
 
   const realRevenue = conv(formData.monthlyRealOperatingRevenue);
   const grossRevenue = conv(formData.monthlyRevenue);
-  const monthlyRevenue = realRevenue > 0 ? realRevenue : grossRevenue;
+  // 与 scoringEngine 的 Gate-1 口径保持一致：总流水可能已包含外部捐赠款，
+  // 未填真实收入细项时退回"总流水扣除已知捐赠款"，而不是直接退回可能被污染的总流水。
+  const grants = conv(formData.monthlyExternalGrants);
+  const monthlyRevenue = realRevenue > 0 ? realRevenue : Math.max(0, grossRevenue - grants);
 
   const monthlyCostTotal = monthlyCostTotalIncludingTax(formData);
   const monthlyNetSurplus = monthlyRevenue - monthlyCostTotal;

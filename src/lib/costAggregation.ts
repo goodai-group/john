@@ -111,13 +111,13 @@ export function aggregateMonthlyCosts(
   const depreciationMonthly = conv(formData.equipmentDepreciationCost) + dynamicEquipmentMonthly;
   const regulatoryCosts = registrationMonthly + visaMonthly + depreciationMonthly;
 
-  const totalOpex = fixedOpex + regulatoryCosts;
+  const totalOpex = fixedOpex + otherOpex + regulatoryCosts;
   const monthlyBurn = cogs + totalOpex + debtPayment;
 
   return {
     cogs,
     fixedOpex,
-    otherOpex: 0,
+    otherOpex,
     tax,
     debtPayment,
     registrationMonthly,
