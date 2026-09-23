@@ -1,5 +1,11 @@
 import { BusinessFormData, CurrencyCode, MoneyField } from '../types.js';
 import { convertToTargetCurrency } from './currencies.js';
+import { normalizeToMonthly } from './ledgerCycle.js';
+
+/** 动态明细项的月度等效额：cycle 缺省按 'monthly' 处理，与历史数据（没有 cycle 字段）完全兼容 */
+function monthlyValueOf(it: { value: number; cycle?: import('../types.js').BillingCycle; amortizationMonths?: number }): number {
+  return normalizeToMonthly(Number(it.value) || 0, it.cycle || 'monthly', it.amortizationMonths);
+}
 
 /**
  * 成本聚合的单一实现来源。此前 scoringEngine.ts / breakEvenCalculator.ts / anomalyDetection.ts
@@ -58,7 +64,7 @@ export function aggregateMonthlyCosts(
 
   // 动态明细项目前没有独立币种选择器，始终按主币种录入，故不参与折算，与 scoringEngine 原有口径一致。
   const dynamicCogsTotal = (formData.dynamicCogsItems || []).reduce(
-    (sum, it) => sum + (Number(it.value) || 0),
+    (sum, it) => sum + monthlyValueOf(it),
     0
   );
   // 当 formData 包含 dynamicCogsItems 数组时（如花费清单界面），以明细合计为准，
@@ -72,7 +78,7 @@ export function aggregateMonthlyCosts(
   // 动态明细项是"在此基础上按行业补充"的额外条目（如设备清洁、排烟维护等），二者相加而非互相覆盖——
   // 否则用户改了白色栏目里的数字却发现 AI 分析结果毫无变化。
   const dynamicOpexTotal = (formData.dynamicOpexItems || []).reduce(
-    (sum, it) => sum + (Number(it.value) || 0),
+    (sum, it) => sum + monthlyValueOf(it),
     0
   );
   const fixedOpex = rent + labor + utility + dynamicOpexTotal;

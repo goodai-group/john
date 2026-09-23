@@ -32,6 +32,8 @@ import {
   Search
 } from 'lucide-react';
 import {
+  BillingCycle,
+  BILLING_CYCLE_LABELS,
   BusinessFormData,
   BusinessStage,
   CurrencyCode,
@@ -46,6 +48,7 @@ import {
 import { SUPPORTED_CURRENCIES, formatMoney, convertToTargetCurrency, CUSTOM_CURRENCY_VALUE } from '../../lib/currencies';
 import { INDUSTRY_BENCHMARKS, getIndustryBenchmark } from '../../lib/industryBenchmarks';
 import { estimateMonthlyRevenue, hasCompleteRevenueEstimate, resolvedUnitsSold } from '../../lib/revenueEstimate';
+import { normalizeToMonthly } from '../../lib/ledgerCycle';
 import { saveActiveDraft, clearActiveDraft, getActiveDraft } from '../../lib/storage';
 import {
   normalizeIndustryKey,
@@ -507,7 +510,15 @@ export const AssessmentForm: React.FC<FormProps> = ({
   // —— 动态成本项（COGS / OPEX）辅助函数 ——
   const updateDynamicCogsItem = (
     id: string,
-    patch: Partial<{ label: string; value: number; isFixed: boolean; quantity: number; unitCost: number }>
+    patch: Partial<{
+      label: string;
+      value: number;
+      isFixed: boolean;
+      quantity: number;
+      unitCost: number;
+      cycle: BillingCycle;
+      amortizationMonths: number;
+    }>
   ) => {
     setCogsTouched(true);
     setFormData((prev) => ({
@@ -542,7 +553,10 @@ export const AssessmentForm: React.FC<FormProps> = ({
     }));
   };
 
-  const updateDynamicOpexItem = (id: string, patch: Partial<{ label: string; value: number; isFixed: boolean }>) => {
+  const updateDynamicOpexItem = (
+    id: string,
+    patch: Partial<{ label: string; value: number; isFixed: boolean; cycle: BillingCycle; amortizationMonths: number }>
+  ) => {
     setOpexTouched(true);
     setFormData((prev) => ({
       ...prev,
@@ -568,6 +582,44 @@ export const AssessmentForm: React.FC<FormProps> = ({
       dynamicOpexItems: (prev.dynamicOpexItems || []).filter((it) => it.id !== id),
       updatedAt: new Date().toISOString()
     }));
+  };
+
+  // 花费清单每一行的计费周期选择器：默认每月，可切换为每季度/每年/一次性——
+  // 一次性额外露出「÷ N 个月」摊销输入，与既有设备/注册费用行的摊销交互保持一致。
+  // 供 dynamicCogsItems 与 dynamicOpexItems 两处行渲染共用，避免同一段 UI 抄两遍。
+  const renderCyclePicker = (
+    item: { cycle?: BillingCycle; amortizationMonths?: number },
+    onCycleChange: (cycle: BillingCycle) => void,
+    onAmortizationChange: (months: number) => void
+  ) => {
+    const cycle: BillingCycle = item.cycle || 'monthly';
+    return (
+      <div className="flex items-center gap-1 shrink-0">
+        <select
+          value={cycle}
+          onChange={(e) => onCycleChange(e.target.value as BillingCycle)}
+          className="p-1.5 border border-slate-200 rounded-lg text-[12px] font-semibold text-slate-700 bg-white cursor-pointer"
+        >
+          {(['monthly', 'quarterly', 'annual', 'one_time'] as BillingCycle[]).map((c) => (
+            <option key={c} value={c}>
+              {BILLING_CYCLE_LABELS[c][language]}
+            </option>
+          ))}
+        </select>
+        {cycle === 'one_time' && (
+          <div className="flex items-center gap-1">
+            <span className="text-[11px] text-slate-500">{language === 'en' ? 'over' : '÷'}</span>
+            <NumberField
+              min={1}
+              value={item.amortizationMonths || 12}
+              onChange={(v) => onAmortizationChange(Math.max(1, Math.round(v || 12)))}
+              className="w-12 p-1.5 border border-slate-200 rounded-lg font-mono text-right"
+            />
+            <span className="text-[11px] text-slate-500">{language === 'en' ? 'mo' : '个月'}</span>
+          </div>
+        )}
+      </div>
+    );
   };
 
   // —— 动态设备清单（问题5：让用户逐台填「设备值 + 预计使用月数」，AI 自动求和算月度折旧，避免自己心算总设备值） ——
@@ -1995,7 +2047,12 @@ export const AssessmentForm: React.FC<FormProps> = ({
                         placeholder={it.suggestedAmount ? `${language === 'en' ? 'AI suggests' : 'AI建议'} ${it.suggestedAmount}` : (language === 'en' ? 'Amount' : '金额')}
                         title={it.suggestedAmount ? (language === 'en' ? `AI suggested reference amount: ${it.suggestedAmount} (for reference only, please fill in your real figure)` : `AI 建议参考金额：${it.suggestedAmount}（仅供参考，请填你的真实数字）`) : (language === 'en' ? 'Please fill in your real monthly amount, or fill quantity × unit cost above' : '请填你的真实月度金额，或改为在左边填进货量×进货单价')}
                       />
-                      <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.baseCurrency}/{language === 'en' ? 'mo' : '月'}</span>
+                      <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.baseCurrency}</span>
+                      {renderCyclePicker(
+                        it,
+                        (cycle) => updateDynamicCogsItem(it.id, { cycle }),
+                        (months) => updateDynamicCogsItem(it.id, { amortizationMonths: months })
+                      )}
                       {it.suggestedAmount ? (
                         <FieldProvenanceBadge
                           confidence={isReviewedByUser(it) ? 'confirmed' : 'suggested'}
@@ -2314,7 +2371,12 @@ export const AssessmentForm: React.FC<FormProps> = ({
                         placeholder={it.suggestedAmount ? `${language === 'en' ? 'AI suggests' : 'AI建议'} ${it.suggestedAmount}` : (language === 'en' ? 'Amount' : '金额')}
                         title={it.suggestedAmount ? (language === 'en' ? `AI suggested reference amount: ${it.suggestedAmount} (for reference only, please fill in your real figure)` : `AI 建议参考金额：${it.suggestedAmount}（仅供参考，请填你的真实数字）`) : (language === 'en' ? 'Please fill in your real monthly amount' : '请填你的真实月度金额')}
                       />
-                      <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.baseCurrency}/{language === 'en' ? 'mo' : '月'}</span>
+                      <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.baseCurrency}</span>
+                      {renderCyclePicker(
+                        it,
+                        (cycle) => updateDynamicOpexItem(it.id, { cycle }),
+                        (months) => updateDynamicOpexItem(it.id, { amortizationMonths: months })
+                      )}
                       {it.suggestedAmount ? (
                         <FieldProvenanceBadge
                           confidence={isReviewedByUser(it) ? 'confirmed' : 'suggested'}
@@ -3006,8 +3068,10 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   <span className="text-slate-500 block">{language === 'en' ? 'Materials Purchasing:' : '原材料采购:'}</span>
                   <span className="font-bold">
                     {formatMoney(
-                      (formData.dynamicCogsItems || []).reduce((sum, it) => sum + (Number(it.value) || 0), 0) ||
-                        formData.cogsCost.amount,
+                      (formData.dynamicCogsItems || []).reduce(
+                        (sum, it) => sum + normalizeToMonthly(Number(it.value) || 0, it.cycle || 'monthly', it.amortizationMonths),
+                        0
+                      ) || formData.cogsCost.amount,
                       formData.cogsCost.currency
                     )}
                   </span>
