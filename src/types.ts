@@ -147,9 +147,11 @@ export interface MoneyField {
   isExternalSupport?: boolean; // 混合资金来源标注：是否属于外部支持款/捐赠
   note?: string;
   lastEditedBy?: string;
-  lastEditedAt?: string;
+  lastEditedAt?: string; // 有值即代表用户手动编辑过该字段（哪怕改成了0）——AI自动刷新类逻辑靠这个字段判断"是否可以覆盖"
   suggestedAmount?: number; // AI 按属地/行业给出的参考金额（仅占位提示，不参与计算，用户可核实修改）
   aiSourceNote?: string; // AI 给出该参考金额时的依据说明（如"肯尼亚小微企业营业执照年费区间"）
+  cycle?: BillingCycle; // 该笔金额的计费周期，默认每月
+  amortizationMonths?: number; // 仅 cycle 为 'one_time' 时生效：分摊到未来这么多个月
 }
 
 // 收入细节输入（必填其中一条路径）：用「月销售总量」或「月客流量×成交率」算出月成单数，
@@ -254,7 +256,13 @@ export interface BusinessFormData {
   visaFeeCost: MoneyField; // 经营者/员工签证与工作许可费用总额
   visaFeeAmortizationMonths: number; // 签证费用分摊月数（默认 12 个月）
   equipmentDepreciationCost: MoneyField; // 设备月度折旧费（直接按月计入成本）
-  existingDebtMonthlyPayment: MoneyField; // 现有债务月还本付息额
+  // 反馈：还本付息不应该是笼统一项，本金和利息性质不同（本金是负债规模的减少，利息才是真正的
+  // 资金成本），拆成两个独立字段各自可填、可选周期。existingDebtMonthlyPayment 保留只是为了
+  // 兼容拆分前的存量项目数据——只要 existingDebtMonthlyPrincipal 有值，计算就改用这两个新字段，
+  // 旧字段不再是编辑入口（详见 costAggregation.ts 的回退逻辑）。
+  existingDebtMonthlyPayment: MoneyField; // [历史字段，新数据不再直接编辑] 现有债务月还本付息合计
+  existingDebtMonthlyPrincipal?: MoneyField; // 每月偿还债务 - 本金
+  existingDebtMonthlyInterest?: MoneyField; // 每月偿还债务 - 利息
   cashAndLiquidAssets: MoneyField; // 当前现金与高流动资产
   inventoryValue: MoneyField; // 库存及固定资产估值
   operatingMonthsCount: number; // 连续稳定经营月数

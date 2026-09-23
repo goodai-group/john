@@ -47,6 +47,25 @@ function scale(form: BusinessFormData, key: keyof BusinessFormData, factor: numb
   }
 }
 
+// 还本付息拆分成本金/利息两个字段后，costAggregation.ts 计算时优先用这两个新字段，
+// 旧的 existingDebtMonthlyPayment 只在两个新字段都不存在时才生效（见该文件的回退逻辑）。
+// 这里必须镜像同一套回退规则，否则杠杆缩放的是一个已经不参与计算的旧字段，
+// 模拟出的分数增益会是假的（用户点了"降20%还款"，分数却纹丝不动）。
+function totalDebtPayment(form: BusinessFormData): number {
+  return form.existingDebtMonthlyPrincipal
+    ? (form.existingDebtMonthlyPrincipal.amount || 0) + (form.existingDebtMonthlyInterest?.amount || 0)
+    : form.existingDebtMonthlyPayment.amount || 0;
+}
+
+function scaleDebtPayment(form: BusinessFormData, factor: number): void {
+  if (form.existingDebtMonthlyPrincipal) {
+    scale(form, 'existingDebtMonthlyPrincipal', factor);
+    if (form.existingDebtMonthlyInterest) scale(form, 'existingDebtMonthlyInterest', factor);
+  } else {
+    scale(form, 'existingDebtMonthlyPayment', factor);
+  }
+}
+
 export const LEVER_CATALOG: Lever[] = [
   {
     id: 'cogs_down_5',
@@ -172,8 +191,8 @@ export const LEVER_CATALOG: Lever[] = [
     titleZh: '与债权人重谈还款计划，把月还款额降 20%',
     titleEn: 'Renegotiate the repayment plan to cut monthly debt service by 20%',
     horizonDays: 60,
-    appliesTo: (_r, f) => f.existingDebtMonthlyPayment.amount > 0,
-    apply: (f) => scale(f, 'existingDebtMonthlyPayment', 0.8),
+    appliesTo: (_r, f) => totalDebtPayment(f) > 0,
+    apply: (f) => scaleDebtPayment(f, 0.8),
     detailZh:
       '拉长还款期限往往比降利率更容易谈成，对每月现金流的缓解也更直接。谈之前先算清楚：每月最多能拿出多少还款而不影响进货。',
     detailEn:
