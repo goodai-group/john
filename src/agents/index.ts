@@ -9,6 +9,7 @@
 import type { AgentDefinition } from './types.js';
 import { consultationAgent } from './consultation.js';
 import { businessStructureAgent } from './businessStructure.js';
+import { ledgerClassifierAgent } from './ledgerClassifier.js';
 import { deepDiagnosisAgent } from './deepDiagnosis.js';
 import { revenueGapAgent } from './revenueGap.js';
 import { registrarAgent } from './registrar.js';
@@ -20,6 +21,7 @@ import { scoutAgent } from './scout.js';
 export const AGENTS = {
   consultation: consultationAgent,
   businessStructure: businessStructureAgent,
+  ledgerClassifier: ledgerClassifierAgent,
   deepDiagnosis: deepDiagnosisAgent,
   revenueGap: revenueGapAgent,
   registrar: registrarAgent,

@@ -322,6 +322,9 @@ export function registerApiRoutes(app: express.Express): void {
   // 2.5 AI Infer Industry & Generate Dynamic Cost/Opex Structure
   app.post('/api/ai/infer-business-structure', jsonAgentRoute(AGENTS.businessStructure));
 
+  // 2.6 CPA 分类 Agent：把用户自由填写的流水条目（名称+金额+周期）分类到标准会计科目
+  app.post('/api/ai/classify-ledger', jsonAgentRoute(AGENTS.ledgerClassifier));
+
   // 3. AI Deep Diagnosis for Assessment Report
   //
   // 这是报告页唯一真正下发给用户的、由大模型自由生成的文字（其余核心数值全部来自
