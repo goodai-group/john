@@ -1,6 +1,7 @@
 import { BusinessFormData, FormAnomalyWarning } from '../types.js';
 import { convertToTargetCurrency, CUSTOM_CURRENCY_VALUE } from './currencies.js';
 import { aggregateMonthlyCosts } from './costAggregation.js';
+import { normalizeToMonthly } from './ledgerCycle.js';
 import { footfallPathIsPartial, pathsConflict, unitsFromDirectSales, unitsFromFootfall } from './revenueEstimate.js';
 
 /**
@@ -37,7 +38,7 @@ export function detectFormAnomalies(formData: BusinessFormData): FormAnomalyWarn
   );
   const labor = conv(formData.laborCost);
   const dynamicOpexTotal = (formData.dynamicOpexItems || []).reduce(
-    (s, it) => s + (Number(it.value) || 0),
+    (s, it) => s + normalizeToMonthly(Number(it.value) || 0, it.cycle || 'monthly', it.amortizationMonths),
     0
   );
 

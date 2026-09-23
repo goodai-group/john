@@ -53,19 +53,23 @@ export interface ProofExtractedData {
 export interface DynamicCostItem {
   id: string;
   label: string;
-  value: number;
+  value: number; // 按 cycle 折算前的原始金额；cycle 缺省视为 'monthly'（历史数据兼容口径）
   isFixed?: boolean;
   suggestedAmount?: number; // AI 推断的参考金额（仅用于占位提示，不参与计算）
   quantity?: number; // 该项的进货量（选填）
   unitCost?: number; // 该项的进货单价（选填）；与 quantity 同时填写时，value 自动按两者相乘算出
+  cycle?: BillingCycle; // 该笔金额的计费周期，默认每月
+  amortizationMonths?: number; // 仅 cycle 为 'one_time' 时生效：分摊到未来这么多个月
 }
 
 export interface DynamicOpexItem {
   id: string;
   label: string;
-  value: number;
+  value: number; // 按 cycle 折算前的原始金额；cycle 缺省视为 'monthly'（历史数据兼容口径）
   isFixed?: boolean;
   suggestedAmount?: number; // AI 推断的参考金额（仅用于占位提示，不参与计算）
+  cycle?: BillingCycle; // 该笔金额的计费周期，默认每月
+  amortizationMonths?: number; // 仅 cycle 为 'one_time' 时生效：分摊到未来这么多个月
 }
 
 // 按台/按项填报的设备清单：月度折旧 = 设备值 ÷ 预计使用月数，用户逐台填，避免自己心算总设备值
