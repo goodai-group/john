@@ -2288,6 +2288,31 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     </button>
                   </div>
 
+                  {/* 修复：otherOpex 是 costAggregation.ts 里真实参与"花费清单合计"计算的字段
+                      （totalOpex = fixedOpex + otherOpex + regulatoryCosts），但此前整个表单
+                      没有任何输入框能看到/编辑它——旧项目或其他入口一旦把它写成非零值，
+                      清单合计就会悄悄比用户在页面上能看到的逐行相加结果多出一块，用户根本无从
+                      核实这笔钱是什么。补上这一行，让它跟房租/人工/水电一样可见、可核实、可清零。 */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="flex-1 min-w-[7rem] p-1.5 font-semibold text-slate-800">{language === 'en' ? 'Other Daily Operating Expenses' : '其他日常经营开销'}</span>
+                    <NumberField
+                      inputMode="numeric"
+                      min={0}
+                      value={formData.otherOpex.amount}
+                      onChange={(v) => updateMoney('otherOpex', v)}
+                      className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                    />
+                    <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.otherOpex.currency}</span>
+                    {renderCyclePicker(
+                      formData.otherOpex,
+                      (cycle) => updateMoneyCycle('otherOpex', cycle),
+                      (months) => updateMoneyAmortization('otherOpex', months)
+                    )}
+                    <button type="button" onClick={() => updateMoney('otherOpex', 0)} title={language === 'en' ? 'Reset to 0 (fixed category, cannot remove the row)' : '清零该项（此为固定类目，不可整行移除）'} className="p-1 text-slate-400 hover:text-amber-600 cursor-pointer shrink-0">
+                      <Eraser className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
                   <div className="space-y-1.5">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="flex-1 min-w-[7rem] p-1.5 font-semibold text-slate-800">{language === 'en' ? 'Taxes & Fees' : '税金及规费'}</span>
