@@ -90,7 +90,10 @@ export function aggregateMonthlyCosts(
   );
   const fixedOpex = rent + labor + utility + dynamicOpexTotal;
 
-  const otherOpex = conv(formData.otherOpex);
+  // otherOpex 现在和房租/人工/水电一样在表单里有可见的周期选择器，折算逻辑同步改用
+  // convMonthly（按 cycle/amortizationMonths 折算到月度等效额），与 UI 上新增的周期选择器保持一致；
+  // 历史数据没有 cycle 字段时仍按 'monthly' 处理，折算结果与之前的 conv() 完全相同，不影响存量项目。
+  const otherOpex = convMonthly(formData.otherOpex);
   // 当用户在花费清单界面录入了 taxCost 时，以界面展示的 taxCost 为准，确保清单所见即所得；
   // 只有在 taxCost 额度为 0 且存在 dynamicTaxItems 时才使用明细合计。
   const dynamicTaxTotal = (formData.dynamicTaxItems || []).reduce(
