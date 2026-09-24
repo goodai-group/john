@@ -192,7 +192,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <ShieldCheck className="w-[18px] h-[18px]" />
           </div>
           <h1 className="text-sm font-bold text-white tracking-tight leading-tight">
-            {language === 'zh' ? '商业财务测算' : 'BAM Financial Health'}
+            {language === 'zh' ? '商宣商业模式检验' : 'BAM Financial Health'}
           </h1>
         </div>
 
@@ -224,6 +224,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onClick={onOpenAccessibility}
                 className="p-2 rounded-lg hover:bg-white/10 text-teal-200 transition-colors cursor-pointer"
                 title={language === 'zh' ? '无障碍 / 大字模式' : 'Accessibility / Large Font'}
+                aria-label={language === 'zh' ? '无障碍 / 大字模式' : 'Accessibility / Large Font'}
               >
                 <Globe className="w-4 h-4" />
               </button>
@@ -233,6 +234,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onClick={onOpenAppGuide}
                 className="p-2 rounded-lg hover:bg-white/10 text-teal-200 transition-colors cursor-pointer"
                 title={language === 'zh' ? '使用指南' : 'Guide'}
+                aria-label={language === 'zh' ? '使用指南' : 'Guide'}
               >
                 <HelpCircle className="w-4 h-4" />
               </button>
@@ -260,7 +262,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <ShieldCheck className="w-4 h-4" />
             </div>
             <h1 className="text-sm font-bold text-neutral-900 tracking-tight">
-              {language === 'zh' ? '商业财务测算' : 'BAM Financial Health'}
+              {language === 'zh' ? '商宣商业模式检验' : 'BAM Financial Health'}
             </h1>
           </div>
 
@@ -270,6 +272,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onClick={onOpenAccessibility}
                 className="p-2 rounded-lg hover:bg-neutral-100 text-neutral-500 transition-colors cursor-pointer"
                 title={language === 'zh' ? '无障碍 / 大字模式' : 'Accessibility / Large Font'}
+                aria-label={language === 'zh' ? '无障碍 / 大字模式' : 'Accessibility / Large Font'}
               >
                 <Globe className="w-4 h-4 text-teal-600" />
               </button>
@@ -280,6 +283,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onClick={onOpenAppGuide}
                 className="p-2 rounded-lg hover:bg-neutral-100 text-neutral-500 transition-colors cursor-pointer"
                 title={language === 'zh' ? '使用指南' : 'Guide'}
+                aria-label={language === 'zh' ? '使用指南' : 'Guide'}
               >
                 <HelpCircle className="w-4 h-4" />
               </button>
@@ -292,6 +296,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 activeTab === 'standards' ? 'text-teal-600 bg-teal-50' : 'text-neutral-500'
               }`}
               title={language === 'zh' ? '评分规则' : 'Scoring Rules'}
+              aria-label={language === 'zh' ? '评分规则' : 'Scoring Rules'}
             >
               <BookOpen className="w-4 h-4" />
             </button>

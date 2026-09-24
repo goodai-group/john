@@ -5,6 +5,7 @@
 // 不再像重构前那样在每个路由里各写一遍。
 import express from 'express';
 import { asyncHandler } from './http.js';
+import { requireAuth } from './auth.js';
 import { AGENTS, listAgents } from '../agents/index.js';
 import { ROLE_AGENTS, inputForRole, authoritativeForRole } from '../agents/roles.js';
 import { dossierFromForm, applyProposals, pendingConfirmations } from '../agents/dossier.js';
@@ -102,25 +103,15 @@ export function registerApiRoutes(app: express.Express): void {
   // 1. Health & Config status API
   // 注意：Vercel 上 /api/health 由 api/health.ts 这个 file-based function 直接服务，
   // 不会走到这里。两处的响应体必须保持一致，修改时请同步 api/health.ts。
+  // BUG-13 修复：此接口未登录即可访问，此前额外返回 version 与 hasSupabaseConfig，
+  // 相当于把部署版本号、后端配置状态白送给任何匿名探测者。hasGeminiKey 是前端
+  // AiRuleConsultationDrawer 展示"本地规则库/AI 驱动"徽标唯一实际消费的字段，予以保留。
   app.get('/api/health', (req, res) => {
     const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GEMINI_API_KEY;
     const hasGemini = Boolean(geminiKey && geminiKey !== 'MY_GEMINI_API_KEY');
-    // 前端 Vite 只读取 VITE_* 前缀变量，因此 health 需一并检查，避免"已配置但 badge 仍显示未配置"
-    const supabaseUrl =
-      process.env.SUPABASE_URL ||
-      process.env.NEXT_PUBLIC_SUPABASE_URL ||
-      process.env.VITE_SUPABASE_URL;
-    const supabaseKey =
-      process.env.SUPABASE_ANON_KEY ||
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-      process.env.VITE_SUPABASE_ANON_KEY;
-    const hasSupabase = Boolean(supabaseUrl && supabaseKey);
     res.json({
       status: 'ok',
-      version: '1.4.1',
-      hasGeminiKey: hasGemini,
-      hasSupabaseConfig: hasSupabase,
-      timestamp: new Date().toISOString()
+      hasGeminiKey: hasGemini
     });
   });
 
@@ -137,7 +128,7 @@ export function registerApiRoutes(app: express.Express): void {
   });
 
   // 2. AI Rule Consultation & Edge Case Evaluator
-  app.post(['/api/ai/chat', '/api/ai-consultation'], jsonAgentRoute(AGENTS.consultation));
+  app.post(['/api/ai/chat', '/api/ai-consultation'], requireAuth(), jsonAgentRoute(AGENTS.consultation));
 
   // 2.1 AI Rule Consultation — Streaming (SSE) variant
   //
@@ -151,6 +142,7 @@ export function registerApiRoutes(app: express.Express): void {
   // Gemini 的 JSON 结构化输出——流式场景下半截 JSON 本来也没法增量解析。
   app.post(
     ['/api/ai/chat/stream', '/api/ai-consultation/stream'],
+    requireAuth(),
     asyncHandler(async (req, res) => {
       const input = parseConsultationInput(req.body);
       const { question, language, isEdgeKeyword } = input;
@@ -265,6 +257,7 @@ export function registerApiRoutes(app: express.Express): void {
   // 4. Coach 编排：按 businessStage 分流，激活相应角色并汇总产物
   app.post(
     '/api/coach/:intent',
+    requireAuth(),
     asyncHandler(async (req, res) => {
       const intent = req.params.intent as CoachIntent;
       if (!['profile', 'assess', 'ask'].includes(intent)) {
@@ -309,6 +302,7 @@ export function registerApiRoutes(app: express.Express): void {
   // 5. 单个角色直调（便于联调与回归测试，不参与编排）
   app.post(
     '/api/agents/:name',
+    requireAuth(),
     asyncHandler(async (req, res) => {
       const agent = ROLE_AGENTS[req.params.name];
       if (!agent) {
@@ -320,10 +314,14 @@ export function registerApiRoutes(app: express.Express): void {
   );
 
   // 2.5 AI Infer Industry & Generate Dynamic Cost/Opex Structure
-  app.post('/api/ai/infer-business-structure', jsonAgentRoute(AGENTS.businessStructure));
+  app.post(
+    '/api/ai/infer-business-structure',
+    requireAuth(),
+    jsonAgentRoute(AGENTS.businessStructure)
+  );
 
   // 2.6 CPA 分类 Agent：把用户自由填写的流水条目（名称+金额+周期）分类到标准会计科目
-  app.post('/api/ai/classify-ledger', jsonAgentRoute(AGENTS.ledgerClassifier));
+  app.post('/api/ai/classify-ledger', requireAuth(), jsonAgentRoute(AGENTS.ledgerClassifier));
 
   // 3. AI Deep Diagnosis for Assessment Report
   //
@@ -334,6 +332,7 @@ export function registerApiRoutes(app: express.Express): void {
   // 避免用一个可能幻觉的 Agent 去"修正"另一个 Agent 的幻觉。
   app.post(
     '/api/ai/deep-diagnosis',
+    requireAuth(),
     asyncHandler(async (req, res) => {
       const { output } = await runAgent(AGENTS.deepDiagnosis, req.body, makeContext(req));
 
@@ -365,5 +364,5 @@ export function registerApiRoutes(app: express.Express): void {
   // 3.1 AI Broken-Stream Gap Detection & Completion
   // 对外 URL 保持 /api/ai/ocr-estimate 不变（前端零改动），内部已更名为 revenueGap ——
   // 该接口既不含 AI 也不做 OCR，原命名是误导性的。
-  app.post('/api/ai/ocr-estimate', jsonAgentRoute(AGENTS.revenueGap));
+  app.post('/api/ai/ocr-estimate', requireAuth(), jsonAgentRoute(AGENTS.revenueGap));
 }

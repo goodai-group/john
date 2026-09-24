@@ -50,6 +50,7 @@ import { INDUSTRY_BENCHMARKS, getIndustryBenchmark } from '../../lib/industryBen
 import { estimateMonthlyRevenue, hasCompleteRevenueEstimate, resolvedUnitsSold } from '../../lib/revenueEstimate';
 import { normalizeToMonthly } from '../../lib/ledgerCycle';
 import { saveActiveDraft, clearActiveDraft, getActiveDraft } from '../../lib/storage';
+import { getAuthHeaders } from '../../lib/supabaseClient';
 import {
   normalizeIndustryKey,
   getIndustryTemplateByKey,
@@ -85,7 +86,7 @@ async function callInferBusinessStructure(projectName: string): Promise<Inferred
   try {
     const res = await fetch('/api/ai/infer-business-structure', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(await getAuthHeaders()) },
       body: JSON.stringify({ projectName })
     });
     // 后端即便走降级路径（如配额冷却中）也会返回 200 + { success:false, unavailable:true, reason }，
@@ -134,6 +135,8 @@ interface FormProps {
   onSubmit: (formData: BusinessFormData) => void;
   onOpenAiHelper: (topic?: string) => void;
   largeFont: boolean;
+  /** BUG-12：把当前表单另存为一个新项目（保留已填数据，不覆盖正在编辑的原项目） */
+  onSaveAsNewProject?: (data: BusinessFormData) => void;
 }
 
 const DEFAULT_FORM_DATA: BusinessFormData = {
@@ -189,8 +192,10 @@ const DEFAULT_FORM_DATA: BusinessFormData = {
   existingDebtMonthlyPayment: { amount: 0, currency: 'USD' },
   cashAndLiquidAssets: { amount: 0, currency: 'USD' },
   inventoryValue: { amount: 0, currency: 'USD' },
-  operatingMonthsCount: 12,
-  fullTimeEmployeesCount: 1,
+  // BUG-06 修复：同 App.tsx 的 createBlankDraft，不再预填未经用户确认的默认月数/人数，
+  // 避免它们悄悄计入评分、并误触发"填写了员工但工资为0"的异常提醒。
+  operatingMonthsCount: 0,
+  fullTimeEmployeesCount: 0,
   ownerEmail: '',
   collaborators: [],
   isSubmitted: false,
@@ -202,8 +207,13 @@ export const AssessmentForm: React.FC<FormProps> = ({
   language,
   onSubmit,
   onOpenAiHelper,
-  largeFont
+  largeFont,
+  onSaveAsNewProject
 }) => {
+  // BUG-12：进入快速体检时会默认载入上一个已提交的项目（而不是空白新项目），此前没有任何
+  // 提示，用户以为在新建，实际在编辑并可能覆盖原项目。isSubmitted 为 true 说明这是一个
+  // 已经生成过报告的"真实项目"而非刚创建的空白草稿，此时显示"正在编辑"提示条。
+  const isEditingExistingProject = Boolean(initialData?.id && initialData?.isSubmitted);
   // 初始化时优先恢复本机未提交的草稿：
   // 切换导航 / 从外部链接回跳后组件会重新挂载，只取同一项目 id 的草稿，避免串项目
   const [formData, setFormData] = useState<BusinessFormData>(() => {
@@ -259,6 +269,17 @@ export const AssessmentForm: React.FC<FormProps> = ({
   // 用户是否手动改过动态项（用于显示"已手动调整"标记）
   const [cogsTouched, setCogsTouched] = useState(false);
   const [opexTouched, setOpexTouched] = useState(false);
+  // BUG-03 修复：用户是否已手动设置过行业/主币种（含通过选择所在国家联动出的币种）。
+  // 一旦为 true，AI 推断（点击"下一步"/"重新推算"触发）只填充成本明细，不再覆盖这两项，
+  // 否则会出现"选好 CNY 和餐饮烘焙，AI 一推算币种变 USD、行业被改写"的静默覆盖。
+  // 打开一个已有项目时，若其行业/币种已不是空白草稿的默认值，同样视为"已手动设置过"。
+  const [industryTouched, setIndustryTouched] = useState(
+    () => Boolean(initialData?.industry && initialData.industry !== DEFAULT_FORM_DATA.industry) ||
+      Boolean(initialData?.customIndustryName)
+  );
+  const [currencyTouched, setCurrencyTouched] = useState(
+    () => Boolean(initialData?.baseCurrency && initialData.baseCurrency !== DEFAULT_FORM_DATA.baseCurrency)
+  );
   // 公司注册费/签证费是否被用户手动改过：没改过时，切换国家应自动刷新 AI 估值
   // 修复：此前这两个 state 一律从 false 起步，页面刷新/重新挂载（formData 早已从草稿/已存项目
   // 恢复了用户填的真实数字）后，"没改过"就被误判为 true→false 的初始态，紧接着下面那个
@@ -323,14 +344,24 @@ export const AssessmentForm: React.FC<FormProps> = ({
     [language]
   );
   // 紧凑版币种选项：用于行内小型币种选择器（如每条金额旁边的币种下拉），显示 CODE (符号) 而非全名
+  // BUG-16 修复：自定义币种的 value 是内部占位键 "__CUSTOM__"，不能直接当 CODE 展示给用户，
+  // 否则会看到 "__CUSTOM__ (¤)" 这类原始键值，改为展示其友好名称。
   const compactCurrencyOptions: SearchableSelectOption[] = React.useMemo(
-    () => SUPPORTED_CURRENCIES.map((c) => ({ value: c.code, label: `${c.code} (${c.symbol})` })),
-    []
+    () =>
+      SUPPORTED_CURRENCIES.map((c) => ({
+        value: c.code,
+        label: c.isCustomOption ? (language === 'en' ? c.nameEn : c.nameZh) : `${c.code} (${c.symbol})`
+      })),
+    [language]
   );
   // 更紧凑：只显示 3 字母代码，用于空间更窄的行内币种下拉，避免被截断
   const codeOnlyCurrencyOptions: SearchableSelectOption[] = React.useMemo(
-    () => SUPPORTED_CURRENCIES.map((c) => ({ value: c.code, label: c.code })),
-    []
+    () =>
+      SUPPORTED_CURRENCIES.map((c) => ({
+        value: c.code,
+        label: c.isCustomOption ? (language === 'en' ? 'Custom' : '自定义') : c.code
+      })),
+    [language]
   );
   const industryOptions: SearchableSelectOption[] = React.useMemo(
     () => [
@@ -751,6 +782,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
 
   // —— 行业自定义 / 币种自定义 处理 ——
   const handleIndustryChange = (value: string) => {
+    setIndustryTouched(true);
     if (value === CUSTOM_INDUSTRY_VALUE) {
       updateField('industry', CUSTOM_INDUSTRY_VALUE as any);
       // 若用户尚未自填自定义行业，先用项目名预填，降低空框困惑
@@ -805,6 +837,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
     }
   };
   const handleCustomIndustryInput = (value: string) => {
+    setIndustryTouched(true);
     setCustomIndustry(value);
     updateField('customIndustryName', value || undefined);
   };
@@ -851,6 +884,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
   };
 
   const handleCurrencyChange = (value: string) => {
+    setCurrencyTouched(true);
     if (value === CUSTOM_CURRENCY_VALUE) {
       updateField('baseCurrency', CUSTOM_CURRENCY_VALUE as any);
       return;
@@ -865,6 +899,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
     setCustomCurrencyCode('');
   };
   const handleCustomCurrencyInput = (value: string) => {
+    setCurrencyTouched(true);
     const code = value.trim().toUpperCase().slice(0, 3);
     setCustomCurrencyCode(code);
     updateField('customCurrencyCode', code);
@@ -874,6 +909,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
   // 确认后一次性把所有金额字段（成本/开支/现金等）都切到新币种，避免用户逐一手动改。
   const handleRevenueCurrencyChange = (value: CurrencyCode) => {
     if (value === formData.monthlyRevenue.currency) return;
+    setCurrencyTouched(true);
     const ok = window.confirm(
       language === 'en'
         ? `Also switch every other amount field (costs, expenses, cash, etc.) on this form to ${value}? Choose Cancel to change only Total Revenue's currency.`
@@ -894,6 +930,9 @@ export const AssessmentForm: React.FC<FormProps> = ({
   const handleRegionCountryChange = (value: string) => {
     const matched = REGULATORY_COUNTRY_OPTIONS.find((o) => o.countryLabel === value);
     if (matched) {
+      // 选择所在国家会联动决定主报告币种（产品文案承诺"国家将决定主报告币种"），
+      // 这本身就是一次明确的用户选择，之后的 AI 推断不应再静默改写（BUG-03）。
+      setCurrencyTouched(true);
       setFormData((prev) => ({
         ...prev,
         ...syncMoneyFieldsToCurrency(prev, matched.code as CurrencyCode),
@@ -917,11 +956,14 @@ export const AssessmentForm: React.FC<FormProps> = ({
 
     // 行业：优先使用后端 inferredIndustryKey，兼容 industry 别名；命中枚举则使用枚举，否则归为自定义行业
     // 注意：后端兜底规则对未匹配项返回 'custom'，应视为未命中枚举，改用 customIndustryName（即用户所填项目名）
+    // BUG-03 修复：用户已手动选过行业时，AI 推断不再覆盖，只填充未手动设置的字段。
     const rawIndustryKey = normalizeIndustryKey(result.inferredIndustryKey || result.industry || '');
     const rawIndustry =
       rawIndustryKey && rawIndustryKey !== 'custom' ? rawIndustryKey : (result.customIndustryName || '');
     const matchedIndustry = rawIndustry && INDUSTRY_KEYS.includes(rawIndustry) ? rawIndustry : null;
-    if (matchedIndustry) {
+    if (industryTouched) {
+      // 保留用户已选择的行业，不做任何覆盖
+    } else if (matchedIndustry) {
       patch.industry = matchedIndustry as BusinessFormData['industry'];
       patch.customIndustryName = undefined as any;
       setCustomIndustry('');
@@ -932,7 +974,8 @@ export const AssessmentForm: React.FC<FormProps> = ({
     }
 
     // 币种：优先 suggestedCurrency，兼容 baseCurrency 别名
-    const rawCurrency = (result.suggestedCurrency || result.baseCurrency || '').trim();
+    // BUG-03 修复：用户已手动选定币种（含通过选择所在国家联动决定）时，AI 推断不再覆盖。
+    const rawCurrency = currencyTouched ? '' : (result.suggestedCurrency || result.baseCurrency || '').trim();
     const knownCurrency = SUPPORTED_CURRENCIES.find(
       (c) => !c.isCustomOption && c.code.toUpperCase() === rawCurrency.toUpperCase()
     );
@@ -1360,8 +1403,53 @@ export const AssessmentForm: React.FC<FormProps> = ({
     (formData.industry === CUSTOM_INDUSTRY_VALUE ? formData.customIndustryName : formData.industry) ||
     (language === 'en' ? 'Not identified' : '未识别');
 
+  const handleSaveAsNew = () => {
+    if (!onSaveAsNewProject) return;
+    const ok = window.confirm(
+      language === 'en'
+        ? 'Save the currently filled-in data as a brand-new project (the original project will be left untouched)?'
+        : '把当前已填写的内容另存为一个全新项目（原项目保持不变）？'
+    );
+    if (!ok) return;
+    onSaveAsNewProject({
+      ...formData,
+      id: `proj-${crypto.randomUUID()}`,
+      version: 1,
+      isSubmitted: false,
+      isDraft: true,
+      projectName: formData.projectName
+        ? `${formData.projectName}${language === 'en' ? ' (copy)' : ' (副本)'}`
+        : formData.projectName,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+  };
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+      {/* BUG-12 修复："正在编辑"提示条：默认载入的是上一个已提交项目而非空白新项目时，
+          明确告知用户当前在编辑哪个项目，并提供"另存为新项目"以避免误覆盖原数据。 */}
+      {isEditingExistingProject && (
+        <div className="flex items-center justify-between flex-wrap gap-3 px-4 py-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900">
+          <p className="text-xs sm:text-sm font-bold">
+            {language === 'en' ? 'Editing: ' : '正在编辑：'}
+            <span className="font-black">{formData.projectName || (language === 'en' ? 'Untitled project' : '未命名项目')}</span>
+            {language === 'en'
+              ? ' — saving will update this existing project, not create a new one.'
+              : '——提交后会更新此项目，不会新建。'}
+          </p>
+          {onSaveAsNewProject && (
+            <button
+              type="button"
+              onClick={handleSaveAsNew}
+              className="shrink-0 px-3 py-1.5 rounded-xl bg-white border border-amber-300 text-amber-900 text-xs font-bold hover:bg-amber-100 transition-colors cursor-pointer"
+            >
+              {language === 'en' ? 'Save as new project' : '另存为新项目'}
+            </button>
+          )}
+        </div>
+      )}
+
       {/* 1. Slim Header */}
       <div className="bg-white rounded-3xl p-4 sm:p-5 border border-neutral-200 shadow-xs space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-4">
@@ -1420,10 +1508,11 @@ export const AssessmentForm: React.FC<FormProps> = ({
 
             {/* 唯一主输入：项目名称 */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+              <label htmlFor="bam-project-name" className="block text-xs font-bold text-slate-700 mb-1.5">
                 {language === 'en' ? 'Project / Business Name' : '项目 / 店铺名称'} <span className="text-rose-500">*</span>
               </label>
               <input
+                id="bam-project-name"
                 type="text"
                 placeholder={language === 'en' ? 'e.g. Sunshine Bakery Cafe' : '例如：阳光工坊社区烘焙店'}
                 value={formData.projectName}
@@ -1681,8 +1770,9 @@ export const AssessmentForm: React.FC<FormProps> = ({
                           />
                         </div>
                         <div>
-                          <label className="block text-slate-600 font-medium mb-1">{language === 'en' ? 'Rate type and source' : '汇率类型与来源说明'}</label>
+                          <label htmlFor="bam-exchange-rate-source" className="block text-slate-600 font-medium mb-1">{language === 'en' ? 'Rate type and source' : '汇率类型与来源说明'}</label>
                           <input
+                            id="bam-exchange-rate-source"
                             type="text"
                             placeholder={language === 'en' ? 'e.g. daily rate from local chamber of commerce / street cash exchange rate' : '例如：当地商会日常兑换价 / 街区现金汇兑价'}
                             value={formData.customExchangeRateType || ''}
@@ -1712,7 +1802,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                             {language === 'en' ? 'Sensitive Region Safe Mode' : '敏感地区数据安全模式 (Sensitive Safe Mode)'}
                           </span>
                           <span className="text-[12px] bg-amber-200/80 text-amber-900 font-bold px-1.5 py-0.5 rounded">
-                            {language === 'en' ? 'P0 Core Protection' : 'P0 核心保障'}
+                            {language === 'en' ? 'Core Protection' : '核心保障'}
                           </span>
                         </div>
                         <p className="text-[13px] text-slate-600 leading-relaxed">
@@ -1736,10 +1826,11 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     {formData.isSensitiveRegion && (
                       <div className="mt-4 pt-3 border-t border-amber-200 grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-amber-900 font-bold mb-1">
+                          <label htmlFor="bam-sensitive-region-country" className="block text-amber-900 font-bold mb-1">
                             {language === 'en' ? 'Country / Macro Region (no specific city required)' : '所在国家 / 宏观大区（不要求具体城市）'}
                           </label>
                           <input
+                            id="bam-sensitive-region-country"
                             type="text"
                             placeholder={language === 'en' ? 'e.g. North Africa/Middle East region or Southeast Asia' : '例如：北非/中东大区 或 东南亚地区'}
                             value={formData.regionCountry}
@@ -1748,10 +1839,11 @@ export const AssessmentForm: React.FC<FormProps> = ({
                           />
                         </div>
                         <div>
-                          <label className="block text-amber-900 font-bold mb-1">
+                          <label htmlFor="bam-sensitive-contact-channel" className="block text-amber-900 font-bold mb-1">
                             {language === 'en' ? 'Contact Channel (anonymous alias or internal ID allowed)' : '联系渠道（允许填写匿名代号或内部ID）'}
                           </label>
                           <input
+                            id="bam-sensitive-contact-channel"
                             type="text"
                             placeholder={language === 'en' ? 'e.g. Telegram: @coop_rep_09' : '例如：Telegram: @coop_rep_09'}
                             value={formData.contactChannel}
@@ -3129,6 +3221,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       <NumberField
                         value={formData.operatingMonthsCount}
                         onChange={(v) => updateField('operatingMonthsCount', v)}
+                        placeholder={language === 'en' ? 'e.g. 12 (leave blank if unknown)' : '如：12（不确定可留空）'}
                         className="w-full p-2.5 border border-slate-300 rounded-xl font-bold"
                       />
                     </div>
@@ -3137,6 +3230,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       <NumberField
                         value={formData.fullTimeEmployeesCount}
                         onChange={(v) => updateField('fullTimeEmployeesCount', v)}
+                        placeholder={language === 'en' ? 'e.g. 2 (leave blank if unknown)' : '如：2（不确定可留空）'}
                         className="w-full p-2.5 border border-slate-300 rounded-xl font-bold"
                       />
                     </div>

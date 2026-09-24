@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Language } from '../types';
 import { INDUSTRY_BENCHMARKS } from '../lib/industryBenchmarks';
+import { SCORING_METRIC_DEFINITIONS } from '../lib/scoringEngine';
 
 interface StandardsProps {
   language: Language;
@@ -233,13 +234,29 @@ export const PublicScoringStandards: React.FC<StandardsProps> = ({ language }) =
             <tbody className="divide-y divide-neutral-100 text-neutral-600">
               <tr className="hover:bg-neutral-50/80 transition-colors">
                 <td className="p-3.5 font-medium">
-                  <div className="text-neutral-900 font-bold">COGS Ratio / {language === 'zh' ? '原材料与直接成本占比' : 'Materials & Direct Cost Ratio'}</div>
+                  <div className="text-neutral-900 font-bold">Real Operating Revenue Ratio / {language === 'zh' ? '真实营业额占比' : 'Real Operating Revenue Ratio'}</div>
+                  <div className="text-neutral-400">
+                    {language === 'zh' ? '真金白银的客户成交，占总进账的比例' : 'Share of total receipts that comes from real paying customers'}
+                  </div>
+                </td>
+                <td className="p-3.5 font-mono font-bold text-teal-600">{SCORING_METRIC_DEFINITIONS.real_revenue_strength.weight}%</td>
+                <td className="p-3.5 font-mono">{SCORING_METRIC_DEFINITIONS.real_revenue_strength.benchmarkValue}</td>
+                <td className="p-3.5 text-neutral-700">
+                  {language === 'zh'
+                    ? '逐步减少对外部赠款/借款的依附，提高自身主打产品在本地市场的真实成交量。'
+                    : 'Reduce reliance on external grants or loans, and grow real local sales of your core product.'}
+                </td>
+              </tr>
+
+              <tr className="hover:bg-neutral-50/80 transition-colors">
+                <td className="p-3.5 font-medium">
+                  <div className="text-neutral-900 font-bold">Gross Profit Margin (COGS Ratio) / {language === 'zh' ? '毛利率（原材料与直接成本占比）' : 'Gross Margin (Materials & Direct Cost Ratio)'}</div>
                   <div className="text-neutral-400">
                     {language === 'zh' ? '进货原料花了多少钱' : 'How much you spend on sourcing materials'}
                   </div>
                 </td>
-                <td className="p-3.5 font-mono font-bold text-teal-600">20%</td>
-                <td className="p-3.5 font-mono">35% - 60%</td>
+                <td className="p-3.5 font-mono font-bold text-teal-600">{SCORING_METRIC_DEFINITIONS.gross_margin_rate.weight}%</td>
+                <td className="p-3.5 font-mono">{SCORING_METRIC_DEFINITIONS.gross_margin_rate.benchmarkValue}</td>
                 <td className="p-3.5 text-neutral-700">
                   {language === 'zh'
                     ? '寻找就近源头供货商，减少中间商加价；优化配方或包装成本。'
@@ -254,8 +271,8 @@ export const PublicScoringStandards: React.FC<StandardsProps> = ({ language }) =
                     {language === 'zh' ? '每月房租、工人工资与日常杂费' : 'Monthly rent, wages, and routine miscellaneous fees'}
                   </div>
                 </td>
-                <td className="p-3.5 font-mono font-bold text-teal-600">15%</td>
-                <td className="p-3.5 font-mono">≤ 45%</td>
+                <td className="p-3.5 font-mono font-bold text-teal-600">{SCORING_METRIC_DEFINITIONS.opex_efficiency.weight}%</td>
+                <td className="p-3.5 font-mono">{SCORING_METRIC_DEFINITIONS.opex_efficiency.benchmarkValue}</td>
                 <td className="p-3.5 text-neutral-700">
                   {language === 'zh'
                     ? '精简人工冗余工时、协商按月分段付租或分租部分场地以降低固定负担。'
@@ -270,8 +287,8 @@ export const PublicScoringStandards: React.FC<StandardsProps> = ({ language }) =
                     {language === 'zh' ? '最终揣进兜里的纯利润比例' : 'The share of revenue that ends up in your pocket'}
                   </div>
                 </td>
-                <td className="p-3.5 font-mono font-bold text-teal-600">20%</td>
-                <td className="p-3.5 font-mono">≥ 15%</td>
+                <td className="p-3.5 font-mono font-bold text-teal-600">{SCORING_METRIC_DEFINITIONS.net_margin_rate.weight}%</td>
+                <td className="p-3.5 font-mono">{SCORING_METRIC_DEFINITIONS.net_margin_rate.benchmarkValue}</td>
                 <td className="p-3.5 text-neutral-700">
                   {language === 'zh'
                     ? '通过老客户会员复购或组合套餐提高客单价，严格压缩零碎损耗。'
@@ -286,28 +303,12 @@ export const PublicScoringStandards: React.FC<StandardsProps> = ({ language }) =
                     {language === 'zh' ? '即使不进账，账上备用金能维持几个月' : 'How many months your reserves last with zero income'}
                   </div>
                 </td>
-                <td className="p-3.5 font-mono font-bold text-teal-600">15%</td>
-                <td className="p-3.5 font-mono">{language === 'zh' ? '≥ 3.0 个月' : '≥ 3.0 months'}</td>
+                <td className="p-3.5 font-mono font-bold text-teal-600">{SCORING_METRIC_DEFINITIONS.cash_buffer_runway.weight}%</td>
+                <td className="p-3.5 font-mono">{SCORING_METRIC_DEFINITIONS.cash_buffer_runway.benchmarkValue}</td>
                 <td className="p-3.5 text-neutral-700">
                   {language === 'zh'
                     ? '每月坚持将 10%-15% 净利润提取到独立应急资金池，防范突发事件。'
                     : 'Consistently set aside 10%-15% of net profit into a separate emergency fund to guard against surprises.'}
-                </td>
-              </tr>
-
-              <tr className="hover:bg-neutral-50/80 transition-colors">
-                <td className="p-3.5 font-medium">
-                  <div className="text-neutral-900 font-bold">DSCR / {language === 'zh' ? '债务偿付保障倍数' : 'Debt Service Coverage Ratio'}</div>
-                  <div className="text-neutral-400">
-                    {language === 'zh' ? '还债抗压能力（赚的钱够不够还贷）' : 'Ability to withstand repayments (does profit cover debt?)'}
-                  </div>
-                </td>
-                <td className="p-3.5 font-mono font-bold text-teal-600">15%</td>
-                <td className="p-3.5 font-mono">{language === 'zh' ? '≥ 1.25x 或 无债' : '≥ 1.25x or no debt'}</td>
-                <td className="p-3.5 text-neutral-700">
-                  {language === 'zh'
-                    ? '协商延长贷款还款年限以降低月供，避免过度举债扩大规模。'
-                    : 'Negotiate a longer loan term to lower monthly payments, and avoid over-leveraging for expansion.'}
                 </td>
               </tr>
 
@@ -318,8 +319,8 @@ export const PublicScoringStandards: React.FC<StandardsProps> = ({ language }) =
                     {language === 'zh' ? '开了多少个月，团队规模是否平稳' : 'Months in operation and team stability'}
                   </div>
                 </td>
-                <td className="p-3.5 font-mono font-bold text-teal-600">15%</td>
-                <td className="p-3.5 font-mono">{language === 'zh' ? '≥ 12 个月' : '≥ 12 months'}</td>
+                <td className="p-3.5 font-mono font-bold text-teal-600">{SCORING_METRIC_DEFINITIONS.business_continuity.weight}%</td>
+                <td className="p-3.5 font-mono">{SCORING_METRIC_DEFINITIONS.business_continuity.benchmarkValue}</td>
                 <td className="p-3.5 text-neutral-700">
                   {language === 'zh'
                     ? '建立清晰的经营台账，与核心员工签订互信分成机制以稳住团队。'
@@ -329,6 +330,11 @@ export const PublicScoringStandards: React.FC<StandardsProps> = ({ language }) =
             </tbody>
           </table>
         </div>
+        <p className="text-[11px] text-neutral-400 leading-relaxed">
+          {language === 'zh'
+            ? '以上 6 项权重合计 100%，与报告页综合得分的加权算法逐项对应。DSCR（债务偿付保障倍数）不参与该加权求和，属于上方"5 项 Gate 底线红线判定"中的一票否决项。'
+            : 'These 6 items sum to 100% weight and map one-to-one to the report\'s weighted score algorithm. DSCR (Debt Service Coverage Ratio) is not part of this weighted sum — it is one of the 5 Gate threshold checks (automatic disqualifiers) above.'}
+        </p>
       </div>
 
       {/* Sector Benchmark Comparison (Plate H) */}

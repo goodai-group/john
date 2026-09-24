@@ -31,6 +31,33 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
   const [debtPayment, setDebtPayment] = useState(0);
   const [liquidCash, setLiquidCash] = useState(0);
   const [operatingMonths, setOperatingMonths] = useState(12);
+  // BUG-07 修复：负数/超大值此前会被 Math.max(0, ...) 静默纠正，用户完全不知道自己的
+  // 输入被改过；1e12 这类明显误输入也毫无上限地被接受，算出"月到手纯利 -999,999,999,500"
+  // 这种荒谬结果。改为限定合理上限，且纠正时就地给出红字提示，而不是悄悄改数。
+  const [rangeWarnings, setRangeWarnings] = useState<Record<string, string | null>>({});
+  const MAX_REASONABLE_AMOUNT = 100_000_000;
+  const handleAmountInput = (field: string, raw: string, setter: (n: number) => void) => {
+    const n = Number(raw);
+    if (Number.isNaN(n)) return;
+    if (n < 0) {
+      setter(0);
+      setRangeWarnings((prev) => ({
+        ...prev,
+        [field]: language === 'zh' ? '不能小于 0，已按 0 计算' : 'Cannot be negative — treated as 0'
+      }));
+      return;
+    }
+    if (n > MAX_REASONABLE_AMOUNT) {
+      setter(MAX_REASONABLE_AMOUNT);
+      setRangeWarnings((prev) => ({
+        ...prev,
+        [field]: language === 'zh' ? '数值过大，已按上限计算' : 'Value too large — capped at the limit'
+      }));
+      return;
+    }
+    setRangeWarnings((prev) => ({ ...prev, [field]: null }));
+    setter(n);
+  };
 
   // 修复：不再手写一套独立的打分/红线公式（会与正式报告引擎的加权算法长期跑偏，
   // 同样的输入曾出现试算器与正式报告分数、评级档位都不一致的问题）。
@@ -208,7 +235,8 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
                 >
                   {SUPPORTED_CURRENCIES.map((c) => (
                     <option key={c.code} value={c.code}>
-                      {c.code} ({c.symbol})
+                      {/* BUG-16 修复：自定义币种选项此前显示原始占位键值 "__CUSTOM__ (¤)"，改为展示友好名称 */}
+                      {c.isCustomOption ? (language === 'zh' ? c.nameZh : c.nameEn) : `${c.code} (${c.symbol})`}
                     </option>
                   ))}
                 </select>
@@ -298,10 +326,12 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
                 </label>
                 <input
                   type="number"
+                  min={0}
                   value={rent}
-                  onChange={(e) => setRent(Math.max(0, Number(e.target.value)))}
+                  onChange={(e) => handleAmountInput('rent', e.target.value, setRent)}
                   className="w-full p-2 border-2 border-neutral-200 rounded-xl font-mono font-bold text-neutral-900 bg-white"
                 />
+                {rangeWarnings.rent && <p className="text-[11px] text-rose-600 mt-1">{rangeWarnings.rent}</p>}
               </div>
               <div className="p-3 bg-neutral-50 rounded-2xl border border-neutral-100">
                 <label className="block text-neutral-500 font-bold mb-1">
@@ -309,10 +339,12 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
                 </label>
                 <input
                   type="number"
+                  min={0}
                   value={labor}
-                  onChange={(e) => setLabor(Math.max(0, Number(e.target.value)))}
+                  onChange={(e) => handleAmountInput('labor', e.target.value, setLabor)}
                   className="w-full p-2 border-2 border-neutral-200 rounded-xl font-mono font-bold text-neutral-900 bg-white"
                 />
+                {rangeWarnings.labor && <p className="text-[11px] text-rose-600 mt-1">{rangeWarnings.labor}</p>}
               </div>
               <div className="p-3 bg-neutral-50 rounded-2xl border border-neutral-100">
                 <label className="block text-neutral-500 font-bold mb-1">
@@ -320,10 +352,12 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
                 </label>
                 <input
                   type="number"
+                  min={0}
                   value={utilities}
-                  onChange={(e) => setUtilities(Math.max(0, Number(e.target.value)))}
+                  onChange={(e) => handleAmountInput('utilities', e.target.value, setUtilities)}
                   className="w-full p-2 border-2 border-neutral-200 rounded-xl font-mono font-bold text-neutral-900 bg-white"
                 />
+                {rangeWarnings.utilities && <p className="text-[11px] text-rose-600 mt-1">{rangeWarnings.utilities}</p>}
               </div>
               <div className="p-3 bg-neutral-50 rounded-2xl border border-neutral-100">
                 <label className="block text-neutral-500 font-bold mb-1">
@@ -331,10 +365,12 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
                 </label>
                 <input
                   type="number"
+                  min={0}
                   value={taxes}
-                  onChange={(e) => setTaxes(Math.max(0, Number(e.target.value)))}
+                  onChange={(e) => handleAmountInput('taxes', e.target.value, setTaxes)}
                   className="w-full p-2 border-2 border-neutral-200 rounded-xl font-mono font-bold text-neutral-900 bg-white"
                 />
+                {rangeWarnings.taxes && <p className="text-[11px] text-rose-600 mt-1">{rangeWarnings.taxes}</p>}
               </div>
               <div className="p-3 bg-neutral-50 rounded-2xl border border-neutral-100">
                 <label className="block text-neutral-500 font-bold mb-1">
@@ -342,10 +378,12 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
                 </label>
                 <input
                   type="number"
+                  min={0}
                   value={debtPayment}
-                  onChange={(e) => setDebtPayment(Math.max(0, Number(e.target.value)))}
+                  onChange={(e) => handleAmountInput('debtPayment', e.target.value, setDebtPayment)}
                   className="w-full p-2 border-2 border-neutral-200 rounded-xl font-mono font-bold text-neutral-900 bg-white"
                 />
+                {rangeWarnings.debtPayment && <p className="text-[11px] text-rose-600 mt-1">{rangeWarnings.debtPayment}</p>}
               </div>
               <div className="p-3 bg-neutral-50 rounded-2xl border border-neutral-100">
                 <label className="block text-neutral-500 font-bold mb-1">
@@ -353,10 +391,12 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
                 </label>
                 <input
                   type="number"
+                  min={0}
                   value={liquidCash}
-                  onChange={(e) => setLiquidCash(Math.max(0, Number(e.target.value)))}
+                  onChange={(e) => handleAmountInput('liquidCash', e.target.value, setLiquidCash)}
                   className="w-full p-2 border-2 border-neutral-200 rounded-xl font-mono font-bold text-neutral-900 bg-white"
                 />
+                {rangeWarnings.liquidCash && <p className="text-[11px] text-rose-600 mt-1">{rangeWarnings.liquidCash}</p>}
               </div>
             </div>
           </div>

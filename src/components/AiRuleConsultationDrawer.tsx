@@ -20,6 +20,7 @@ import {
   addEscalatedQuestion,
   updateEscalatedQuestionFeedback
 } from '../lib/storage';
+import { getAuthHeaders } from '../lib/supabaseClient';
 import { LEARNING_VIDEOS } from '../lib/learningVideos';
 import ReactMarkdown from 'react-markdown';
 import type { Components } from 'react-markdown';
@@ -273,6 +274,16 @@ export const AiRuleConsultationDrawer: React.FC<AiDrawerProps> = ({
   const [aiConfigured, setAiConfigured] = useState<boolean | null>(null);
   // 云端 Gemini AI 调用健康状态：null=未探测，true=最近一次调用成功，false=最近一次调用失败
   const [geminiHealthy, setGeminiHealthy] = useState<boolean | null>(null);
+
+  // BUG-10 修复：抽屉此前按 Esc 无法关闭（无障碍：键盘用户被困在弹层里出不去）。
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   useEffect(() => {
     if (isOpen) {
@@ -571,7 +582,7 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
       const timeoutId = setTimeout(() => controller.abort(), 20000);
       const res = await fetch('/api/ai-consultation', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await getAuthHeaders()) },
         body: JSON.stringify({ question: text, language }),
         signal: controller.signal
       });
@@ -661,7 +672,7 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
       const timeoutId = setTimeout(() => controller.abort(), 45000);
       const res = await fetch('/api/ai-consultation/stream', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await getAuthHeaders()) },
         body: JSON.stringify({ question: text, language }),
         signal: controller.signal
       });
@@ -755,7 +766,12 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/60 backdrop-blur-xs animate-in fade-in">
-      <div className="bg-white w-full max-w-2xl h-full shadow-2xl flex flex-col justify-between border-l border-slate-200">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={language === 'zh' ? 'AI 智能答疑' : 'AI Q&A'}
+        className="bg-white w-full max-w-2xl h-full shadow-2xl flex flex-col justify-between border-l border-slate-200"
+      >
         {/* Drawer Header */}
         <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
           <div className="flex items-center gap-3">
@@ -791,6 +807,8 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
           </div>
           <button
             onClick={onClose}
+            aria-label={language === 'zh' ? '关闭' : 'Close'}
+            title={language === 'zh' ? '关闭' : 'Close'}
             className="p-2 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />

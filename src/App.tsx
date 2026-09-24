@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { Heart, X, AlertTriangle, ExternalLink, MessageCircle } from 'lucide-react';
 import {
   BusinessFormData,
@@ -11,16 +11,38 @@ import { Navbar } from './components/Navbar';
 import { FeeTransparencyModal } from './components/FeeTransparencyModal';
 import { AppGuideModal } from './components/AppGuideModal';
 import { AccessibilityToolbar } from './components/AccessibilityToolbar';
-import { AiRuleConsultationDrawer } from './components/AiRuleConsultationDrawer';
-import { ScoringSimulator } from './components/ScoringSimulator';
-import { PublicScoringStandards } from './components/PublicScoringStandards';
-import { AssessmentForm } from './components/AssessmentForm/AssessmentForm';
-import { AssessmentReportView } from './components/AssessmentReport/AssessmentReportView';
 import { AuthModal, AuthMode } from './components/AuthModal';
 import { LoginRequiredGate } from './components/LoginRequiredGate';
-import { ProjectsListPage } from './pages/ProjectsListPage';
-import { LearningCenterPage } from './pages/LearningCenterPage';
-import { FeasibilityBriefPage } from './pages/FeasibilityBriefPage';
+
+// BUG-11 修复：这些是应用里最大的几个组件（AssessmentForm ~3000 行、
+// AssessmentReportView ~1700 行、AiRuleConsultationDrawer ~1100 行等），此前全部
+// 打进同一个初始 JS 包（解压后约 1.6MB），首屏必须先加载完全部 6 个 Tab 的代码才能显示
+// 任何一个 Tab。改为按 Tab 懒加载：只有真正切到某个 Tab（或打开 AI 抽屉）时才拉取
+// 对应的分包，显著减小首屏体积。命名导出需要包一层 { default: m.X } 才能配合 React.lazy。
+const AiRuleConsultationDrawer = lazy(() =>
+  import('./components/AiRuleConsultationDrawer').then((m) => ({ default: m.AiRuleConsultationDrawer }))
+);
+const ScoringSimulator = lazy(() =>
+  import('./components/ScoringSimulator').then((m) => ({ default: m.ScoringSimulator }))
+);
+const PublicScoringStandards = lazy(() =>
+  import('./components/PublicScoringStandards').then((m) => ({ default: m.PublicScoringStandards }))
+);
+const AssessmentForm = lazy(() =>
+  import('./components/AssessmentForm/AssessmentForm').then((m) => ({ default: m.AssessmentForm }))
+);
+const AssessmentReportView = lazy(() =>
+  import('./components/AssessmentReport/AssessmentReportView').then((m) => ({ default: m.AssessmentReportView }))
+);
+const ProjectsListPage = lazy(() =>
+  import('./pages/ProjectsListPage').then((m) => ({ default: m.ProjectsListPage }))
+);
+const LearningCenterPage = lazy(() =>
+  import('./pages/LearningCenterPage').then((m) => ({ default: m.LearningCenterPage }))
+);
+const FeasibilityBriefPage = lazy(() =>
+  import('./pages/FeasibilityBriefPage').then((m) => ({ default: m.FeasibilityBriefPage }))
+);
 import {
   loadStoredProjects,
   saveStoredProjects,
@@ -58,6 +80,17 @@ export default function App() {
     return saved ? (saved as ActiveTab) : 'form';
   });
   const [language, setLanguage] = useState<Language>('zh');
+
+  // BUG-17 修复：切换中英文时，<html lang> 与页面 <title> 此前一直没有跟着同步——
+  // <html lang> 永远固定为 index.html 里写死的 "en"（哪怕界面显示中文），影响读屏
+  // 工具选择正确的语音朗读规则，也影响搜索引擎对页面语言的判断。
+  useEffect(() => {
+    document.documentElement.lang = language === 'zh' ? 'zh-CN' : 'en';
+    document.title =
+      language === 'zh'
+        ? '商宣商业模式检验 - 三分钟小白看懂'
+        : 'BAM Financial Health - Understand Your Numbers in 3 Minutes';
+  }, [language]);
 
   // 统一的页面导航入口：
   // 1) 写入 history —— 用户点浏览器「后退」时回到上一个页面，而不是直接退出站点；
@@ -528,7 +561,21 @@ export default function App() {
       const updatedReports = [newReport, ...reports];
       setReports(updatedReports);
       saveStoredReports(updatedReports);
-      saveReport(newReport);
+      // 报告已确定性地存入本地；云端写入是否成功要如实告知，不能默认成功，
+      // 否则用户会误以为已上云，实际清缓存/换设备后数据全部丢失（BUG-01）。
+      saveReport(newReport).then((cloudSynced) => {
+        if (currentUser && !cloudSynced) {
+          pushBanner(
+            {
+              kind: 'error',
+              text: language === 'zh'
+                ? '报告已保存在本机，但云端同步失败（可能是网络问题），请稍后点击"云端双向同步"重试'
+                : 'Report saved locally, but cloud sync failed (possibly a network issue). Please retry via "Sync with cloud" later'
+            },
+            6000
+          );
+        }
+      });
 
       // 5. Navigate to report view
       setActiveProjectId(submittedData.id);
@@ -637,8 +684,11 @@ export default function App() {
       existingDebtMonthlyPayment: { amount: 0, currency: 'USD' },
       cashAndLiquidAssets: { amount: 0, currency: 'USD' },
       inventoryValue: { amount: 0, currency: 'USD' },
-      operatingMonthsCount: 12,
-      fullTimeEmployeesCount: 1,
+      // BUG-06 修复：不再预填看起来像真数据的默认值——12个月、1名员工从未被用户确认过，
+      // 却会静默计入"持续经营稳定性"评分，并触发"填写了1名员工但工资为0"的误报警告。
+      // 改为 0（NumberField 会把 0 显示为空白输入框），未填项不再参与评分。
+      operatingMonthsCount: 0,
+      fullTimeEmployeesCount: 0,
       ownerUid: currentUser?.uid,
       ownerEmail: currentUser?.email || '',
       collaborators: [],
@@ -655,6 +705,16 @@ export default function App() {
     saveStoredProjects(updatedProjects);
     setActiveProjectId(newDraft.id);
     navigateTo('form');
+  };
+
+  // BUG-12：把当前表单内容另存为一份全新项目，原项目保持不动，避免用户以为在新建
+  // 实际却覆盖了正在编辑速览。
+  const handleSaveAsNewProject = (data: BusinessFormData) => {
+    const updatedProjects = [data, ...projects];
+    setProjects(updatedProjects);
+    saveStoredProjects(updatedProjects);
+    saveProject(data);
+    setActiveProjectId(data.id);
   };
 
   // Apply simulator values into form
@@ -770,6 +830,14 @@ export default function App() {
         largeFont ? 'text-base leading-relaxed font-medium' : 'text-sm'
       } ${highContrast ? 'contrast-125 saturate-110' : ''}`}
     >
+      {/* BUG-10 修复：跳到主内容链接——键盘/读屏用户此前只能一格格 Tab 过整个侧边栏才能到正文。
+          默认视觉隐藏，仅在获得键盘焦点时显示。 */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-xl focus:bg-teal-700 focus:text-white focus:text-sm focus:font-bold focus:shadow-lg"
+      >
+        {language === 'zh' ? '跳到主内容' : 'Skip to main content'}
+      </a>
       {/* Top Navbar */}
       <Navbar
         activeTab={activeTab}
@@ -839,7 +907,10 @@ export default function App() {
       )}
 
       {/* Main Content Area based on activeTab */}
-      <main className="pb-24 md:pb-16">
+      {/* BUG-19 修复：移动端悬浮"AI 答疑"按钮固定在 bottom-20（80px）且自身还有高度，
+          pb-24（96px）的安全区不足以完全避开它，会遮挡卡片右下角内容/开关。加大到 pb-36
+          （144px）确保滚动到底部时按钮下方也留有足够空间，不与页面内容重叠。 */}
+      <main id="main-content" tabIndex={-1} className="pb-36 md:pb-16 focus:outline-hidden">
         {!currentUser ? (
           <LoginRequiredGate
             language={language}
@@ -847,7 +918,13 @@ export default function App() {
             isSigningIn={isSigningIn}
           />
         ) : (
-        <>
+        <Suspense
+          fallback={
+            <div className="flex items-center justify-center py-24 text-neutral-400 text-sm font-medium">
+              {language === 'zh' ? '加载中…' : 'Loading…'}
+            </div>
+          }
+        >
         {activeTab === 'form' && (
           <AssessmentForm
             key={activeProject?.id || 'new'}
@@ -859,6 +936,7 @@ export default function App() {
               setIsAiDrawerOpen(true);
             }}
             largeFont={largeFont}
+            onSaveAsNewProject={handleSaveAsNewProject}
           />
         )}
 
@@ -948,7 +1026,7 @@ export default function App() {
             onOpenAuth={() => setIsAuthModalOpen(true)}
           />
         )}
-        </>
+        </Suspense>
         )}
       </main>
 
@@ -1008,16 +1086,18 @@ export default function App() {
         onToggleLowBandwidth={() => setLowBandwidth(!lowBandwidth)}
       />
 
-      <AiRuleConsultationDrawer
-        isOpen={isAiDrawerOpen && !!currentUser}
-        onClose={() => setIsAiDrawerOpen(false)}
-        language={language}
-        initialTopic={aiInitialTopic}
-        onNavigateToLearning={() => {
-          setIsAiDrawerOpen(false);
-          navigateTo('learning');
-        }}
-      />
+      <Suspense fallback={null}>
+        <AiRuleConsultationDrawer
+          isOpen={isAiDrawerOpen && !!currentUser}
+          onClose={() => setIsAiDrawerOpen(false)}
+          language={language}
+          initialTopic={aiInitialTopic}
+          onNavigateToLearning={() => {
+            setIsAiDrawerOpen(false);
+            navigateTo('learning');
+          }}
+        />
+      </Suspense>
 
       {/* 账号登录 / 注册弹窗（Google + 邮箱密码双通道） */}
       <AuthModal
