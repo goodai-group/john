@@ -443,6 +443,21 @@ export const getCurrentAuthUser = (): AppUser | null => {
   return cachedSupabaseUser;
 };
 
+// 供调用 /api/ai/*、/api/coach/*、/api/agents/* 等接口时附带登录态使用（BUG-02：
+// 这些接口现在要求服务端校验 Supabase JWT，前端必须把当前会话的 access token
+// 一并发送，否则登录用户自己也会被 401 挡在门外）。未登录或 Supabase 未配置时
+// 返回空对象，交由服务端按其自身的降级策略处理（本地开发未配置云端数据库时放行）。
+export const getAuthHeaders = async (): Promise<Record<string, string>> => {
+  if (!supabase) return {};
+  try {
+    const { data } = await supabase.auth.getSession();
+    const token = data?.session?.access_token;
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  } catch {
+    return {};
+  }
+};
+
 // ========================
 // 1. Cloud Projects (/projects)
 // ========================

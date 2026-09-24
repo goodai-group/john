@@ -6,6 +6,12 @@ import {defineConfig} from 'vite';
 export default defineConfig(() => {
   return {
     envPrefix: ['VITE_', 'NEXT_PUBLIC_'],
+    // BUG-14 修复：生产构建里之前保留了约 51 处 console.log/warn（含 Supabase 初始化等内部实现细节），
+    // 在浏览器控制台里对所有访客可见。esbuild 在生产构建时整体去掉 console/debugger 调用；
+    // 本地 `npm run dev` 不受影响，仍能看到日志用于调试。
+    esbuild: {
+      drop: (process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : []) as ('console' | 'debugger')[]
+    },
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {

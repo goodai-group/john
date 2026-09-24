@@ -185,18 +185,41 @@ export function deleteProjectAndReports(projectId: string, explicitReportIds?: s
     });
 }
 
+// 数据库要求 id 为 UUID；早期版本曾用 "report-<时间戳>" 格式，写入云端会因
+// invalid input syntax for type uuid 静默失败。这里做一次性迁移，把历史本地
+// 报告的非 UUID id 换成真正的 UUID，避免它们永远无法同步到云端。
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function isValidUuid(id: string): boolean {
+  return typeof id === 'string' && UUID_RE.test(id);
+}
+
 export function getAllReports(): AssessmentReport[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_REPORTS);
     if (!raw) return [];
-    return JSON.parse(raw);
+    const parsed: AssessmentReport[] = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    let migrated = false;
+    const fixed = parsed.map((r) => {
+      if (r && !isValidUuid(r.id)) {
+        migrated = true;
+        return { ...r, id: crypto.randomUUID() };
+      }
+      return r;
+    });
+    if (migrated) {
+      localStorage.setItem(STORAGE_KEY_REPORTS, JSON.stringify(fixed));
+    }
+    return fixed;
   } catch (e) {
     console.error('Failed to load reports from storage', e);
     return [];
   }
 }
 
-export function saveReport(report: AssessmentReport): void {
+// 返回 Promise<boolean>：云端不可用时视为本地保存成功（true）；
+// 云端可用但写入失败时返回 false，调用方应据此向用户如实提示，而不是默认成功。
+export function saveReport(report: AssessmentReport): Promise<boolean> {
   // 重新保存即视为"存活"，从删除墓碑中移除
   writeDeletedIds(STORAGE_KEY_DELETED_REPORTS, unmarkDeleted(getDeletedReportIds(), report.id));
   const current = getAllReports();
@@ -212,10 +235,14 @@ export function saveReport(report: AssessmentReport): void {
   if (isCloudDatabaseAvailable()) {
     // 等待同一 project 的云端 upsert 先落地，避免 project_id 外键约束校验失败
     const waitForProject = pendingProjectCloudSync.get(report.projectId) || Promise.resolve(true);
-    waitForProject
+    return waitForProject
       .then(() => saveReportToCloud(report))
-      .catch((err) => console.warn('Background cloud save report failed:', err));
+      .catch((err) => {
+        console.warn('Background cloud save report failed:', err);
+        return false;
+      });
   }
+  return Promise.resolve(true);
 }
 
 export function getProjectReports(projectId: string): AssessmentReport[] {
@@ -415,11 +442,13 @@ async function performCloudSync(currentUser?: AppUser | null): Promise<void> {
     // 注意：不能只在 liveCloudProjects 为空时才推送——云端已有其它 project 时，
     // 本地新建但尚未同步的 project 同样需要补推，否则它的 report 会在 project 行缺失的情况下
     // 因外键约束（assessment_reports.project_id → projects.id）被拒绝写入。
+    let pushFailureCount = 0;
     if (currentUser?.uid) {
       const cloudProjectIds = new Set(liveCloudProjects.map((p) => p.id));
       const localOnlyProjects = localProjects.filter((p) => !cloudProjectIds.has(p.id));
       for (const p of localOnlyProjects) {
-        await saveAssessmentToCloud(p, currentUser);
+        const ok = await saveAssessmentToCloud(p, currentUser);
+        if (!ok) pushFailureCount++;
       }
     }
 
@@ -439,7 +468,8 @@ async function performCloudSync(currentUser?: AppUser | null): Promise<void> {
       const cloudReportIds = new Set(liveCloudReports.map((r) => r.id));
       const localOnlyReports = localReports.filter((r) => !cloudReportIds.has(r.id));
       for (const r of localOnlyReports) {
-        await saveReportToCloud(r, currentUser);
+        const ok = await saveReportToCloud(r, currentUser);
+        if (!ok) pushFailureCount++;
       }
     }
 
@@ -458,8 +488,18 @@ async function performCloudSync(currentUser?: AppUser | null): Promise<void> {
     }
 
     console.log('✅ Supabase cloud tables synced with user state.');
+
+    // 有本地数据没能推送成功时，不能对外报"同步完成"——那会让用户误以为
+    // 数据已安全上云，实际上仍只存在本机（BUG-01）。这里向上抛出，
+    // 由调用方（如"云端双向同步"按钮）如实提示失败并保留重试入口。
+    if (pushFailureCount > 0) {
+      throw new Error(
+        `${pushFailureCount} 条本地数据未能同步到云端，已保留在本机，请稍后重试`
+      );
+    }
   } catch (err) {
     console.warn('Cloud sync encountered non-fatal issue:', err);
+    throw err;
   }
 }
 

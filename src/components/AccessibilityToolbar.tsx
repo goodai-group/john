@@ -133,8 +133,8 @@ export const AccessibilityToolbar: React.FC<AccessibilityProps> = ({
                 </p>
                 <p className="text-xs text-slate-500">
                   {language === 'zh'
-                    ? '将文字放大 120%，加大按钮点击热区，方便阅读与点击'
-                    : 'Enlarges text by 120% and expands button tap areas for easier reading and tapping'}
+                    ? '将基础字号放大约 15%（含更多页面的加粗与更宽松行距），加大按钮点击热区，方便阅读与点击'
+                    : 'Enlarges the base text size by about 15% (with bolder weight and looser line height on more pages) and expands button tap areas for easier reading and tapping'}
                 </p>
               </div>
             </div>

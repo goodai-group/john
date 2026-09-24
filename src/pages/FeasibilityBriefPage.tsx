@@ -14,6 +14,7 @@ import { BusinessFormData, Language } from '../types';
 import { calculateBreakEvenRevenue } from '../lib/breakEvenCalculator';
 import { calculatePaybackPeriod } from '../lib/paybackCalculator';
 import { CUSTOM_CURRENCY_VALUE } from '../lib/currencies';
+import { getAuthHeaders } from '../lib/supabaseClient';
 
 /**
  * 开业可行性简报 —— 面向「还没开业的人」的第二套报告模板。
@@ -110,15 +111,18 @@ export function FeasibilityBriefPage({ project, language, onGoToForm }: Props) {
     let cancelled = false;
     setLoadingTests(true);
 
-    fetch('/api/agents/strategist', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        form: project,
-        report: { normalizedFinancials: {}, totalScore: 0, tier: 'B', gates: [], metrics: [] },
-        language
-      })
-    })
+    getAuthHeaders()
+      .then((authHeaders) =>
+        fetch('/api/agents/strategist', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
+          body: JSON.stringify({
+            form: project,
+            report: { normalizedFinancials: {}, totalScore: 0, tier: 'B', gates: [], metrics: [] },
+            language
+          })
+        })
+      )
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
       .then((d) => {
         if (cancelled) return;
@@ -246,8 +250,8 @@ export function FeasibilityBriefPage({ project, language, onGoToForm }: Props) {
             </div>
             <p className="sm:col-span-2 text-xs text-slate-500">
               {isEn
-                ? `Based on total monthly cost of ${fmt(breakEven.monthlyCostTotal, currency)} over ${breakEven.operatingDaysPerMonth} operating days.`
-                : `按你已填的每月成本合计 ${fmt(breakEven.monthlyCostTotal, currency)}、每月经营 ${breakEven.operatingDaysPerMonth} 天估算。`}
+                ? `Based on total monthly cost of ${fmt(breakEven.monthlyCostTotal, currency)} over ${breakEven.operatingDaysPerMonth} operating days. This total does not include tax (same basis as "Monthly cash burn" below), so it may be lower than the total in your expense list.`
+                : `按你已填的每月成本合计 ${fmt(breakEven.monthlyCostTotal, currency)}、每月经营 ${breakEven.operatingDaysPerMonth} 天估算。此合计不含税费（与下方"每月现金消耗"口径一致），可能会比花费清单里的总额略低。`}
             </p>
           </div>
         ) : (

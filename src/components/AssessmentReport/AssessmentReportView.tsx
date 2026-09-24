@@ -41,6 +41,7 @@ import {
   Calculator
 } from 'lucide-react';
 import { formatMoney } from '../../lib/currencies';
+import { getAuthHeaders } from '../../lib/supabaseClient';
 
 interface ReportViewProps {
   report: AssessmentReport;
@@ -185,7 +186,7 @@ export const AssessmentReportView: React.FC<ReportViewProps> = ({
     try {
       const res = await fetch('/api/ai/deep-diagnosis', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await getAuthHeaders()) },
         body: JSON.stringify({ report })
       });
       if (res.ok) {
@@ -359,7 +360,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
     }
     if (netProfitMarginPercent >= 20 && cashRunwayMonths >= 3) {
       return t(
-        '放心，你这小店既赚钱、手头又留了够花几个月的备用金，是很稳的状态，可以继续服事。',
+        '放心，你这小店既赚钱、手头又留了够花几个月的备用金，是很稳的状态，可以继续稳健经营。',
         "Rest assured — your business is profitable and has enough cash reserve to last several months. It's a very stable position, and you can continue your work."
       );
     }
