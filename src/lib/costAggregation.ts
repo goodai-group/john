@@ -54,6 +54,8 @@ export function aggregateMonthlyCosts(
     | 'visaFeeAmortizationMonths'
     | 'equipmentDepreciationCost'
     | 'dynamicEquipmentItems'
+    | 'existingDebtMonthlyPrincipal'
+    | 'existingDebtMonthlyInterest'
   >,
   baseCurrency: CurrencyCode,
   customRateValue?: number,
@@ -61,6 +63,11 @@ export function aggregateMonthlyCosts(
 ): AggregatedMonthlyCosts {
   const conv = (field: MoneyField | undefined) =>
     convertToTargetCurrency(field, baseCurrency, customRateValue, customRateCode);
+  // 固定字段（房租/人工/水电/税金/折旧/债务）现在也可以逐字段选周期——
+  // 先按自身币种折算到主币种，再按 cycle/amortizationMonths 折算到月度等效额；
+  // cycle 缺省按 'monthly' 处理，与历史数据（没有 cycle 字段）完全兼容。
+  const convMonthly = (field: MoneyField | undefined) =>
+    normalizeToMonthly(conv(field), field?.cycle || 'monthly', field?.amortizationMonths);
 
   // 动态明细项目前没有独立币种选择器，始终按主币种录入，故不参与折算，与 scoringEngine 原有口径一致。
   const dynamicCogsTotal = (formData.dynamicCogsItems || []).reduce(
@@ -71,9 +78,9 @@ export function aggregateMonthlyCosts(
   // 避免使用界面隐藏的 cogsCost 盲目推高花费清单合计；只有未提供 dynamicCogsItems 时才退回 cogsCost。
   const cogs = formData.dynamicCogsItems ? dynamicCogsTotal : conv(formData.cogsCost);
 
-  const rent = conv(formData.rentCost);
-  const labor = conv(formData.laborCost);
-  const utility = conv(formData.utilityCost);
+  const rent = convMonthly(formData.rentCost);
+  const labor = convMonthly(formData.laborCost);
+  const utility = convMonthly(formData.utilityCost);
   // 固定开销的白色栏目（房租/人工/水电）对各行业都通用，予以保留；
   // 动态明细项是"在此基础上按行业补充"的额外条目（如设备清洁、排烟维护等），二者相加而非互相覆盖——
   // 否则用户改了白色栏目里的数字却发现 AI 分析结果毫无变化。
@@ -87,16 +94,22 @@ export function aggregateMonthlyCosts(
   // 当用户在花费清单界面录入了 taxCost 时，以界面展示的 taxCost 为准，确保清单所见即所得；
   // 只有在 taxCost 额度为 0 且存在 dynamicTaxItems 时才使用明细合计。
   const dynamicTaxTotal = (formData.dynamicTaxItems || []).reduce(
-    (sum, it) => sum + (Number(it.value) || 0),
+    (sum, it) => sum + monthlyValueOf(it),
     0
   );
   const tax =
     formData.taxCost && (formData.taxCost.amount || 0) > 0
-      ? conv(formData.taxCost)
+      ? convMonthly(formData.taxCost)
       : dynamicTaxTotal > 0
       ? dynamicTaxTotal
-      : conv(formData.taxCost);
-  const debtPayment = conv(formData.existingDebtMonthlyPayment);
+      : convMonthly(formData.taxCost);
+  // 本金/利息拆分为新字段：只要填了本金，就以「本金+利息」为准（利息缺省按0）；
+  // 未拆分过的历史数据（两个新字段都不存在）退回原来的单一合计字段，总额不变，
+  // 避免存量项目一夜之间"丢失"债务数据。
+  const debtPayment = formData.existingDebtMonthlyPrincipal
+    ? convMonthly(formData.existingDebtMonthlyPrincipal) +
+      (formData.existingDebtMonthlyInterest ? convMonthly(formData.existingDebtMonthlyInterest) : 0)
+    : convMonthly(formData.existingDebtMonthlyPayment);
 
   // 逐项注册/执照费用：一次性按用户自定月数分摊，年度费用固定按 12 个月分摊
   // （年度性质的费用每年都要再付一次，不应套用用户为其他一次性项目设的分摊月数）。
@@ -114,7 +127,7 @@ export function aggregateMonthlyCosts(
     (sum, it) => sum + (Number(it.value) || 0) / Math.max(1, Math.round(Number(it.usefulLifeMonths) || 12)),
     0
   );
-  const depreciationMonthly = conv(formData.equipmentDepreciationCost) + dynamicEquipmentMonthly;
+  const depreciationMonthly = convMonthly(formData.equipmentDepreciationCost) + dynamicEquipmentMonthly;
   const regulatoryCosts = registrationMonthly + visaMonthly + depreciationMonthly;
 
   const totalOpex = fixedOpex + otherOpex + regulatoryCosts;

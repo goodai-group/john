@@ -44,6 +44,8 @@ type PaybackFormFields = Pick<
   | 'dynamicOpexItems'
   | 'taxCost'
   | 'existingDebtMonthlyPayment'
+  | 'existingDebtMonthlyPrincipal'
+  | 'existingDebtMonthlyInterest'
   | 'companyRegistrationCost'
   | 'companyRegistrationAmortizationMonths'
   | 'dynamicRegistrationCostItems'

@@ -214,7 +214,16 @@ export const AssessmentForm: React.FC<FormProps> = ({
       id
     };
     const draft = getActiveDraft(id);
-    return draft ? { ...base, ...draft, id } : base;
+    const merged = draft ? { ...base, ...draft, id } : base;
+    // 存量项目只有合并后的旧字段 existingDebtMonthlyPayment，还没有本金/利息两个新字段——
+    // 一次性把旧总额搬进"本金"、利息置0，用户打开老项目时能看到自己原来填的数字，
+    // 而不是两个空白框（计算侧 costAggregation.ts 本身也有退回旧字段的兜底，这里纯粹是为了
+    // 界面上不让用户以为数据丢了）。
+    if (!merged.existingDebtMonthlyPrincipal && merged.existingDebtMonthlyPayment?.amount > 0) {
+      merged.existingDebtMonthlyPrincipal = { ...merged.existingDebtMonthlyPayment };
+      merged.existingDebtMonthlyInterest = { amount: 0, currency: merged.existingDebtMonthlyPayment.currency };
+    }
+    return merged;
   });
   // 本次挂载是否恢复了草稿（用于提示"已恢复未提交的填写"）
   const restoredDraftRef = React.useRef(Boolean(initialData?.id && getActiveDraft(initialData.id)));
@@ -251,8 +260,17 @@ export const AssessmentForm: React.FC<FormProps> = ({
   const [cogsTouched, setCogsTouched] = useState(false);
   const [opexTouched, setOpexTouched] = useState(false);
   // 公司注册费/签证费是否被用户手动改过：没改过时，切换国家应自动刷新 AI 估值
-  const [companyRegCostTouched, setCompanyRegCostTouched] = useState(false);
-  const [visaFeeCostTouched, setVisaFeeCostTouched] = useState(false);
+  // 修复：此前这两个 state 一律从 false 起步，页面刷新/重新挂载（formData 早已从草稿/已存项目
+  // 恢复了用户填的真实数字）后，"没改过"就被误判为 true→false 的初始态，紧接着下面那个
+  // useEffect 会把用户填好的数字覆盖回 AI 估值——本质是把"这次渲染没改过"和"这个字段从来
+  // 没被人手填过"混为一谈了。改成从 formData 的 lastEditedAt 判断：有值就说明这个字段被人
+  // 编辑过（哪怕改成了0），任何时候都不该再被自动覆盖；lastEditedAt 是持久化字段，能扛住刷新。
+  const [companyRegCostTouched, setCompanyRegCostTouched] = useState(
+    () => Boolean(formData.companyRegistrationCost.lastEditedAt)
+  );
+  const [visaFeeCostTouched, setVisaFeeCostTouched] = useState(
+    () => Boolean(formData.visaFeeCost.lastEditedAt)
+  );
   const inferReqId = React.useRef(0);
 
   // —— 第5点：属地税收/公司注册/签证成本 AI 预估（可核实修改，不直接参与计算）——
@@ -808,6 +826,8 @@ export const AssessmentForm: React.FC<FormProps> = ({
     'visaFeeCost',
     'equipmentDepreciationCost',
     'existingDebtMonthlyPayment',
+    'existingDebtMonthlyPrincipal',
+    'existingDebtMonthlyInterest',
     'cashAndLiquidAssets',
     'initialInvestmentEstimate',
     'inventoryValue'
@@ -1070,22 +1090,25 @@ export const AssessmentForm: React.FC<FormProps> = ({
     setOpexTouched(false);
   };
 
+  type FixedMoneyFieldKey =
+    | 'monthlyExternalGrants'
+    | 'cogsCost'
+    | 'rentCost'
+    | 'laborCost'
+    | 'utilityCost'
+    | 'taxCost'
+    | 'otherOpex'
+    | 'companyRegistrationCost'
+    | 'visaFeeCost'
+    | 'equipmentDepreciationCost'
+    | 'existingDebtMonthlyPrincipal'
+    | 'existingDebtMonthlyInterest'
+    | 'cashAndLiquidAssets'
+    | 'initialInvestmentEstimate'
+    | 'inventoryValue';
+
   const updateMoney = (
-    fieldKey:
-      | 'monthlyExternalGrants'
-      | 'cogsCost'
-      | 'rentCost'
-      | 'laborCost'
-      | 'utilityCost'
-      | 'taxCost'
-      | 'otherOpex'
-      | 'companyRegistrationCost'
-      | 'visaFeeCost'
-      | 'equipmentDepreciationCost'
-      | 'existingDebtMonthlyPayment'
-      | 'cashAndLiquidAssets'
-      | 'initialInvestmentEstimate'
-      | 'inventoryValue',
+    fieldKey: FixedMoneyFieldKey,
     amount: number,
     currency?: CurrencyCode
   ) => {
@@ -1106,16 +1129,53 @@ export const AssessmentForm: React.FC<FormProps> = ({
 
     setFormData((prev) => {
       const sanitized = Math.min(1e9, Math.max(0, isNaN(amount) ? 0 : amount));
+      // 本金/利息是新增的可选字段，历史数据/新建项目里可能还不存在，需要兜底；
+      // 同时必须先展开原有字段（...existing）再覆盖 amount/currency，否则会把已经选好的
+      // cycle/amortizationMonths 丢掉——填了金额之后周期又变回"每月"，等于白填。
+      const existing: MoneyField = (prev[fieldKey] as MoneyField | undefined) || {
+        amount: 0,
+        currency: prev.baseCurrency
+      };
       const patch: Record<string, unknown> = {
         [fieldKey]: {
+          ...existing,
           amount: sanitized,
-          currency: currency || prev[fieldKey].currency || prev.baseCurrency,
+          currency: currency || existing.currency || prev.baseCurrency,
           lastEditedBy: prev.ownerEmail,
           lastEditedAt: new Date().toISOString()
         },
         updatedAt: new Date().toISOString()
       };
       return { ...prev, ...patch };
+    });
+  };
+
+  // 花费清单里"固定类目"（房租/人工/水电/税金/设备折旧/债务本金/债务利息）各自的周期选择器
+  // 复用同一套 patch 逻辑：只改 cycle 或 amortizationMonths，不碰 amount/currency。
+  const updateMoneyCycle = (fieldKey: FixedMoneyFieldKey, cycle: BillingCycle) => {
+    setFormData((prev) => {
+      const existing: MoneyField = (prev[fieldKey] as MoneyField | undefined) || {
+        amount: 0,
+        currency: prev.baseCurrency
+      };
+      return {
+        ...prev,
+        [fieldKey]: { ...existing, cycle },
+        updatedAt: new Date().toISOString()
+      };
+    });
+  };
+  const updateMoneyAmortization = (fieldKey: FixedMoneyFieldKey, months: number) => {
+    setFormData((prev) => {
+      const existing: MoneyField = (prev[fieldKey] as MoneyField | undefined) || {
+        amount: 0,
+        currency: prev.baseCurrency
+      };
+      return {
+        ...prev,
+        [fieldKey]: { ...existing, amortizationMonths: months },
+        updatedAt: new Date().toISOString()
+      };
     });
   };
 
@@ -2085,7 +2145,12 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       onChange={(v) => updateMoney('rentCost', v)}
                       className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
                     />
-                    <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.rentCost.currency}/{language === 'en' ? 'mo' : '月'}</span>
+                    <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.rentCost.currency}</span>
+                    {renderCyclePicker(
+                      formData.rentCost,
+                      (cycle) => updateMoneyCycle('rentCost', cycle),
+                      (months) => updateMoneyAmortization('rentCost', months)
+                    )}
                     <button type="button" onClick={() => updateMoney('rentCost', 0)} title={language === 'en' ? 'Reset to 0 (fixed category, cannot remove the row)' : '清零该项（此为固定类目，不可整行移除）'} className="p-1 text-slate-400 hover:text-amber-600 cursor-pointer shrink-0">
                       <Eraser className="w-3.5 h-3.5" />
                     </button>
@@ -2100,7 +2165,12 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       onChange={(v) => updateMoney('laborCost', v)}
                       className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
                     />
-                    <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.laborCost.currency}/{language === 'en' ? 'mo' : '月'}</span>
+                    <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.laborCost.currency}</span>
+                    {renderCyclePicker(
+                      formData.laborCost,
+                      (cycle) => updateMoneyCycle('laborCost', cycle),
+                      (months) => updateMoneyAmortization('laborCost', months)
+                    )}
                     <button type="button" onClick={() => updateMoney('laborCost', 0)} title={language === 'en' ? 'Reset to 0 (fixed category, cannot remove the row)' : '清零该项（此为固定类目，不可整行移除）'} className="p-1 text-slate-400 hover:text-amber-600 cursor-pointer shrink-0">
                       <Eraser className="w-3.5 h-3.5" />
                     </button>
@@ -2115,7 +2185,12 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       onChange={(v) => updateMoney('utilityCost', v)}
                       className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
                     />
-                    <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.utilityCost.currency}/{language === 'en' ? 'mo' : '月'}</span>
+                    <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.utilityCost.currency}</span>
+                    {renderCyclePicker(
+                      formData.utilityCost,
+                      (cycle) => updateMoneyCycle('utilityCost', cycle),
+                      (months) => updateMoneyAmortization('utilityCost', months)
+                    )}
                     <button type="button" onClick={() => updateMoney('utilityCost', 0)} title={language === 'en' ? 'Reset to 0 (fixed category, cannot remove the row)' : '清零该项（此为固定类目，不可整行移除）'} className="p-1 text-slate-400 hover:text-amber-600 cursor-pointer shrink-0">
                       <Eraser className="w-3.5 h-3.5" />
                     </button>
@@ -2131,7 +2206,12 @@ export const AssessmentForm: React.FC<FormProps> = ({
                         onChange={(v) => updateMoney('taxCost', v)}
                         className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
                       />
-                      <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.taxCost.currency}/{language === 'en' ? 'mo' : '月'}</span>
+                      <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.taxCost.currency}</span>
+                      {renderCyclePicker(
+                        formData.taxCost,
+                        (cycle) => updateMoneyCycle('taxCost', cycle),
+                        (months) => updateMoneyAmortization('taxCost', months)
+                      )}
                       <button type="button" onClick={() => updateMoney('taxCost', 0)} title={language === 'en' ? 'Reset to 0 (fixed category, cannot remove the row)' : '清零该项（此为固定类目，不可整行移除）'} className="p-1 text-slate-400 hover:text-amber-600 cursor-pointer shrink-0">
                         <Eraser className="w-3.5 h-3.5" />
                       </button>
@@ -2166,21 +2246,51 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     {renderInlineAnomalies('taxCost')}
                   </div>
 
+                  {/* 反馈：还本付息不该是笼统一项——本金是负债规模减少，利息才是真正的资金成本，
+                      两者性质不同，拆成两行各自可填/可选周期。旧的 existingDebtMonthlyPayment
+                      字段不再作为编辑入口，只在存量项目里由上面的初始化逻辑一次性搬进"本金"。 */}
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="flex-1 min-w-[7rem] p-1.5 font-semibold text-slate-800">{language === 'en' ? 'Monthly Debt Repayment (Principal & Interest)' : '每月偿还债务本息'}</span>
+                    <span className="flex-1 min-w-[7rem] p-1.5 font-semibold text-slate-800">{language === 'en' ? 'Monthly Debt Repayment — Principal' : '每月偿还债务 - 本金'}</span>
                     <NumberField
                       inputMode="numeric"
                       min={0}
                       placeholder={language === 'en' ? 'Enter 0 if no debt' : '无债务填 0'}
-                      value={formData.existingDebtMonthlyPayment.amount}
-                      onChange={(v) => updateMoney('existingDebtMonthlyPayment', v)}
+                      value={formData.existingDebtMonthlyPrincipal?.amount || 0}
+                      onChange={(v) => updateMoney('existingDebtMonthlyPrincipal', v)}
                       className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
                     />
-                    <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.existingDebtMonthlyPayment.currency}/{language === 'en' ? 'mo' : '月'}</span>
-                    <button type="button" onClick={() => updateMoney('existingDebtMonthlyPayment', 0)} title={language === 'en' ? 'Reset to 0 (fixed category, cannot remove the row)' : '清零该项（此为固定类目，不可整行移除）'} className="p-1 text-slate-400 hover:text-amber-600 cursor-pointer shrink-0">
+                    <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.existingDebtMonthlyPrincipal?.currency || formData.baseCurrency}</span>
+                    {renderCyclePicker(
+                      formData.existingDebtMonthlyPrincipal || { amount: 0, currency: formData.baseCurrency },
+                      (cycle) => updateMoneyCycle('existingDebtMonthlyPrincipal', cycle),
+                      (months) => updateMoneyAmortization('existingDebtMonthlyPrincipal', months)
+                    )}
+                    <button type="button" onClick={() => updateMoney('existingDebtMonthlyPrincipal', 0)} title={language === 'en' ? 'Reset to 0 (fixed category, cannot remove the row)' : '清零该项（此为固定类目，不可整行移除）'} className="p-1 text-slate-400 hover:text-amber-600 cursor-pointer shrink-0">
                       <Eraser className="w-3.5 h-3.5" />
                     </button>
                   </div>
+
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="flex-1 min-w-[7rem] p-1.5 font-semibold text-slate-800">{language === 'en' ? 'Monthly Debt Repayment — Interest' : '每月偿还债务 - 利息'}</span>
+                    <NumberField
+                      inputMode="numeric"
+                      min={0}
+                      placeholder={language === 'en' ? 'Enter 0 if no interest' : '无利息填 0'}
+                      value={formData.existingDebtMonthlyInterest?.amount || 0}
+                      onChange={(v) => updateMoney('existingDebtMonthlyInterest', v)}
+                      className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                    />
+                    <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.existingDebtMonthlyInterest?.currency || formData.baseCurrency}</span>
+                    {renderCyclePicker(
+                      formData.existingDebtMonthlyInterest || { amount: 0, currency: formData.baseCurrency },
+                      (cycle) => updateMoneyCycle('existingDebtMonthlyInterest', cycle),
+                      (months) => updateMoneyAmortization('existingDebtMonthlyInterest', months)
+                    )}
+                    <button type="button" onClick={() => updateMoney('existingDebtMonthlyInterest', 0)} title={language === 'en' ? 'Reset to 0 (fixed category, cannot remove the row)' : '清零该项（此为固定类目，不可整行移除）'} className="p-1 text-slate-400 hover:text-amber-600 cursor-pointer shrink-0">
+                      <Eraser className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  {renderInlineAnomalies('existingDebtMonthlyPrincipal')}
 
                   {/* 注册/执照费用：逐项区分一次性（按自定月数分摊）与年度（固定按12个月分摊），
                       与上面的条目共用同一份清单展示。 */}
@@ -2346,7 +2456,12 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       onChange={(v) => updateMoney('equipmentDepreciationCost', v)}
                       className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
                     />
-                    <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.equipmentDepreciationCost.currency}/{language === 'en' ? 'mo' : '月'}</span>
+                    <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.equipmentDepreciationCost.currency}</span>
+                    {renderCyclePicker(
+                      formData.equipmentDepreciationCost,
+                      (cycle) => updateMoneyCycle('equipmentDepreciationCost', cycle),
+                      (months) => updateMoneyAmortization('equipmentDepreciationCost', months)
+                    )}
                     <button type="button" onClick={() => updateMoney('equipmentDepreciationCost', 0)} title={language === 'en' ? 'Reset to 0 (fixed category, cannot remove the row)' : '清零该项（此为固定类目，不可整行移除）'} className="p-1 text-slate-400 hover:text-amber-600 cursor-pointer shrink-0">
                       <Eraser className="w-3.5 h-3.5" />
                     </button>

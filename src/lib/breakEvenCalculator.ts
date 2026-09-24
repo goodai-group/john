@@ -50,6 +50,8 @@ export function calculateBreakEvenRevenue(
     | 'taxCost'
     | 'dynamicTaxItems'
     | 'existingDebtMonthlyPayment'
+    | 'existingDebtMonthlyPrincipal'
+    | 'existingDebtMonthlyInterest'
     | 'companyRegistrationCost'
     | 'companyRegistrationAmortizationMonths'
     | 'dynamicRegistrationCostItems'

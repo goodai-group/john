@@ -186,7 +186,7 @@ export function detectFormAnomalies(formData: BusinessFormData): FormAnomalyWarn
   // 9) 偿债压力极端：还贷远超营收
   if (debt > 0 && revenue > 0 && debt > revenue) {
     warnings.push({
-      field: 'existingDebtMonthlyPayment',
+      field: 'existingDebtMonthlyPrincipal',
       severity: 'error',
       messageZh: '每月还贷金额比总流水还高，通常是把「贷款总额」误填成了「每月还款额」，请核对。',
       messageEn: 'Monthly debt payment exceeds total revenue — likely the total loan amount was entered instead of the monthly installment.'
