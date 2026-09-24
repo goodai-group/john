@@ -2602,7 +2602,13 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     </button>
                     <span className="text-[13px] font-black text-slate-900">
                       {language === 'en' ? 'Total monthly expense:' : '花费清单合计：'}{' '}
-                      {formatMoney(breakEven.monthlyCostTotal, formData.baseCurrency)}
+                      {/* breakEven.monthlyCostTotal 刻意不含税费（与"每月现金消耗"口径保持一致，
+                          详见 breakEvenCalculator.ts 注释），但这里的花费清单里"税金及规费"是
+                          用户实际填写并展示出来的一行，合计里若漏掉它，用户会发现清单合计
+                          比自己手动加总的数字小一块，怎么核对都对不上。这里补回 tax，让本合计
+                          真正等于清单里逐行相加的结果；不改 breakEven.monthlyCostTotal 本身，
+                          避免影响保本收入等其他依赖该口径的计算。 */}
+                      {formatMoney(breakEven.monthlyCostTotal + breakEven.costBreakdown.tax, formData.baseCurrency)}
                     </span>
                   </div>
                 </div>
