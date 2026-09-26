@@ -163,6 +163,27 @@ BEGIN
 END $$;
 
 -- ============================================================
+-- 修复历史遗留问题：assessment_reports 表在部分环境里还带一个 runway_months 列
+-- （NOT NULL 且无默认值）。本应用代码从未写入过这一列——现金储备可支撑月数
+-- （cashRunwayMonths）是打分引擎算出来的展示值，存在 report_data JSONB 里，
+-- 不落单独列——导致每次写报告都报
+--   "null value in column runway_months of relation assessment_reports violates not-null constraint"。
+-- 放宽为可空即可，不删列（避免影响该列上可能已有的历史数据/依赖）。可安全重复执行。
+-- ============================================================
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'assessment_reports'
+      AND column_name = 'runway_months'
+      AND is_nullable = 'NO'
+  ) THEN
+    ALTER TABLE public.assessment_reports ALTER COLUMN runway_months DROP NOT NULL;
+  END IF;
+END $$;
+
+-- ============================================================
 -- 修复历史遗留问题：早期手动建表 / 未跟着本文件更新过的环境里，
 -- projects / assessment_reports 表可能缺少后续新增的列（例如
 -- assessment_reports.project_id），导致 PostgREST 报
