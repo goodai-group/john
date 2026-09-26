@@ -604,8 +604,18 @@ export const fetchReportsFromCloud = async (
   }
 };
 
+// assessment_reports.id 在不少环境（含 Supabase 建表向导的默认值）是 uuid 类型——这才是
+// 正常情况，不需要把它改成 text。早期版本产生过 "report-<时间戳>" 这类非 UUID 格式的本地
+// id（storage.ts 的 getAllReports() 会把它们迁移成真正的 UUID），这类 id 从未真正插入过
+// uuid 类型的云端表（insert 时就已经因同样的类型不匹配失败，被 saveReportToCloud 悄悄吞掉），
+// 所以按这种 id 去删也肯定删不到行。这里直接判断格式，非法就当"云端本来就没有这一行，
+// 删除已完成"处理，避免 DELETE 请求在把过滤条件转成 uuid 时就抛出
+// "invalid input syntax for type uuid"。
+const REPORT_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export const deleteReportFromCloud = async (id: string): Promise<boolean> => {
   if (!supabase) return false;
+  if (!REPORT_UUID_RE.test(id)) return true;
   try {
     const { error } = await supabase.from('assessment_reports').delete().eq('id', id);
     if (error) {
@@ -854,20 +864,31 @@ CREATE TABLE IF NOT EXISTS public.agent_facts (
 CREATE UNIQUE INDEX IF NOT EXISTS agent_facts_project_key_idx
   ON public.agent_facts (project_id, fact_type, fact_key);
 
--- 修复历史遗留问题：assessment_reports.id 列类型误建为 UUID，
--- 导致 report-<timestamp> 格式的 ID 在读写/删除时报
--- "invalid input syntax for type uuid"。可安全重复执行。
+-- 说明：assessment_reports.id 在有的环境是 uuid 类型（Supabase 建表向导的默认值），
+-- 这是正常情况，不需要靠迁移把它转回 text。早期版本产生过 "report-<时间戳>" 这类非 UUID
+-- 格式的本地 id，这类 id 从未真正插入过 uuid 类型的云端表，读写/删除时报
+-- "invalid input syntax for type uuid" 的问题现在由应用层处理：
+--   1. storage.ts 的 getAllReports() 把本地历史数据的非 UUID id 迁移成真正的 UUID；
+--   2. supabaseClient.ts 的 deleteReportFromCloud() 对不合法 UUID 格式的 id 直接跳过，
+--      不发出必然报错的 DELETE 请求。
+-- 因此这里不再提供"改列类型"的迁移。
+
+-- 修复历史遗留问题：assessment_reports 表在部分环境里还带一个 runway_months 列
+-- （NOT NULL 且无默认值）。本应用代码从未写入过这一列——现金储备可支撑月数
+-- （cashRunwayMonths）是打分引擎算出来的展示值，存在 report_data JSONB 里，
+-- 不落单独列——导致每次写报告都报
+--   "null value in column runway_months of relation assessment_reports violates not-null constraint"。
+-- 放宽为可空即可，不删列（避免影响该列上可能已有的历史数据/依赖）。可安全重复执行。
 DO $$
 BEGIN
   IF EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'public'
       AND table_name = 'assessment_reports'
-      AND column_name = 'id'
-      AND data_type <> 'text'
+      AND column_name = 'runway_months'
+      AND is_nullable = 'NO'
   ) THEN
-    ALTER TABLE public.assessment_reports
-      ALTER COLUMN id TYPE TEXT USING id::TEXT;
+    ALTER TABLE public.assessment_reports ALTER COLUMN runway_months DROP NOT NULL;
   END IF;
 END $$;
 
