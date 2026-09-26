@@ -403,11 +403,24 @@ async function performCloudSync(currentUser?: AppUser | null): Promise<void> {
   try {
     // 0. 先重试把"已删除墓碑"对应的云端记录彻底删干净
     //    （上次删除失败/未完成时，这里补删，从根上消灭刷新"复活"）
+    // 修复：墓碑此前只增不减——即使云端确认删除成功，id 也会永远留在
+    // bam_deleted_projects_v1/bam_deleted_reports_v1 里，导致往后每一次同步都要
+    // 重新对着一个早就删干净的 id 发一次 DELETE（线上能看到对同一个早已不存在的
+    // 项目反复发出的 200/204 请求，就是这里造成的）。现在按每个 id 的删除结果
+    // 摘除已确认成功的，只把仍然失败的留在墓碑里等下次重试。
     if (deletedProjectIds.length > 0 || deletedReportIds.length > 0) {
-      await Promise.all([
-        ...deletedProjectIds.map((id) => deleteAssessmentFromCloud(id)),
-        ...deletedReportIds.map((id) => deleteReportFromCloud(id))
+      const [projectDeleteResults, reportDeleteResults] = await Promise.all([
+        Promise.all(deletedProjectIds.map((id) => deleteAssessmentFromCloud(id))),
+        Promise.all(deletedReportIds.map((id) => deleteReportFromCloud(id)))
       ]);
+      const stillPendingProjectIds = deletedProjectIds.filter((_, i) => !projectDeleteResults[i]);
+      const stillPendingReportIds = deletedReportIds.filter((_, i) => !reportDeleteResults[i]);
+      if (stillPendingProjectIds.length !== deletedProjectIds.length) {
+        writeDeletedIds(STORAGE_KEY_DELETED_PROJECTS, stillPendingProjectIds);
+      }
+      if (stillPendingReportIds.length !== deletedReportIds.length) {
+        writeDeletedIds(STORAGE_KEY_DELETED_REPORTS, stillPendingReportIds);
+      }
     }
 
     const [cloudProjects, cloudReports, cloudQuestions] = await Promise.all([
