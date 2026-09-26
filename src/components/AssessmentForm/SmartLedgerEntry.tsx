@@ -18,9 +18,16 @@ import { NumberField } from './NumberField';
 // 填完一行后等这么久没有再改动才发起分类请求，避免用户还在打字时就一个字一个字地调接口
 const CLASSIFY_DEBOUNCE_MS = 900;
 
+// 这个组件目前只嵌在「花费清单」卡片里，只处理支出——收入走表单里已有的收入模块，
+// 不在这里重复提供收/支切换（避免花费清单区域出现"这笔是收入"这种矛盾选项）。
+const ROW_TYPE = 'expense' as const;
+// 分类下拉框同理只列支出类科目，不出现 REAL_REVENUE/EXTERNAL_GRANT 这两个收入类选项
+const EXPENSE_LEDGER_CATEGORIES = (Object.keys(LEDGER_CATEGORY_LABELS) as LedgerCategory[]).filter(
+  (cat) => cat !== 'REAL_REVENUE' && cat !== 'EXTERNAL_GRANT'
+);
+
 interface DraftRow {
   id: string;
-  type: 'income' | 'expense';
   name: string;
   amount: number;
   cycle: BillingCycle;
@@ -44,7 +51,6 @@ interface AppliedLogEntry {
 function emptyRow(): DraftRow {
   return {
     id: `ledger-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-    type: 'expense',
     name: '',
     amount: 0,
     cycle: 'monthly',
@@ -64,11 +70,10 @@ interface SmartLedgerEntryProps {
 }
 
 /**
- * 智能记账入口：用户填完一行「名称+金额+周期+收入或支出」，停手不到一秒就自动分类并记入，
- * 不需要点按钮、也不需要自己选会计科目——置信度够高时整个过程对用户基本无感（与
- * types.ts 里 LedgerItem 的设计注释一致）。只有低置信度/高风险判断（真实收入 vs 外部
- * 捐赠、一次性 vs 应折旧）才会弹出来让用户确认或改分类，确认后才真正记入，避免这类会
- * 直接影响 Gate-1 判断的错误被静默吞掉。
+ * 智能记账入口（花费清单专用，只处理支出）：用户填完一行「名称+金额+周期」，停手不到一秒
+ * 就自动分类并记入，不需要点按钮、也不需要自己选会计科目——置信度够高时整个过程对用户
+ * 基本无感（与 types.ts 里 LedgerItem 的设计注释一致）。只有低置信度/高风险判断（如
+ * 一次性支出 vs 应折旧的资本性支出）才会弹出来让用户确认或改分类，确认后才真正记入。
  */
 export function SmartLedgerEntry({ language, baseCurrency, projectName, industryHint, onApply }: SmartLedgerEntryProps) {
   const [rows, setRows] = useState<DraftRow[]>([emptyRow()]);
@@ -92,7 +97,7 @@ export function SmartLedgerEntry({ language, baseCurrency, projectName, industry
   const applyClassification = (row: DraftRow, classification: LedgerClassification) => {
     const item: LedgerItem = {
       id: row.id,
-      type: row.type,
+      type: ROW_TYPE,
       name: row.name.trim(),
       amount: row.amount,
       currency: baseCurrency,
@@ -124,7 +129,7 @@ export function SmartLedgerEntry({ language, baseCurrency, projectName, industry
     setRows((prev) => prev.map((r) => (r.id === rowId ? { ...r, classifying: true, error: null } : r)));
 
     try {
-      const item = { id: rowId, type: row.type, name: row.name.trim(), amount: row.amount, currency: baseCurrency, cycle: row.cycle };
+      const item = { id: rowId, type: ROW_TYPE, name: row.name.trim(), amount: row.amount, currency: baseCurrency, cycle: row.cycle };
       const res = await fetch('/api/ai/classify-ledger', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(await getAuthHeaders()) },
@@ -170,7 +175,7 @@ export function SmartLedgerEntry({ language, baseCurrency, projectName, industry
     timers.current[rowId] = setTimeout(() => runClassify(rowId), CLASSIFY_DEBOUNCE_MS);
   };
 
-  const updateRow = (id: string, patch: Partial<Pick<DraftRow, 'type' | 'name' | 'amount' | 'cycle'>>) => {
+  const updateRow = (id: string, patch: Partial<Pick<DraftRow, 'name' | 'amount' | 'cycle'>>) => {
     setRows((prev) => {
       const next = prev.map((r) => (r.id === id ? { ...r, ...patch, error: null } : r));
       const row = next.find((r) => r.id === id);
@@ -210,35 +215,19 @@ export function SmartLedgerEntry({ language, baseCurrency, projectName, industry
       </div>
       <p className="text-[11px] text-teal-800/80 leading-relaxed">
         {language === 'en'
-          ? "Just type what it is, how much, and how often — it's filed automatically as soon as you finish a line. You'll only be asked when something is uncertain (e.g. real revenue vs. a grant)."
-          : '只填「这是什么、多少钱、多久一次」，填完一行就自动记入，不用你自己选科目；只有拿不准的情况（比如真实收入还是外部资助）才会让你确认一下。'}
+          ? "Just type what it is, how much, and how often — it's filed automatically as soon as you finish a line. You'll only be asked when something is uncertain (e.g. one-time cost vs. something to depreciate)."
+          : '只填「这是什么、多少钱、多久一次」，填完一行就自动记入，不用你自己选科目；只有拿不准的情况（比如该按一次性算还是要分摊折旧）才会让你确认一下。'}
       </p>
 
       <div className="space-y-1.5">
         {rows.map((row) => (
           <div key={row.id}>
             <div className="flex items-center gap-1.5 flex-wrap">
-              <div className="flex shrink-0 rounded-lg border border-slate-200 overflow-hidden text-[11px] font-bold">
-                <button
-                  type="button"
-                  onClick={() => updateRow(row.id, { type: 'expense' })}
-                  className={`px-2 py-1.5 cursor-pointer ${row.type === 'expense' ? 'bg-rose-600 text-white' : 'bg-white text-slate-500'}`}
-                >
-                  {language === 'en' ? 'Expense' : '支出'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => updateRow(row.id, { type: 'income' })}
-                  className={`px-2 py-1.5 cursor-pointer ${row.type === 'income' ? 'bg-emerald-600 text-white' : 'bg-white text-slate-500'}`}
-                >
-                  {language === 'en' ? 'Income' : '收入'}
-                </button>
-              </div>
               <input
                 type="text"
                 value={row.name}
                 onChange={(e) => updateRow(row.id, { name: e.target.value })}
-                placeholder={language === 'en' ? 'e.g. Coffee beans / Shop rent / Church donation' : '例如：咖啡豆 / 铺租 / 教会资助'}
+                placeholder={language === 'en' ? 'e.g. Coffee beans / Shop rent / Utilities' : '例如：咖啡豆 / 铺租 / 水电费'}
                 className="flex-1 min-w-[8rem] p-1.5 border border-slate-200 rounded-lg font-semibold text-slate-800"
               />
               <NumberField
@@ -284,8 +273,8 @@ export function SmartLedgerEntry({ language, baseCurrency, projectName, industry
         <div className="space-y-1.5">
           <p className="text-[12px] text-amber-700 font-bold">
             {language === 'en'
-              ? `${pendingConfirm.length} item(s) need your confirmation (low confidence, or revenue vs. grant / one-time vs. depreciable).`
-              : `有 ${pendingConfirm.length} 项需要你确认分类（置信度较低，或涉及"真实收入/外部资助""一次性/应折旧"这类关键判断）。`}
+              ? `${pendingConfirm.length} item(s) need your confirmation (low confidence, or one-time vs. depreciable).`
+              : `有 ${pendingConfirm.length} 项需要你确认分类（置信度较低，或涉及"一次性/应折旧"这类关键判断）。`}
           </p>
           {pendingConfirm.map((entry, index) => (
             <div key={entry.row.id} className="p-2 rounded-lg border border-amber-300 bg-amber-50/60 space-y-1">
@@ -304,7 +293,7 @@ export function SmartLedgerEntry({ language, baseCurrency, projectName, industry
                   onChange={(e) => updatePendingClassification(index, { category: e.target.value as LedgerCategory })}
                   className="p-1.5 border border-amber-400 rounded-lg text-[12px] font-bold text-amber-800 bg-white cursor-pointer"
                 >
-                  {(Object.keys(LEDGER_CATEGORY_LABELS) as LedgerCategory[]).map((cat) => (
+                  {EXPENSE_LEDGER_CATEGORIES.map((cat) => (
                     <option key={cat} value={cat}>
                       {LEDGER_CATEGORY_LABELS[cat][language]}
                     </option>
