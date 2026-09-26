@@ -614,17 +614,6 @@ export const AssessmentForm: React.FC<FormProps> = ({
       updatedAt: new Date().toISOString()
     }));
   };
-  const addDynamicOpexItem = () => {
-    setOpexTouched(true);
-    setFormData((prev) => ({
-      ...prev,
-      dynamicOpexItems: [
-        ...(prev.dynamicOpexItems || []),
-        { id: `opex-${Date.now()}`, label: language === 'en' ? 'New operating expense item' : '新增运营开支项', value: 0, isFixed: false }
-      ],
-      updatedAt: new Date().toISOString()
-    }));
-  };
   const removeDynamicOpexItem = (id: string) => {
     setOpexTouched(true);
     setFormData((prev) => ({
@@ -2262,10 +2251,8 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   ))}
 
                   {/* 修复：此前 COGS 明细只能靠「AI结构推断成功」或在高级设置里重新选一次行业模板
-                      才能生成条目，没有像 OPEX 明细那样的手动新增入口——本地没配置 AI 密钥时
-                      AI 推断必定失败，普通用户实际上完全没有办法给 COGS 添加自定义行项目。
-                      addDynamicCogsItem 函数本就存在，这里补上对应按钮，与下方 OPEX 的
-                      「＋添加花费项」保持一致，两者对称。 */}
+                      才能生成条目——本地没配置 AI 密钥时 AI 推断必定失败，普通用户实际上完全
+                      没有办法给 COGS 添加自定义行项目，这里补一个手动新增入口兜底。 */}
                   <button type="button" onClick={addDynamicCogsItem} className="text-[12px] px-2 py-1 rounded border border-slate-300 text-slate-700 font-bold hover:bg-slate-100 cursor-pointer">
                     {language === 'en' ? '+ Add material cost item' : '＋ 添加物料成本项'}
                   </button>
@@ -2628,9 +2615,8 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     </button>
                   </div>
 
-                  {/* 反馈：新增花费项此前渲染在固定类目中间（每月偿还债务本息之后），离底下的
-                      「＋ 添加花费项」按钮很远，用户点击新增后要往上翻才能找到刚加的那一行。
-                      移到这里——紧挨着触发它的按钮，点了就在眼前，不用滚动查找。 */}
+                  {/* 动态花费项：不再提供手动「＋添加」入口——新条目统一走上面的智能记账
+                      （SmartLedgerEntry）自动分类记入，这里只负责展示/编辑/删除已有条目。 */}
                   {(formData.dynamicOpexItems || []).map((it) => (
                     <div key={it.id} className="flex items-center gap-1.5 flex-wrap">
                       <input
@@ -2665,10 +2651,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     </div>
                   ))}
 
-                  <div className="flex items-center justify-between flex-wrap gap-2 pt-2 border-t border-slate-200">
-                    <button type="button" onClick={addDynamicOpexItem} className="text-[12px] px-2 py-1 rounded border border-slate-300 text-slate-700 font-bold hover:bg-slate-100 cursor-pointer">
-                      {language === 'en' ? '+ Add expense item' : '＋ 添加花费项'}
-                    </button>
+                  <div className="flex items-center justify-end flex-wrap gap-2 pt-2 border-t border-slate-200">
                     <span className="text-[13px] font-black text-slate-900">
                       {language === 'en' ? 'Total monthly expense:' : '花费清单合计：'}{' '}
                       {/* breakEven.monthlyCostTotal 刻意不含税费（与"每月现金消耗"口径保持一致，
