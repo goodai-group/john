@@ -60,6 +60,7 @@ import {
 } from '../../lib/inferBusinessStructure';
 import { State as StateLib } from 'country-state-city';
 import { SearchableSelect, type SearchableSelectOption } from './SearchableSelect';
+import { SmartLedgerEntry } from './SmartLedgerEntry';
 import { calculateBreakEvenRevenue } from '../../lib/breakEvenCalculator';
 import { calculatePaybackPeriod, calculateRequiredRevenueForTarget } from '../../lib/paybackCalculator';
 import { detectFormAnomalies } from '../../lib/anomalyDetection';
@@ -631,6 +632,41 @@ export const AssessmentForm: React.FC<FormProps> = ({
       dynamicOpexItems: (prev.dynamicOpexItems || []).filter((it) => it.id !== id),
       updatedAt: new Date().toISOString()
     }));
+  };
+
+  // 智能记账（SmartLedgerEntry）用户确认分类后调用：把 mapClassifiedLedgerToForm 算出的
+  // 表单补丁「累加」进现有数据，而不是整体覆盖——那份补丁只包含这一批新流水换算出的数字，
+  // 直接覆盖会把用户已经在别处填好的收入/还贷/花费清单顶掉。
+  const applySmartLedgerPatch = (patch: Partial<BusinessFormData>) => {
+    setCogsTouched(true);
+    setOpexTouched(true);
+    setFormData((prev) => {
+      const addAmount = (field: MoneyField, deltaAmount?: number): MoneyField => ({
+        ...field,
+        amount: (field.amount || 0) + (deltaAmount || 0)
+      });
+      // existingDebtMonthlyPayment 是历史字段：项目一旦已经在用拆分后的本金/利息字段
+      // （existingDebtMonthlyPrincipal 有值），costAggregation.ts 就不再读旧字段——
+      // 这里改加进 existingDebtMonthlyPrincipal，避免这笔钱记进去了却不参与任何计算。
+      const usesSplitDebtFields = prev.existingDebtMonthlyPrincipal !== undefined;
+      const debtDelta = patch.existingDebtMonthlyPayment?.amount || 0;
+      return {
+        ...prev,
+        dynamicCogsItems: [...(prev.dynamicCogsItems || []), ...(patch.dynamicCogsItems || [])],
+        dynamicOpexItems: [...(prev.dynamicOpexItems || []), ...(patch.dynamicOpexItems || [])],
+        dynamicTaxItems: [...(prev.dynamicTaxItems || []), ...(patch.dynamicTaxItems || [])],
+        dynamicEquipmentItems: [...(prev.dynamicEquipmentItems || []), ...(patch.dynamicEquipmentItems || [])],
+        oneTimeStartupItems: [...(prev.oneTimeStartupItems || []), ...(patch.oneTimeStartupItems || [])],
+        existingDebtMonthlyPayment: usesSplitDebtFields ? prev.existingDebtMonthlyPayment : addAmount(prev.existingDebtMonthlyPayment, debtDelta),
+        existingDebtMonthlyPrincipal: usesSplitDebtFields
+          ? addAmount(prev.existingDebtMonthlyPrincipal as MoneyField, debtDelta)
+          : prev.existingDebtMonthlyPrincipal,
+        monthlyRealOperatingRevenue: addAmount(prev.monthlyRealOperatingRevenue, patch.monthlyRealOperatingRevenue?.amount),
+        monthlyExternalGrants: addAmount(prev.monthlyExternalGrants, patch.monthlyExternalGrants?.amount),
+        monthlyRevenue: addAmount(prev.monthlyRevenue, patch.monthlyRevenue?.amount),
+        updatedAt: new Date().toISOString()
+      };
+    });
   };
 
   // 花费清单每一行的计费周期选择器：默认每月，可切换为每季度/每年/一次性——
@@ -2132,6 +2168,14 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     {language === 'en' ? 'Monthly Expenses' : '月度运营开支'}
                   </span>
                 </div>
+
+                <SmartLedgerEntry
+                  language={language}
+                  baseCurrency={formData.baseCurrency}
+                  projectName={formData.projectName}
+                  industryHint={formData.industry}
+                  onApply={applySmartLedgerPatch}
+                />
 
                 {/* 花费清单：所有成本/开支项目（材料、房租、人工、水电、税金、还贷、注册、签证、设备折旧……）
                     统一放进同一份可增删改的清单里逐行展示，不再按类目拆成一个个独立分区/白框——

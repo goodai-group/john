@@ -130,6 +130,21 @@ export type LedgerCategory =
   | 'REAL_REVENUE' // 真实经营收入
   | 'EXTERNAL_GRANT'; // 外部捐赠/资助/非经常性收入
 
+// 供前端「智能记账」分类结果展示 + 用户改分类下拉框使用
+export const LEDGER_CATEGORY_LABELS: Record<LedgerCategory, { zh: string; en: string }> = {
+  COGS: { zh: '原材料/直接成本', en: 'COGS (direct materials)' },
+  OPEX_FIXED_RENT: { zh: '固定开销·房租', en: 'Fixed opex · Rent' },
+  OPEX_FIXED_LABOR: { zh: '固定开销·人工', en: 'Fixed opex · Labor' },
+  OPEX_FIXED_UTILITY: { zh: '固定开销·水电网络', en: 'Fixed opex · Utilities' },
+  OPEX_VARIABLE: { zh: '其他日常经营费用', en: 'Other operating expense' },
+  TAX: { zh: '税金及规费', en: 'Tax & fees' },
+  DEBT_SERVICE: { zh: '还本付息', en: 'Debt service' },
+  CAPEX_DEPRECIATION: { zh: '资本性支出（按月折旧）', en: 'Capex (depreciated monthly)' },
+  ONE_TIME_STARTUP: { zh: '一次性启动支出', en: 'One-time startup cost' },
+  REAL_REVENUE: { zh: '真实经营收入', en: 'Real operating revenue' },
+  EXTERNAL_GRANT: { zh: '外部捐赠/资助', en: 'External grant/donation' }
+};
+
 /** CPA 分类 Agent 的产物：只做判断，不做金额换算/周期折算——那部分是确定性代码的职责 */
 export interface LedgerClassification {
   id: string; // 对应 LedgerItem.id
