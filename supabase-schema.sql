@@ -140,27 +140,15 @@ CREATE UNIQUE INDEX IF NOT EXISTS agent_facts_project_key_idx
   ON public.agent_facts (project_id, fact_type, fact_key);
 
 -- ============================================================
--- 修复历史遗留问题：assessment_reports.id 列类型误建为 UUID
--- 现象：删除/写入 report-<timestamp> 格式的 ID 时报错
---   "invalid input syntax for type uuid: report-xxxx"
--- 原因：部分早期安装通过 Supabase 控制台手动建表，默认把 id 建成了 UUID，
---   与本文件定义的 TEXT 主键不一致（CREATE TABLE IF NOT EXISTS 不会修正
---   已存在表的列类型，所以重新执行本文件无法自动修复）。
---   以下语句可安全重复执行，仅在实际列类型不是 text 时才会转换。
+-- 说明：assessment_reports.id 在有的环境是 uuid 类型（Supabase 建表向导的默认值），
+-- 这是正常情况，不需要靠迁移把它转回 text。早期版本产生过 "report-<时间戳>" 这类非
+-- UUID 格式的本地 id，这类 id 从未真正插入过 uuid 类型的云端表，读写/删除时报
+-- "invalid input syntax for type uuid" 的问题现在由应用层处理：
+--   1. storage.ts 的 getAllReports() 把本地历史数据的非 UUID id 迁移成真正的 UUID；
+--   2. supabaseClient.ts 的 deleteReportFromCloud() 对不合法 UUID 格式的 id 直接跳过，
+--      不发出必然报错的 DELETE 请求。
+-- 因此这里不再提供"改列类型"的迁移。
 -- ============================================================
-DO $$
-BEGIN
-  IF EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public'
-      AND table_name = 'assessment_reports'
-      AND column_name = 'id'
-      AND data_type <> 'text'
-  ) THEN
-    ALTER TABLE public.assessment_reports
-      ALTER COLUMN id TYPE TEXT USING id::TEXT;
-  END IF;
-END $$;
 
 -- ============================================================
 -- 修复历史遗留问题：assessment_reports 表在部分环境里还带一个 runway_months 列
