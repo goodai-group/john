@@ -372,16 +372,34 @@ export const AssessmentForm: React.FC<FormProps> = ({
     [language]
   );
 
+  // 模块4「AI 实时财务测算与智能校验」的手动刷新按钮：下面几个 useMemo 本身已经用整个
+  // formData 做依赖，每次改动都会自动重算，理论上不需要手动刷新。但用户曾经真的遇到过
+  // "改了花费、这里没反应"的情况（根因是钱被智能记账悄悄记进了没有计算入口的 oneTimeStartupItems，
+  // 已在别处修复），出于对这块数字的信任，这里加一个手动刷新入口：点击后强制重新求值一遍
+  // 并用短暂的"已刷新"提示给用户一个明确反馈，而不是让他们怀疑数字到底有没有变。
+  const [module4RefreshNonce, setModule4RefreshNonce] = useState(0);
+  const [module4JustRefreshed, setModule4JustRefreshed] = useState(false);
+  const module4RefreshTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const refreshModule4 = () => {
+    setModule4RefreshNonce((n) => n + 1);
+    setModule4JustRefreshed(true);
+    if (module4RefreshTimerRef.current) clearTimeout(module4RefreshTimerRef.current);
+    module4RefreshTimerRef.current = setTimeout(() => setModule4JustRefreshed(false), 1500);
+  };
+  React.useEffect(() => () => {
+    if (module4RefreshTimerRef.current) clearTimeout(module4RefreshTimerRef.current);
+  }, []);
+
   // —— 第3点：根据已填成本自动算出保本收入（每天/每月至少赚多少才不亏钱）——
   // 依赖数组改为直接依赖整个 formData（而非逐字段列举）：calculateBreakEvenRevenue 内部经
   // aggregateMonthlyCosts 读取的字段集合此前曾与这里手动维护的依赖列表出现过漏项（如遗漏
   // dynamicTaxItems），导致某些字段改了、这里的数字却纹丝不动——用整个 formData 作为唯一依赖
   // 从根上消除这类"计算函数读了但依赖数组没列"的隐性 bug，formData 本身每次改动都是新引用，
   // 不会因此丢失变更。
-  const breakEven = React.useMemo(() => calculateBreakEvenRevenue(formData), [formData]);
+  const breakEven = React.useMemo(() => calculateBreakEvenRevenue(formData), [formData, module4RefreshNonce]);
 
   // —— 第2点：AI 自动识别用户填错的数值及类目并提醒（本地规则化，仅提醒不阻断）——
-  const rawAnomalyWarnings = React.useMemo(() => detectFormAnomalies(formData), [formData]);
+  const rawAnomalyWarnings = React.useMemo(() => detectFormAnomalies(formData), [formData, module4RefreshNonce]);
 
   /**
    * 尚未被用户复核的 AI 建议数量。
@@ -406,12 +424,12 @@ export const AssessmentForm: React.FC<FormProps> = ({
 
   // —— 第5点：回本时间（收回初始投资所需时间），与盈亏平衡点是两条独立时间线，避免混为一谈 ——
   // 同上，依赖整个 formData，避免逐字段依赖列表漏项导致数字不跟着变。
-  const payback = React.useMemo(() => calculatePaybackPeriod(formData), [formData]);
+  const payback = React.useMemo(() => calculatePaybackPeriod(formData), [formData, module4RefreshNonce]);
 
   // —— 第6点：按用户设定的目标回本时间反推所需月/日收入 ——
   const reverseTarget = React.useMemo(
     () => calculateRequiredRevenueForTarget(formData, formData.targetPaybackMonths || 12),
-    [formData]
+    [formData, module4RefreshNonce]
   );
 
   const setAnomalyOverride = (field: string, reason: string) => {
@@ -619,6 +637,26 @@ export const AssessmentForm: React.FC<FormProps> = ({
     setFormData((prev) => ({
       ...prev,
       dynamicOpexItems: (prev.dynamicOpexItems || []).filter((it) => it.id !== id),
+      updatedAt: new Date().toISOString()
+    }));
+  };
+
+  // 修复：智能记账（SmartLedgerEntry）把"一次性且未给出摊销月数"的支出记进 oneTimeStartupItems
+  // （见 ledgerMapping.ts 注释：不摊销就不该算进月度指标），但这份清单此前在整个表单里没有任何
+  // UI 入口——用户点「确认并记入」后钱就悄悄进了一个没人能看到、也不参与保本/回本任何计算的
+  // 数组，花费清单合计和 AI 实时测算自然纹丝不动，用户会以为自己刚记的这笔账凭空消失了。
+  // 补上编辑/删除入口，让这份清单至少可见可核实，不再是数据黑洞。
+  const updateOneTimeStartupItem = (id: string, patch: Partial<{ label: string; value: number }>) => {
+    setFormData((prev) => ({
+      ...prev,
+      oneTimeStartupItems: (prev.oneTimeStartupItems || []).map((it) => (it.id === id ? { ...it, ...patch } : it)),
+      updatedAt: new Date().toISOString()
+    }));
+  };
+  const removeOneTimeStartupItem = (id: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      oneTimeStartupItems: (prev.oneTimeStartupItems || []).filter((it) => it.id !== id),
       updatedAt: new Date().toISOString()
     }));
   };
@@ -2651,6 +2689,49 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     </div>
                   ))}
 
+                  {/* 修复：智能记账把"一次性且未摊销"的支出记进 oneTimeStartupItems（性质上更接近
+                      「一次性启动投入」而不是月度经营开销，因此不计入下方保本收入等月度指标——
+                      这与 breakEvenCalculator 的口径一致，不是漏算），但此前完全没有 UI 能看到
+                      这份清单，用户确认记账后钱就像消失了一样。这里补一个独立小节让它可见/可编辑/
+                      可删除，并提示用户可以手动累加进下方「初始投资估算」。 */}
+                  {(formData.oneTimeStartupItems || []).length > 0 && (
+                    <div className="pt-2 mt-1 border-t border-dashed border-slate-300 space-y-1.5">
+                      <p className="text-[12px] font-bold text-slate-500">
+                        {language === 'en'
+                          ? 'One-time startup costs (not counted in the monthly figures above — add them into "Initial Investment Estimate" below if relevant)'
+                          : '一次性启动成本（不计入上方月度测算，如适用请手动累加进下方「初始投资估算」）'}
+                      </p>
+                      {(formData.oneTimeStartupItems || []).map((it) => (
+                        <div key={it.id} className="flex items-center gap-1.5 flex-wrap">
+                          <input
+                            type="text"
+                            value={it.label}
+                            onChange={(e) => updateOneTimeStartupItem(it.id, { label: e.target.value })}
+                            className="flex-1 min-w-[7rem] p-1.5 border border-slate-200 rounded-lg font-semibold text-slate-800"
+                          />
+                          <NumberField
+                            min={0}
+                            value={it.value}
+                            onChange={(v) => updateOneTimeStartupItem(it.id, { value: Math.max(0, v) })}
+                            className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                          />
+                          <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.baseCurrency}</span>
+                          <span className="text-[11px] text-slate-500 shrink-0">{language === 'en' ? 'one-time' : '一次性'}</span>
+                          <button type="button" onClick={() => removeOneTimeStartupItem(it.id)} className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer shrink-0">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                      <p className="text-[12px] text-slate-500 text-right">
+                        {language === 'en' ? 'One-time startup costs total: ' : '一次性启动成本合计：'}
+                        {formatMoney(
+                          (formData.oneTimeStartupItems || []).reduce((sum, it) => sum + (Number(it.value) || 0), 0),
+                          formData.baseCurrency
+                        )}
+                      </p>
+                    </div>
+                  )}
+
                   <div className="flex items-center justify-end flex-wrap gap-2 pt-2 border-t border-slate-200">
                     <span className="text-[13px] font-black text-slate-900">
                       {language === 'en' ? 'Total monthly expense:' : '花费清单合计：'}{' '}
@@ -2743,9 +2824,20 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     <Sparkles className="w-4 h-4 text-amber-600" />
                     <span>{language === 'en' ? '4. AI Real-time Financial Analysis & Diagnostics' : '4. AI 实时财务测算与智能校验'}</span>
                   </h4>
-                  <span className="text-[12px] bg-amber-200 text-amber-900 font-bold px-2.5 py-0.5 rounded-full">
-                    {language === 'en' ? 'Live Auto-Calculations' : 'AI 动态计算'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[12px] bg-amber-200 text-amber-900 font-bold px-2.5 py-0.5 rounded-full">
+                      {language === 'en' ? 'Live Auto-Calculations' : 'AI 动态计算'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={refreshModule4}
+                      title={language === 'en' ? 'Force refresh these numbers now' : '立即强制重新计算以上数字'}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white border border-amber-300 text-amber-800 text-[12px] font-bold hover:bg-amber-100 cursor-pointer transition-colors"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      <span>{module4JustRefreshed ? (language === 'en' ? '✓ Refreshed' : '✓ 已刷新') : (language === 'en' ? 'Refresh' : '手动刷新')}</span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* AI 算出的保本收入 */}
