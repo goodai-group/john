@@ -143,7 +143,7 @@ interface FormProps {
   /** BUG-12：把当前表单另存为一个新项目（保留已填数据，不覆盖正在编辑的原项目） */
   onSaveAsNewProject?: (data: BusinessFormData) => void;
   /** 手动「保存」：把当前填写进度写入项目列表（本地 + 云端），不生成报告 */
-  onSaveProgress?: (data: BusinessFormData) => void;
+  onSaveProgress?: (data: BusinessFormData) => Promise<boolean> | void;
 }
 
 const DEFAULT_FORM_DATA: BusinessFormData = {
@@ -1521,13 +1521,19 @@ export const AssessmentForm: React.FC<FormProps> = ({
   // —— 手动保存：成本页内容多、填写时间长，自动暂存只在本机草稿里，用户看不到也不放心。
   // 这里给一个显式的「保存」按钮（底部常驻操作条 + Ctrl/⌘+S），把进度写进项目列表并同步云端。
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [cloudSaveFailed, setCloudSaveFailed] = useState(false);
   const handleManualSave = () => {
     const snapshot: BusinessFormData = { ...formData, updatedAt: new Date().toISOString() };
     saveActiveDraft(snapshot);
-    onSaveProgress?.(snapshot);
+    const result = onSaveProgress?.(snapshot);
     setLastSavedAt(new Date());
+    setCloudSaveFailed(false);
     setSaveStatus(language === 'en' ? 'Saved' : '已保存');
     setTimeout(() => setSaveStatus(null), 2500);
+    // 云端写入失败要在保存按钮旁如实标出（App 层同时会弹出不自动消失的错误提示）
+    Promise.resolve(result).then((ok) => {
+      if (ok === false) setCloudSaveFailed(true);
+    });
   };
   const handleManualSaveRef = React.useRef(handleManualSave);
   handleManualSaveRef.current = handleManualSave;
@@ -3732,9 +3738,13 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   <span>{language === 'en' ? 'Save' : '保存'}</span>
                 </button>
                 {lastSavedAt && (
-                  <span className="hidden sm:inline text-[12px] text-slate-500 font-medium">
-                    {language === 'en' ? 'Saved at ' : '已保存于 '}
-                    {lastSavedAt.toLocaleTimeString(language === 'en' ? 'en-US' : 'zh-CN', { hour: '2-digit', minute: '2-digit' })}
+                  <span className={`text-[12px] font-medium ${cloudSaveFailed ? 'text-rose-600' : 'hidden sm:inline text-slate-500'}`}>
+                    {cloudSaveFailed
+                      ? (language === 'en' ? 'Saved on device only — cloud sync failed' : '仅存本机，云端同步失败')
+                      : <>
+                          {language === 'en' ? 'Saved at ' : '已保存于 '}
+                          {lastSavedAt.toLocaleTimeString(language === 'en' ? 'en-US' : 'zh-CN', { hour: '2-digit', minute: '2-digit' })}
+                        </>}
                   </span>
                 )}
               </div>
