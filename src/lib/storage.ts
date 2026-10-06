@@ -26,6 +26,9 @@ const STORAGE_KEY_INITIAL_SEEDED = 'bam_cloud_seeded_v14';
 // 删除墓碑：记录用户已删除的云端数据 id，防止同步合并时被云端旧数据"复活"
 const STORAGE_KEY_DELETED_PROJECTS = 'bam_deleted_projects_v1';
 const STORAGE_KEY_DELETED_REPORTS = 'bam_deleted_reports_v1';
+// 「已存本机、但还没成功写进云端」的项目 id：用于界面标注「未同步」、退出登录前提醒，
+// 以及下次同步时优先补推（反馈：有同学保存的项目换设备/重新登录后看不到，且没有任何错误提示）
+const STORAGE_KEY_UNSYNCED_PROJECTS = 'bam_unsynced_projects_v1';
 // 商业知识学习中心：本地记录每个视频的观看进度（第4点）
 const STORAGE_KEY_LEARNING_PROGRESS = 'bam_learning_progress_v1';
 
@@ -59,6 +62,22 @@ function markDeleted(list: string[], id: string): string[] {
 }
 function unmarkDeleted(list: string[], id: string): string[] {
   return list.filter((x) => x !== id);
+}
+
+export const getUnsyncedProjectIds = (): string[] => readDeletedIds(STORAGE_KEY_UNSYNCED_PROJECTS);
+function markUnsynced(id: string): void {
+  writeDeletedIds(STORAGE_KEY_UNSYNCED_PROJECTS, markDeleted(getUnsyncedProjectIds(), id));
+}
+function unmarkUnsynced(id: string): void {
+  writeDeletedIds(STORAGE_KEY_UNSYNCED_PROJECTS, unmarkDeleted(getUnsyncedProjectIds(), id));
+}
+
+/** a 是否比 b 更新：先比版本号（出报告会递增），同版本再比 updatedAt（表单每次修改/保存都会刷新） */
+function isNewerProject(a: BusinessFormData, b: BusinessFormData): boolean {
+  const va = a.version || 0;
+  const vb = b.version || 0;
+  if (va !== vb) return va > vb;
+  return (Date.parse(a.updatedAt || '') || 0) > (Date.parse(b.updatedAt || '') || 0);
 }
 
 export const INITIAL_PRESET_PROJECTS: BusinessFormData[] = [];
@@ -124,7 +143,9 @@ export function getStoredProjects(): BusinessFormData[] {
 // 供 saveReport 在写 report 前等待，从而保证同一 project 的云端行一定先落地。
 const pendingProjectCloudSync = new Map<string, Promise<boolean>>();
 
-export function saveProject(project: BusinessFormData): void {
+// 返回 Promise<boolean>：云端不可用时视为本地保存成功（true）；云端写入失败时返回 false，
+// 并把项目记入「未同步」列表，调用方应如实提示用户，而不是默认成功（此前失败只打 console.warn）。
+export function saveProject(project: BusinessFormData): Promise<boolean> {
   // 重新保存即视为"存活"，从删除墓碑中移除（避免同 id 数据被墓碑误拦）
   writeDeletedIds(STORAGE_KEY_DELETED_PROJECTS, unmarkDeleted(getDeletedProjectIds(), project.id));
   const current = getStoredProjects();
@@ -137,13 +158,19 @@ export function saveProject(project: BusinessFormData): void {
   localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(current));
 
   // Sync to Supabase Cloud Table /projects
-  if (isCloudDatabaseAvailable()) {
-    const syncPromise = saveAssessmentToCloud(project).catch((err) => {
+  if (!isCloudDatabaseAvailable()) return Promise.resolve(true);
+  markUnsynced(project.id);
+  const syncPromise = saveAssessmentToCloud(project)
+    .catch((err) => {
       console.warn('Background cloud save assessment failed:', err);
       return false;
+    })
+    .then((ok) => {
+      if (ok) unmarkUnsynced(project.id);
+      return ok;
     });
-    pendingProjectCloudSync.set(project.id, syncPromise);
-  }
+  pendingProjectCloudSync.set(project.id, syncPromise);
+  return syncPromise;
 }
 
 export function deleteProjectAndReports(projectId: string, explicitReportIds?: string[]): Promise<boolean> {
@@ -169,6 +196,7 @@ export function deleteProjectAndReports(projectId: string, explicitReportIds?: s
   // 即使云端删除失败或被中断，刷新时同步合并也会把这些 id 过滤掉，杜绝"复活"
   writeDeletedIds(STORAGE_KEY_DELETED_PROJECTS, markDeleted(getDeletedProjectIds(), projectId));
   writeDeletedIds(STORAGE_KEY_DELETED_REPORTS, allDeletedReportIds);
+  unmarkUnsynced(projectId);
 
   // Remove from Cloud (Supabase) Tables
   if (!isCloudDatabaseAvailable()) {
@@ -234,9 +262,10 @@ export function saveReport(report: AssessmentReport): Promise<boolean> {
   // Sync to Supabase Cloud Table /assessment_reports
   if (isCloudDatabaseAvailable()) {
     // 等待同一 project 的云端 upsert 先落地，避免 project_id 外键约束校验失败
+    // 项目行没写进去时，报告必然因外键失败，直接如实返回 false
     const waitForProject = pendingProjectCloudSync.get(report.projectId) || Promise.resolve(true);
     return waitForProject
-      .then(() => saveReportToCloud(report))
+      .then((projectOk) => (projectOk ? saveReportToCloud(report) : false))
       .catch((err) => {
         console.warn('Background cloud save report failed:', err);
         return false;
@@ -321,6 +350,7 @@ export function clearAllLocalUserData(): void {
     localStorage.removeItem(STORAGE_KEY_DELETED_PROJECTS);
     localStorage.removeItem(STORAGE_KEY_DELETED_REPORTS);
     localStorage.removeItem(STORAGE_KEY_INITIAL_SEEDED);
+    localStorage.removeItem(STORAGE_KEY_UNSYNCED_PROJECTS);
   } catch (e) {
     console.warn('Failed to clear local user data on logout:', e);
   }
@@ -390,8 +420,12 @@ export function updateEscalatedQuestionFeedback(
 // 串行化同步：StrictMode 双挂载 / 多处并发调用时排队执行，避免合并结果互相覆盖
 let syncChain: Promise<void> = Promise.resolve();
 export function syncWithCloudDatabase(currentUser?: AppUser | null): Promise<void> {
-  syncChain = syncChain.then(() => performCloudSync(currentUser));
-  return syncChain;
+  // 修复：此前写成 syncChain.then(...)，只要有一次同步抛错，syncChain 就成了一个 rejected
+  // Promise，之后每次 .then 都直接跳过 performCloudSync、原样返回那次旧错误——整页会话内
+  // 再也不会真正同步（重新登录、点「同步」都没用），直到刷新页面。先吞掉上一次的结果再排队。
+  const run = syncChain.catch(() => undefined).then(() => performCloudSync(currentUser));
+  syncChain = run.catch(() => undefined);
+  return run;
 }
 
 async function performCloudSync(currentUser?: AppUser | null): Promise<void> {
@@ -413,13 +447,15 @@ async function performCloudSync(currentUser?: AppUser | null): Promise<void> {
         Promise.all(deletedProjectIds.map((id) => deleteAssessmentFromCloud(id))),
         Promise.all(deletedReportIds.map((id) => deleteReportFromCloud(id)))
       ]);
-      const stillPendingProjectIds = deletedProjectIds.filter((_, i) => !projectDeleteResults[i]);
-      const stillPendingReportIds = deletedReportIds.filter((_, i) => !reportDeleteResults[i]);
-      if (stillPendingProjectIds.length !== deletedProjectIds.length) {
-        writeDeletedIds(STORAGE_KEY_DELETED_PROJECTS, stillPendingProjectIds);
+      // 基于「当前」墓碑摘除已确认删除的 id（而不是用同步开始时的快照整体覆盖），
+      // 否则同步期间用户新删的项目会从墓碑里丢失，随后被云端旧数据"复活"
+      const confirmedProjectIds = new Set(deletedProjectIds.filter((_, i) => projectDeleteResults[i]));
+      const confirmedReportIds = new Set(deletedReportIds.filter((_, i) => reportDeleteResults[i]));
+      if (confirmedProjectIds.size > 0) {
+        writeDeletedIds(STORAGE_KEY_DELETED_PROJECTS, getDeletedProjectIds().filter((id) => !confirmedProjectIds.has(id)));
       }
-      if (stillPendingReportIds.length !== deletedReportIds.length) {
-        writeDeletedIds(STORAGE_KEY_DELETED_REPORTS, stillPendingReportIds);
+      if (confirmedReportIds.size > 0) {
+        writeDeletedIds(STORAGE_KEY_DELETED_REPORTS, getDeletedReportIds().filter((id) => !confirmedReportIds.has(id)));
       }
     }
 
@@ -429,56 +465,68 @@ async function performCloudSync(currentUser?: AppUser | null): Promise<void> {
       fetchQuestionsFromCloud()
     ]);
 
-    // 过滤掉"用户已删除"的云端记录（墓碑），其余才允许合并回本地
-    const liveCloudProjects = cloudProjects.filter((p) => !deletedProjectIds.includes(p.id));
-    const liveCloudReports = cloudReports.filter((r) => !deletedReportIds.includes(r.id));
+    // 过滤掉"用户已删除"的云端记录（墓碑），其余才允许合并回本地。
+    // 墓碑在这里重新读取：同步期间（网络请求进行中）用户新删的项目也要拦住。
+    // 已确认删干净的 id 虽然已摘出墓碑，但云端也已没有这一行，不会被拉回来。
+    const tombstonedProjectIds = new Set([...deletedProjectIds, ...getDeletedProjectIds()]);
+    const tombstonedReportIds = new Set([...deletedReportIds, ...getDeletedReportIds()]);
+    const liveCloudProjects = cloudProjects.filter((p) => !tombstonedProjectIds.has(p.id));
+    const liveCloudReports = cloudReports.filter((r) => !tombstonedReportIds.has(r.id));
+    const cloudProjectMap = new Map(liveCloudProjects.map((p) => [p.id, p] as const));
+    const cloudReportIds = new Set(liveCloudReports.map((r) => r.id));
 
-    // 合并云端与本地 projects（云端优先取最新版本）
+    // 合并本地与云端：本地数据在拿到云端结果之后「当场」读取并立即写回，读写之间没有 await，
+    // 不会用旧快照覆盖同步期间刚保存的项目。
+    // 修复：合并规则改为「谁更新用谁」（版本号，其次 updatedAt）。此前同版本时一律以云端为准，
+    // 本地已改、但上一次没能推上云的内容，会在下次同步时被云端旧数据悄悄覆盖。
     const localProjects = getStoredProjects();
-    if (liveCloudProjects.length > 0) {
-      // 以项目 id 为键合并（保留最新版本），避免同一项目多版本同时进入列表导致 React 重复 key
-      const mergedProjectsMap = new Map<string, BusinessFormData>();
-      const putLatest = (p: BusinessFormData) => {
-        const existing = mergedProjectsMap.get(p.id);
-        if (!existing || (p.version || 0) >= (existing.version || 0)) {
-          mergedProjectsMap.set(p.id, p);
-        }
-      };
-      localProjects.forEach(putLatest);
-      // Cloud projects take precedence
-      liveCloudProjects.forEach(putLatest);
-      const mergedList = Array.from(mergedProjectsMap.values());
-      localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(mergedList));
-    }
+    const mergedProjectsMap = new Map<string, BusinessFormData>();
+    localProjects.forEach((p) => {
+      const existing = mergedProjectsMap.get(p.id);
+      if (!existing || isNewerProject(p, existing)) mergedProjectsMap.set(p.id, p);
+    });
+    liveCloudProjects.forEach((p) => {
+      const existing = mergedProjectsMap.get(p.id);
+      if (!existing || isNewerProject(p, existing)) mergedProjectsMap.set(p.id, p);
+    });
+    const mergedProjects = Array.from(mergedProjectsMap.values()).sort(
+      (a, b) => (Date.parse(b.updatedAt || '') || 0) - (Date.parse(a.updatedAt || '') || 0)
+    );
+    localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(mergedProjects));
 
-    // 仅登录用户：把云端还没有的本地 project 补推上去（未登录的匿名访问不向公共表写入数据，避免数据串扰/泄漏）。
-    // 注意：不能只在 liveCloudProjects 为空时才推送——云端已有其它 project 时，
-    // 本地新建但尚未同步的 project 同样需要补推，否则它的 report 会在 project 行缺失的情况下
-    // 因外键约束（assessment_reports.project_id → projects.id）被拒绝写入。
-    let pushFailureCount = 0;
-    if (currentUser?.uid) {
-      const cloudProjectIds = new Set(liveCloudProjects.map((p) => p.id));
-      const localOnlyProjects = localProjects.filter((p) => !cloudProjectIds.has(p.id));
-      for (const p of localOnlyProjects) {
-        const ok = await saveAssessmentToCloud(p, currentUser);
-        if (!ok) pushFailureCount++;
-      }
-    }
-
-    // 合并云端与本地 reports
     const localReports = getAllReports();
     if (liveCloudReports.length > 0) {
       const mergedReportsMap = new Map<string, AssessmentReport>();
       localReports.forEach((r) => mergedReportsMap.set(r.id, r));
       liveCloudReports.forEach((r) => mergedReportsMap.set(r.id, r));
-      const mergedList = Array.from(mergedReportsMap.values());
-      localStorage.setItem(STORAGE_KEY_REPORTS, JSON.stringify(mergedList));
+      localStorage.setItem(STORAGE_KEY_REPORTS, JSON.stringify(Array.from(mergedReportsMap.values())));
     }
 
-    // 同理：补推云端还没有的本地 report。放在 project 补推之后执行，
-    // 保证同一 project 的云端行先落地，避免外键校验失败。
+    // 仅登录用户：把云端没有、或本地比云端更新的 project 补推上去（未登录的匿名访问不向公共表写入数据，
+    // 避免数据串扰/泄漏）。此前只补推「云端完全没有」的项目，云端已有旧版本、但本地改动那次没推上去的
+    // 项目永远不会再推，换设备后看到的始终是旧内容。
+    let pushFailureCount = 0;
     if (currentUser?.uid) {
-      const cloudReportIds = new Set(liveCloudReports.map((r) => r.id));
+      const projectsToPush = mergedProjects.filter((p) => {
+        const cloud = cloudProjectMap.get(p.id);
+        return !cloud || isNewerProject(p, cloud);
+      });
+      for (const p of projectsToPush) {
+        const ok = await saveAssessmentToCloud(p, currentUser);
+        if (ok) unmarkUnsynced(p.id);
+        else {
+          markUnsynced(p.id);
+          pushFailureCount++;
+        }
+      }
+      // 云端已有且不比本地旧的项目，说明已同步，清掉可能残留的「未同步」标记
+      mergedProjects.forEach((p) => {
+        const cloud = cloudProjectMap.get(p.id);
+        if (cloud && !isNewerProject(p, cloud)) unmarkUnsynced(p.id);
+      });
+
+      // 同理：补推云端还没有的本地 report。放在 project 补推之后执行，
+      // 保证同一 project 的云端行先落地，避免外键校验失败。
       const localOnlyReports = localReports.filter((r) => !cloudReportIds.has(r.id));
       for (const r of localOnlyReports) {
         const ok = await saveReportToCloud(r, currentUser);

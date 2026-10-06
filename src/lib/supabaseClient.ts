@@ -467,8 +467,14 @@ export const saveAssessmentToCloud = async (
   currentUser?: AppUser | null
 ): Promise<boolean> => {
   if (!supabase) return false;
+  const user = currentUser || getCurrentAuthUser();
+  // 没有登录用户时绝不写入：拉取是按 owner_uid 过滤的，owner_uid 为空的行任何人都拉不回来；
+  // 更糟的是 upsert 会把一个已有项目的 owner_uid 覆盖成 null，等于把它从本人账号下"弄丢"。
+  if (!user?.uid) {
+    console.warn('saveAssessmentToCloud skipped: no signed-in user (would orphan the row)');
+    return false;
+  }
   try {
-    const user = currentUser || getCurrentAuthUser();
     const { error } = await supabase.from('projects').upsert(
       {
         id: data.id,
@@ -487,8 +493,8 @@ export const saveAssessmentToCloud = async (
         custom_exchange_rate_value: data.customExchangeRateValue,
         proof_type: data.proofType,
         form_data: data,
-        owner_uid: user?.uid || null,
-        owner_email: user?.email || data.ownerEmail || null,
+        owner_uid: user.uid,
+        owner_email: user.email || data.ownerEmail || null,
         is_submitted: data.isSubmitted,
         updated_at: new Date().toISOString()
       },
@@ -523,8 +529,10 @@ export const fetchAssessmentsFromCloud = async (
       .map((row: any) => row?.form_data as BusinessFormData)
       .filter((p): p is BusinessFormData => Boolean(p && p.id));
   } catch (e: any) {
+    // 读取失败必须抛给调用方：此前这里返回 []，与「云端确实没有项目」无法区分——
+    // 换设备/清缓存的同学看到空列表，却没有任何报错（权限/RLS/网络问题全被吞掉）。
     console.warn('fetchAssessmentsFromCloud (Supabase) failed:', e?.message || e);
-    return [];
+    throw new Error(`读取云端项目失败：${e?.message || '网络或权限异常'}`);
   }
 };
 
@@ -552,8 +560,13 @@ export const saveReportToCloud = async (
   currentUser?: AppUser | null
 ): Promise<boolean> => {
   if (!supabase) return false;
+  const user = currentUser || getCurrentAuthUser();
+  // 同 saveAssessmentToCloud：无登录用户时不写，避免产生按 owner_uid 永远拉不回来的孤儿行
+  if (!user?.uid) {
+    console.warn('saveReportToCloud skipped: no signed-in user (would orphan the row)');
+    return false;
+  }
   try {
-    const user = currentUser || getCurrentAuthUser();
     const { error } = await supabase.from('assessment_reports').upsert(
       {
         id: report.id,
@@ -564,8 +577,8 @@ export const saveReportToCloud = async (
         overall_status: report.overallStatus,
         gate_passed: report.gatePassed,
         report_data: report,
-        owner_uid: user?.uid || null,
-        owner_email: user?.email || report.ownerEmail || null,
+        owner_uid: user.uid,
+        owner_email: user.email || report.ownerEmail || null,
         created_at: report.createdAt,
         updated_at: new Date().toISOString()
       },
@@ -599,8 +612,9 @@ export const fetchReportsFromCloud = async (
       .map((row: any) => row?.report_data as AssessmentReport)
       .filter((r): r is AssessmentReport => Boolean(r && r.id));
   } catch (e: any) {
+    // 同 fetchAssessmentsFromCloud：失败要抛出，不能伪装成"云端没有报告"
     console.warn('fetchReportsFromCloud (Supabase) failed:', e?.message || e);
-    return [];
+    throw new Error(`读取云端报告失败：${e?.message || '网络或权限异常'}`);
   }
 };
 

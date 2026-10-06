@@ -55,6 +55,7 @@ import {
   saveReport,
   deleteProjectAndReports,
   hasAnyStoredProjects,
+  getUnsyncedProjectIds,
   hasAnyStoredReports,
   loadStoredTab,
   saveStoredTab,
@@ -224,6 +225,10 @@ export default function App() {
     }
     const unsubscribe = subscribeToAuthChanges(async (user, event) => {
       setCurrentUser(user);
+      // Supabase 每小时刷新 token、切回标签页时补刷新、别的标签页刷新都会触发 TOKEN_REFRESHED，
+      // 修改资料会触发 USER_UPDATED——这些都不是"重新登录"，不应再跑一次全量同步并弹「欢迎回来」。
+      // 此前每次都同步，一来频繁打扰，二来同步合并与用户正在进行的保存并发，是项目"消失"的诱因之一。
+      if (event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') return;
       if (user) {
         if (event === 'PASSWORD_RECOVERY') {
           // 用户点开找回密码邮件链接回跳：先让他设置新密码，不要当成普通登录一闪而过
@@ -254,6 +259,7 @@ export default function App() {
           const refreshedReports = loadStoredReports();
           setProjects(refreshedProjects);
           setReports(refreshedReports);
+          setUnsyncedProjectIds(getUnsyncedProjectIds());
           pushBanner(
             {
               kind: 'info',
@@ -264,6 +270,10 @@ export default function App() {
             4000
           );
         } catch (e: any) {
+          // 同步失败时本地合并结果可能已部分写入，同样刷新一次界面，避免显示的列表与本机存储不一致
+          setProjects(loadStoredProjects());
+          setReports(loadStoredReports());
+          setUnsyncedProjectIds(getUnsyncedProjectIds());
           pushBanner({
             kind: 'error',
             text: language === 'zh'
@@ -327,6 +337,7 @@ export default function App() {
       await syncWithCloudDatabase(user);
       setProjects(loadStoredProjects());
       setReports(loadStoredReports());
+      setUnsyncedProjectIds(getUnsyncedProjectIds());
       pushBanner(
         {
           kind: 'info',
@@ -495,6 +506,28 @@ export default function App() {
 
   // Logout Action
   const handleLogout = async () => {
+    // 退出登录会清空本机数据：还有没同步上云的项目时，先再尝试同步一次；
+    // 仍然失败就明确告知会丢失哪些项目，由用户决定，而不是悄悄删掉（此前没有任何提示）。
+    if (isCloudDatabaseAvailable() && getUnsyncedProjectIds().length > 0) {
+      try {
+        await syncWithCloudDatabase(currentUser);
+      } catch (e) {
+        console.warn('Pre-logout sync failed:', e);
+      }
+      const stillUnsynced = getUnsyncedProjectIds();
+      setUnsyncedProjectIds(stillUnsynced);
+      if (stillUnsynced.length > 0) {
+        const names = loadStoredProjects()
+          .filter((p) => stillUnsynced.includes(p.id))
+          .map((p) => p.projectName || (language === 'zh' ? '未命名项目' : 'Untitled project'));
+        const ok = window.confirm(
+          language === 'zh'
+            ? `以下 ${stillUnsynced.length} 个项目还没有同步到云端，退出登录后会从本机清除且无法找回：\n\n${names.join('\n')}\n\n建议先取消，检查网络后到「我的项目」点击「云端双向同步」。确定仍要退出吗？`
+            : `${stillUnsynced.length} project(s) have not been synced to the cloud and will be permanently removed from this device when you sign out:\n\n${names.join('\n')}\n\nWe recommend cancelling and retrying "Sync with cloud" in My Projects. Sign out anyway?`
+        );
+        if (!ok) return;
+      }
+    }
     let remoteLogoutFailed = false;
     try {
       await logoutGoogleUser();
@@ -514,6 +547,7 @@ export default function App() {
     setActiveProjectId('');
     setActiveReportId('');
     clearAllLocalUserData();
+    setUnsyncedProjectIds([]);
 
     pushBanner(
       remoteLogoutFailed
@@ -531,6 +565,33 @@ export default function App() {
     );
   };
 
+  // 「已存本机、未同步到云端」的项目 id，用于「我的项目」里的未同步标记与退出登录前的提醒
+  const [unsyncedProjectIds, setUnsyncedProjectIds] = useState<string[]>(() => getUnsyncedProjectIds());
+  const refreshUnsynced = () => setUnsyncedProjectIds(getUnsyncedProjectIds());
+
+  // 把单个项目写进本地列表（置顶）。以 localStorage 中的最新列表为底而不是组件 state——
+  // state 可能落后于后台同步或其他标签页刚写入的数据，用它整体覆盖会把那些项目抹掉。
+  const upsertProjectLocally = (project: BusinessFormData) => {
+    const list = [project, ...loadStoredProjects().filter((p) => p.id !== project.id)];
+    setProjects(list);
+    saveStoredProjects(list);
+  };
+
+  // 写入云端并如实反馈：失败时给出不会自动消失的错误提示（此前只有 console.warn，用户毫不知情）
+  const persistProjectToCloud = (project: BusinessFormData): Promise<boolean> =>
+    saveProject(project).then((ok) => {
+      refreshUnsynced();
+      if (!ok && currentUser) {
+        pushBanner({
+          kind: 'error',
+          text: language === 'zh'
+            ? `「${project.projectName || '未命名项目'}」已保存在本机，但未能同步到云端。换设备或退出登录前，请先到「我的项目」点击「云端双向同步」重试。`
+            : `"${project.projectName || 'Untitled project'}" is saved on this device but could not be synced to the cloud. Before switching devices or signing out, retry via "Sync with cloud" in My Projects.`
+        });
+      }
+      return ok;
+    });
+
   // Submit form handler
   const handleFormSubmit = (submittedData: BusinessFormData) => {
     // 1. 先进入"正在生成报告"过场，让结果出炉有仪式感
@@ -539,12 +600,16 @@ export default function App() {
     // 用 setTimeout 把真实计算与导航包起来，制造一段可感知的"生成"过程
     setTimeout(() => {
       // 2. Calculate latest version report
-      const existingReportsForProj = reports.filter((r) => r.projectId === submittedData.id);
+      // 列表一律以 localStorage 里的最新数据为底，而不是 1.1 秒前点击时闭包里的 state：
+      // 这期间后台同步（或另一个标签页）可能已经写入了新数据，用旧 state 整体覆盖回去会把它们抹掉。
+      const latestReports = loadStoredReports();
+      const existingReportsForProj = latestReports.filter((r) => r.projectId === submittedData.id);
       // 取历史最大版本号 + 1，避免旧数据中版本号重复导致列表 key 冲突
       const nextVersion = existingReportsForProj.reduce((max, r) => Math.max(max, r.version || 0), 0) + 1;
       const projectWithVersion = {
         ...submittedData,
         version: nextVersion,
+        updatedAt: new Date().toISOString(),
         ...(currentUser ? { ownerUid: currentUser.uid, ownerEmail: currentUser.email || submittedData.ownerEmail } : {})
       };
 
@@ -555,16 +620,12 @@ export default function App() {
       }
 
       // 3. Update projects list
-      const updatedProjects = [
-        projectWithVersion,
-        ...projects.filter((p) => p.id !== submittedData.id)
-      ];
-      setProjects(updatedProjects);
-      saveStoredProjects(updatedProjects);
-      saveProject(projectWithVersion);
+      upsertProjectLocally(projectWithVersion);
+      // 项目云端写入失败时 saveReport 也会返回 false（外键依赖），由下方统一提示一次
+      saveProject(projectWithVersion).finally(refreshUnsynced);
 
       // 4. Update reports list
-      const updatedReports = [newReport, ...reports];
+      const updatedReports = [newReport, ...latestReports.filter((r) => r.id !== newReport.id)];
       setReports(updatedReports);
       saveStoredReports(updatedReports);
       // 报告已确定性地存入本地；云端写入是否成功要如实告知，不能默认成功，
@@ -575,10 +636,9 @@ export default function App() {
             {
               kind: 'error',
               text: language === 'zh'
-                ? '报告已保存在本机，但云端同步失败（可能是网络问题），请稍后点击"云端双向同步"重试'
-                : 'Report saved locally, but cloud sync failed (possibly a network issue). Please retry via "Sync with cloud" later'
-            },
-            6000
+                ? '报告已保存在本机，但云端同步失败（可能是网络问题），换设备或退出登录前请先到「我的项目」点击「云端双向同步」重试'
+                : 'Report saved on this device, but cloud sync failed (possibly a network issue). Before switching devices or signing out, retry via "Sync with cloud" in My Projects'
+            }
           );
         }
       });
@@ -594,8 +654,9 @@ export default function App() {
   // Delete project and all associated reports (P0 data withdrawal)
   // ⚠️ 修复：删除时必须同步清理云端数据，否则刷新后云端合并会把已删除的数据重新拉回本地
   const handleDeleteProject = (projId: string) => {
-    const updatedProjects = projects.filter((p) => p.id !== projId);
-    const updatedReports = reports.filter((r) => r.projectId !== projId);
+    const latestReports = loadStoredReports();
+    const updatedProjects = loadStoredProjects().filter((p) => p.id !== projId);
+    const updatedReports = latestReports.filter((r) => r.projectId !== projId);
 
     setProjects(updatedProjects);
     saveStoredProjects(updatedProjects);
@@ -604,10 +665,10 @@ export default function App() {
 
     // 同步删除本地与云端（Supabase）中该项目的评估与报告，防止刷新后被云端数据"复活"；
     // 显式传入被删报告 id，确保删除墓碑能准确记录（本地报告此刻可能已被上方清空）
-    const deletedReportIds = reports.filter((r) => r.projectId === projId).map((r) => r.id);
-    deleteProjectAndReports(projId, deletedReportIds).catch((e) =>
-      console.warn('云端删除失败（本地已删除，可稍后重试同步）:', e)
-    );
+    const deletedReportIds = latestReports.filter((r) => r.projectId === projId).map((r) => r.id);
+    deleteProjectAndReports(projId, deletedReportIds)
+      .catch((e) => console.warn('云端删除失败（本地已删除，可稍后重试同步）:', e))
+      .finally(refreshUnsynced);
 
     if (activeProjectId === projId) {
       if (updatedProjects.length > 0) {
@@ -621,13 +682,13 @@ export default function App() {
 
   // Update a project's metadata (e.g. collaborators managed from Projects page)
   const handleUpdateProject = (projId: string, patch: Partial<BusinessFormData>) => {
-    const updated = projects.map((p) =>
-      p.id === projId ? { ...p, ...patch, updatedAt: new Date().toISOString() } : p
-    );
+    const current = loadStoredProjects().find((p) => p.id === projId);
+    if (!current) return;
+    const proj = { ...current, ...patch, updatedAt: new Date().toISOString() };
+    const updated = loadStoredProjects().map((p) => (p.id === projId ? proj : p));
     setProjects(updated);
     saveStoredProjects(updated);
-    const proj = updated.find((p) => p.id === projId);
-    if (proj) saveProject(proj);
+    persistProjectToCloud(proj);
   };
 
   // Re-assess existing project
@@ -706,9 +767,7 @@ export default function App() {
   // Create new project
   const handleNewProject = () => {
     const newDraft = createBlankDraft();
-    const updatedProjects = [newDraft, ...projects];
-    setProjects(updatedProjects);
-    saveStoredProjects(updatedProjects);
+    upsertProjectLocally(newDraft);
     setActiveProjectId(newDraft.id);
     navigateTo('form');
   };
@@ -716,10 +775,8 @@ export default function App() {
   // BUG-12：把当前表单内容另存为一份全新项目，原项目保持不动，避免用户以为在新建
   // 实际却覆盖了正在编辑速览。
   const handleSaveAsNewProject = (data: BusinessFormData) => {
-    const updatedProjects = [data, ...projects];
-    setProjects(updatedProjects);
-    saveStoredProjects(updatedProjects);
-    saveProject(data);
+    upsertProjectLocally(data);
+    persistProjectToCloud(data);
     setActiveProjectId(data.id);
   };
 
@@ -730,11 +787,9 @@ export default function App() {
       ...data,
       ...(currentUser ? { ownerUid: currentUser.uid, ownerEmail: currentUser.email || data.ownerEmail } : {})
     };
-    const updatedProjects = [saved, ...projects.filter((p) => p.id !== saved.id)];
-    setProjects(updatedProjects);
-    saveStoredProjects(updatedProjects);
-    saveProject(saved);
+    upsertProjectLocally(saved);
     setActiveProjectId(saved.id);
+    return persistProjectToCloud(saved);
   };
 
   // Apply simulator values into form
@@ -750,8 +805,9 @@ export default function App() {
       updatedAt: new Date().toISOString()
     };
     saveActiveDraft(updated);
-    const isNewProject = !projects.some((p) => p.id === updated.id);
-    const updatedList = isNewProject ? [updated, ...projects] : projects.map((p) => (p.id === updated.id ? updated : p));
+    const latestProjects = loadStoredProjects();
+    const isNewProject = !latestProjects.some((p) => p.id === updated.id);
+    const updatedList = isNewProject ? [updated, ...latestProjects] : latestProjects.map((p) => (p.id === updated.id ? updated : p));
     setProjects(updatedList);
     saveStoredProjects(updatedList);
     if (isNewProject) setActiveProjectId(updated.id);
@@ -804,6 +860,7 @@ export default function App() {
         const refreshedReports = loadStoredReports();
         setProjects(refreshedProjects);
         setReports(refreshedReports);
+        setUnsyncedProjectIds(getUnsyncedProjectIds());
         if (currentUser) {
           pushBanner(
             {
@@ -1046,6 +1103,7 @@ export default function App() {
             onUpdateProject={handleUpdateProject}
             isCloudDatabaseReady={isCloudDatabaseAvailable()}
             onTriggerSync={handleTriggerSync}
+            unsyncedProjectIds={unsyncedProjectIds}
             currentUser={currentUser}
             onOpenAuth={() => setIsAuthModalOpen(true)}
           />

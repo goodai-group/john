@@ -39,6 +39,8 @@ interface ProjectsListProps {
   onUpdateProject?: (id: string, patch: Partial<BusinessFormData>) => void;
   isCloudDatabaseReady: boolean;
   onTriggerSync: () => void;
+  /** 已存本机但还没成功同步到云端的项目 id */
+  unsyncedProjectIds?: string[];
   currentUser?: AppUser | null;
   /** 打开登录/注册弹窗（Google + 邮箱密码双通道） */
   onOpenAuth?: () => void;
@@ -55,6 +57,7 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
   onUpdateProject,
   isCloudDatabaseReady,
   onTriggerSync,
+  unsyncedProjectIds = [],
   currentUser,
   onOpenAuth
 }) => {
@@ -238,6 +241,17 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
                         <span className="text-[12px] text-neutral-400 font-medium">
                           {new Date(proj.updatedAt).toLocaleDateString()}
                         </span>
+                        {isCloudDatabaseReady && currentUser && unsyncedProjectIds.includes(proj.id) && (
+                          <button
+                            type="button"
+                            onClick={onTriggerSync}
+                            title={t('这个项目只存在本机，换设备或退出登录前请先同步', 'This project only exists on this device — sync before switching devices or signing out')}
+                            className="text-[12px] bg-rose-50 text-rose-700 font-bold px-2.5 py-0.5 rounded-full border border-rose-200 flex items-center space-x-1 cursor-pointer hover:bg-rose-100"
+                          >
+                            <AlertCircle className="w-3 h-3" />
+                            <span>{t('未同步到云端 · 点击重试', 'Not synced · retry')}</span>
+                          </button>
+                        )}
                       </div>
 
                       <h3 className="text-base font-black text-neutral-900 leading-snug">
