@@ -29,7 +29,8 @@ import {
   Wrench,
   Target,
   AlertOctagon,
-  Search
+  Search,
+  Save
 } from 'lucide-react';
 import {
   BillingCycle,
@@ -54,6 +55,7 @@ import { getAuthHeaders } from '../../lib/supabaseClient';
 import {
   normalizeIndustryKey,
   getIndustryTemplateByKey,
+  inferBusinessStructureLocally,
   inferRegulatoryCosts,
   InferredStructure,
   REGULATORY_COUNTRY_OPTIONS
@@ -62,10 +64,12 @@ import { State as StateLib } from 'country-state-city';
 import { SearchableSelect, type SearchableSelectOption } from './SearchableSelect';
 import { SmartLedgerEntry } from './SmartLedgerEntry';
 import { calculateBreakEvenRevenue } from '../../lib/breakEvenCalculator';
+import { getDepreciationSuggestion, getDepreciationTable } from '../../lib/depreciationGuide';
 import { calculatePaybackPeriod, calculateRequiredRevenueForTarget } from '../../lib/paybackCalculator';
 import { detectFormAnomalies } from '../../lib/anomalyDetection';
 import { FieldProvenanceBadge, PendingConfirmationsBar } from '../FieldProvenanceBadge';
 import { NumberField } from './NumberField';
+import { ChinaVpnInlineLink } from '../ChinaNetworkTip';
 
 /** 行业枚举值集合，用于在 AI 返回值与可选项之间做映射 */
 const INDUSTRY_KEYS = INDUSTRY_BENCHMARKS.map((b) => b.id) as string[];
@@ -138,6 +142,8 @@ interface FormProps {
   largeFont: boolean;
   /** BUG-12：把当前表单另存为一个新项目（保留已填数据，不覆盖正在编辑的原项目） */
   onSaveAsNewProject?: (data: BusinessFormData) => void;
+  /** 手动「保存」：把当前填写进度写入项目列表（本地 + 云端），不生成报告 */
+  onSaveProgress?: (data: BusinessFormData) => void;
 }
 
 const DEFAULT_FORM_DATA: BusinessFormData = {
@@ -209,7 +215,8 @@ export const AssessmentForm: React.FC<FormProps> = ({
   onSubmit,
   onOpenAiHelper,
   largeFont,
-  onSaveAsNewProject
+  onSaveAsNewProject,
+  onSaveProgress
 }) => {
   // BUG-12：进入快速体检时会默认载入上一个已提交的项目（而不是空白新项目），此前没有任何
   // 提示，用户以为在新建，实际在编辑并可能覆盖原项目。isSubmitted 为 true 说明这是一个
@@ -278,6 +285,12 @@ export const AssessmentForm: React.FC<FormProps> = ({
     () => Boolean(initialData?.industry && initialData.industry !== DEFAULT_FORM_DATA.industry) ||
       Boolean(initialData?.customIndustryName)
   );
+  // 所属行业不再要求用户一上来就选：填项目名称时先用本地关键词即时推测，名称填完（失焦）
+  // 再由 AI 推算校正；这里记录当前行业值的来源，用于在名称下方标注「AI 推测，可修改」。
+  const [industrySource, setIndustrySource] = useState<'pending' | 'guess' | 'ai' | 'user'>(() =>
+    industryTouched ? 'user' : initialData?.projectName?.trim() ? 'ai' : 'pending'
+  );
+  const [isEditingIndustry, setIsEditingIndustry] = useState(false);
   const [currencyTouched, setCurrencyTouched] = useState(
     () => Boolean(initialData?.baseCurrency && initialData.baseCurrency !== DEFAULT_FORM_DATA.baseCurrency)
   );
@@ -317,6 +330,16 @@ export const AssessmentForm: React.FC<FormProps> = ({
     () => REGULATORY_COUNTRY_OPTIONS.find((o) => o.countryLabel === formData.regionCountry)?.iso2,
     [formData.regionCountry]
   );
+  // 折旧指引按「所在国家」的法定货币代码查当地规则（欧盟地区共用 EUR）；未选国家时给通用参考
+  const regionCountryCode = React.useMemo(
+    () => REGULATORY_COUNTRY_OPTIONS.find((o) => o.countryLabel === formData.regionCountry)?.code,
+    [formData.regionCountry]
+  );
+  const depreciationTable = React.useMemo(
+    () => getDepreciationTable(regionCountryCode, language),
+    [regionCountryCode, language]
+  );
+  const [showDepreciationGuide, setShowDepreciationGuide] = useState(false);
   const statesForRegionCountry = React.useMemo(
     () => (regionCountryIso2 ? StateLib.getStatesOfCountry(regionCountryIso2) : []),
     [regionCountryIso2]
@@ -754,9 +777,11 @@ export const AssessmentForm: React.FC<FormProps> = ({
         ...(prev.dynamicEquipmentItems || []),
         {
           id: `equip-${Date.now()}`,
-          label: language === 'en' ? 'New equipment' : '新增设备',
+          // 留空让占位提示「例如：冰柜 / 笔记本电脑」引导用户填名称，名称决定下方的折旧年限参考
+          label: '',
           value: 0,
-          usefulLifeMonths: 12
+          // 默认 5 年（通用设备参考年限），填了名称后会给出更贴切的当地参考可一键套用
+          usefulLifeMonths: 60
         }
       ],
       updatedAt: new Date().toISOString()
@@ -846,6 +871,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
   // —— 行业自定义 / 币种自定义 处理 ——
   const handleIndustryChange = (value: string) => {
     setIndustryTouched(true);
+    setIndustrySource('user');
     if (value === CUSTOM_INDUSTRY_VALUE) {
       updateField('industry', CUSTOM_INDUSTRY_VALUE as any);
       // 若用户尚未自填自定义行业，先用项目名预填，降低空框困惑
@@ -901,6 +927,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
   };
   const handleCustomIndustryInput = (value: string) => {
     setIndustryTouched(true);
+    setIndustrySource('user');
     setCustomIndustry(value);
     updateField('customIndustryName', value || undefined);
   };
@@ -1030,10 +1057,12 @@ export const AssessmentForm: React.FC<FormProps> = ({
       patch.industry = matchedIndustry as BusinessFormData['industry'];
       patch.customIndustryName = undefined as any;
       setCustomIndustry('');
+      setIndustrySource('ai');
     } else if (rawIndustry) {
       patch.industry = CUSTOM_INDUSTRY_VALUE as any;
       patch.customIndustryName = rawIndustry;
       setCustomIndustry(rawIndustry);
+      setIndustrySource('ai');
     }
 
     // 币种：优先 suggestedCurrency，兼容 baseCurrency 别名
@@ -1130,6 +1159,16 @@ export const AssessmentForm: React.FC<FormProps> = ({
     updateField('projectName', value);
     if (value.trim()) setNameError(null);
     const name = value.trim();
+    // 本地关键词即时推测行业（纯前端、无网络请求、不打断输入），只更新行业本身；
+    // 成本结构等仍等名称填完后由 AI 推算。用户手动选过行业后不再改动。
+    if (!industryTouched && name.length >= 2) {
+      const guessKey = inferBusinessStructureLocally(name).inferredIndustryKey;
+      if (guessKey && guessKey !== 'custom' && INDUSTRY_KEYS.includes(guessKey)) {
+        setFormData((prev) => ({ ...prev, industry: guessKey as BusinessFormData['industry'], customIndustryName: undefined }));
+        setCustomIndustry('');
+        setIndustrySource('guess');
+      }
+    }
     if (name.length < 2) {
       setInferState('idle');
       setInferErrorReason(null);
@@ -1142,6 +1181,19 @@ export const AssessmentForm: React.FC<FormProps> = ({
   };
 
   /** 真正发起一次 AI 推算（不再防抖，因为调用时机已经是用户的一次明确操作：点下一步，或点“重新推算”）。 */
+  const inferInFlightRef = React.useRef<Promise<void> | null>(null);
+  /** 名称填完（输入框失焦）就触发 AI 推算；点「下一步」时若推算还在进行，等它完成，不重复发请求。 */
+  const ensureBusinessInference = (): Promise<void> => {
+    if (inferInFlightRef.current) return inferInFlightRef.current;
+    const name = formData.projectName.trim();
+    if (!nameDirtyRef.current || name.length < 2) return Promise.resolve();
+    const p = runBusinessInference(name).finally(() => {
+      inferInFlightRef.current = null;
+    });
+    inferInFlightRef.current = p;
+    return p;
+  };
+
   const runBusinessInference = async (name: string): Promise<void> => {
     setInferState('loading');
     setInferErrorReason(null);
@@ -1466,6 +1518,30 @@ export const AssessmentForm: React.FC<FormProps> = ({
     (formData.industry === CUSTOM_INDUSTRY_VALUE ? formData.customIndustryName : formData.industry) ||
     (language === 'en' ? 'Not identified' : '未识别');
 
+  // —— 手动保存：成本页内容多、填写时间长，自动暂存只在本机草稿里，用户看不到也不放心。
+  // 这里给一个显式的「保存」按钮（底部常驻操作条 + Ctrl/⌘+S），把进度写进项目列表并同步云端。
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const handleManualSave = () => {
+    const snapshot: BusinessFormData = { ...formData, updatedAt: new Date().toISOString() };
+    saveActiveDraft(snapshot);
+    onSaveProgress?.(snapshot);
+    setLastSavedAt(new Date());
+    setSaveStatus(language === 'en' ? 'Saved' : '已保存');
+    setTimeout(() => setSaveStatus(null), 2500);
+  };
+  const handleManualSaveRef = React.useRef(handleManualSave);
+  handleManualSaveRef.current = handleManualSave;
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        handleManualSaveRef.current();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
   const handleSaveAsNew = () => {
     if (!onSaveAsNewProject) return;
     const ok = window.confirm(
@@ -1564,8 +1640,8 @@ export const AssessmentForm: React.FC<FormProps> = ({
               </h3>
               <p className="text-xs text-slate-500 font-medium">
                 {language === 'en'
-                  ? 'Just the name. AI will automatically infer industry, currency and cost structure for you — you can always change it below in "Advanced Settings".'
-                  : '只填名字。行业、币种、成本结构，AI 都会自动替你推断，也可以随时在下方「高级设置」里改。'}
+                  ? 'Just the name. AI guesses the industry from it (shown right below the name, editable), plus currency and cost structure.'
+                  : '只填名字。AI 会根据名称推测所属行业（名称下方显示，不对可直接改），并自动推断币种与成本结构。'}
               </p>
             </div>
 
@@ -1580,6 +1656,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                 placeholder={language === 'en' ? 'e.g. Sunshine Bakery Cafe' : '例如：阳光工坊社区烘焙店'}
                 value={formData.projectName}
                 onChange={(e) => handleProjectNameChange(e.target.value)}
+                onBlur={() => void ensureBusinessInference()}
                 className={`w-full p-4 border-2 rounded-2xl text-base font-bold text-slate-900 shadow-2xs focus:ring-1 focus:ring-teal-500 ${
                   nameError ? 'border-rose-400 focus:border-rose-600' : 'border-teal-200 focus:border-teal-600'
                 }`}
@@ -1589,7 +1666,8 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   ⚠️ {nameError}
                 </p>
               )}
-              <div className="mt-2 text-[13px] space-y-1">
+              {/* 预留一行高度：名称框失焦即显示「AI 正在推算…」，若此处从 0 高度撑开会把下方按钮挤走，吞掉用户正在点的「下一步」 */}
+              <div className="mt-2 text-[13px] space-y-1 min-h-5">
                 {inferState === 'loading' && (
                   <span className="text-teal-500 font-semibold animate-pulse">
                     {language === 'en' ? 'AI is inferring industry, currency and cost structure…' : 'AI 正在推算行业、币种与成本结构…'}
@@ -1607,6 +1685,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                           ? 'AI free quota is temporarily exhausted (cooling down ~90s) — please wait a moment and retry, or fill in the fields manually for now.'
                           : 'AI 免费额度暂时用尽（冷却约 90 秒），请稍后重试，或先手动填写成本与收入项目。')
                       : (language === 'en' ? 'AI is temporarily unavailable — please select the industry manually and fill in the cost/revenue items yourself.' : 'AI 暂时不可用，请手动选择行业并自行填写成本与收入项目。')}
+                    <ChinaVpnInlineLink language={language} />
                     <button
                       type="button"
                       onClick={() => formData.projectName.trim().length >= 2 && runBusinessInference(formData.projectName.trim())}
@@ -1618,6 +1697,74 @@ export const AssessmentForm: React.FC<FormProps> = ({
                 )}
               </div>
             </div>
+
+            {/* 所属行业：不让用户一上来就选，由项目名称自动推测（输入时本地关键词即时推测，
+                名称填完后 AI 校正），这里只展示结果并允许一键修改。 */}
+            {formData.projectName.trim().length >= 2 && (
+              <div className="-mt-3 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-bold text-slate-700">{language === 'en' ? 'Industry:' : '所属行业：'}</span>
+                  {industrySource === 'pending' ? (
+                    <span className="text-slate-500">
+                      {inferState === 'loading'
+                        ? (language === 'en' ? 'AI is guessing from the name…' : 'AI 正在根据名称推测…')
+                        : inferState === 'error' || inferState === 'done'
+                          ? (language === 'en' ? 'AI could not guess it — please choose it yourself' : 'AI 暂时没能推测出来，请点右侧「自己选」')
+                          : (language === 'en' ? 'AI will guess it once you finish the name' : '名称填完后 AI 自动推测')}
+                    </span>
+                  ) : (
+                    <>
+                      <span className="font-black text-slate-900">{industryLabel}</span>
+                      <span
+                        className={`text-[11px] px-1.5 py-0.5 rounded font-bold ${
+                          industrySource === 'user' ? 'bg-slate-200 text-slate-700' : 'bg-violet-100 text-violet-700'
+                        }`}
+                      >
+                        {industrySource === 'user'
+                          ? (language === 'en' ? 'Set by you' : '你已选择')
+                          : industrySource === 'ai'
+                            ? (language === 'en' ? 'AI guess' : 'AI 推测')
+                            : (language === 'en' ? 'Guessed from name' : '根据名称初步推测')}
+                      </span>
+                    </>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingIndustry((v) => !v)}
+                    className="ml-auto text-teal-700 font-bold underline hover:text-teal-600 cursor-pointer"
+                  >
+                    {isEditingIndustry
+                      ? (language === 'en' ? 'Done' : '完成')
+                      : industrySource === 'pending'
+                        ? (language === 'en' ? 'Choose myself' : '自己选')
+                        : (language === 'en' ? 'Not right? Change' : '不对？修改')}
+                  </button>
+                </div>
+                {isEditingIndustry && (
+                  <div className="space-y-2">
+                    <SearchableSelect
+                      value={formData.industry}
+                      onChange={(v) => {
+                        handleIndustryChange(v);
+                        if (v !== CUSTOM_INDUSTRY_VALUE) setIsEditingIndustry(false);
+                      }}
+                      options={industryOptions}
+                      placeholder={language === 'en' ? '-- Select industry --' : '-- 请选择行业 --'}
+                      controlClassName="w-full p-2.5 border border-slate-300 rounded-xl font-medium text-slate-800 bg-white"
+                    />
+                    {formData.industry === CUSTOM_INDUSTRY_VALUE && (
+                      <input
+                        type="text"
+                        placeholder={language === 'en' ? 'Please enter your industry' : '请输入所属行业领域'}
+                        value={customIndustry}
+                        onChange={(e) => handleCustomIndustryInput(e.target.value)}
+                        className="w-full p-2.5 border-2 border-teal-300 rounded-xl font-medium text-slate-800"
+                      />
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* 公司注册所在国家/地区：放在第一步，因为它直接决定主报告币种，
                 并作为后面「花费清单」里税收/注册/签证参考值的唯一权威信号源。 */}
@@ -1749,7 +1896,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
               >
                 <span className="flex items-center gap-2">
                   <Settings2 className="w-4 h-4 text-teal-600" />
-                  {language === 'en' ? 'Advanced Settings (Currency / Industry / Exchange Rate / Safe Mode)' : '高级设置（币种 / 行业 / 汇率 / 安全模式）'}
+                  {language === 'en' ? 'Advanced Settings (Currency / Exchange Rate / Safe Mode)' : '高级设置（币种 / 汇率 / 安全模式）'}
                 </span>
                 <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
               </button>
@@ -1757,28 +1904,6 @@ export const AssessmentForm: React.FC<FormProps> = ({
               {showAdvanced && (
                 <div className="p-4 sm:p-5 space-y-6 text-xs bg-white">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-slate-700 font-bold mb-1">
-                        {language === 'en' ? 'Industry Type' : '所属行业类型'} <span className="text-rose-500">*</span>
-                      </label>
-                      <SearchableSelect
-                        value={formData.industry}
-                        onChange={handleIndustryChange}
-                        options={industryOptions}
-                        placeholder={language === 'en' ? '-- Select industry --' : '-- 请选择行业 --'}
-                        controlClassName="w-full p-2.5 border border-slate-300 rounded-xl font-medium text-slate-800 bg-white"
-                      />
-                      {formData.industry === CUSTOM_INDUSTRY_VALUE && (
-                        <input
-                          type="text"
-                          placeholder={language === 'en' ? 'Please enter your industry' : '请输入所属行业领域'}
-                          value={customIndustry}
-                          onChange={(e) => handleCustomIndustryInput(e.target.value)}
-                          className="mt-2 w-full p-2.5 border-2 border-teal-300 rounded-xl font-medium text-slate-800"
-                        />
-                      )}
-                    </div>
-
                     <div>
                       <label className="block text-slate-700 font-bold mb-1">
                         {language === 'en' ? 'Base Currency' : '主报告币种 (Base Currency)'} <span className="text-rose-500">*</span>
@@ -1923,8 +2048,10 @@ export const AssessmentForm: React.FC<FormProps> = ({
           </div>
 
           <div className="flex justify-end flex-col items-end gap-2">
+            {/* 不用 disabled：名称框失焦即开始推算，若这里禁用，用户这一下点击会被吞掉；
+                推算进行中点击会等待同一次推算完成后再进入下一步。 */}
             <button
-              disabled={inferState === 'loading'}
+              aria-busy={inferState === 'loading'}
               onClick={async () => {
                 const name = formData.projectName.trim();
                 if (!name) {
@@ -1938,9 +2065,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                 setNameError(null);
                 // AI 推算只在这里（用户明确点了「下一步」）触发一次，而不是每敲一个字就触发——
                 // nameDirtyRef 确保名称没改过时（如打开一个已有项目）不会误触发，覆盖已有数据。
-                if (nameDirtyRef.current && name.length >= 2) {
-                  await runBusinessInference(name);
-                }
+                await ensureBusinessInference();
                 setCurrentStep(2);
               }}
               className="flex items-center gap-1.5 px-6 py-2.5 bg-teal-600 hover:bg-teal-500 disabled:opacity-60 disabled:cursor-wait text-white rounded-xl text-xs font-bold shadow-md shadow-teal-600/20 transition-all cursor-pointer"
@@ -2593,20 +2718,104 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     </button>
                   </div>
 
-                  {/* 设备月度折旧：逐台填「设备值 + 预计使用月数」，月度折旧（设备值÷使用月数）自动求和 */}
-                  {(formData.dynamicEquipmentItems || []).map((it) => (
-                    <div key={it.id} className="flex items-center gap-1.5 flex-wrap">
+                  {/* 设备月度折旧：逐台填「设备值 + 预计使用月数」，月度折旧（设备值÷使用月数）自动求和。
+                      用户普遍不知道折旧率/使用月数该填多少：每行下方按设备名称归类，结合所在国家给出
+                      当地税法口径的参考年限与年折旧率，一键套用；「折旧怎么填？」面板解释概念并列出当地全表。 */}
+                  <div className="mt-1 p-2.5 rounded-lg bg-sky-50/70 border border-sky-100 space-y-2">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <span className="font-bold text-sky-950 flex items-center gap-1.5">
+                        <Wrench className="w-3.5 h-3.5 text-sky-600" />
+                        {language === 'en' ? 'Equipment depreciation (spread purchase cost over its useful life)' : '设备折旧（把买设备的钱摊到能用的每个月）'}
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setShowDepreciationGuide((v) => !v)}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white border border-sky-200 text-sky-700 text-[12px] font-bold hover:bg-sky-100 cursor-pointer"
+                        >
+                          <HelpCircle className="w-3 h-3" />
+                          {language === 'en' ? 'How do I fill this in?' : '折旧怎么填？'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={addDynamicEquipmentItem}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-sky-600 text-white text-[12px] font-bold hover:bg-sky-500 cursor-pointer"
+                        >
+                          + {language === 'en' ? 'Add equipment' : '添加设备'}
+                        </button>
+                      </div>
+                    </div>
+                    {showDepreciationGuide && (
+                      <div className="p-2.5 rounded-lg bg-white border border-sky-100 space-y-2 text-[12px] text-slate-700 leading-relaxed">
+                        <p>
+                          {language === 'en'
+                            ? 'Depreciation = purchase price ÷ months you expect to use it. Annual depreciation rate = 1 ÷ useful years (5 years → 20% per year).'
+                            : '折旧 = 设备买价 ÷ 预计能用多少个月；年折旧率 = 1 ÷ 能用的年数（能用 5 年 → 每年折旧 20%）。'}
+                        </p>
+                        <p className="text-slate-500">
+                          {language === 'en'
+                            ? `Example: a fridge bought for 3,600 that lasts 5 years (60 months) costs 3,600 ÷ 60 = 60 per month. Just enter the price and pick the months or the annual rate — the system does the maths.`
+                            : '例：花 3,600 买的冰箱能用 5 年（60 个月），每月折旧 = 3,600 ÷ 60 = 60。你只需填买价，再选使用月数或年折旧率，系统自动算。'}
+                        </p>
+                        <div className="font-bold text-sky-900">
+                          {language === 'en'
+                            ? `Reference lives — ${depreciationTable.regionLabel}`
+                            : `参考折旧年限 · ${depreciationTable.regionLabel}`}
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                          {depreciationTable.rows.map((r) => (
+                            <div key={r.category} className="p-1.5 rounded bg-sky-50 border border-sky-100">
+                              <div className="text-slate-600">{r.label}</div>
+                              <div className="font-mono font-bold text-slate-900">
+                                {language === 'en' ? `${r.years}y · ${r.annualRatePct}%/yr` : `${r.years}年 · 年折旧率${r.annualRatePct}%`}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <p className="text-[11px] text-slate-500">{depreciationTable.note}</p>
+                        {!depreciationTable.isLocal && (
+                          <p className="text-[11px] text-amber-700 font-semibold">
+                            {language === 'en'
+                              ? 'Select "Company Registration Country / Region" in Step 1 to see your local tax rules.'
+                              : '在第一步选择「公司注册所在国家/地区」，即可看到当地税法口径的折旧年限。'}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    {(formData.dynamicEquipmentItems || []).length === 0 && (
+                      <p className="text-[12px] text-slate-500">
+                        {language === 'en'
+                          ? 'Bought machines, fridges, computers or a vehicle? Click "Add equipment" and enter each one — no need to compute depreciation yourself.'
+                          : '买了机器、冰柜、电脑或车辆？点「添加设备」逐台填买价即可，不用自己算折旧。'}
+                      </p>
+                    )}
+                  </div>
+                  {(formData.dynamicEquipmentItems || []).map((it) => {
+                    const sug = getDepreciationSuggestion(it.label, regionCountryCode, language);
+                    const months = it.usefulLifeMonths > 0 ? it.usefulLifeMonths : 0;
+                    const ratePct = months > 0 ? Math.round((1200 / months) * 10) / 10 : 0;
+                    const monthlyDep = months > 0 ? (Number(it.value) || 0) / months : 0;
+                    const RATE_YEAR_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 10, 15, 20, 25, 30, 39];
+                    // 智能记账记入的设备行 usefulLifeMonths 固定为 1、value 已是折算好的每月金额
+                    // （见 ledgerMapping.ts），不能再套用年限参考，否则会把月额再除一次
+                    const isPreconverted = it.usefulLifeMonths === 1;
+                    const yearsValue = months > 0 && months % 12 === 0 && RATE_YEAR_OPTIONS.includes(months / 12) ? String(months / 12) : '';
+                    return (
+                    <div key={it.id} className="space-y-1">
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       <input
                         type="text"
                         value={it.label}
                         onChange={(e) => updateDynamicEquipmentItem(it.id, { label: e.target.value })}
-                        placeholder={language === 'en' ? 'e.g. Machine A' : '例如：机器A'}
+                        placeholder={language === 'en' ? 'e.g. Freezer / Laptop / Delivery van' : '例如：冰柜 / 笔记本电脑 / 送货车'}
                         className="flex-1 min-w-[7rem] p-1.5 border border-slate-200 rounded-lg font-semibold text-slate-800"
                       />
                       <NumberField
                         min={0}
                         value={it.value}
                         onChange={(v) => updateDynamicEquipmentItem(it.id, { value: v })}
+                        title={language === 'en' ? 'Purchase price' : '设备买价'}
+                        placeholder={language === 'en' ? 'Price' : '买价'}
                         className="w-20 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
                       />
                       <div className="flex items-center gap-1 shrink-0">
@@ -2615,10 +2824,32 @@ export const AssessmentForm: React.FC<FormProps> = ({
                           min={1}
                           value={it.usefulLifeMonths}
                           onChange={(v) => updateDynamicEquipmentItem(it.id, { usefulLifeMonths: v })}
+                          title={language === 'en' ? 'Months you expect to use it' : '预计能用多少个月'}
                           className="w-14 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
                         />
                         <span className="text-[11px] text-slate-500">{language === 'en' ? 'months' : '个月'}</span>
                       </div>
+                      {!isPreconverted && (
+                      <select
+                        value={yearsValue}
+                        onChange={(e) => e.target.value && updateDynamicEquipmentItem(it.id, { usefulLifeMonths: Number(e.target.value) * 12 })}
+                        title={language === 'en' ? 'Or pick by annual depreciation rate' : '或者直接按年折旧率选'}
+                        className="shrink-0 p-1.5 border border-slate-200 rounded-lg bg-white text-[12px] font-semibold text-slate-700"
+                      >
+                        {!yearsValue && (
+                          <option value="">
+                            {language === 'en' ? `Rate ${ratePct}%/yr` : `年折旧率 ${ratePct}%`}
+                          </option>
+                        )}
+                        {RATE_YEAR_OPTIONS.map((y) => (
+                          <option key={y} value={y}>
+                            {language === 'en'
+                              ? `${Math.round((100 / y) * 10) / 10}%/yr (${y}y)`
+                              : `年折旧率 ${Math.round((100 / y) * 10) / 10}%（${y}年）`}
+                          </option>
+                        ))}
+                      </select>
+                      )}
                       <button
                         type="button"
                         onClick={() => openEquipmentSearch(it.label)}
@@ -2631,7 +2862,39 @@ export const AssessmentForm: React.FC<FormProps> = ({
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
-                  ))}
+                    {isPreconverted ? (
+                    <div className="pl-1 text-[11px] text-slate-500">
+                      {language === 'en'
+                        ? 'Recorded via smart ledger — amount is already the monthly depreciation.'
+                        : '由智能记账记入：金额已是折算好的每月折旧额。'}
+                    </div>
+                    ) : (
+                    <div className="flex items-center gap-1.5 flex-wrap pl-1 text-[11px] text-sky-800">
+                      <span title={sug.note}>
+                        💡 {language === 'en'
+                          ? `${sug.categoryLabel} · ${sug.regionLabel}: ${sug.years} years ≈ ${sug.annualRatePct}% per year`
+                          : `${sug.categoryLabel} · ${sug.regionLabel}参考：${sug.years} 年 ≈ 年折旧率 ${sug.annualRatePct}%`}
+                      </span>
+                      {it.usefulLifeMonths !== sug.months && (
+                        <button
+                          type="button"
+                          onClick={() => updateDynamicEquipmentItem(it.id, { usefulLifeMonths: sug.months })}
+                          className="px-1.5 py-0.5 rounded bg-sky-100 hover:bg-sky-200 text-sky-800 font-bold cursor-pointer"
+                        >
+                          {language === 'en' ? `Use ${sug.months} months` : `套用 ${sug.months} 个月`}
+                        </button>
+                      )}
+                      {monthlyDep > 0 && (
+                        <span className="text-slate-500">
+                          {language === 'en' ? '→ monthly ' : '→ 每月折旧 '}
+                          {formatMoney(Math.round(monthlyDep), formData.equipmentDepreciationCost.currency)}
+                        </span>
+                      )}
+                    </div>
+                    )}
+                    </div>
+                    );
+                  })}
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="flex-1 min-w-[7rem] p-1.5 font-semibold text-slate-800">{language === 'en' ? 'Other equipment depreciation' : '其他补充设备折旧'}</span>
                     <NumberField
@@ -3446,21 +3709,44 @@ export const AssessmentForm: React.FC<FormProps> = ({
             </div>
           )}
 
-          <div className="flex justify-between">
-            <button
-              onClick={() => setCurrentStep(1)}
-              className="flex items-center gap-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold cursor-pointer"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>{language === 'en' ? 'Back' : '上一步'}</span>
-            </button>
-            <button
-              onClick={handleFinalSubmit}
-              className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-neutral-950 rounded-xl text-sm font-black shadow-lg shadow-amber-500/30 transition-all cursor-pointer"
-            >
-              <Sparkles className="w-4 h-4" />
-              <span>{language === 'en' ? 'Generate Health Report' : '出报告 · 生成财务测算与评估报告'}</span>
-            </button>
+          {/* 底部常驻操作条：成本页很长，保存/出报告按钮始终贴在屏幕底部，不用滚到最下面才能点。
+              右侧留出空位，避免与全局右下角「AI 答疑」悬浮按钮重叠；移动端抬高到底部标签栏之上。 */}
+          <div className="sticky bottom-[4.5rem] md:bottom-4 z-30 mr-16 sm:mr-28 2xl:mr-0">
+            <div className="flex items-center justify-between gap-2 flex-wrap p-2.5 rounded-2xl bg-white/95 backdrop-blur border border-slate-200 shadow-lg">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentStep(1)}
+                  aria-label={language === 'en' ? 'Back' : '上一步'}
+                  className="flex items-center gap-1 px-2.5 sm:px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold cursor-pointer"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">{language === 'en' ? 'Back' : '上一步'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleManualSave}
+                  title={language === 'en' ? 'Save progress (Ctrl/⌘ + S)' : '保存填写进度（Ctrl/⌘ + S）'}
+                  className="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white rounded-xl text-xs font-bold shadow-sm cursor-pointer"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>{language === 'en' ? 'Save' : '保存'}</span>
+                </button>
+                {lastSavedAt && (
+                  <span className="hidden sm:inline text-[12px] text-slate-500 font-medium">
+                    {language === 'en' ? 'Saved at ' : '已保存于 '}
+                    {lastSavedAt.toLocaleTimeString(language === 'en' ? 'en-US' : 'zh-CN', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={handleFinalSubmit}
+                className="flex items-center gap-2 px-4 sm:px-8 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-neutral-950 rounded-xl text-xs sm:text-sm font-black shadow-lg shadow-amber-500/30 transition-all cursor-pointer"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span className="sm:hidden">{language === 'en' ? 'Report' : '出报告'}</span>
+                <span className="hidden sm:inline">{language === 'en' ? 'Generate Health Report' : '出报告 · 生成评估报告'}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

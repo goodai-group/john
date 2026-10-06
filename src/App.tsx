@@ -11,6 +11,7 @@ import { Navbar } from './components/Navbar';
 import { FeeTransparencyModal } from './components/FeeTransparencyModal';
 import { AppGuideModal } from './components/AppGuideModal';
 import { AccessibilityToolbar } from './components/AccessibilityToolbar';
+import { ChinaNetworkTip } from './components/ChinaNetworkTip';
 import { AuthModal, AuthMode } from './components/AuthModal';
 import { LoginRequiredGate } from './components/LoginRequiredGate';
 
@@ -301,6 +302,11 @@ export default function App() {
 
   // Find active project & active report
   const activeProject = projects.find((p) => p.id === activeProjectId) || projects[0];
+  // 表单在还没有任何项目时以 key='new' 挂载；第一次手动保存后项目才进入列表，
+  // 若 key 跟着变成项目 id 会整个重新挂载（跳回第一步）。记下这次保存的 id 沿用原 key。
+  const [unsavedFormProjectId, setUnsavedFormProjectId] = useState<string | null>(null);
+  const formKey =
+    activeProject && activeProject.id === unsavedFormProjectId ? 'new' : activeProject?.id || 'new';
   const activeReport =
     reports.find((r) => r.id === activeReportId) ||
     reports.find((r) => r.projectId === activeProjectId) ||
@@ -717,6 +723,20 @@ export default function App() {
     setActiveProjectId(data.id);
   };
 
+  // 表单里的手动「保存」：只更新这个项目的填写内容（本地 + 云端），不生成报告、不切换页面
+  const handleSaveFormProgress = (data: BusinessFormData) => {
+    if (!activeProject) setUnsavedFormProjectId(data.id);
+    const saved = {
+      ...data,
+      ...(currentUser ? { ownerUid: currentUser.uid, ownerEmail: currentUser.email || data.ownerEmail } : {})
+    };
+    const updatedProjects = [saved, ...projects.filter((p) => p.id !== saved.id)];
+    setProjects(updatedProjects);
+    saveStoredProjects(updatedProjects);
+    saveProject(saved);
+    setActiveProjectId(saved.id);
+  };
+
   // Apply simulator values into form
   const handleApplySimulatorToForm = (simulatedData: Partial<BusinessFormData>) => {
     // 没有任何已有项目时（如全新账号第一次使用沙盒试算器），activeProject 为 undefined，
@@ -906,6 +926,9 @@ export default function App() {
         </div>
       )}
 
+      {/* 中国大陆访问者：AI 功能依赖海外服务，提示可使用网络加速 */}
+      <ChinaNetworkTip language={language} />
+
       {/* Main Content Area based on activeTab */}
       {/* BUG-19 修复：移动端悬浮"AI 答疑"按钮固定在 bottom-20（80px）且自身还有高度，
           pb-24（96px）的安全区不足以完全避开它，会遮挡卡片右下角内容/开关。加大到 pb-36
@@ -927,7 +950,7 @@ export default function App() {
         >
         {activeTab === 'form' && (
           <AssessmentForm
-            key={activeProject?.id || 'new'}
+            key={formKey}
             initialData={activeProject}
             language={language}
             onSubmit={handleFormSubmit}
@@ -937,6 +960,7 @@ export default function App() {
             }}
             largeFont={largeFont}
             onSaveAsNewProject={handleSaveAsNewProject}
+            onSaveProgress={handleSaveFormProgress}
           />
         )}
 
