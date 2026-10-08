@@ -20,9 +20,16 @@ export function isLikelyMainlandChina(): boolean {
   }
 }
 
+// 常驻入口（侧边栏、AI 不可用提示旁）用更宽松的判断：大陆时区，或界面语言为中文。
+// 顶部提示条比较打扰，仍只按时区弹出；但时区判断会漏掉系统时区设成别处、或关掉过提示条的大陆用户，
+// 这些人需要一个随时能找到的入口（反馈：PC 端看不到加速推荐）。
+export function shouldOfferChinaVpn(language: Language): boolean {
+  return language === 'zh' || isLikelyMainlandChina();
+}
+
 /** 行内小链接：放在「AI 暂时不可用」一类提示旁边 */
 export function ChinaVpnInlineLink({ language }: { language: Language }) {
-  if (!isLikelyMainlandChina()) return null;
+  if (!shouldOfferChinaVpn(language)) return null;
   return (
     <a
       href={CHINA_VPN_URL}
@@ -87,5 +94,27 @@ export function ChinaNetworkTip({ language }: { language: Language }) {
         </button>
       </div>
     </div>
+  );
+}
+
+/** 桌面侧边栏底部的常驻入口，提示条关掉后也随时能找到 */
+export function ChinaVpnSidebarLink({ language }: { language: Language }) {
+  if (!shouldOfferChinaVpn(language)) return null;
+  return (
+    <a
+      href={CHINA_VPN_URL}
+      target="_blank"
+      rel="noopener noreferrer sponsored"
+      className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-teal-100 bg-white/5 hover:bg-white/10 border border-white/10 transition-colors"
+      title={
+        language === 'en'
+          ? 'AI features rely on overseas services; use a network accelerator if they fail to load in mainland China'
+          : 'AI 功能依赖海外服务，在中国大陆如出现加载失败，推荐使用网络加速'
+      }
+    >
+      <Globe className="w-4 h-4 text-violet-300 shrink-0" />
+      <span className="flex-1">{language === 'en' ? 'Network accelerator (VPN)' : '大陆网络加速推荐'}</span>
+      <ExternalLink className="w-3 h-3 text-teal-300 shrink-0" />
+    </a>
   );
 }
