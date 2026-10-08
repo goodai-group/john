@@ -119,6 +119,7 @@ export interface LedgerItem {
 // 流水，最终都落在同一套口径上，可横向比较（此前按行业模板关键词猜的自由文本桶做不到这点）。
 export type LedgerCategory =
   | 'COGS' // 原材料/直接采购成本
+  | 'COGS_DIRECT_LABOR' // 直接服务人工（授课老师/技师等一线人员工资，计入营业成本）
   | 'OPEX_FIXED_RENT' // 固定开销 - 房租
   | 'OPEX_FIXED_LABOR' // 固定开销 - 人工
   | 'OPEX_FIXED_UTILITY' // 固定开销 - 水电网络
@@ -133,8 +134,9 @@ export type LedgerCategory =
 // 供前端「智能记账」分类结果展示 + 用户改分类下拉框使用
 export const LEDGER_CATEGORY_LABELS: Record<LedgerCategory, { zh: string; en: string }> = {
   COGS: { zh: '原材料/直接成本', en: 'COGS (direct materials)' },
+  COGS_DIRECT_LABOR: { zh: '营业成本·直接服务人工', en: 'Cost of revenue · Direct service labor' },
   OPEX_FIXED_RENT: { zh: '固定开销·房租', en: 'Fixed opex · Rent' },
-  OPEX_FIXED_LABOR: { zh: '固定开销·人工', en: 'Fixed opex · Labor' },
+  OPEX_FIXED_LABOR: { zh: '固定开销·管理与行政人工', en: 'Fixed opex · Admin & management labor' },
   OPEX_FIXED_UTILITY: { zh: '固定开销·水电网络', en: 'Fixed opex · Utilities' },
   OPEX_VARIABLE: { zh: '其他日常经营费用', en: 'Other operating expense' },
   TAX: { zh: '税金及规费', en: 'Tax & fees' },
@@ -258,7 +260,12 @@ export interface BusinessFormData {
   revenueDetailEstimate?: RevenueDetailEstimate; // 收入细节辅助输入（选填，用于估算总流水，参见 applyEstimatedRevenue）
   cogsCost: MoneyField; // F10 原材料与直接采购成本
   rentCost: MoneyField; // F11 场地租金与物业
-  laborCost: MoneyField; // F12 员工工资与人工支出
+  // 人工拆成两栏（会计口径）：直接为客户提供服务的一线人工（授课老师、技师、护理员等）
+  // 属于营业成本，计入毛利之前扣除；laborCost 只放管理与行政人工（前台/行政/招生/店长），
+  // 作为期间费用在毛利之后扣除。directLaborCost 为可选字段——拆分前保存的存量项目没有它，
+  // 计算时按 0 处理（即旧口径：全部人工都在 OPEX），并在表单/报告里提示用户拆分。
+  directLaborCost?: MoneyField; // 直接服务人工（计入营业成本）
+  laborCost: MoneyField; // F12 管理与行政人工（拆分前的存量数据为全部员工工资与人工支出）
   utilityCost: MoneyField; // F13 水电网络杂费
   taxCost: MoneyField; // F16 税金及规费
   otherOpex: MoneyField; // 其他日常经营费用
@@ -335,6 +342,11 @@ export interface AssessmentReport {
   isSensitiveRegion: boolean;
   dataMinimizationNotice?: string;
   customRateNotice?: string;
+  // 毛利口径标记：'accounting' = 营业成本含直接服务人工（会计口径）。毛利口径调整前生成的
+  // 旧报告没有该字段，报告页据此提示"本报告按旧口径计算，请重新生成"。
+  grossMarginBasis?: 'accounting';
+  // 服务型行业尚未拆分出直接服务人工时的提示（毛利率可能偏高）
+  grossMarginNotice?: string;
   estimatedMonthsCount: number;
   proofTypeUsed: ProofType;
   ownerUid?: string;
@@ -367,7 +379,8 @@ export interface AssessmentReport {
     monthlyGrossRevenue: number;
     monthlyRealRevenue: number;
     monthlyExternalGrants: number;
-    monthlyCogs: number;
+    monthlyCogs: number; // 营业成本 = 物料/进货成本 + 直接服务人工
+    monthlyDirectLabor?: number; // 其中的直接服务人工部分（毛利口径调整前生成的旧报告没有该字段）
     monthlyOpex: number;
     monthlyRegulatoryCosts: number; // 税收/签证/设备折旧/公司注册费用的月度等效合计
     monthlyBurn: number; // 每月现金消耗 = COGS + OPEX + 还贷（不含税），用于统一"能撑多久"口径

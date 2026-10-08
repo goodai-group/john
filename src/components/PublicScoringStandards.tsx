@@ -116,13 +116,18 @@ export const PublicScoringStandards: React.FC<StandardsProps> = ({ language }) =
                 {language === 'zh' ? 'Gate-2: 毛利率底线 (Gross Margin)' : 'Gate-2: Gross Margin Floor'}
               </span>
               <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 font-mono font-bold">
-                ≥ 20%
+                {language === 'zh' ? '按行业 ≥ 20%~30%' : '≥ 20%-30% by industry'}
               </span>
             </div>
             <p className="text-neutral-600 font-medium">
               {language === 'zh'
-                ? '大白话：每卖出 100 块钱东西，扣除直接进货和原材料成本后，至少要剩下 20 块钱毛利。'
-                : 'Plain language: For every 100 you sell, after subtracting direct sourcing and material costs, at least 20 must remain as gross profit.'}
+                ? '大白话：每做 100 块钱生意，扣除直接成本后至少要剩下一定的毛利。直接成本按会计口径计算：卖货生意是进货和原材料；教育培训、美容美发、托育、诊所等服务型生意，还要加上授课老师、技师、医护等一线服务人员的工资（前台、行政、招生等管理人员工资不算，放在固定开销里）。'
+                : 'Plain language: For every 100 of business, a minimum gross profit must remain after direct costs. Direct costs follow accounting rules: for goods businesses, purchasing and materials; for service businesses (education, beauty, childcare, clinics), also the wages of front-line staff such as teachers, technicians and medical staff (front desk, admin and sales staff are fixed costs instead).'}
+            </p>
+            <p className="text-neutral-600 font-medium">
+              {language === 'zh'
+                ? '红线：零售/餐饮/农业及其他行业 ≥ 20%（10%~20% 为警告）；语言教育、职业实训、美容美发与社区服务 ≥ 30%（20%~30% 为警告）；儿童日托、诊所 ≥ 25%（15%~25% 为警告）。'
+                : 'Floors: retail / food / agriculture / other ≥ 20% (10%-20% warning); education, vocational training, beauty & community services ≥ 30% (20%-30% warning); childcare and clinics ≥ 25% (15%-25% warning).'}
             </p>
             <p className="text-teal-900 bg-teal-50/80 p-2.5 rounded-xl border border-teal-100 font-medium">
               {language === 'zh'
@@ -252,7 +257,7 @@ export const PublicScoringStandards: React.FC<StandardsProps> = ({ language }) =
                 <td className="p-3.5 font-medium">
                   <div className="text-neutral-900 font-bold">Gross Profit Margin (COGS Ratio) / {language === 'zh' ? '毛利率（原材料与直接成本占比）' : 'Gross Margin (Materials & Direct Cost Ratio)'}</div>
                   <div className="text-neutral-400">
-                    {language === 'zh' ? '进货原料花了多少钱' : 'How much you spend on sourcing materials'}
+                    {language === 'zh' ? '进货原料（服务业另含一线服务人工）花了多少钱' : 'How much you spend on materials (plus front-line service labor for service businesses)'}
                   </div>
                 </td>
                 <td className="p-3.5 font-mono font-bold text-teal-600">{SCORING_METRIC_DEFINITIONS.gross_margin_rate.weight}%</td>

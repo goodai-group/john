@@ -61,6 +61,7 @@ export function mapClassifiedLedgerToForm(
   const details: LedgerClassificationDetail[] = [];
 
   let debtServiceMonthly = 0;
+  let directLaborMonthly = 0;
   let realRevenueMonthly = 0;
   let externalGrantsMonthly = 0;
 
@@ -104,6 +105,10 @@ export function mapClassifiedLedgerToForm(
       case 'COGS':
         dynamicCogsItems.push({ id: item.id, label: item.name, value: monthlyAmount });
         break;
+      case 'COGS_DIRECT_LABOR':
+        // 直接服务人工汇总进 directLaborCost（营业成本），由调用方累加到表单已有金额上
+        directLaborMonthly += monthlyAmount;
+        break;
       case 'OPEX_FIXED_RENT':
       case 'OPEX_FIXED_LABOR':
       case 'OPEX_FIXED_UTILITY':
@@ -141,6 +146,7 @@ export function mapClassifiedLedgerToForm(
     dynamicEquipmentItems,
     oneTimeStartupItems,
     existingDebtMonthlyPayment: money(debtServiceMonthly, baseCurrency),
+    directLaborCost: money(directLaborMonthly, baseCurrency),
     monthlyRealOperatingRevenue: money(realRevenueMonthly, baseCurrency),
     monthlyExternalGrants: money(externalGrantsMonthly, baseCurrency),
     monthlyRevenue: money(realRevenueMonthly + externalGrantsMonthly, baseCurrency)

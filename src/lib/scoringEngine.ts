@@ -7,6 +7,7 @@ import {
 } from '../types.js';
 import { convertToTargetCurrency, CUSTOM_CURRENCY_VALUE } from './currencies.js';
 import { aggregateMonthlyCosts } from './costAggregation.js';
+import { getGrossMarginPolicy, usesDirectServiceLabor } from './grossMarginPolicy.js';
 
 /** 与 AssessmentForm 中 CUSTOM_INDUSTRY_VALUE 保持一致的占位常量 */
 const CUSTOM_INDUSTRY_VALUE = '__CUSTOM__';
@@ -86,6 +87,7 @@ export function runBusinessAssessment(formData: BusinessFormData): AssessmentRep
   // 避免与保本计算器、异常检测各自重复实现一遍、逐字段币种折算规则跑偏。
   const {
     cogs,
+    directLabor,
     otherOpex,
     tax,
     debtPayment,
@@ -93,13 +95,20 @@ export function runBusinessAssessment(formData: BusinessFormData): AssessmentRep
     totalOpex
   } = aggregateMonthlyCosts(formData, baseCurrency, customRateVal, customRateCode);
 
-  // 毛利 (Gross Profit) = 真实主营收入 - COGS
+  // 毛利 (Gross Profit) = 真实主营收入 - 营业成本（物料/进货成本 + 直接服务人工，会计口径）
+  // 服务型行业的一线人员工资属于营业成本，详见 grossMarginPolicy.ts；红线与评分档位按行业取值。
   // 修复：此前用 Math.max(0, ...) 强制不低于0，导致进货成本倒挂（COGS > 真实收入）时
   // 真实的负毛利被静默拉平成0，再传导进 PBT/PAT 会让亏损被系统性低估。负毛利应如实
   // 传导到下游，毛利率允许为负数展示（真实反映"倒挂"这一风险状态）。
   const grossProfit = monthlyRealRev - cogs;
   const grossMarginPercent =
     monthlyRealRev > 0 ? Number(((grossProfit / monthlyRealRev) * 100).toFixed(1)) : 0;
+  const marginPolicy = getGrossMarginPolicy(formData.industry);
+  const isServiceLaborIndustry = usesDirectServiceLabor(formData.industry);
+  // 服务型行业还没拆出直接服务人工（多为口径调整前保存的项目）：全部人工仍在 OPEX，
+  // 毛利率会按"只扣物料"偏高，需在报告里提示用户拆分后重新生成。
+  const managementLabor = conv(formData.laborCost);
+  const directLaborNotSplit = isServiceLaborIndustry && directLabor <= 0 && managementLabor > 0;
 
   // 税前利润 (PBT / Operating Profit) = 毛利 - OPEX
   const operatingProfitPBT = grossProfit - totalOpex;
@@ -158,15 +167,28 @@ export function runBusinessAssessment(formData: BusinessFormData): AssessmentRep
     {
       code: 'GATE-2',
       name: '毛利率底线 (Gross Profit Margin)',
-      plainName: '商品买卖毛利空间（扣除进货直接成本）',
-      status: grossMarginPercent >= 20 ? 'PASS' : grossMarginPercent >= 10 ? 'WARNING' : 'FAIL',
+      plainName: isServiceLaborIndustry
+        ? '服务毛利空间（扣除物料与一线服务人工等直接成本）'
+        : '商品买卖毛利空间（扣除进货直接成本）',
+      status:
+        grossMarginPercent >= marginPolicy.passAt
+          ? 'PASS'
+          : grossMarginPercent >= marginPolicy.warnAt
+            ? 'WARNING'
+            : 'FAIL',
       currentValue: `${grossMarginPercent}%`,
-      threshold: '≥ 20%',
+      threshold: `≥ ${marginPolicy.passAt}%`,
       plainDescription:
-        grossMarginPercent >= 20
-          ? '进货成本与售价空间充足，具备良性盈利基础。'
-          : '毛利空间太薄，一旦进货涨价或商品损耗极易直接亏损。',
-      improvementTip: '可尝试与上游供应商谈判降低批发采购价，或优化高毛利招牌商品的组合销售。'
+        grossMarginPercent >= marginPolicy.passAt
+          ? isServiceLaborIndustry
+            ? '扣除教材耗材与一线服务人员工资后，收费与直接成本之间空间充足，具备良性盈利基础。'
+            : '进货成本与售价空间充足，具备良性盈利基础。'
+          : isServiceLaborIndustry
+            ? '扣除一线服务人员工资与物料后剩下的太少，一旦人手增加或学员/客人减少极易直接亏损。'
+            : '毛利空间太薄，一旦进货涨价或商品损耗极易直接亏损。',
+      improvementTip: isServiceLaborIndustry
+        ? '可评估师生比/人效（每位老师或技师服务的人数）、优化排班减少空闲课时，或适度调整收费。'
+        : '可尝试与上游供应商谈判降低批发采购价，或优化高毛利招牌商品的组合销售。'
     },
     {
       code: 'GATE-3',
@@ -231,10 +253,17 @@ export function runBusinessAssessment(formData: BusinessFormData): AssessmentRep
     {
       ...SCORING_METRIC_DEFINITIONS.gross_margin_rate,
       key: 'gross_margin_rate',
-      plainName: '毛利率（每做100元生意除去原料还能剩多少）',
-      score: Math.min(100, Math.max(0, Math.round(grossMarginPercent * 1.8))),
+      plainName: isServiceLaborIndustry
+        ? '毛利率（每做100元生意除去物料和一线人工还能剩多少）'
+        : '毛利率（每做100元生意除去原料还能剩多少）',
+      score: Math.min(100, Math.max(0, Math.round((grossMarginPercent / marginPolicy.fullScoreAt) * 100))),
       actualValue: `${grossMarginPercent}%`,
-      status: grossMarginPercent >= 40 ? 'excellent' : grossMarginPercent >= 25 ? 'good' : 'poor',
+      status:
+        grossMarginPercent >= marginPolicy.excellentAt
+          ? 'excellent'
+          : grossMarginPercent >= marginPolicy.goodAt
+            ? 'good'
+            : 'poor',
       plainExplanation: '毛利率越高，抵御物价上涨和原料波动的缓冲垫越厚。',
       improvementTip: '寻找本地就近原材料替代品，减少中间批发商抽成，或对热销品做微调提价。'
     },
@@ -360,8 +389,15 @@ export function runBusinessAssessment(formData: BusinessFormData): AssessmentRep
     aiActionableAdvice.push('存在未通过的关键红线项，建议优先解决上述红线指标（如削减固定开销或提升真实主营收入）。');
   }
 
-  if (grossMarginPercent < 30) {
-    aiActionableAdvice.push('毛利率偏紧：建议评估采购批发批量或适度推出高附加值套餐，提高单笔订单利润。');
+  if (grossMarginPercent < marginPolicy.passAt + 10) {
+    aiActionableAdvice.push(
+      isServiceLaborIndustry
+        ? '毛利率偏紧：一线授课/服务人工占收入比例偏高，建议评估班级规模与排班利用率，或适度推出高附加值课程/套餐。'
+        : '毛利率偏紧：建议评估采购批发批量或适度推出高附加值套餐，提高单笔订单利润。'
+    );
+  }
+  if (directLaborNotSplit) {
+    aiActionableAdvice.push('尚未拆分直接服务人工：老师/技师等一线人员工资应计入营业成本，拆分后毛利率会更接近真实水平。');
   }
   if (opexRatioPercent > 50) {
     aiActionableAdvice.push('每月固定支出占比超50%：重点核对租金与人工利用率，避免淡季资金链承压。');
@@ -394,6 +430,10 @@ export function runBusinessAssessment(formData: BusinessFormData): AssessmentRep
     customRateNotice: formData.hasMultipleRates
       ? `用户自报汇率（${formData.customExchangeRateType || '民间/日常兑换价'}，1 USD ≈ ${formData.customExchangeRateValue || '自定义'} ${baseCurrency}），非官方汇率，已公开透明核对。`
       : undefined,
+    grossMarginBasis: 'accounting',
+    grossMarginNotice: directLaborNotSplit
+      ? '毛利已按会计口径计算：授课老师、技师等一线服务人员工资属于营业成本。本项目尚未填写「直接服务人工」，全部人工仍按管理费用处理，毛利率可能偏高——请在花费清单里把一线人员工资拆到「直接服务人工」后重新生成报告。'
+      : undefined,
     estimatedMonthsCount,
     proofTypeUsed: formData.proofType,
     totalScore,
@@ -414,6 +454,7 @@ export function runBusinessAssessment(formData: BusinessFormData): AssessmentRep
       monthlyRealRevenue: monthlyRealRev,
       monthlyExternalGrants: monthlyGrants,
       monthlyCogs: cogs,
+      monthlyDirectLabor: directLabor,
       monthlyOpex: totalOpex,
       monthlyRegulatoryCosts,
       monthlyBurn,

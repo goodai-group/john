@@ -50,6 +50,7 @@ import { SUPPORTED_CURRENCIES, formatMoney, convertToTargetCurrency, CUSTOM_CURR
 import { INDUSTRY_BENCHMARKS, getIndustryBenchmark } from '../../lib/industryBenchmarks';
 import { estimateMonthlyRevenue, hasCompleteRevenueEstimate, resolvedUnitsSold } from '../../lib/revenueEstimate';
 import { normalizeToMonthly } from '../../lib/ledgerCycle';
+import { usesDirectServiceLabor } from '../../lib/grossMarginPolicy';
 import { saveActiveDraft, clearActiveDraft, getActiveDraft } from '../../lib/storage';
 import { getAuthHeaders } from '../../lib/supabaseClient';
 import {
@@ -598,6 +599,53 @@ export const AssessmentForm: React.FC<FormProps> = ({
     }
   }, [formData.industry, language]);
 
+  // —— 人工拆两栏（会计口径，见 lib/grossMarginPolicy.ts）——
+  // 直接服务人工（授课老师/技师等一线人员）计入营业成本、在毛利之前扣除；
+  // laborCost 只放管理与行政人工，作为 OPEX 在毛利之后扣除。
+  const directLaborFieldMeta = React.useMemo(() => {
+    const en = language === 'en';
+    switch (formData.industry) {
+      case 'education_training':
+        return { label: en ? 'Teacher & TA Pay (direct labor)' : '授课老师与助教课酬（直接服务人工）', who: en ? 'teachers and teaching assistants' : '授课老师、助教' };
+      case 'vocational_training':
+        return { label: en ? 'Instructor & Trainer Pay (direct labor)' : '实训老师与带教技师课酬（直接服务人工）', who: en ? 'instructors and trainers' : '实训老师、带教技师' };
+      case 'child_care':
+        return { label: en ? 'Caregiver & Teacher Wages (direct labor)' : '保育与看护老师工资（直接服务人工）', who: en ? 'caregivers and teachers' : '保育员、看护老师' };
+      case 'community_service':
+        return { label: en ? 'Technician & Front-line Staff Wages (direct labor)' : '技师与一线服务人员工资（直接服务人工）', who: en ? 'technicians and front-line service staff' : '理发师、美容技师、护理员等一线人员' };
+      case 'medical_health':
+        return { label: en ? 'Doctor & Nurse Wages (direct labor)' : '医生与护士工资（直接服务人工）', who: en ? 'doctors and nurses' : '医生、护士等诊疗人员' };
+      default:
+        return { label: en ? 'Direct Service/Production Labor' : '直接服务/生产人工', who: en ? 'staff who directly deliver the service or product' : '直接提供服务或生产的一线人员' };
+    }
+  }, [formData.industry, language]);
+  // 服务型行业与自定义行业默认展示「直接服务人工」一栏；其他行业（零售/餐饮/农业）默认隐藏，
+  // 但只要已经填了金额就始终展示，避免切换行业后这笔钱藏在看不见的字段里仍参与计算。
+  const showDirectLaborRow =
+    usesDirectServiceLabor(formData.industry) ||
+    formData.industry === CUSTOM_INDUSTRY_VALUE ||
+    (formData.directLaborCost?.amount || 0) > 0;
+  // 口径调整前保存的服务型项目：从未填过直接服务人工、全部人工都在 laborCost 里——提示用户拆分。
+  const needsLaborSplitPrompt =
+    usesDirectServiceLabor(formData.industry) &&
+    formData.directLaborCost === undefined &&
+    (formData.laborCost.amount || 0) > 0;
+  const moveAllLaborToDirect = () => {
+    setFormData((prev) => ({
+      ...prev,
+      directLaborCost: { ...prev.laborCost },
+      laborCost: { ...prev.laborCost, amount: 0 },
+      updatedAt: new Date().toISOString()
+    }));
+  };
+  const keepLaborAsManagement = () => {
+    setFormData((prev) => ({
+      ...prev,
+      directLaborCost: { amount: 0, currency: prev.laborCost.currency || prev.baseCurrency },
+      updatedAt: new Date().toISOString()
+    }));
+  };
+
   // —— 动态成本项（COGS / OPEX）辅助函数 ——
   const updateDynamicCogsItem = (
     id: string,
@@ -700,8 +748,18 @@ export const AssessmentForm: React.FC<FormProps> = ({
       // 这里改加进 existingDebtMonthlyPrincipal，避免这笔钱记进去了却不参与任何计算。
       const usesSplitDebtFields = prev.existingDebtMonthlyPrincipal !== undefined;
       const debtDelta = patch.existingDebtMonthlyPayment?.amount || 0;
+      // 直接服务人工：patch 里是月度等效额；已有字段若选了按季/按年等周期，先换算回该周期的金额再累加，
+      // 否则把月度金额加进年度字段会被再除以 12，等于少记。
+      const directLaborDelta = patch.directLaborCost?.amount || 0;
+      const existingDirectLabor: MoneyField = prev.directLaborCost || { amount: 0, currency: prev.baseCurrency };
+      const directLaborPerMonthFactor =
+        normalizeToMonthly(1, existingDirectLabor.cycle || 'monthly', existingDirectLabor.amortizationMonths) || 1;
       return {
         ...prev,
+        directLaborCost:
+          directLaborDelta > 0
+            ? addAmount(existingDirectLabor, directLaborDelta / directLaborPerMonthFactor)
+            : prev.directLaborCost,
         dynamicCogsItems: [...(prev.dynamicCogsItems || []), ...(patch.dynamicCogsItems || [])],
         dynamicOpexItems: [...(prev.dynamicOpexItems || []), ...(patch.dynamicOpexItems || [])],
         dynamicTaxItems: [...(prev.dynamicTaxItems || []), ...(patch.dynamicTaxItems || [])],
@@ -941,6 +999,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
     'monthlyExternalGrants',
     'cogsCost',
     'rentCost',
+    'directLaborCost',
     'laborCost',
     'utilityCost',
     'taxCost',
@@ -1088,7 +1147,9 @@ export const AssessmentForm: React.FC<FormProps> = ({
     const rawCogs = (result.cogsItems || []).filter((it) => it.name);
     // 租金/人力/水电已有专属固定字段（rentCost/laborCost/utilityCost），
     // 若 AI 在 opexItems 中重复给出会导致这三类开支被计算两次，需在客户端兜底过滤。
-    const DUPLICATE_OPEX_PATTERN = /(rent|labor|wage|salary|utilit|electric|水电|房租|租金|薪|工资|人力|同工|物业)/i;
+    // 课酬/津贴/staff/teacher：模板与 AI 常把老师课酬、技师津贴写成 opexItems，同样与固定的
+    // 「直接服务人工 / 管理与行政人工」两栏重复，一并过滤。
+    const DUPLICATE_OPEX_PATTERN = /(rent|labor|wage|salary|staff|teacher|utilit|electric|水电|房租|租金|薪|工资|课酬|津贴|人力|同工|物业)/i;
     const rawOpex = (result.opexItems || []).filter(
       (it) => it.name && !DUPLICATE_OPEX_PATTERN.test(`${it.id ?? ''} ${it.name ?? ''}`)
     );
@@ -1252,6 +1313,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
     | 'monthlyExternalGrants'
     | 'cogsCost'
     | 'rentCost'
+    | 'directLaborCost'
     | 'laborCost'
     | 'utilityCost'
     | 'taxCost'
@@ -1475,7 +1537,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
     setRevenueEstimateError(null);
     const hasRevenue = (formData.monthlyRevenue.amount || 0) > 0 || (formData.monthlyRealOperatingRevenue.amount || 0) > 0;
     const hasCogs = (formData.cogsCost.amount || 0) > 0 || (formData.dynamicCogsItems || []).some((i) => i.value > 0);
-    const hasOpex = (formData.rentCost.amount || 0) > 0 || (formData.laborCost.amount || 0) > 0 || (formData.dynamicOpexItems || []).some((i) => i.value > 0);
+    const hasOpex = (formData.rentCost.amount || 0) > 0 || (formData.laborCost.amount || 0) > 0 || (formData.directLaborCost?.amount || 0) > 0 || (formData.dynamicOpexItems || []).some((i) => i.value > 0);
     const hasCash = (formData.cashAndLiquidAssets.amount || 0) > 0;
 
     if (!hasRevenue && !hasCogs && !hasOpex && !hasCash) {
@@ -2448,8 +2510,59 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     </button>
                   </div>
 
+                  {needsLaborSplitPrompt && (
+                    <div className="p-2.5 rounded-lg border border-amber-300 bg-amber-50 text-amber-900 space-y-1.5">
+                      <p className="text-[12px] leading-relaxed">
+                        {language === 'en'
+                          ? `Gross margin now follows accounting rules: wages of ${directLaborFieldMeta.who} are a direct cost of revenue and are deducted before gross profit. All your labor is currently under "Admin & Management Staff", so your gross margin will look too high. Please move the front-line staff part into the direct labor row.`
+                          : `毛利口径已按会计准则调整：${directLaborFieldMeta.who}的工资属于营业成本，要在算毛利之前扣除。你现在把全部人工都填在「管理与行政人工」里，毛利率会偏高，请把一线人员的工资拆到「直接服务人工」一栏。`}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        <button type="button" onClick={moveAllLaborToDirect} className="text-[12px] px-2 py-1 rounded border border-amber-400 bg-white font-bold text-amber-800 hover:bg-amber-100 cursor-pointer">
+                          {language === 'en' ? 'Move all labor to direct labor (adjust afterwards)' : '全部转为直接服务人工（之后再把行政人员的部分改回去）'}
+                        </button>
+                        <button type="button" onClick={keepLaborAsManagement} className="text-[12px] px-2 py-1 rounded border border-slate-300 bg-white font-bold text-slate-700 hover:bg-slate-100 cursor-pointer">
+                          {language === 'en' ? 'All of it is admin/management staff, keep as is' : '都是行政/管理人员，保持不变'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {showDirectLaborRow && (
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="flex-1 min-w-[7rem] p-1.5 font-semibold text-slate-800">{directLaborFieldMeta.label}</span>
+                        <NumberField
+                          inputMode="numeric"
+                          min={0}
+                          value={formData.directLaborCost?.amount || 0}
+                          onChange={(v) => updateMoney('directLaborCost', v)}
+                          className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                        />
+                        <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.directLaborCost?.currency || formData.laborCost.currency}</span>
+                        {renderCyclePicker(
+                          formData.directLaborCost || {},
+                          (cycle) => updateMoneyCycle('directLaborCost', cycle),
+                          (months) => updateMoneyAmortization('directLaborCost', months)
+                        )}
+                        <button type="button" onClick={() => updateMoney('directLaborCost', 0)} title={language === 'en' ? 'Reset to 0 (fixed category, cannot remove the row)' : '清零该项（此为固定类目，不可整行移除）'} className="p-1 text-slate-400 hover:text-amber-600 cursor-pointer shrink-0">
+                          <Eraser className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <p className="px-1.5 text-[11px] text-slate-500 leading-relaxed">
+                        {language === 'en'
+                          ? `Wages of ${directLaborFieldMeta.who}. Counted as cost of revenue (deducted before gross profit). Front desk, admin, enrollment/sales and manager pay goes in the next row.`
+                          : `${directLaborFieldMeta.who}的工资/课酬，属于营业成本，在算毛利之前扣除；前台、行政、招生、店长等人员工资请填在下一行。`}
+                      </p>
+                    </div>
+                  )}
+
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="flex-1 min-w-[7rem] p-1.5 font-semibold text-slate-800">{language === 'en' ? 'Staff Wages & Labor Costs' : '员工工资与人工支出'}</span>
+                    <span className="flex-1 min-w-[7rem] p-1.5 font-semibold text-slate-800">
+                      {showDirectLaborRow
+                        ? (language === 'en' ? 'Admin & Management Staff Wages' : '管理与行政人工（前台/行政/招生/店长）')
+                        : (language === 'en' ? 'Staff Wages & Labor Costs' : '员工工资与人工支出')}
+                    </span>
                     <NumberField
                       inputMode="numeric"
                       min={0}

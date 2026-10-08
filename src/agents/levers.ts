@@ -119,7 +119,11 @@ export const LEVER_CATALOG: Lever[] = [
     titleEn: 'Shift to demand-based scheduling to cut labor cost by 8%',
     horizonDays: 60,
     appliesTo: (r) => r.normalizedFinancials.opexRatioPercent > 30,
-    apply: (f) => scale(f, 'laborCost', 0.92),
+    // 人工拆成「直接服务人工（营业成本）+ 管理与行政人工（OPEX）」两栏后，排班优化对两栏都生效
+    apply: (f) => {
+      scale(f, 'laborCost', 0.92);
+      scale(f, 'directLaborCost', 0.92);
+    },
     detailZh:
       '先记录一周内每个时段的真实客流，把人手集中到高峰段，低峰段只留必要岗位。不裁人也能省——把固定全天班改成分段班即可。',
     detailEn:
