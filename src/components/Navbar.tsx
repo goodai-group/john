@@ -16,6 +16,7 @@ import {
   Compass
 } from 'lucide-react';
 import { Language, ActiveTab, AppUser } from '../types';
+import { ChinaVpnSidebarLink } from './ChinaNetworkTip';
 
 interface NavbarProps {
   activeTab: ActiveTab | string;
@@ -53,12 +54,17 @@ export const Navbar: React.FC<NavbarProps> = ({
   justSignedIn = false
 }) => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const userMenuRef = useRef<HTMLDivElement>(null);
+  // 桌面侧边栏与移动端顶栏各渲染一份用户菜单（另一份只是被 CSS 隐藏，仍挂在 DOM 上），
+  // 必须各用各的 ref：此前共用一个 ref，会被后渲染的移动端那份覆盖，
+  // 导致 PC 上点「退出登录」时 mousedown 被判定为"点在菜单外"，菜单先被关掉，click 落空，退出无效。
+  const desktopUserMenuRef = useRef<HTMLDivElement>(null);
+  const mobileUserMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
-      if (userMenuRef.current && !userMenuRef.current.contains(target)) {
+      const insideMenu = [desktopUserMenuRef, mobileUserMenuRef].some((ref) => ref.current?.contains(target));
+      if (!insideMenu) {
         setIsUserMenuOpen(false);
       }
     };
@@ -82,7 +88,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   // "评分规则"通过头部图标按钮单独触达，不占用底部空间。
   const mobileBottomNavItems = navItems.filter((item) => item.id !== 'standards');
 
-  const UserBlock = ({ dark = false }: { dark?: boolean }) => (
+  // 普通渲染函数而非内部组件：内部组件每次渲染都是新类型，会让整个用户菜单反复卸载重挂
+  const renderUserBlock = (dark: boolean) => (
     <>
       {currentUser ? (
         justSignedIn ? (
@@ -94,7 +101,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span>{language === 'zh' ? '登录成功' : 'Signed in'}</span>
           </div>
         ) : (
-          <div className={`relative ${dark ? 'w-full' : ''}`} ref={userMenuRef}>
+          <div className={`relative ${dark ? 'w-full' : ''}`} ref={dark ? desktopUserMenuRef : mobileUserMenuRef}>
             <button
               onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
               className={`flex items-center gap-2 p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl border transition-all cursor-pointer ${
@@ -218,6 +225,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         </nav>
 
         <div className="pt-4 mt-4 border-t border-white/10 space-y-3">
+          <ChinaVpnSidebarLink language={language} />
           <div className="flex items-center gap-1">
             {onOpenAccessibility && (
               <button
@@ -247,7 +255,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           </div>
 
-          <UserBlock dark />
+          {renderUserBlock(true)}
         </div>
       </aside>
 
@@ -308,7 +316,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span>{language === 'zh' ? 'EN' : '中文'}</span>
             </button>
 
-            <UserBlock />
+            {renderUserBlock(false)}
           </div>
         </div>
       </header>
