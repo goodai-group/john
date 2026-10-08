@@ -31,6 +31,8 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
   const nf = report.normalizedFinancials;
   const cogs = nf.monthlyCogs;
   const opex = nf.monthlyOpex;
+  // 填了直接服务人工时，第一段是"营业成本（物料+一线人工）"，第二段只剩房租与管理人工
+  const hasDirectLabor = (nf.monthlyDirectLabor || 0) > 0;
   const tax = formData.taxCost.amount;
   const cash = formData.cashAndLiquidAssets.amount;
 
@@ -226,12 +228,20 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
             <div
               className="bg-rose-400 h-full transition-all duration-300"
               style={{ width: `${cogsPct * scale}%` }}
-              title={language === 'en' ? `Purchasing cost: ${Math.round(cogsPct)}%` : `进货成本: ${Math.round(cogsPct)}%`}
+              title={
+                hasDirectLabor
+                  ? (language === 'en' ? `Direct costs (materials + front-line labor): ${Math.round(cogsPct)}%` : `直接成本（物料+一线人工）: ${Math.round(cogsPct)}%`)
+                  : (language === 'en' ? `Purchasing cost: ${Math.round(cogsPct)}%` : `进货成本: ${Math.round(cogsPct)}%`)
+              }
             />
             <div
               className="bg-amber-400 h-full transition-all duration-300"
               style={{ width: `${opexPct * scale}%` }}
-              title={language === 'en' ? `Rent, labor & utilities: ${Math.round(opexPct)}%` : `房租人工水电: ${Math.round(opexPct)}%`}
+              title={
+                hasDirectLabor
+                  ? (language === 'en' ? `Rent, admin staff & utilities: ${Math.round(opexPct)}%` : `房租管理人工水电: ${Math.round(opexPct)}%`)
+                  : (language === 'en' ? `Rent, labor & utilities: ${Math.round(opexPct)}%` : `房租人工水电: ${Math.round(opexPct)}%`)
+              }
             />
             <div
               className="bg-emerald-500 h-full transition-all duration-300"
@@ -243,7 +253,7 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
           <div className="grid grid-cols-3 gap-1 text-xs sm:text-sm font-semibold pt-1">
             <div className="flex items-center gap-1.5 text-rose-800">
               <span className="w-2.5 h-2.5 rounded-full bg-rose-400 shrink-0" />
-              <span>{language === 'en' ? 'Purchasing' : '进货'} <strong>{Math.round(cogsPct)}%</strong></span>
+              <span>{hasDirectLabor ? (language === 'en' ? 'Direct costs' : '直接成本') : (language === 'en' ? 'Purchasing' : '进货')} <strong>{Math.round(cogsPct)}%</strong></span>
             </div>
             <div className="flex items-center gap-1.5 text-amber-800">
               <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" />

@@ -21,8 +21,10 @@ export function amortizeMonthly(totalAmount: number, months: number | undefined)
 }
 
 export interface AggregatedMonthlyCosts {
-  cogs: number;
-  fixedOpex: number; // 房租+人工+水电（或动态明细合计）
+  cogs: number; // 营业成本 = materialsCogs + directLabor（会计口径，毛利之前扣除）
+  materialsCogs: number; // 物料/进货/原材料成本
+  directLabor: number; // 直接服务人工（授课老师/技师等一线人员工资）
+  fixedOpex: number; // 房租+管理与行政人工+水电（或动态明细合计）
   otherOpex: number;
   tax: number;
   debtPayment: number;
@@ -40,6 +42,7 @@ export function aggregateMonthlyCosts(
     | 'cogsCost'
     | 'dynamicCogsItems'
     | 'rentCost'
+    | 'directLaborCost'
     | 'laborCost'
     | 'utilityCost'
     | 'otherOpex'
@@ -76,7 +79,10 @@ export function aggregateMonthlyCosts(
   );
   // 当 formData 包含 dynamicCogsItems 数组时（如花费清单界面），以明细合计为准，
   // 避免使用界面隐藏的 cogsCost 盲目推高花费清单合计；只有未提供 dynamicCogsItems 时才退回 cogsCost。
-  const cogs = formData.dynamicCogsItems ? dynamicCogsTotal : conv(formData.cogsCost);
+  const materialsCogs = formData.dynamicCogsItems ? dynamicCogsTotal : conv(formData.cogsCost);
+  // 直接服务人工计入营业成本（会计口径，见 grossMarginPolicy.ts）；未拆分的存量项目没有该字段，按 0 处理。
+  const directLabor = convMonthly(formData.directLaborCost);
+  const cogs = materialsCogs + directLabor;
 
   const rent = convMonthly(formData.rentCost);
   const labor = convMonthly(formData.laborCost);
@@ -138,6 +144,8 @@ export function aggregateMonthlyCosts(
 
   return {
     cogs,
+    materialsCogs,
+    directLabor,
     fixedOpex,
     otherOpex,
     tax,

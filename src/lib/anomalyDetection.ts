@@ -30,13 +30,16 @@ export function detectFormAnomalies(formData: BusinessFormData): FormAnomalyWarn
   const grants = conv(formData.monthlyExternalGrants);
   const cash = conv(formData.cashAndLiquidAssets);
 
-  const { cogs, fixedOpex, tax, debtPayment: debt } = aggregateMonthlyCosts(
+  // 1) 号提醒说的是"原材料/进货成本"，用物料口径（materialsCogs），不含直接服务人工——
+  // 否则服务业把老师工资填进直接人工后会被误报"进货成本占比过高"。
+  const { materialsCogs: cogs, directLabor, fixedOpex, tax, debtPayment: debt } = aggregateMonthlyCosts(
     formData,
     baseCurrency,
     customRateValue,
     customRateCode
   );
-  const labor = conv(formData.laborCost);
+  // 人工拆成"直接服务人工 + 管理与行政人工"两栏后，任一栏有值都算填了人工
+  const labor = conv(formData.laborCost) + directLabor;
   const dynamicOpexTotal = (formData.dynamicOpexItems || []).reduce(
     (s, it) => s + normalizeToMonthly(Number(it.value) || 0, it.cycle || 'monthly', it.amortizationMonths),
     0

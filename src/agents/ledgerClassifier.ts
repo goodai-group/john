@@ -24,6 +24,7 @@ import type { BillingCycle, LedgerCategory, LedgerClassification, LedgerItem } f
 
 const LEDGER_CATEGORIES: LedgerCategory[] = [
   'COGS',
+  'COGS_DIRECT_LABOR',
   'OPEX_FIXED_RENT',
   'OPEX_FIXED_LABOR',
   'OPEX_FIXED_UTILITY',
@@ -55,10 +56,11 @@ export const LEDGER_CLASSIFIER_SYSTEM_INSTRUCTION = `
 你是一名注册会计师（CPA），任务是把用户自由填写的一笔笔"流水条目"（名称+金额+周期+收入或支出）
 分类到标准会计科目，用户全程不需要自己选科目。
 
-标准科目枚举（只能用这11个，不得自创新科目）：
+标准科目枚举（只能用这12个，不得自创新科目）：
 - COGS：直接与产出商品/服务挂钩的原材料、进货、直接采购成本
+- COGS_DIRECT_LABOR：直接为客户提供服务的一线人员工资（授课老师/助教课酬、美容美发技师、医生护士、保育老师、带教技师等），属于营业成本
 - OPEX_FIXED_RENT：场地租金/铺租/物业费
-- OPEX_FIXED_LABOR：员工工资/人工/同工薪酬/社保
+- OPEX_FIXED_LABOR：管理与行政人员工资（前台/行政/招生/店长/财务等）及无法区分岗位的员工工资/社保
 - OPEX_FIXED_UTILITY：水电/网络/燃气等公用事业费
 - OPEX_VARIABLE：其他不属于以上三类固定开销、但仍是经常性日常经营费用的支出（如营销推广、办公用品、差旅）
 - TAX：增值税/所得税/附加税/工商年检等规费
@@ -70,7 +72,7 @@ export const LEDGER_CLASSIFIER_SYSTEM_INSTRUCTION = `
 
 对每一条给出：
 - id：原样返回输入的 id，不得遗漏、不得新增
-- category：上述11个之一
+- category：上述12个之一
 - confidence：0到1之间的置信度
 - reasoning：一句话说明为什么这样分类（给用户看，不超过30字）
 - needsUserConfirmation：true/false —— 以下情况必须为 true：置信度低于0.75；REAL_REVENUE 与
@@ -138,6 +140,8 @@ function parseGeminiClassifications(raw: unknown, expectedIds: Set<string>): Led
 
 const KEYWORD_RULES: Array<{ pattern: RegExp; category: LedgerCategory }> = [
   { pattern: /房租|租金|铺租|场地费|物业费/, category: 'OPEX_FIXED_RENT' },
+  // 一线服务人员（老师/技师/医护/保育）先于泛化的"工资"关键词匹配，归入营业成本
+  { pattern: /老师|教师|助教|课酬|讲师|教练|技师|理发师|美容师|医生|护士|保育|看护/, category: 'COGS_DIRECT_LABOR' },
   { pattern: /工资|人工|薪资|同工|工时费|社保|雇员/, category: 'OPEX_FIXED_LABOR' },
   { pattern: /水电|电费|水费|网费|宽带|燃气|网络费/, category: 'OPEX_FIXED_UTILITY' },
   { pattern: /进货|原材料|原料|采购|物料|食材|耗材|批发/, category: 'COGS' },

@@ -41,6 +41,7 @@ import {
   Calculator
 } from 'lucide-react';
 import { formatMoney } from '../../lib/currencies';
+import { usesDirectServiceLabor } from '../../lib/grossMarginPolicy';
 import { getAuthHeaders } from '../../lib/supabaseClient';
 
 interface ReportViewProps {
@@ -154,6 +155,25 @@ export const AssessmentReportView: React.FC<ReportViewProps> = ({
     debtServiceCoverageRatio
   } = report.normalizedFinancials;
 
+  // 毛利口径（会计口径）：营业成本 = 物料/进货 + 直接服务人工。有直接服务人工时，
+  // 各处"进货采购"标签改称营业成本，"房租工人工资"改称房租与管理人工，避免口径与数字对不上。
+  const monthlyDirectLabor = report.normalizedFinancials.monthlyDirectLabor || 0;
+  const hasDirectLabor = monthlyDirectLabor > 0;
+  // 毛利口径调整前生成的服务型行业旧报告：当时一线人员工资全部算在 OPEX，毛利率偏高。
+  const isLegacyGrossMarginReport = !report.grossMarginBasis && usesDirectServiceLabor(report.industry);
+  const legacyGrossMarginNotice = t(
+    '本报告生成于毛利口径调整之前：当时授课老师、技师等一线服务人员的工资按管理费用处理，毛利率偏高。按会计口径这部分属于营业成本——请回到表单把一线人员工资拆到「直接服务人工」后重新生成报告（净利润不受影响）。',
+    'This report was generated before the gross margin basis was updated: wages of front-line service staff (e.g. teachers, technicians) were treated as operating expenses, so the gross margin is overstated. Under accounting rules they are a cost of revenue — split them into "Direct service labor" in the form and regenerate the report (net profit is unaffected).'
+  );
+  const grossMarginNoticeText = isLegacyGrossMarginReport
+    ? legacyGrossMarginNotice
+    : report.grossMarginNotice
+      ? t(
+          report.grossMarginNotice,
+          'Gross margin follows accounting rules: wages of front-line service staff (teachers, technicians, etc.) are a cost of revenue. "Direct service labor" is not filled in for this project, so all labor is still treated as operating expense and the gross margin may be overstated — split front-line staff wages into "Direct service labor" in the cost list and regenerate the report.'
+        )
+      : undefined;
+
   // 税金及规费金额本身未单独存于 normalizedFinancials（只存了 PBT 与 PAT），
   // 但 净利润(PAT) = 税前利润(PBT) − 税金，两项都已知，反推即可，且与评分引擎的算法完全一致，
   // 不是另一套估算逻辑——用于下方「计算方法与过程」区块逐步展示税金这一步的代入过程。
@@ -210,8 +230,8 @@ Gate Compliance: ${report.gatePassed ? `All passed (${report.gates.length}/${rep
 Core Operations Data Overview:
 - Monthly real operating revenue: ${formatMoney(monthlyRealRevenue, baseCurr)}
 - Monthly net profit: ${formatMoney(netProfit, baseCurr)} (net margin ${netProfitMarginPercent}%)
-- Materials/purchasing cost (COGS): ${formatMoney(monthlyCogs, baseCurr)} (gross margin ${grossMarginPercent}%)
-- Monthly rent & staff cost: ${formatMoney(monthlyOpex, baseCurr)} (${opexRatioPercent}% of revenue)
+- ${hasDirectLabor ? `Cost of revenue (materials + direct labor ${formatMoney(monthlyDirectLabor, baseCurr)})` : 'Materials/purchasing cost (COGS)'}: ${formatMoney(monthlyCogs, baseCurr)} (gross margin ${grossMarginPercent}%)
+- Monthly rent & ${hasDirectLabor ? 'admin staff' : 'staff'} cost: ${formatMoney(monthlyOpex, baseCurr)} (${opexRatioPercent}% of revenue)
 - Emergency cash reserve: covers ${cashRunwayMonths} months of fixed costs
 ${
   report.dynamicCogsItems?.length
@@ -238,8 +258,8 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
 核心经营数据概览：
 - 每月真实经营收入：${formatMoney(monthlyRealRevenue, baseCurr)}
 - 每月结余净产出：${formatMoney(netProfit, baseCurr)} (净利润率 ${netProfitMarginPercent}%)
-- 原材料/进货采购花销：${formatMoney(monthlyCogs, baseCurr)} (毛利率 ${grossMarginPercent}%)
-- 每月租金与同工支出：${formatMoney(monthlyOpex, baseCurr)} (占进账 ${opexRatioPercent}%)
+- ${hasDirectLabor ? `营业成本（物料 + 直接服务人工 ${formatMoney(monthlyDirectLabor, baseCurr)}）` : '原材料/进货采购花销'}：${formatMoney(monthlyCogs, baseCurr)} (毛利率 ${grossMarginPercent}%)
+- 每月租金与${hasDirectLabor ? '管理人工' : '同工'}支出：${formatMoney(monthlyOpex, baseCurr)} (占进账 ${opexRatioPercent}%)
 - 应急储备金水库：能支撑 ${cashRunwayMonths} 个月固定开销
 ${
   report.dynamicCogsItems?.length
@@ -760,9 +780,13 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                     key="breakdown-cogs"
                     style={{ width: `${cogsPct}%` }}
                     className="bg-amber-400 text-amber-950 flex items-center justify-center text-xs font-mono font-bold transition-all relative group"
-                    title={t(`进货采购: ${cogsPct}% (${formatMoney(monthlyCogs, baseCurr)})`, `Purchasing: ${cogsPct}% (${formatMoney(monthlyCogs, baseCurr)})`)}
+                    title={
+                      hasDirectLabor
+                        ? t(`营业成本（物料+一线人工）: ${cogsPct}% (${formatMoney(monthlyCogs, baseCurr)})`, `Cost of revenue (materials + direct labor): ${cogsPct}% (${formatMoney(monthlyCogs, baseCurr)})`)
+                        : t(`进货采购: ${cogsPct}% (${formatMoney(monthlyCogs, baseCurr)})`, `Purchasing: ${cogsPct}% (${formatMoney(monthlyCogs, baseCurr)})`)
+                    }
                   >
-                    {cogsPct >= 10 && <span>{t(`进货 ${cogsPct}元`, `Purchasing ${cogsPct}`)}</span>}
+                    {cogsPct >= 10 && <span>{hasDirectLabor ? t(`直接成本 ${cogsPct}元`, `Direct cost ${cogsPct}`) : t(`进货 ${cogsPct}元`, `Purchasing ${cogsPct}`)}</span>}
                   </div>
                 )}
                 {/* 2. OPEX Bar */}
@@ -771,9 +795,13 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                     key="breakdown-opex"
                     style={{ width: `${opexPct}%` }}
                     className="bg-teal-500 text-white flex items-center justify-center text-xs font-mono font-bold transition-all relative group"
-                    title={t(`房租与工人工资: ${opexPct}% (${formatMoney(monthlyOpex, baseCurr)})`, `Rent & Wages: ${opexPct}% (${formatMoney(monthlyOpex, baseCurr)})`)}
+                    title={
+                      hasDirectLabor
+                        ? t(`房租与管理人工: ${opexPct}% (${formatMoney(monthlyOpex, baseCurr)})`, `Rent & Admin Wages: ${opexPct}% (${formatMoney(monthlyOpex, baseCurr)})`)
+                        : t(`房租与工人工资: ${opexPct}% (${formatMoney(monthlyOpex, baseCurr)})`, `Rent & Wages: ${opexPct}% (${formatMoney(monthlyOpex, baseCurr)})`)
+                    }
                   >
-                    {opexPct >= 10 && <span>{t(`房租人工 ${opexPct}元`, `Rent/Wages ${opexPct}`)}</span>}
+                    {opexPct >= 10 && <span>{hasDirectLabor ? t(`房租管理 ${opexPct}元`, `Rent/Admin ${opexPct}`) : t(`房租人工 ${opexPct}元`, `Rent/Wages ${opexPct}`)}</span>}
                   </div>
                 )}
                 {/* 3. Taxes & Other */}
@@ -805,7 +833,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                 <div className="bg-amber-50/70 border border-amber-200 p-3 rounded-2xl">
                   <div className="flex items-center space-x-1.5 text-xs text-amber-800 font-bold mb-1">
                     <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0"></span>
-                    <span>{t('1. 进货采购成本', '1. Purchasing Cost')}</span>
+                    <span>{hasDirectLabor ? t('1. 营业成本（物料+一线人工）', '1. Cost of Revenue (materials + direct labor)') : t('1. 进货采购成本', '1. Purchasing Cost')}</span>
                   </div>
                   <div className="text-base font-mono font-black text-neutral-900">
                     {cogsPct} {t('块钱', '')}
@@ -819,7 +847,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                 <div className="bg-teal-50/70 border border-teal-200 p-3 rounded-2xl">
                   <div className="flex items-center space-x-1.5 text-xs text-teal-800 font-bold mb-1">
                     <span className="w-2.5 h-2.5 rounded-full bg-teal-500 shrink-0"></span>
-                    <span>{t('2. 房租工人工资', '2. Rent & Wages')}</span>
+                    <span>{hasDirectLabor ? t('2. 房租与管理人工', '2. Rent & Admin Wages') : t('2. 房租工人工资', '2. Rent & Wages')}</span>
                   </div>
                   <div className="text-base font-mono font-black text-neutral-900">
                     {opexPct} {t('块钱', '')}
@@ -1181,6 +1209,13 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                   </span>
                 )}
 
+                {grossMarginNoticeText && (
+                  <div className="basis-full text-xs bg-amber-50 text-amber-900 font-semibold px-3 py-2 rounded-xl border border-amber-300 flex items-start space-x-1.5 leading-relaxed">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                    <span>{grossMarginNoticeText}</span>
+                  </div>
+                )}
+
                 {report.estimatedMonthsCount > 0 && (
                   <span className="text-xs bg-cyan-50 text-cyan-800 font-semibold px-3 py-1 rounded-xl border border-cyan-200 flex items-center space-x-1.5">
                     <Sparkles className="w-3.5 h-3.5 text-cyan-600 shrink-0" />
@@ -1509,7 +1544,10 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
             {[
               {
                 label: t('毛利润 Gross Profit', 'Gross Profit'),
-                formula: t('毛利润 = 月真实主营收入 − 月进货/直接成本 COGS', 'Gross Profit = Monthly Real Operating Revenue − COGS'),
+                formula: t(
+                  '毛利润 = 月真实主营收入 − 月营业成本 COGS（物料/进货成本 + 直接服务人工）',
+                  'Gross Profit = Monthly Real Operating Revenue − COGS (materials/purchasing + direct service labor)'
+                ),
                 substitution: `${formatMoney(monthlyRealRevenue, baseCurr)} − ${formatMoney(monthlyCogs, baseCurr)} = ${formatMoney(grossProfit, baseCurr)}`
               },
               {
