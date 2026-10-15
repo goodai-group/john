@@ -536,6 +536,96 @@ export const fetchAssessmentsFromCloud = async (
   }
 };
 
+// ========================
+// 超级账户（只读查看所有人提交的项目）
+// ========================
+
+// 超级账户邮箱白名单，逗号分隔，在 .env 里配置 VITE_SUPER_ADMIN_EMAILS。
+// ⚠️ 前端判断只决定"是否显示入口"，并不构成安全边界；真正的数据隔离必须靠
+// Supabase RLS（见建表 SQL 末尾的 super admin 策略示例）。
+const SUPER_ADMIN_EMAILS: string[] = String(
+  (import.meta as any).env?.VITE_SUPER_ADMIN_EMAILS || ''
+)
+  .split(',')
+  .map((s) => s.trim().toLowerCase())
+  .filter(Boolean);
+
+export const isSuperAdmin = (user?: { email?: string | null } | null): boolean => {
+  const email = user?.email?.trim().toLowerCase();
+  return !!email && SUPER_ADMIN_EMAILS.includes(email);
+};
+
+export interface AdminProjectRow {
+  data: BusinessFormData;
+  ownerUid: string | null;
+  ownerEmail: string | null;
+  isSubmitted: boolean;
+  updatedAt: string | null;
+  /** 该项目最新一份体检报告的健康摘要；从未生成过报告则为 null */
+  health: AdminProjectHealth | null;
+}
+
+export interface AdminProjectHealth {
+  status: 'PASS' | 'REVIEW' | 'FAIL';
+  score: number | null;
+  tier: string | null;
+  gatePassed: boolean | null;
+  reportVersion: number | null;
+  reportAt: string | null;
+}
+
+/** 超级账户：拉取所有用户的项目（不按 owner_uid 过滤）。非超级账户直接返回空数组。 */
+export const fetchAllProjectsForAdmin = async (
+  user?: AppUser | null
+): Promise<AdminProjectRow[]> => {
+  if (!supabase || !isSuperAdmin(user)) return [];
+  const { data, error } = await supabase
+    .from('projects')
+    .select('form_data, owner_uid, owner_email, is_submitted, updated_at')
+    .order('updated_at', { ascending: false });
+  if (error) throw new Error(`读取全部项目失败：${error.message}`);
+
+  // 每个项目取最新一份报告作为健康状况；报告读取失败不影响项目列表展示
+  const latest = new Map<string, any>();
+  try {
+    const { data: reps, error: repErr } = await supabase
+      .from('assessment_reports')
+      .select('project_id, version, total_score, tier, overall_status, gate_passed, created_at')
+      .order('created_at', { ascending: false });
+    if (repErr) throw repErr;
+    for (const r of reps || []) {
+      if (r?.project_id && !latest.has(r.project_id)) latest.set(r.project_id, r);
+    }
+  } catch (e: any) {
+    console.warn('fetchAllProjectsForAdmin: reports unavailable:', e?.message || e);
+  }
+
+  return (data || [])
+    .filter((row: any) => row?.form_data?.id)
+    .map((row: any) => {
+      const rep = latest.get(row.form_data.id);
+      const status = rep?.overall_status;
+      return {
+        data: row.form_data as BusinessFormData,
+        ownerUid: row.owner_uid ?? null,
+        ownerEmail: row.owner_email ?? null,
+        isSubmitted: !!row.is_submitted,
+        updatedAt: row.updated_at ?? null,
+        health:
+          status === 'PASS' || status === 'REVIEW' || status === 'FAIL'
+            ? {
+                status,
+                score: rep.total_score ?? null,
+                tier: rep.tier ?? null,
+                gatePassed: rep.gate_passed ?? null,
+                reportVersion: rep.version ?? null,
+                reportAt: rep.created_at ?? null
+              }
+            : null
+      } as AdminProjectRow;
+    });
+};
+
 export const deleteAssessmentFromCloud = async (id: string): Promise<boolean> => {
   if (!supabase) return false;
   try {
@@ -958,4 +1048,8 @@ NOTIFY pgrst, 'reload schema';
 -- CREATE POLICY "owner insert" ON public.projects FOR INSERT WITH CHECK (owner_uid = auth.uid() OR owner_uid IS NULL);
 -- CREATE POLICY "owner update" ON public.projects FOR UPDATE USING (owner_uid = auth.uid() OR owner_uid IS NULL);
 -- CREATE POLICY "owner delete" ON public.projects FOR DELETE USING (owner_uid = auth.uid() OR owner_uid IS NULL);
+-- 超级账户（只读所有项目）：邮箱需与前端 VITE_SUPER_ADMIN_EMAILS 保持一致。启用 RLS 后必须加这条，
+-- 否则超级账户只能看到自己的项目：
+-- CREATE POLICY "super admin select" ON public.projects FOR SELECT
+--   USING (lower(auth.jwt() ->> 'email') IN ('admin@example.com'));
 `;

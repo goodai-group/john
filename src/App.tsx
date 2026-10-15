@@ -35,6 +35,9 @@ const AssessmentForm = lazy(() =>
 const AssessmentReportView = lazy(() =>
   import('./components/AssessmentReport/AssessmentReportView').then((m) => ({ default: m.AssessmentReportView }))
 );
+const AdminProjectsPage = lazy(() =>
+  import('./pages/AdminProjectsPage').then((m) => ({ default: m.AdminProjectsPage }))
+);
 const ProjectsListPage = lazy(() =>
   import('./pages/ProjectsListPage').then((m) => ({ default: m.ProjectsListPage }))
 );
@@ -1081,6 +1084,10 @@ export default function App() {
         )}
 
         {activeTab === 'learning' && <LearningCenterPage language={language} />}
+
+        {activeTab === 'admin' && (
+          <AdminProjectsPage currentUser={currentUser} language={language} />
+        )}
 
         {activeTab === 'projects' && (
           <ProjectsListPage
