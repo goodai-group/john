@@ -536,6 +536,54 @@ export const fetchAssessmentsFromCloud = async (
   }
 };
 
+// ========================
+// 超级账户（只读查看所有人提交的项目）
+// ========================
+
+// 超级账户邮箱白名单，逗号分隔，在 .env 里配置 VITE_SUPER_ADMIN_EMAILS。
+// ⚠️ 前端判断只决定"是否显示入口"，并不构成安全边界；真正的数据隔离必须靠
+// Supabase RLS（见建表 SQL 末尾的 super admin 策略示例）。
+const SUPER_ADMIN_EMAILS: string[] = String(
+  (import.meta as any).env?.VITE_SUPER_ADMIN_EMAILS || ''
+)
+  .split(',')
+  .map((s) => s.trim().toLowerCase())
+  .filter(Boolean);
+
+export const isSuperAdmin = (user?: { email?: string | null } | null): boolean => {
+  const email = user?.email?.trim().toLowerCase();
+  return !!email && SUPER_ADMIN_EMAILS.includes(email);
+};
+
+export interface AdminProjectRow {
+  data: BusinessFormData;
+  ownerUid: string | null;
+  ownerEmail: string | null;
+  isSubmitted: boolean;
+  updatedAt: string | null;
+}
+
+/** 超级账户：拉取所有用户的项目（不按 owner_uid 过滤）。非超级账户直接返回空数组。 */
+export const fetchAllProjectsForAdmin = async (
+  user?: AppUser | null
+): Promise<AdminProjectRow[]> => {
+  if (!supabase || !isSuperAdmin(user)) return [];
+  const { data, error } = await supabase
+    .from('projects')
+    .select('form_data, owner_uid, owner_email, is_submitted, updated_at')
+    .order('updated_at', { ascending: false });
+  if (error) throw new Error(`读取全部项目失败：${error.message}`);
+  return (data || [])
+    .filter((row: any) => row?.form_data?.id)
+    .map((row: any) => ({
+      data: row.form_data as BusinessFormData,
+      ownerUid: row.owner_uid ?? null,
+      ownerEmail: row.owner_email ?? null,
+      isSubmitted: !!row.is_submitted,
+      updatedAt: row.updated_at ?? null
+    }));
+};
+
 export const deleteAssessmentFromCloud = async (id: string): Promise<boolean> => {
   if (!supabase) return false;
   try {
@@ -958,4 +1006,8 @@ NOTIFY pgrst, 'reload schema';
 -- CREATE POLICY "owner insert" ON public.projects FOR INSERT WITH CHECK (owner_uid = auth.uid() OR owner_uid IS NULL);
 -- CREATE POLICY "owner update" ON public.projects FOR UPDATE USING (owner_uid = auth.uid() OR owner_uid IS NULL);
 -- CREATE POLICY "owner delete" ON public.projects FOR DELETE USING (owner_uid = auth.uid() OR owner_uid IS NULL);
+-- 超级账户（只读所有项目）：邮箱需与前端 VITE_SUPER_ADMIN_EMAILS 保持一致。启用 RLS 后必须加这条，
+-- 否则超级账户只能看到自己的项目：
+-- CREATE POLICY "super admin select" ON public.projects FOR SELECT
+--   USING (lower(auth.jwt() ->> 'email') IN ('admin@example.com'));
 `;

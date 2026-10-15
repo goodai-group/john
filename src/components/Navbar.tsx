@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { Language, ActiveTab, AppUser } from '../types';
 import { ChinaVpnSidebarLink } from './ChinaNetworkTip';
+import { isSuperAdmin } from '../lib/supabaseClient';
 
 interface NavbarProps {
   activeTab: ActiveTab | string;
@@ -80,7 +81,10 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'simulator', label: language === 'zh' ? '沙盒试算' : 'Simulator', icon: Calculator },
     { id: 'standards', label: language === 'zh' ? '评分规则' : 'Rules', icon: BookOpen },
     { id: 'learning', label: language === 'zh' ? '商业学习' : 'Learn', icon: GraduationCap },
-    { id: 'projects', label: language === 'zh' ? '我的项目' : 'Projects', icon: FolderKanban }
+    { id: 'projects', label: language === 'zh' ? '我的项目' : 'Projects', icon: FolderKanban },
+    ...(isSuperAdmin(currentUser)
+      ? [{ id: 'admin' as ActiveTab, label: language === 'zh' ? '全部项目' : 'All Projects', icon: ShieldCheck }]
+      : [])
   ];
 
   // 移动端屏幕宽度装不下全部 6 个标签（原先横向滚动但没有滚动提示，
