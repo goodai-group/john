@@ -4,6 +4,18 @@ import { AppUser, Language } from '../types';
 import { AdminProjectRow, fetchAllProjectsForAdmin, isSuperAdmin } from '../lib/supabaseClient';
 import { formatMoney } from '../lib/currencies';
 
+type HealthKey = 'PASS' | 'REVIEW' | 'FAIL' | 'NONE';
+
+const healthKeyOf = (r: AdminProjectRow): HealthKey => r.health?.status ?? 'NONE';
+
+const HEALTH_META: Record<HealthKey, { zh: string; en: string; cls: string }> = {
+  PASS: { zh: '健康', en: 'Healthy', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  REVIEW: { zh: '需关注', en: 'Needs review', cls: 'bg-amber-50 text-amber-700 border-amber-200' },
+  FAIL: { zh: '不达标', en: 'At risk', cls: 'bg-red-50 text-red-700 border-red-200' },
+  NONE: { zh: '未评估', en: 'Not assessed', cls: 'bg-neutral-100 text-neutral-500 border-neutral-200' }
+};
+const HEALTH_ORDER: HealthKey[] = ['FAIL', 'REVIEW', 'PASS', 'NONE'];
+
 interface AdminProjectsPageProps {
   currentUser: AppUser | null;
   language: Language;
@@ -17,6 +29,7 @@ export const AdminProjectsPage: React.FC<AdminProjectsPageProps> = ({ currentUse
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [onlySubmitted, setOnlySubmitted] = useState(false);
+  const [healthFilter, setHealthFilter] = useState<HealthKey | 'ALL'>('ALL');
 
   const allowed = isSuperAdmin(currentUser);
 
@@ -41,11 +54,20 @@ export const AdminProjectsPage: React.FC<AdminProjectsPageProps> = ({ currentUse
     const q = query.trim().toLowerCase();
     return rows.filter((r) => {
       if (onlySubmitted && !r.isSubmitted) return false;
+      if (healthFilter !== 'ALL' && healthKeyOf(r) !== healthFilter) return false;
       if (!q) return true;
       return [r.data.projectName, r.data.industry, r.ownerEmail, r.data.regionCountry]
         .some((s) => (s || '').toLowerCase().includes(q));
     });
-  }, [rows, query, onlySubmitted]);
+  }, [rows, query, onlySubmitted, healthFilter]);
+
+  const counts = useMemo(() => {
+    const c: Record<HealthKey, number> = { PASS: 0, REVIEW: 0, FAIL: 0, NONE: 0 };
+    rows.forEach((r) => {
+      c[healthKeyOf(r)] += 1;
+    });
+    return c;
+  }, [rows]);
 
   if (!allowed) {
     return (
@@ -75,6 +97,28 @@ export const AdminProjectsPage: React.FC<AdminProjectsPageProps> = ({ currentUse
           {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
           {t('刷新', 'Refresh')}
         </button>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t('按健康状况筛选', 'Filter by health')}>
+        <button
+          onClick={() => setHealthFilter('ALL')}
+          className={`px-3 py-1.5 rounded-full border text-sm font-bold cursor-pointer ${
+            healthFilter === 'ALL' ? 'bg-neutral-900 text-white border-neutral-900' : 'bg-white text-neutral-700 border-neutral-300'
+          }`}
+        >
+          {t('全部', 'All')} {rows.length}
+        </button>
+        {HEALTH_ORDER.map((k) => (
+          <button
+            key={k}
+            onClick={() => setHealthFilter(healthFilter === k ? 'ALL' : k)}
+            className={`px-3 py-1.5 rounded-full border text-sm font-bold cursor-pointer ${HEALTH_META[k].cls} ${
+              healthFilter === k ? 'ring-2 ring-offset-1 ring-neutral-900' : ''
+            }`}
+          >
+            {t(HEALTH_META[k].zh, HEALTH_META[k].en)} {counts[k]}
+          </button>
+        ))}
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -107,6 +151,7 @@ export const AdminProjectsPage: React.FC<AdminProjectsPageProps> = ({ currentUse
               <th className="px-4 py-3">{t('提交人', 'Owner')}</th>
               <th className="px-4 py-3">{t('行业 / 地区', 'Industry / Region')}</th>
               <th className="px-4 py-3 text-right">{t('月流水', 'Monthly revenue')}</th>
+              <th className="px-4 py-3">{t('健康状况', 'Health')}</th>
               <th className="px-4 py-3">{t('状态', 'Status')}</th>
               <th className="px-4 py-3">{t('更新时间', 'Updated')}</th>
             </tr>
@@ -127,6 +172,19 @@ export const AdminProjectsPage: React.FC<AdminProjectsPageProps> = ({ currentUse
                     ? formatMoney(Number(r.data.monthlyRevenue.amount), r.data.monthlyRevenue.currency || r.data.baseCurrency)
                     : '—'}
                 </td>
+                <td className="px-4 py-3 whitespace-nowrap">
+                  <span className={`px-2 py-0.5 rounded-full border text-xs font-bold ${HEALTH_META[healthKeyOf(r)].cls}`}>
+                    {t(HEALTH_META[healthKeyOf(r)].zh, HEALTH_META[healthKeyOf(r)].en)}
+                  </span>
+                  {r.health && (
+                    <span className="ml-2 text-xs text-neutral-500 tabular-nums">
+                      {r.health.score ?? '—'}{t('分', ' pts')} · {r.health.tier ?? '—'}
+                      {r.health.gatePassed === false && (
+                        <span className="ml-1 text-red-600 font-bold">{t('红线未过', 'Gate failed')}</span>
+                      )}
+                    </span>
+                  )}
+                </td>
                 <td className="px-4 py-3">
                   <span
                     className={`px-2 py-0.5 rounded-full text-xs font-bold ${
@@ -143,7 +201,7 @@ export const AdminProjectsPage: React.FC<AdminProjectsPageProps> = ({ currentUse
             ))}
             {!loading && filtered.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-10 text-center text-neutral-400">
+                <td colSpan={7} className="px-4 py-10 text-center text-neutral-400">
                   {t('暂无项目', 'No projects')}
                 </td>
               </tr>

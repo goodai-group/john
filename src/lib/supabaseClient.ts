@@ -561,6 +561,17 @@ export interface AdminProjectRow {
   ownerEmail: string | null;
   isSubmitted: boolean;
   updatedAt: string | null;
+  /** 该项目最新一份体检报告的健康摘要；从未生成过报告则为 null */
+  health: AdminProjectHealth | null;
+}
+
+export interface AdminProjectHealth {
+  status: 'PASS' | 'REVIEW' | 'FAIL';
+  score: number | null;
+  tier: string | null;
+  gatePassed: boolean | null;
+  reportVersion: number | null;
+  reportAt: string | null;
 }
 
 /** 超级账户：拉取所有用户的项目（不按 owner_uid 过滤）。非超级账户直接返回空数组。 */
@@ -573,15 +584,46 @@ export const fetchAllProjectsForAdmin = async (
     .select('form_data, owner_uid, owner_email, is_submitted, updated_at')
     .order('updated_at', { ascending: false });
   if (error) throw new Error(`读取全部项目失败：${error.message}`);
+
+  // 每个项目取最新一份报告作为健康状况；报告读取失败不影响项目列表展示
+  const latest = new Map<string, any>();
+  try {
+    const { data: reps, error: repErr } = await supabase
+      .from('assessment_reports')
+      .select('project_id, version, total_score, tier, overall_status, gate_passed, created_at')
+      .order('created_at', { ascending: false });
+    if (repErr) throw repErr;
+    for (const r of reps || []) {
+      if (r?.project_id && !latest.has(r.project_id)) latest.set(r.project_id, r);
+    }
+  } catch (e: any) {
+    console.warn('fetchAllProjectsForAdmin: reports unavailable:', e?.message || e);
+  }
+
   return (data || [])
     .filter((row: any) => row?.form_data?.id)
-    .map((row: any) => ({
-      data: row.form_data as BusinessFormData,
-      ownerUid: row.owner_uid ?? null,
-      ownerEmail: row.owner_email ?? null,
-      isSubmitted: !!row.is_submitted,
-      updatedAt: row.updated_at ?? null
-    }));
+    .map((row: any) => {
+      const rep = latest.get(row.form_data.id);
+      const status = rep?.overall_status;
+      return {
+        data: row.form_data as BusinessFormData,
+        ownerUid: row.owner_uid ?? null,
+        ownerEmail: row.owner_email ?? null,
+        isSubmitted: !!row.is_submitted,
+        updatedAt: row.updated_at ?? null,
+        health:
+          status === 'PASS' || status === 'REVIEW' || status === 'FAIL'
+            ? {
+                status,
+                score: rep.total_score ?? null,
+                tier: rep.tier ?? null,
+                gatePassed: rep.gate_passed ?? null,
+                reportVersion: rep.version ?? null,
+                reportAt: rep.created_at ?? null
+              }
+            : null
+      } as AdminProjectRow;
+    });
 };
 
 export const deleteAssessmentFromCloud = async (id: string): Promise<boolean> => {
