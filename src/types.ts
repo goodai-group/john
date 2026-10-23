@@ -392,6 +392,14 @@ export interface AssessmentReport {
     opexRatioPercent: number;
     cashRunwayMonths: number;
     debtServiceCoverageRatio: number;
+    // 税金来源明细（生成报告时记录）：用来回答"这笔税金是从哪来的"。
+    // field = 表单「税金及规费」一栏；ledger = 该栏为 0 时改用的智能记账税费明细；none = 都没有。
+    // 加入该字段之前生成的旧报告没有它。
+    taxBreakdown?: {
+      source: 'field' | 'ledger' | 'none';
+      fieldAmount: number;
+      ledgerItems: { label: string; amount: number }[];
+    };
   };
 
   // AI 大白话诊断与建议
