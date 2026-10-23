@@ -27,6 +27,11 @@ export interface AggregatedMonthlyCosts {
   fixedOpex: number; // 房租+管理与行政人工+水电（或动态明细合计）
   otherOpex: number;
   tax: number;
+  taxBreakdown: {
+    source: 'field' | 'ledger' | 'none';
+    fieldAmount: number; // 「税金及规费」一栏的月度等效额
+    ledgerItems: { label: string; amount: number }[]; // 智能记账税费明细（月度等效额）
+  };
   debtPayment: number;
   registrationMonthly: number;
   visaMonthly: number;
@@ -112,6 +117,12 @@ export function aggregateMonthlyCosts(
       : dynamicTaxTotal > 0
       ? dynamicTaxTotal
       : convMonthly(formData.taxCost);
+  const taxFieldAmount = convMonthly(formData.taxCost);
+  const taxBreakdown: AggregatedMonthlyCosts['taxBreakdown'] = {
+    source: taxFieldAmount > 0 ? 'field' : dynamicTaxTotal > 0 ? 'ledger' : 'none',
+    fieldAmount: taxFieldAmount,
+    ledgerItems: (formData.dynamicTaxItems || []).map((it) => ({ label: it.label, amount: monthlyValueOf(it) }))
+  };
   // 本金/利息拆分为新字段：只要填了本金，就以「本金+利息」为准（利息缺省按0）；
   // 未拆分过的历史数据（两个新字段都不存在）退回原来的单一合计字段，总额不变，
   // 避免存量项目一夜之间"丢失"债务数据。
@@ -149,6 +160,7 @@ export function aggregateMonthlyCosts(
     fixedOpex,
     otherOpex,
     tax,
+    taxBreakdown,
     debtPayment,
     registrationMonthly,
     visaMonthly,

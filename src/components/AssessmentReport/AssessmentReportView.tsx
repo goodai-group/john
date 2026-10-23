@@ -179,6 +179,27 @@ export const AssessmentReportView: React.FC<ReportViewProps> = ({
   // 但 净利润(PAT) = 税前利润(PBT) − 税金，两项都已知，反推即可，且与评分引擎的算法完全一致，
   // 不是另一套估算逻辑——用于下方「计算方法与过程」区块逐步展示税金这一步的代入过程。
   const taxAmountDerived = Math.max(0, operatingProfit - netProfit);
+  const baseCurr = report.baseCurrency;
+  // 税金来源：生成报告时由引擎记录（见 costAggregation.ts 的 taxBreakdown），旧报告没有该字段。
+  const taxBreakdown = report.normalizedFinancials.taxBreakdown;
+  const taxSourceDetail = !taxBreakdown
+    ? taxAmountDerived > 0
+      ? t(
+          '来源：本报告生成于记录税金来源之前，无法区分这笔税金来自「税金及规费」一栏还是智能记账的税费明细。请打开表单核对「税金及规费」及其下方的税费明细，然后重新生成报告。',
+          'Source: this report predates tax-source tracking, so it cannot tell whether this tax came from the "Taxes & Fees" field or smart-bookkeeping tax items. Check the "Taxes & Fees" field and the tax items listed under it in the form, then regenerate the report.'
+        )
+      : undefined
+    : taxBreakdown.source === 'field'
+      ? t(
+          `来源：表单「税金及规费」一栏，折合每月 ${formatMoney(taxBreakdown.fieldAmount, baseCurr)}${taxBreakdown.ledgerItems.length > 0 ? `（另有 ${taxBreakdown.ledgerItems.length} 条智能记账税费明细，因该栏已填而未计入）` : ''}`,
+          `Source: the "Taxes & Fees" field, ${formatMoney(taxBreakdown.fieldAmount, baseCurr)}/month${taxBreakdown.ledgerItems.length > 0 ? ` (${taxBreakdown.ledgerItems.length} smart-bookkeeping tax item(s) not counted because the field is filled)` : ''}`
+        )
+      : taxBreakdown.source === 'ledger'
+        ? t(
+            `来源：「税金及规费」一栏为 0，改用智能记账记入的税费明细：${taxBreakdown.ledgerItems.map((it) => `「${it.label}」${formatMoney(it.amount, baseCurr)}`).join('、')}。如不是税费，请到表单「税金及规费」下方删除或修改这些明细后重新生成报告。`,
+            `Source: the "Taxes & Fees" field is 0, so smart-bookkeeping tax items were used: ${taxBreakdown.ledgerItems.map((it) => `"${it.label}" ${formatMoney(it.amount, baseCurr)}`).join(', ')}. If these are not taxes, delete or edit them under "Taxes & Fees" in the form and regenerate the report.`
+          )
+        : t('来源：「税金及规费」一栏为 0，也没有智能记账税费明细，税金按 0 计算。', 'Source: the "Taxes & Fees" field is 0 and there are no smart-bookkeeping tax items, so tax is 0.');
   const gate5 = report.gates.find((g) => g.code === 'GATE-5');
 
   // 真实收入占比：引擎里用来判定 Gate-1 的同一个公式，专业明细页此前从未把这个具体百分比
@@ -188,7 +209,6 @@ export const AssessmentReportView: React.FC<ReportViewProps> = ({
       ? Number(((monthlyRealRevenue / (monthlyRealRevenue + monthlyExternalGrants)) * 100).toFixed(1))
       : 100;
 
-  const baseCurr = report.baseCurrency;
 
   // 加权表里每个单项得分的算法说明（悬停「?」显示）。公式与 scoringEngine.ts 的 metrics 一一对应，
   // 改了那边的打分公式这里要同步改。
@@ -1614,7 +1634,8 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                   '税金取表单「税金及规费」一栏的月度金额；该栏为 0 时，改用智能记账记入的税费明细合计。此处由税前利润与净利润反推核对：税金 = 税前利润 − 净利润',
                   'Tax is the monthly "Taxes & Fees" amount from the form; when that field is 0, the total of tax items recorded via smart bookkeeping is used instead. Cross-checked here from PBT and Net Profit: Tax = PBT − Net Profit'
                 ),
-                substitution: `${formatMoney(operatingProfit, baseCurr)} − ${formatMoney(netProfit, baseCurr)} = ${formatMoney(taxAmountDerived, baseCurr)}`
+                substitution: `${formatMoney(operatingProfit, baseCurr)} − ${formatMoney(netProfit, baseCurr)} = ${formatMoney(taxAmountDerived, baseCurr)}`,
+                detail: taxSourceDetail
               },
               {
                 label: t('净利润 PAT', 'Net Profit (PAT)'),
@@ -1656,6 +1677,9 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                 <div className="text-xs font-black text-neutral-900">{row.label}</div>
                 <div className="text-[12px] text-neutral-500">{row.formula}</div>
                 <div className="text-[12px] font-mono text-teal-700 font-bold break-all">{row.substitution}</div>
+                {'detail' in row && row.detail && (
+                  <div className="text-[12px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1">{row.detail}</div>
+                )}
               </div>
             ))}
           </div>
