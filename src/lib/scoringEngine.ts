@@ -90,6 +90,7 @@ export function runBusinessAssessment(formData: BusinessFormData): AssessmentRep
     directLabor,
     otherOpex,
     tax,
+    taxBreakdown,
     debtPayment,
     regulatoryCosts: monthlyRegulatoryCosts,
     totalOpex
@@ -465,7 +466,8 @@ export function runBusinessAssessment(formData: BusinessFormData): AssessmentRep
       netProfitMarginPercent,
       opexRatioPercent,
       cashRunwayMonths,
-      debtServiceCoverageRatio
+      debtServiceCoverageRatio,
+      taxBreakdown
     }
   };
 }
