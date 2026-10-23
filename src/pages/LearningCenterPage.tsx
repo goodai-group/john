@@ -1,14 +1,18 @@
 import React, { useMemo, useState } from 'react';
+import { Button, Card, Col, Flex, Progress, Row, Segmented, Tag, Tooltip, Typography } from 'antd';
 import { GraduationCap, PlayCircle, CheckCircle2, ExternalLink, Youtube, Film, Clock } from 'lucide-react';
 import { Language } from '../types';
 import { LEARNING_VIDEOS, LEARNING_CATEGORIES, LEARNING_CATEGORY_LABELS_EN } from '../lib/learningVideos';
 import { getLearningProgress, setVideoWatched } from '../lib/storage';
+import { PageContainer, PageHeader } from '../components/ui/PageHeader';
 
 interface LearningCenterPageProps {
   language: Language;
 }
 
 export const LearningCenterPage: React.FC<LearningCenterPageProps> = ({ language }) => {
+  const isEn = language === 'en';
+  const t = (zh: string, en: string) => (isEn ? en : zh);
   const [progress, setProgress] = useState(() => getLearningProgress());
   const [activeCategory, setActiveCategory] = useState<string>('全部');
   const [playingVideoId, setPlayingVideoId] = useState<string | null>(null);
@@ -16,16 +20,13 @@ export const LearningCenterPage: React.FC<LearningCenterPageProps> = ({ language
   const categories = useMemo(() => ['全部', ...LEARNING_CATEGORIES], []);
 
   const categoryLabel = (cat: string) => {
-    if (language === 'zh') return cat;
+    if (!isEn) return cat;
     if (cat === '全部') return 'All';
     return LEARNING_CATEGORY_LABELS_EN[cat] || cat;
   };
 
   const filteredVideos = useMemo(
-    () =>
-      activeCategory === '全部'
-        ? LEARNING_VIDEOS
-        : LEARNING_VIDEOS.filter((v) => v.category === activeCategory),
+    () => (activeCategory === '全部' ? LEARNING_VIDEOS : LEARNING_VIDEOS.filter((v) => v.category === activeCategory)),
     [activeCategory]
   );
 
@@ -33,159 +34,120 @@ export const LearningCenterPage: React.FC<LearningCenterPageProps> = ({ language
   const totalCount = LEARNING_VIDEOS.length;
   const progressPercent = totalCount > 0 ? Math.round((watchedCount / totalCount) * 100) : 0;
 
-  const toggleWatched = (videoId: string) => {
-    const isWatched = Boolean(progress[videoId]?.watched);
-    const updated = setVideoWatched(videoId, !isWatched);
-    setProgress(updated);
-  };
+  const markWatched = (videoId: string, watched: boolean) => setProgress(setVideoWatched(videoId, watched));
 
-  const handlePlay = (videoId: string, url: string) => {
-    setPlayingVideoId(videoId);
+  // 站内视频在卡片里直接播放；外链（YouTube）才新开标签页。
+  // 此前两种都会新开标签页，站内视频因此同时在新页面和卡片里各播一遍。
+  const handlePlay = (videoId: string, url: string, source: string) => {
+    if (source === 'internal') {
+      setPlayingVideoId(videoId);
+      return;
+    }
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
-      {/* Header + 进度条 */}
-      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-4">
-        <div className="flex items-start justify-between flex-wrap gap-4">
-          <div className="space-y-1.5">
-            <h2 className="text-xl sm:text-2xl font-black text-slate-900 flex items-center gap-2">
-              <GraduationCap className="w-6 h-6 text-teal-600" />
-              {language === 'zh' ? '商业知识学习中心' : 'Business Knowledge Learning Center'}
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-500 font-medium max-w-2xl">
-              {language === 'zh'
-                ? '不只是填表出报告——这里整理了成本核算、盈亏平衡、签证合规、现金流管理等商业基础知识短片，学多少、学到哪，系统都会帮你记住进度。'
-                : 'Beyond filling out forms — curated videos on cost accounting, break-even, visa compliance, and cash flow. Your progress is tracked automatically.'}
-            </p>
-          </div>
-          <div className="shrink-0 text-right">
-            <div className="text-3xl font-black text-teal-600">
-              {watchedCount}/{totalCount}
-            </div>
-            <div className="text-[13px] text-slate-400 font-bold uppercase tracking-wider">
-              {language === 'zh' ? '已学完' : 'Completed'}
-            </div>
-          </div>
+    <PageContainer>
+      <PageHeader
+        icon={<GraduationCap className="w-5 h-5" />}
+        title={t('商业学习', 'Learn')}
+        description={t(
+          '成本核算、保本点、签证合规、现金流管理的小课程，学到哪里系统会帮你记住。',
+          'Short lessons on costing, break-even, visa compliance and cash flow. Your progress is saved.'
+        )}
+      >
+        <Flex align="center" gap={16} className="mt-4">
+          <Progress percent={progressPercent} className="flex-1 m-0" />
+          <Typography.Text type="secondary" className="shrink-0">
+            {t(`已学完 ${watchedCount}/${totalCount}`, `${watchedCount}/${totalCount} done`)}
+          </Typography.Text>
+        </Flex>
+        <div className="mt-3 overflow-x-auto -mx-1 px-1">
+          <Segmented
+            value={activeCategory}
+            onChange={(v) => setActiveCategory(v as string)}
+            options={categories.map((c) => ({ value: c, label: categoryLabel(c) }))}
+          />
         </div>
+      </PageHeader>
 
-        <div className="space-y-1.5">
-          <div className="w-full h-2.5 rounded-full bg-slate-100 overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-teal-500 to-emerald-500 transition-all duration-500"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
-          <p className="text-[13px] text-slate-400 font-semibold">
-            {language === 'zh' ? `学习进度 ${progressPercent}%` : `Progress ${progressPercent}%`}
-          </p>
-        </div>
-
-        {/* 分类筛选 */}
-        <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-100">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              type="button"
-              onClick={() => setActiveCategory(cat)}
-              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors cursor-pointer ${
-                activeCategory === cat
-                  ? 'bg-teal-600 text-white shadow-sm'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              {categoryLabel(cat)}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* 视频网格 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <Row gutter={[16, 16]}>
         {filteredVideos.map((video) => {
           const isWatched = Boolean(progress[video.id]?.watched);
-          const title = language === 'zh' ? video.titleZh : video.titleEn;
-          const description = language === 'zh' ? video.descriptionZh : video.descriptionEn;
+          const title = isEn ? video.titleEn : video.titleZh;
+          const description = isEn ? video.descriptionEn : video.descriptionZh;
 
           return (
-            <div
-              key={video.id}
-              className={`rounded-2xl border p-4 space-y-3 transition-all ${
-                isWatched ? 'bg-emerald-50/50 border-emerald-300' : 'bg-white border-slate-200'
-              }`}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[12px] font-bold px-2 py-0.5 rounded-full bg-teal-100 text-teal-700">
-                  {categoryLabel(video.category)}
-                </span>
-                <span className="inline-flex items-center gap-1 text-[12px] text-slate-400 font-semibold">
-                  {video.source === 'youtube' ? (
-                    <Youtube className="w-3 h-3 text-rose-500" />
-                  ) : (
-                    <Film className="w-3 h-3 text-teal-500" />
-                  )}
-                  {video.source === 'youtube'
-                    ? 'YouTube'
-                    : language === 'zh'
-                    ? '站内视频'
-                    : 'Platform Video'}
-                </span>
-              </div>
+            <Col xs={24} sm={12} lg={8} key={video.id}>
+              <Card
+                variant="borderless"
+                className="shadow-xs h-full"
+                styles={{ body: { display: 'flex', flexDirection: 'column', gap: 8, height: '100%' } }}
+              >
+                <Flex justify="space-between" align="center" gap={8}>
+                  <Tag color="cyan" className="me-0">
+                    {categoryLabel(video.category)}
+                  </Tag>
+                  <Flex align="center" gap={4} className="text-xs text-neutral-500">
+                    {video.source === 'youtube' ? (
+                      <Youtube className="w-3.5 h-3.5 text-red-500" />
+                    ) : (
+                      <Film className="w-3.5 h-3.5 text-teal-600" />
+                    )}
+                    {video.source === 'youtube' ? 'YouTube' : t('站内视频', 'Platform video')}
+                  </Flex>
+                </Flex>
 
-              <h3 className="text-sm font-black text-slate-900 leading-snug">{title}</h3>
-              <p className="text-[13px] text-slate-500 leading-relaxed line-clamp-3">{description}</p>
+                <Typography.Text strong className="text-base">
+                  {title}
+                </Typography.Text>
+                <Typography.Paragraph type="secondary" ellipsis={{ rows: 3 }} className="mb-0">
+                  {description}
+                </Typography.Paragraph>
 
-              <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                <span className="inline-flex items-center gap-1 text-[13px] text-slate-400 font-semibold">
-                  <Clock className="w-3.5 h-3.5" />
-                  {video.durationMinutes} {language === 'zh' ? '分钟' : 'min'}
-                </span>
+                {playingVideoId === video.id && video.source === 'internal' && (
+                  <video
+                    src={video.url}
+                    controls
+                    autoPlay
+                    className="w-full rounded-lg border border-neutral-200"
+                    onEnded={() => markWatched(video.id, true)}
+                  />
+                )}
 
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => handlePlay(video.id, video.url)}
-                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-[13px] font-bold transition-colors cursor-pointer"
-                  >
-                    <PlayCircle className="w-3.5 h-3.5" />
-                    {language === 'zh' ? '观看' : 'Watch'}
-                    <ExternalLink className="w-3 h-3" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => toggleWatched(video.id)}
-                    title={
-                      language === 'zh'
-                        ? isWatched
-                          ? '取消标记已学完'
-                          : '标记为已学完'
-                        : isWatched
-                        ? 'Unmark as watched'
-                        : 'Mark as watched'
-                    }
-                    className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                      isWatched
-                        ? 'bg-emerald-600 text-white hover:bg-emerald-500'
-                        : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
-                    }`}
-                  >
-                    <CheckCircle2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-              {playingVideoId === video.id && video.source === 'internal' && (
-                <video
-                  src={video.url}
-                  controls
-                  className="w-full rounded-xl mt-2 border border-slate-200"
-                  onEnded={() => toggleWatched(video.id)}
-                />
-              )}
-            </div>
+                <Flex justify="space-between" align="center" className="mt-auto pt-2 border-t border-neutral-100">
+                  <Flex align="center" gap={4} className="text-xs text-neutral-500">
+                    <Clock className="w-3.5 h-3.5" />
+                    {video.durationMinutes} {t('分钟', 'min')}
+                  </Flex>
+                  <Flex gap={8}>
+                    <Tooltip title={isWatched ? t('取消标记已学完', 'Unmark as watched') : t('标记为已学完', 'Mark as watched')}>
+                      <Button
+                        size="small"
+                        type={isWatched ? 'primary' : 'default'}
+                        ghost={isWatched}
+                        icon={<CheckCircle2 className="w-4 h-4" />}
+                        onClick={() => markWatched(video.id, !isWatched)}
+                      >
+                        {isWatched ? t('已学完', 'Done') : t('标为已学', 'Mark done')}
+                      </Button>
+                    </Tooltip>
+                    <Button
+                      size="small"
+                      type="primary"
+                      icon={<PlayCircle className="w-4 h-4" />}
+                      onClick={() => handlePlay(video.id, video.url, video.source)}
+                    >
+                      {t('观看', 'Watch')}
+                      {video.source !== 'internal' && <ExternalLink className="w-3 h-3" />}
+                    </Button>
+                  </Flex>
+                </Flex>
+              </Card>
+            </Col>
           );
         })}
-      </div>
-    </div>
+      </Row>
+    </PageContainer>
   );
 };

@@ -216,7 +216,7 @@ export const PublicScoringStandards: React.FC<StandardsProps> = ({ language }) =
               <Card size="small" className="h-full bg-neutral-50">
                 <div className="mb-2">
                   <Typography.Text strong className="mr-2">
-                    {g.code} · {pick(g.title)}
+                    {isEn ? g.code : g.code.replace("Gate-", "红线 ")} · {pick(g.title)}
                   </Typography.Text>
                   <Tag color="success" className="me-0">
                     {pick(g.threshold)}
@@ -320,7 +320,7 @@ export const PublicScoringStandards: React.FC<StandardsProps> = ({ language }) =
         </Flex>
         <Typography.Paragraph type="secondary" className="mt-3 mb-0 text-xs">
           {t(
-            '6 项权重合计 100%，与报告综合得分的加权算法逐项对应。服务型行业的毛利率区间按行业另行设定（见上方 Gate-2）。偿债倍数不参与加权，属于红线 Gate-5。',
+            '6 项权重合计 100%，与报告综合得分的加权算法逐项对应。服务型行业的毛利率区间按行业另行设定（见上方红线 2）。偿债倍数不参与加权，属于红线 5。',
             'The 6 weights sum to 100% and map one-to-one to the report score. Service industries use industry-specific gross margin ranges (see Gate-2). DSCR is not weighted — it is Gate-5.'
           )}
         </Typography.Paragraph>

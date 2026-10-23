@@ -1,5 +1,5 @@
-import React from 'react';
-import { App as AntdApp, ConfigProvider, theme as antdTheme, type ThemeConfig } from 'antd';
+import React, { useMemo } from 'react';
+import { ConfigProvider, theme as antdTheme, type ThemeConfig } from 'antd';
 import { StyleProvider } from '@ant-design/cssinjs';
 import zhCN from 'antd/locale/zh_CN';
 import enUS from 'antd/locale/en_US';
@@ -53,11 +53,42 @@ export const antdThemeConfig: ThemeConfig = {
  * 位于 Tailwind 的 base 之后、utilities 之前——既不会被 Tailwind preflight 重置掉，
  * 又允许在 antd 组件上用 Tailwind 工具类做少量布局微调。
  */
-export function AntdProvider({ language, children }: { language: Language; children: React.ReactNode }) {
+export function AntdProvider({
+  language,
+  largeFont = false,
+  highContrast = false,
+  children
+}: {
+  language: Language;
+  /** 无障碍「大字模式」：antd 组件用 px 字号，不会跟着 Tailwind 的 text-* 放大，需单独调令牌 */
+  largeFont?: boolean;
+  /** 无障碍「高对比度」：加深正文/次要文字与边框颜色 */
+  highContrast?: boolean;
+  children: React.ReactNode;
+}) {
+  const theme = useMemo<ThemeConfig>(
+    () => ({
+      ...antdThemeConfig,
+      token: {
+        ...antdThemeConfig.token,
+        ...(largeFont ? { fontSize: 16, controlHeight: 36 } : {}),
+        ...(highContrast
+          ? {
+              colorText: '#000000',
+              colorTextSecondary: 'rgba(0,0,0,0.78)',
+              colorTextTertiary: 'rgba(0,0,0,0.65)',
+              colorBorder: '#8c8c8c',
+              colorBorderSecondary: '#bfbfbf'
+            }
+          : {})
+      }
+    }),
+    [largeFont, highContrast]
+  );
   return (
     <StyleProvider layer>
-      <ConfigProvider theme={antdThemeConfig} locale={language === 'en' ? enUS : zhCN}>
-        <AntdApp component={false}>{children}</AntdApp>
+      <ConfigProvider theme={theme} locale={language === 'en' ? enUS : zhCN}>
+        {children}
       </ConfigProvider>
     </StyleProvider>
   );

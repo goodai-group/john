@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Button,
@@ -33,12 +33,21 @@ import { calculateAssessmentReport } from '../lib/scoringEngine';
 import { INDUSTRY_BENCHMARKS } from '../lib/industryBenchmarks';
 import { getGrossMarginPolicy, usesDirectServiceLabor } from '../lib/grossMarginPolicy';
 import { PageContainer, PageHeader } from './ui/PageHeader';
+import { simulatorInputsFromProject } from '../lib/simulatorSeed';
+import { HEALTH_LEVEL_META, healthLabel, healthLevelOf, tierLabel } from '../lib/healthStatus';
 
 interface SimulatorProps {
   language: Language;
   /** 把试算数值带入一份新的草稿项目并跳转到表单 */
   onApplyToForm: (data: Partial<BusinessFormData>) => void;
+  /** 用户已有的项目，可一键载入为试算起点 */
+  projects?: BusinessFormData[];
+  /** 进入页面时自动载入的项目（例如从开业测算点「在沙盒里调整」跳过来） */
+  seedProjectId?: string;
 }
+
+/** 比例展示：整数原样显示，从项目载入的非整数比例保留 1 位小数 */
+const pct = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
 
 /** 1 美元在 currency 下等于多少 */
 const usdRate = (currency: CurrencyCode) => getCurrencyInfo(currency).rateToUsd || 1;
@@ -56,7 +65,7 @@ const STATUS_META: Record<GateCheckResult['status'], { color: string; zh: string
   FAIL: { color: 'error', zh: '不达标', en: 'Fail', icon: <XCircle className="w-4 h-4 text-red-500" /> }
 };
 
-export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyToForm }) => {
+export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyToForm, projects = [], seedProjectId }) => {
   const isEn = language === 'en';
   const t = (zh: string, en: string) => (isEn ? en : zh);
 
@@ -73,7 +82,36 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
   const [debtPayment, setDebtPayment] = useState(0);
   const [liquidCash, setLiquidCash] = useState(0);
   const [operatingMonths, setOperatingMonths] = useState(12);
+  const [employees, setEmployees] = useState(0);
+  const [loadedProjectId, setLoadedProjectId] = useState<string | undefined>(undefined);
   const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const loadProject = (id: string) => {
+    const project = projects.find((p) => p.id === id);
+    if (!project) return;
+    const v = simulatorInputsFromProject(project);
+    setCurrency(v.currency);
+    setIndustry(v.industry);
+    setMonthlyRevenue(v.monthlyRevenue);
+    setRealRevenueRatio(v.realRevenueRatio);
+    setCogsRatio(v.cogsRatio);
+    setRent(v.rent);
+    setLabor(v.labor);
+    setUtilities(v.utilities);
+    setOtherOpex(v.otherOpex);
+    setTaxes(v.taxes);
+    setDebtPayment(v.debtPayment);
+    setLiquidCash(v.liquidCash);
+    setOperatingMonths(v.operatingMonths);
+    setEmployees(v.employees);
+    setLoadedProjectId(id);
+  };
+
+  useEffect(() => {
+    if (seedProjectId) loadProject(seedProjectId);
+    // 只在进入页面时按传入的项目载入一次
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seedProjectId]);
 
   // 金额上限按币种折算（约合 1000 万美元），避免 VND/IDR 这类大面额币种被一个固定上限卡死
   const amountMax = Math.round(10_000_000 * usdRate(currency));
@@ -120,7 +158,8 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
     otherOpex: { amount: otherOpex, currency },
     existingDebtMonthlyPayment: { amount: debtPayment, currency },
     cashAndLiquidAssets: { amount: liquidCash, currency },
-    operatingMonthsCount: operatingMonths
+    operatingMonthsCount: operatingMonths,
+    fullTimeEmployeesCount: employees
   };
 
   const report = useMemo(() => {
@@ -150,7 +189,6 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
       visaFeeAmortizationMonths: 12,
       equipmentDepreciationCost: { amount: 0, currency },
       inventoryValue: { amount: 0, currency },
-      fullTimeEmployeesCount: 0,
       ownerEmail: '',
       collaborators: [],
       isSubmitted: false,
@@ -176,12 +214,14 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
     setDebtPayment(0);
     setLiquidCash(0);
     setOperatingMonths(12);
+    setEmployees(0);
+    setLoadedProjectId(undefined);
   };
 
   const gateLabel = (g: GateCheckResult): { label: string; value: string } => {
     switch (g.code) {
       case 'GATE-1':
-        return { label: t('真实营业额占比 ≥ 60%', 'Real revenue ratio ≥ 60%'), value: `${realRevenueRatio}%` };
+        return { label: t('真实营业额占比 ≥ 60%', 'Real revenue ratio ≥ 60%'), value: `${pct(realRevenueRatio)}%` };
       case 'GATE-2':
         return {
           label: t(`毛利率 ≥ ${policy.passAt}%`, `Gross margin ≥ ${policy.passAt}%`),
@@ -235,7 +275,16 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
     </Col>
   );
 
-  const scoreColor = !report.gatePassed ? '#ff4d4f' : report.totalScore >= 80 ? '#52c41a' : '#faad14';
+  const level = healthLevelOf(report);
+  const scoreColor = HEALTH_LEVEL_META[level].hex;
+  // 一句人话结论：没过红线时点名是哪几条；过了就说清每月赚多少、钱能撑多久
+  const failedGateLabels = report.gates.filter((g) => g.status !== 'PASS').map((g) => gateLabel(g).label);
+  const verdict = !report.gatePassed
+    ? t(`没过的红线：${failedGateLabels.join('、')}`, `Failed: ${failedGateLabels.join('; ')}`)
+    : t(
+        `每月净赚 ${formatMoney(fin.netProfit, currency)}，备用金可撑 ${fin.cashRunwayMonths} 个月`,
+        `Nets ${formatMoney(fin.netProfit, currency)} a month; cash lasts ${fin.cashRunwayMonths} months`
+      );
 
   return (
     <PageContainer>
@@ -249,11 +298,24 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
         )}
         extra={
           <>
+            {projects.length > 0 && (
+              <Select
+                className="w-full sm:w-56"
+                value={loadedProjectId}
+                placeholder={t('从我的项目载入…', 'Load from my project…')}
+                onChange={loadProject}
+                options={projects.map((p) => ({
+                  value: p.id,
+                  label: p.projectName?.trim() || t('（未命名项目）', '(untitled)')
+                }))}
+                aria-label={t('从我的项目载入', 'Load from my project')}
+              />
+            )}
             <Button icon={<RotateCcw className="w-4 h-4" />} onClick={resetDefaults}>
-              {t('重置', 'Reset')}
+              {t('清空', 'Clear')}
             </Button>
             <Button type="primary" disabled={!hasInput} onClick={() => setConfirmOpen(true)}>
-              {t('带入正式申报表', 'Apply to form')}
+              {t('用这组数字新建项目', 'Create project from these numbers')}
               <ArrowRight className="w-4 h-4" />
             </Button>
           </>
@@ -338,7 +400,7 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
                       </Tooltip>
                     </span>
                     <Typography.Text type={realRevenueRatio >= 60 ? 'success' : 'danger'} strong>
-                      {realRevenueRatio}% · {formatMoney(realRevenue, currency)}
+                      {pct(realRevenueRatio)}% · {formatMoney(realRevenue, currency)}
                     </Typography.Text>
                   </Flex>
                   <Slider
@@ -359,7 +421,7 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
                         : t('直接成本占比（进货 / 原材料）', 'Direct cost ratio (purchasing / materials)')}
                     </span>
                     <Typography.Text strong>
-                      {cogsRatio}% · {formatMoney(cogsAmount, currency)}
+                      {pct(cogsRatio)}% · {formatMoney(cogsAmount, currency)}
                     </Typography.Text>
                   </Flex>
                   <Slider
@@ -390,7 +452,7 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
                     : undefined
                 )}
                 {amountInput('utilities', t('水电网络', 'Utilities'), utilities, setUtilities)}
-                {amountInput('otherOpex', t('其他运营开销', 'Other overhead'), otherOpex, setOtherOpex)}
+                {amountInput('otherOpex', t('其他固定开销', 'Other overhead'), otherOpex, setOtherOpex)}
                 {amountInput('taxes', t('税费', 'Taxes & fees'), taxes, setTaxes)}
                 {amountInput('debt', t('每月还贷本息', 'Monthly debt payment'), debtPayment, setDebtPayment)}
                 {amountInput('cash', t('可用备用金', 'Cash reserves'), liquidCash, setLiquidCash)}
@@ -407,6 +469,22 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
                     value={operatingMonths}
                     onChange={(v) => setOperatingMonths(typeof v === 'number' ? v : 0)}
                     suffix={t('个月', 'mo')}
+                    inputMode="numeric"
+                  />
+                </Col>
+                <Col xs={24} sm={12}>
+                  <label className="block mb-1 text-neutral-700" htmlFor="sim-employees">
+                    {t('全职员工数', 'Full-time staff')}
+                  </label>
+                  <InputNumber
+                    id="sim-employees"
+                    className="w-full"
+                    min={0}
+                    max={10000}
+                    precision={0}
+                    value={employees}
+                    onChange={(v) => setEmployees(typeof v === 'number' ? v : 0)}
+                    suffix={t('人', 'ppl')}
                     inputMode="numeric"
                   />
                 </Col>
@@ -438,19 +516,14 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
                         </div>
                       )}
                     />
-                    <Flex vertical gap={8}>
-                      <div>
-                        <Typography.Text type="secondary">{t('评级', 'Tier')} </Typography.Text>
-                        <Tag color={report.tier === 'REJECT' ? 'error' : 'processing'} className="text-base">
-                          {report.tier}
-                        </Tag>
-                      </div>
-                      <Tag
-                        color={report.gatePassed ? 'success' : 'error'}
-                        icon={report.gatePassed ? <CheckCircle2 className="w-3.5 h-3.5 inline mr-1" /> : <XCircle className="w-3.5 h-3.5 inline mr-1" />}
-                      >
-                        {report.gatePassed ? t('红线全部通过', 'All gates passed') : t('触发红线（一票否决）', 'Gate failed')}
-                      </Tag>
+                    <Flex vertical gap={6} className="min-w-0 flex-1">
+                      <Typography.Title level={4} style={{ margin: 0, color: HEALTH_LEVEL_META[level].hex }}>
+                        {healthLabel(level, language)}
+                      </Typography.Title>
+                      <Typography.Text>{verdict}</Typography.Text>
+                      <Typography.Text type="secondary" className="text-xs">
+                        {t('评级', 'Tier')} {tierLabel(report.tier, language)}
+                      </Typography.Text>
                     </Flex>
                   </Flex>
 
@@ -539,8 +612,8 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
                 type="info"
                 showIcon
                 title={t(
-                  '试算与正式报告使用同一套评分引擎。需要完整诊断报告时，点「带入正式申报表」生成一个新项目继续填写。',
-                  'The simulator uses the same scoring engine as the formal report. Click "Apply to form" to continue in a new project for the full report.'
+                  '试算与正式报告使用同一套评分引擎。需要完整诊断报告时，点「用这组数字新建项目」继续填写。',
+                  'The simulator uses the same scoring engine as the formal report. Click "Create project from these numbers" to continue for the full report.'
                 )}
               />
             </Card>
@@ -550,8 +623,8 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
 
       <Modal
         open={confirmOpen}
-        title={t('带入正式申报表', 'Apply to the assessment form')}
-        okText={t('新建项目并带入', 'Create project')}
+        title={t('用这组数字新建项目', 'Create a project from these numbers')}
+        okText={t('新建项目', 'Create project')}
         cancelText={t('取消', 'Cancel')}
         onCancel={() => setConfirmOpen(false)}
         onOk={() => {

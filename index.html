@@ -1,18 +1,55 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%234f46e5'/%3E%3Ctext x='16' y='23' font-size='19' font-family='Arial,sans-serif' font-weight='bold' text-anchor='middle' fill='white'%3E%E5%95%86%3C/text%3E%3C/svg%3E" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230f766e'/%3E%3Ctext x='16' y='23' font-size='19' font-family='Arial,sans-serif' font-weight='bold' text-anchor='middle' fill='white'%3E%E5%95%86%3C/text%3E%3C/svg%3E" />
     <title>商宣商业模式检验 - 三分钟小白看懂 · 医疗与教育服事真实范本</title>
     <meta name="description" content="商宣商业模式检验平台：三分钟小白看懂，选用常见医疗诊所与教育培训服事真实范本，零门槛一眼看懂收支运转健康与应急储备。" />
     <meta property="og:title" content="商宣商业模式检验 - 三分钟小白看懂" />
     <meta property="og:description" content="三分钟小白看懂，选用常见医疗诊所与教育培训服事真实范本，零门槛一眼看懂收支运转健康与应急储备。" />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="theme-color" content="#134e4a" />
+    <style>
+      /* 首屏骨架：JS 还在下载时（弱网下可能要好几秒）先显示页面框架，而不是一片空白。
+         React 挂载后会整体替换 #root 内容。配色与 src/theme/AntdProvider.tsx 的品牌令牌一致。 */
+      html, body { margin: 0; background: #f7f3ec; }
+      .boot-side { display: none; }
+      .boot-top { height: 52px; background: #fff; border-bottom: 1px solid #e5e5e5; display: flex; align-items: center; gap: 10px; padding: 0 16px; font: 600 14px/1 -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; color: #171717; }
+      .boot-logo { width: 32px; height: 32px; border-radius: 8px; background: #0f766e; }
+      .boot-main { max-width: 1152px; margin: 0 auto; padding: 16px 12px; }
+      .boot-card { background: #fff; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+      .boot-line { height: 12px; border-radius: 6px; background: #eeeae2; margin: 10px 0; animation: boot-pulse 1.4s ease-in-out infinite; }
+      .boot-hint { font: 13px/1.5 -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; color: #737373; }
+      @keyframes boot-pulse { 50% { opacity: .45; } }
+      @media (min-width: 768px) {
+        .boot-side { display: block; position: fixed; inset: 0 auto 0 0; width: 224px; background: #134e4a; }
+        .boot-top { display: none; }
+        .boot-shell { padding-left: 224px; }
+        .boot-main { padding: 24px; }
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="boot-side"></div>
+      <div class="boot-shell">
+        <div class="boot-top"><span class="boot-logo"></span>商宣商业模式检验</div>
+        <div class="boot-main">
+          <div class="boot-card">
+            <div class="boot-line" style="width: 40%; height: 18px"></div>
+            <div class="boot-line" style="width: 75%"></div>
+            <div class="boot-hint">正在加载，网络较慢时请稍候… / Loading…</div>
+          </div>
+          <div class="boot-card">
+            <div class="boot-line" style="width: 90%"></div>
+            <div class="boot-line" style="width: 65%"></div>
+            <div class="boot-line" style="width: 80%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

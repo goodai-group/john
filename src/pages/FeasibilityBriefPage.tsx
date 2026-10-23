@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Card, Col, Empty, Flex, Row, Select, Skeleton, Statistic, Tag, Typography } from 'antd';
+import { Alert, Button, Card, Col, Empty, Flex, Row, Skeleton, Statistic, Tag, Typography } from 'antd';
 import { CheckCircle2, Clock, Compass, FlaskConical, Target, TrendingUp } from 'lucide-react';
 import { BusinessFormData, Language } from '../types';
 import { calculateBreakEvenRevenue } from '../lib/breakEvenCalculator';
@@ -24,9 +24,8 @@ import { PageContainer, PageHeader } from '../components/ui/PageHeader';
 
 interface Props {
   project: BusinessFormData | undefined;
-  /** 全部项目，用于在页内切换要测算的项目 */
-  projects: BusinessFormData[];
-  onSelectProject: (id: string) => void;
+  /** 带着当前项目的数字打开沙盒试算 */
+  onOpenSimulator: (projectId: string) => void;
   language: Language;
   onGoToForm: () => void;
 }
@@ -43,7 +42,7 @@ const STAGE_LABEL: Record<string, { zh: string; en: string; color: string }> = {
   has_revenue: { zh: '已有营收', en: 'Has revenue', color: 'success' }
 };
 
-export function FeasibilityBriefPage({ project, projects, onSelectProject, language, onGoToForm }: Props) {
+export function FeasibilityBriefPage({ project, onOpenSimulator, language, onGoToForm }: Props) {
   const isEn = language === 'en';
   const t = (zh: string, en: string) => (isEn ? en : zh);
   const [tests, setTests] = useState<AssumptionTest[] | null>(null);
@@ -194,18 +193,6 @@ export function FeasibilityBriefPage({ project, projects, onSelectProject, langu
           '回答「这事该不该做」：保本点、回本周期与开业前要验证的假设。全部在本机计算。',
           'Answers "should I do this?": break-even, payback and the assumptions to test before launch. Calculated locally.'
         )}
-        extra={
-          <Select
-            className="w-full sm:w-64"
-            value={project.id}
-            onChange={onSelectProject}
-            options={projects.map((p) => ({
-              value: p.id,
-              label: p.projectName || t('（未命名项目）', '(untitled)')
-            }))}
-            aria-label={t('选择项目', 'Select project')}
-          />
-        }
       />
 
       {project.businessStage === 'has_revenue' && (
@@ -283,6 +270,11 @@ export function FeasibilityBriefPage({ project, projects, onSelectProject, langu
             {t('回本周期：投进去的钱多久收回', 'Payback: when your investment comes back')}
           </Flex>
         }
+        extra={
+          <Button type="link" size="small" className="px-0" onClick={() => onOpenSimulator(project.id)}>
+            {t('改改数字试试', 'Try other numbers')}
+          </Button>
+        }
       >
         {scenarios ? (
           <>
@@ -314,6 +306,11 @@ export function FeasibilityBriefPage({ project, projects, onSelectProject, langu
                 className="mt-3"
                 type="error"
                 showIcon
+                action={
+                  <Button size="small" danger onClick={() => onOpenSimulator(project.id)}>
+                    {t('去沙盒调整', 'Adjust in simulator')}
+                  </Button>
+                }
                 title={t(
                   '按你填的数字，每月净结余不为正 —— 这门生意会一直亏钱，而不是回本。开业前需要重新算定价或成本结构。',
                   'At your figures the monthly surplus is not positive — the business would keep losing money rather than pay back. Revisit pricing or costs before launching.'

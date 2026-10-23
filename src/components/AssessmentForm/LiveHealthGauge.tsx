@@ -78,7 +78,7 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
 
   if (!isReady) {
     return (
-      <div className="bg-white rounded-3xl p-6 sm:p-7 border-2 border-dashed border-neutral-200 shadow-sm space-y-6">
+      <div className="bg-white rounded-xl p-6 sm:p-7 border-2 border-dashed border-neutral-200 shadow-sm space-y-6">
         {/* Header (muted) */}
         <div className="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-neutral-100">
           <div className="flex items-center space-x-3">
@@ -87,23 +87,23 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-mono font-bold uppercase tracking-wider text-neutral-500 bg-neutral-50 px-2.5 py-0.5 rounded-full border border-neutral-100">
+                <span className="text-xs font-bold text-neutral-500 bg-neutral-50 px-2.5 py-0.5 rounded-full border border-neutral-100">
                   {language === 'en' ? 'Live Barometer' : '实时晴雨表'}
                 </span>
                 <span className="text-xs text-neutral-500 font-bold">{language === 'en' ? '100% Auto-calculated' : '100% 自动计算'}</span>
               </div>
-              <h3 className="text-base sm:text-lg font-black text-neutral-900 mt-0.5">{language === 'en' ? 'Live Business Health Check' : '商宣模式运转健康实时测算'}</h3>
+              <h3 className="text-base sm:text-lg font-bold text-neutral-900 mt-0.5">{language === 'en' ? 'Live Business Health Check' : '商宣模式运转健康实时测算'}</h3>
             </div>
           </div>
 
           <div className="flex items-center space-x-3">
             <div className="text-right">
               <span className="text-xs text-neutral-400 font-medium block">{language === 'en' ? 'Estimated Health Score' : '预估健康分'}</span>
-              <span className="text-2xl font-black text-neutral-300 font-mono">
+              <span className="text-2xl font-bold text-neutral-300 tabular-nums">
                 -- <span className="text-sm text-neutral-300">/ 100</span>
               </span>
             </div>
-            <span className="px-3.5 py-2 rounded-2xl font-black text-sm border bg-neutral-100 text-neutral-500 border-neutral-200">
+            <span className="px-3.5 py-2 rounded-2xl font-bold text-sm border bg-neutral-100 text-neutral-500 border-neutral-200">
               {language === 'en' ? 'Awaiting Input' : '待填写'}
             </span>
           </div>
@@ -121,7 +121,7 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
   }
 
   return (
-    <div className="bg-white rounded-3xl p-6 sm:p-7 border-2 border-teal-200 shadow-sm space-y-6">
+    <div className="bg-white rounded-xl p-6 sm:p-7 border-2 border-teal-200 shadow-sm space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-neutral-100">
         <div className="flex items-center space-x-3">
@@ -130,12 +130,12 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-mono font-bold uppercase tracking-wider text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-100">
+              <span className="text-xs font-bold text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-100">
                 {language === 'en' ? 'Live Barometer' : '实时晴雨表'}
               </span>
               <span className="text-xs text-neutral-500 font-bold">{language === 'en' ? '100% Auto-calculated' : '100% 自动计算'}</span>
             </div>
-            <h3 className="text-base sm:text-lg font-black text-neutral-900 mt-0.5">{language === 'en' ? 'Live Business Health Check' : '商宣模式运转健康实时测算'}</h3>
+            <h3 className="text-base sm:text-lg font-bold text-neutral-900 mt-0.5">{language === 'en' ? 'Live Business Health Check' : '商宣模式运转健康实时测算'}</h3>
           </div>
         </div>
 
@@ -143,12 +143,12 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
         <div className="flex items-center space-x-3">
           <div className="text-right">
             <span className="text-xs text-neutral-400 font-medium block">{language === 'en' ? 'Estimated Health Score' : '预估健康分'}</span>
-            <span className="text-2xl font-black text-teal-900 font-mono">
+            <span className="text-2xl font-bold text-teal-900 tabular-nums">
               {report.totalScore} <span className="text-sm text-neutral-400">/ 100</span>
             </span>
           </div>
           <span
-            className={`px-3.5 py-2 rounded-2xl font-black text-sm border shadow-xs ${
+            className={`px-3.5 py-2 rounded-2xl font-bold text-sm border shadow-xs ${
               report.tier === 'AAA' || report.tier === 'AA'
                 ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
                 : report.tier === 'A' || report.tier === 'BBB'
@@ -182,7 +182,7 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
           </div>
 
           <div className="flex items-baseline justify-between">
-            <span className="text-3xl sm:text-4xl font-black font-mono tracking-tight">
+            <span className="text-3xl sm:text-4xl font-bold tabular-nums tracking-tight">
               {runwayMonths} <span className="text-base font-bold">{language === 'en' ? 'months' : '个月'}</span>
             </span>
             <span className="text-xs sm:text-sm font-semibold opacity-90">
@@ -214,7 +214,7 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
         </div>
 
         {/* Gauge 2: 100 Yuan Flow Breakdown Bar */}
-        <div className="p-5 rounded-2xl bg-neutral-50 border-2 border-neutral-200 space-y-3 text-sm">
+        <div className="p-5 rounded-2xl bg-neutral-50 border border-neutral-200 space-y-3 text-sm">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2 font-bold text-neutral-900">
               <PieChart className="w-5 h-5 text-teal-600" />

@@ -110,7 +110,7 @@ export const INDUSTRY_BIG_DATA = [
     runwaySafety: '≥ 2.0 ~ 3.0 个月',
     runwaySafetyEn: '≥ 2.0 ~ 3.0 mo',
     netProfitMargin: '8% ~ 14%',
-    keySurvivalRule: '严控临期损耗与供货账期，毛利率低于 18% 时极易触碰 Gate-2 红线。',
+    keySurvivalRule: '严控临期损耗与供货账期，毛利率低于 18% 时极易触碰毛利率红线。',
     keySurvivalRuleEn: 'Tightly control near-expiry waste and supplier payment terms — margins below 18% easily trip the Gate-2 red line.'
   },
   {
@@ -530,7 +530,7 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
       conservativePaths = [
         {
           pathName: '路径 A (推荐：12个月年化平均法)',
-          assumption: '将全年总营业收入除以 12 个月拉平为月均收入，房租按月分摊计入 OPEX。',
+          assumption: '将全年总营业收入除以 12 个月拉平为月均收入，房租按月分摊计入固定开销。',
           estimatedScore: '约 76-84 分 (GRADE A/BBB)',
           consequence: '最贴合实际抗风险能力，报告中将自动附注季节性平摊说明。'
         },
@@ -538,18 +538,18 @@ C. 完全不传任何图片，选择【纯手动填写 14 项经营数字】；
           pathName: '路径 B (保守：仅按活跃月份填报并加大备用金)',
           assumption: '按旺季单月真实数据填写，但现金储备必须能覆盖淡季全部固定开支。',
           estimatedScore: '约 70-75 分 (GRADE BBB)',
-          consequence: '备用金若不足可能触发 Gate-3/4 警示。'
+          consequence: '备用金若不足可能触发红线 3/4 警示。'
         }
       ];
     } else {
       category = '通用智能问答';
-      suggestedAction = '您可以询问流水/毛利/OPEX/备用金等指标，或通用生活与实用常识';
+      suggestedAction = '您可以询问流水/毛利/固定开销/备用金等指标，或通用生活与实用常识';
       answer = `【🤖 通用 AI 助手 · 本地规则引擎模式】
 
 关于您咨询的：「${text}」
 
 📌 两个建议方向：
-1️⃣ 本平台的【填报与评分】问题（流水、毛利、OPEX、备用金、汇率、凭证、季节/休渔等边缘情况），请直接追问相关关键词，我会用大白话 + 行业大数据为您详解；
+1️⃣ 本平台的【填报与评分】问题（流水、毛利、固定开销、备用金、汇率、凭证、季节/休渔等边缘情况），请直接追问相关关键词，我会用大白话 + 行业大数据为您详解；
 2️⃣ 【生活常识 / 实用知识 / 简单计算 / 币种换算】类问题也可以直接问，我能覆盖常见场景。
 
 🔑 完整版"能回答任何问题"的 AI：

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Steps } from 'antd';
 import {
   ShieldAlert,
   Sparkles,
@@ -118,7 +119,7 @@ function InfoTooltip({ text, language }: { text: string; language?: Language }) 
           e.preventDefault();
           setOpen((o) => !o);
         }}
-        className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-300/80 hover:bg-slate-400 text-white text-[10px] font-black leading-none shrink-0"
+        className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-300/80 hover:bg-slate-400 text-white text-[10px] font-bold leading-none shrink-0"
         aria-label={language === 'en' ? 'Info' : '说明'}
       >
         ?
@@ -824,7 +825,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
               min={1}
               value={item.amortizationMonths || 12}
               onChange={(v) => onAmortizationChange(Math.max(1, Math.round(v || 12)))}
-              className="w-12 p-1.5 border border-slate-200 rounded-lg font-mono text-right"
+              className="w-12 p-1.5 border border-slate-200 rounded-lg tabular-nums text-right"
             />
             <span className="text-[11px] text-slate-500">{language === 'en' ? 'mo' : '个月'}</span>
           </div>
@@ -1580,8 +1581,8 @@ export const AssessmentForm: React.FC<FormProps> = ({
 
   // —— 两步流程定义 ——
   const stepsList = [
-    { num: 1, title: language === 'en' ? 'What\'s your business?' : '生意叫什么？' },
-    { num: 2, title: language === 'en' ? 'Revenue, expenses & cash on hand' : '赚多少、花多少、兜里有多少现金' }
+    { num: 1, title: language === 'en' ? 'Your business' : '生意叫什么' },
+    { num: 2, title: language === 'en' ? 'Money in & out' : '赚多少、花多少' }
   ];
 
   // —— 断点流水按需出现：仅当月度数据存在缺口（中间某月为 0 且前后有值）时显示 ——
@@ -1651,14 +1652,14 @@ export const AssessmentForm: React.FC<FormProps> = ({
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+    <div className="max-w-4xl mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-4">
       {/* BUG-12 修复："正在编辑"提示条：默认载入的是上一个已提交项目而非空白新项目时，
           明确告知用户当前在编辑哪个项目，并提供"另存为新项目"以避免误覆盖原数据。 */}
       {isEditingExistingProject && (
         <div className="flex items-center justify-between flex-wrap gap-3 px-4 py-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900">
           <p className="text-xs sm:text-sm font-bold">
             {language === 'en' ? 'Editing: ' : '正在编辑：'}
-            <span className="font-black">{formData.projectName || (language === 'en' ? 'Untitled project' : '未命名项目')}</span>
+            <span className="font-bold">{formData.projectName || (language === 'en' ? 'Untitled project' : '未命名项目')}</span>
             {language === 'en'
               ? ' — saving will update this existing project, not create a new one.'
               : '——提交后会更新此项目，不会新建。'}
@@ -1675,54 +1676,31 @@ export const AssessmentForm: React.FC<FormProps> = ({
         </div>
       )}
 
-      {/* 1. Slim Header */}
-      <div className="bg-white rounded-3xl p-4 sm:p-5 border border-neutral-200 shadow-xs space-y-4">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <p className="text-xs sm:text-sm text-neutral-500 font-medium max-w-2xl">
-            {language === 'en'
-              ? 'Enter your name and numbers — AI infers the rest. Two steps to a full health report.'
-              : '只要两步：先告诉生意叫什么，再填上赚多少、花多少。AI 自动补齐行业、币种与成本结构，30 秒出报告。'}
+      {/* 步骤条：此前是说明文字 + 「草稿已暂存」徽标 + 两张大步骤卡，手机上第一个输入框前要先滚过半屏。
+          改为一行紧凑步骤条，自动暂存状态降级为一行小字。 */}
+      <div className="bg-white rounded-lg shadow-xs px-4 py-3">
+        <Steps
+          size="small"
+          responsive={false}
+          current={currentStep - 1}
+          onChange={(i) => setCurrentStep(i + 1)}
+          items={stepsList.map((s) => ({ title: s.title }))}
+        />
+        {saveStatus && (
+          <p className="mt-2 text-xs text-neutral-500 flex items-center gap-1">
+            <CheckCircle2 className="w-3.5 h-3.5 text-teal-600" />
+            {saveStatus}
           </p>
-
-          <div className="flex items-center gap-3">
-            {saveStatus && (
-              <span className="text-xs text-emerald-800 font-bold bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200 flex items-center space-x-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                <span>{saveStatus}</span>
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Step Indicator（两步） */}
-        <div className="grid grid-cols-2 gap-2 pt-3 border-t border-neutral-100">
-          {stepsList.map((s) => (
-            <button
-              key={s.num}
-              onClick={() => setCurrentStep(s.num)}
-              className={`p-3 rounded-2xl text-left border transition-all cursor-pointer ${
-                currentStep === s.num
-                  ? 'bg-neutral-900 border-neutral-800 text-white shadow-md'
-                  : 'bg-neutral-50 border-neutral-200/80 text-neutral-500 hover:bg-neutral-100'
-              }`}
-            >
-              <div className="text-[12px] font-mono font-bold uppercase tracking-wider opacity-80 mb-0.5">
-                STEP 0{s.num}
-              </div>
-              <div className="text-xs font-bold truncate">{s.title}</div>
-            </button>
-          ))}
-        </div>
+        )}
       </div>
 
       {/* STEP 1: 生意叫什么？ */}
       {currentStep === 1 && (
         <div className="space-y-6">
           <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
-            <div className="text-center space-y-1.5">
-              <h3 className="text-xl sm:text-2xl font-black text-slate-900 flex items-center justify-center gap-2">
-                <FileText className="w-5 h-5 text-teal-600" />
-                <span>{language === 'en' ? '1. What\'s your business?' : '1. 生意叫什么？'}</span>
+            <div className="space-y-1">
+              <h3 className="text-lg font-bold text-slate-900">
+                {language === 'en' ? 'What\'s your business?' : '生意叫什么？'}
               </h3>
               <p className="text-xs text-slate-500 font-medium">
                 {language === 'en'
@@ -1800,7 +1778,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     </span>
                   ) : (
                     <>
-                      <span className="font-black text-slate-900">{industryLabel}</span>
+                      <span className="font-bold text-slate-900">{industryLabel}</span>
                       <span
                         className={`text-[11px] px-1.5 py-0.5 rounded font-bold ${
                           industrySource === 'user' ? 'bg-slate-200 text-slate-700' : 'bg-violet-100 text-violet-700'
@@ -1930,13 +1908,13 @@ export const AssessmentForm: React.FC<FormProps> = ({
                         : 'border-slate-200 bg-white hover:border-teal-300'
                     }`}
                   >
-                    <span className="block text-xs font-black text-slate-900">{opt.label}</span>
+                    <span className="block text-xs font-bold text-slate-900">{opt.label}</span>
                     <span className="block text-[12px] text-slate-500 mt-0.5">{opt.desc}</span>
                   </button>
                 ))}
               </div>
               {formData.businessStage !== 'has_revenue' && (
-                <p className="text-[12px] text-amber-700 font-medium mt-1.5">
+                <p className="text-[12px] text-slate-500 font-medium mt-1.5">
                   {language === 'en'
                     ? "You don't have real revenue yet — just enter the next numbers as estimates/assumptions; the system will clearly label them as such."
                     : '你还没有真实营收，下一步的数字都当作「预估/假设」来填即可，系统会明确标注这是假设。'}
@@ -1957,11 +1935,11 @@ export const AssessmentForm: React.FC<FormProps> = ({
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-emerald-900">
                   <div className="p-2.5 rounded-xl bg-white/70 border border-emerald-100">
-                    <span className="text-emerald-600 block font-bold text-[12px] uppercase tracking-wider mb-0.5">{language === 'en' ? 'Industry' : '所属行业'}</span>
+                    <span className="text-emerald-600 block font-bold text-[12px] mb-0.5">{language === 'en' ? 'Industry' : '所属行业'}</span>
                     <span className="font-bold">{industryLabel}</span>
                   </div>
                   <div className="p-2.5 rounded-xl bg-white/70 border border-emerald-100">
-                    <span className="text-emerald-600 block font-bold text-[12px] uppercase tracking-wider mb-0.5">{language === 'en' ? 'Base Currency' : '主报告币种'}</span>
+                    <span className="text-emerald-600 block font-bold text-[12px] mb-0.5">{language === 'en' ? 'Base Currency' : '主报告币种'}</span>
                     <span className="font-bold">{formData.baseCurrency}</span>
                   </div>
                 </div>
@@ -2133,7 +2111,8 @@ export const AssessmentForm: React.FC<FormProps> = ({
             </div>
           </div>
 
-          <div className="flex justify-end flex-col items-end gap-2">
+          {/* 手机上「下一步」吸在底部标签栏之上，不用滚到最下面才能点 */}
+          <div className="sticky bottom-[4.5rem] md:static z-30 flex justify-end flex-col items-end gap-2">
             {/* 不用 disabled：名称框失焦即开始推算，若这里禁用，用户这一下点击会被吞掉；
                 推算进行中点击会等待同一次推算完成后再进入下一步。 */}
             <button
@@ -2154,7 +2133,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                 await ensureBusinessInference();
                 setCurrentStep(2);
               }}
-              className="flex items-center gap-1.5 px-6 py-2.5 bg-teal-600 hover:bg-teal-500 disabled:opacity-60 disabled:cursor-wait text-white rounded-xl text-xs font-bold shadow-md shadow-teal-600/20 transition-all cursor-pointer"
+              className="w-full md:w-auto flex items-center justify-center gap-1.5 px-6 py-3 md:py-2.5 bg-teal-700 hover:bg-teal-600 disabled:opacity-60 disabled:cursor-wait text-white rounded-lg text-sm font-bold shadow-lg md:shadow-sm transition-all cursor-pointer"
             >
               <span>
                 {inferState === 'loading'
@@ -2176,9 +2155,9 @@ export const AssessmentForm: React.FC<FormProps> = ({
 
           <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
             <div className="border-b border-slate-100 pb-3">
-              <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                 <Wallet className="w-5 h-5 text-teal-600" />
-                <span>{language === 'en' ? '2. Revenue, expenses & cash on hand' : '2. 赚多少、花多少、兜里有多少现金'}</span>
+                <span>{language === 'en' ? 'Revenue, expenses & cash on hand' : '赚多少、花多少、兜里有多少现金'}</span>
               </h3>
               <p className="text-xs text-slate-500">
                 {language === 'en'
@@ -2191,9 +2170,9 @@ export const AssessmentForm: React.FC<FormProps> = ({
             <div className="flex flex-col space-y-6">
 
               {/* —— 模块 1：赚多少（收入模块） —— */}
-              <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-50/80 to-teal-50/40 border border-emerald-200 shadow-2xs space-y-4">
+              <div className="p-5 rounded-2xl bg-emerald-50/60 border border-emerald-200 shadow-2xs space-y-4">
                 <div className="flex items-center justify-between flex-wrap gap-2 border-b border-emerald-100 pb-3">
-                  <h4 className="text-sm font-black text-emerald-950 flex items-center gap-2">
+                  <h4 className="text-sm font-bold text-emerald-950 flex items-center gap-2">
                     <TrendingUp className="w-4 h-4 text-emerald-600" />
                     <span>{language === 'en' ? '1. Revenue (Monthly Income)' : '1. 赚多少（每月收入）'}</span>
                   </h4>
@@ -2207,7 +2186,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   <div className="p-4 rounded-xl bg-white border-2 border-teal-200 shadow-2xs space-y-2.5 text-xs">
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <div>
-                        <label className="font-black text-slate-900 text-sm flex items-center gap-1.5">
+                        <label className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
                           <span>{language === 'en' ? 'Average Monthly Total Revenue' : '经营月均总流水'}</span>
                           <span className="text-[12px] bg-teal-600 text-white font-bold px-2 py-0.5 rounded-full">
                             {language === 'en' ? 'Total Turnover' : '总营业额'}
@@ -2245,7 +2224,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     </div>
                     {/* 反馈：不再手动填总额，由下方「按销量算出真实经营收入」的必填项自动算出，
                         和 COGS 的物料成本细则同一个思路——细项算总数，而不是让用户重复填一遍笼统总额。 */}
-                    <div className={`w-full p-3 border-2 rounded-xl font-black text-base shadow-2xs ${
+                    <div className={`w-full p-3 border-2 rounded-xl font-bold text-base shadow-2xs ${
                       estimatedRevenue != null ? 'border-teal-200 bg-white text-slate-900' : 'border-dashed border-slate-300 bg-slate-50 text-slate-400'
                     }`}>
                       {estimatedRevenue != null
@@ -2268,7 +2247,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       return (
                         <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 space-y-1.5">
                           <div className="flex items-center justify-between">
-                            <span className="text-[13px] font-black text-emerald-900">
+                            <span className="text-[13px] font-bold text-emerald-900">
                               {language === 'en' ? benchmark.nameEn : benchmark.nameZh}
                             </span>
                             <button type="button" onClick={() => onOpenAiHelper?.(language === 'en' ? 'What are the average revenue and profit benchmarks across industries?' : '各行业大数据平均流水与利润基准是多少？')} className="text-[12px] text-emerald-700 underline cursor-pointer">
@@ -2337,7 +2316,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   {/* 按销量算出真实经营收入：必填，二选一路径填完整（都填的话两者需一致） */}
                   <div className={`p-4 rounded-xl bg-white border-2 space-y-3 text-xs ${revenueEstimateError ? 'border-rose-400' : 'border-teal-200'}`}>
                     <div>
-                      <label className="font-black text-slate-900 text-sm flex items-center gap-1.5">
+                      <label className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
                         <Sparkles className="w-3.5 h-3.5 text-teal-600" />
                         <span>{language === 'en' ? 'Calculate real operating revenue from sales volume' : '按销量算出真实经营收入'}</span>
                         <span className="text-rose-500">*</span>
@@ -2351,12 +2330,12 @@ export const AssessmentForm: React.FC<FormProps> = ({
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="p-3 rounded-xl bg-teal-50/50 border border-teal-200 space-y-1.5">
-                        <span className="text-[12px] font-black text-teal-800">{language === 'en' ? 'Method 1: by units sold' : '方式一：按销量'}</span>
+                        <span className="text-[12px] font-bold text-teal-800">{language === 'en' ? 'Method 1: by units sold' : '方式一：按销量'}</span>
                         <label className="text-[12px] font-bold text-slate-600 block">{language === 'en' ? 'Units sold / mo' : '月销售总量'}</label>
                         <NumberField inputMode="numeric" min={0} value={formData.revenueDetailEstimate?.unitsSold || 0} onChange={(v) => updateRevenueDetail({ unitsSold: v || undefined })} className="w-full p-2 border border-teal-200 rounded-lg font-semibold bg-white" />
                       </div>
                       <div className="p-3 rounded-xl bg-teal-50/50 border border-teal-200 space-y-1.5">
-                        <span className="text-[12px] font-black text-teal-800">{language === 'en' ? 'Method 2: by foot traffic' : '方式二：按客流量'}</span>
+                        <span className="text-[12px] font-bold text-teal-800">{language === 'en' ? 'Method 2: by foot traffic' : '方式二：按客流量'}</span>
                         <div className="grid grid-cols-2 gap-2">
                           <div>
                             <label className="text-[12px] font-bold text-slate-600 block">{language === 'en' ? 'Monthly foot traffic' : '月客流量'}</label>
@@ -2396,9 +2375,9 @@ export const AssessmentForm: React.FC<FormProps> = ({
 
 
               {/* —— 模块 2：花多少（成本与开支模块） —— */}
-              <div className="p-5 rounded-2xl bg-gradient-to-br from-rose-50/70 to-slate-50 border border-rose-200 shadow-2xs space-y-4">
+              <div className="p-5 rounded-2xl bg-rose-50/50 border border-rose-200 shadow-2xs space-y-4">
                 <div className="flex items-center justify-between flex-wrap gap-2 border-b border-rose-100 pb-3">
-                  <h4 className="text-sm font-black text-rose-950 flex items-center gap-2">
+                  <h4 className="text-sm font-bold text-rose-950 flex items-center gap-2">
                     <Layers className="w-4 h-4 text-rose-600" />
                     <span>{language === 'en' ? '2. Costs & Expenses (Monthly Outflow)' : '2. 花多少（每月成本与开支）'}</span>
                   </h4>
@@ -2422,7 +2401,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     动态类目（材料/其他开支/注册/设备）可随时整行新增或删除。 */}
                 <div className="p-4 rounded-xl bg-white border border-slate-200 space-y-2 text-xs">
                   <div className="flex items-center justify-between flex-wrap gap-2">
-                    <span className="text-[13px] font-black text-slate-900">
+                    <span className="text-[13px] font-bold text-slate-900">
                       {language === 'en' ? 'Your expense items (add/remove/edit)' : '你的花费清单（可增删改）'}
                       {(cogsTouched || opexTouched) && (
                         <span className="ml-1.5 inline-block text-[11px] px-1 py-0.5 rounded bg-amber-100 text-amber-700 font-bold align-middle">{language === 'en' ? 'Manually adjusted' : '已手动调整'}</span>
@@ -2460,7 +2439,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       <NumberField
                         value={it.quantity || 0}
                         onChange={(v) => updateDynamicCogsItem(it.id, { quantity: v || undefined })}
-                        className="w-16 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono text-right"
+                        className="w-16 shrink-0 p-1.5 border border-slate-200 rounded-lg tabular-nums text-right"
                         placeholder={language === 'en' ? 'Qty' : '进货量'}
                         title={language === 'en' ? 'Purchase quantity (optional)' : '进货量（选填）'}
                       />
@@ -2468,7 +2447,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       <NumberField
                         value={it.unitCost || 0}
                         onChange={(v) => updateDynamicCogsItem(it.id, { unitCost: v || undefined })}
-                        className="w-20 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono text-right"
+                        className="w-20 shrink-0 p-1.5 border border-slate-200 rounded-lg tabular-nums text-right"
                         placeholder={language === 'en' ? 'Unit cost' : '进货单价'}
                         title={language === 'en' ? 'Unit purchase cost (optional)' : '进货单价（选填）'}
                       />
@@ -2477,7 +2456,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                         value={it.value}
                         onChange={(v) => updateDynamicCogsItem(it.id, { value: v })}
                         disabled={Boolean(it.quantity && it.unitCost)}
-                        className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right disabled:bg-slate-50 disabled:text-slate-500"
+                        className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg tabular-nums font-semibold text-right disabled:bg-slate-50 disabled:text-slate-500"
                         placeholder={it.suggestedAmount ? `${language === 'en' ? 'AI suggests' : 'AI建议'} ${it.suggestedAmount}` : (language === 'en' ? 'Amount' : '金额')}
                         title={it.suggestedAmount ? (language === 'en' ? `AI suggested reference amount: ${it.suggestedAmount} (for reference only, please fill in your real figure)` : `AI 建议参考金额：${it.suggestedAmount}（仅供参考，请填你的真实数字）`) : (language === 'en' ? 'Please fill in your real monthly amount, or fill quantity × unit cost above' : '请填你的真实月度金额，或改为在左边填进货量×进货单价')}
                       />
@@ -2515,7 +2494,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       min={0}
                       value={formData.rentCost.amount}
                       onChange={(v) => updateMoney('rentCost', v)}
-                      className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                      className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg tabular-nums font-semibold text-right"
                     />
                     <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.rentCost.currency}</span>
                     {renderCyclePicker(
@@ -2555,7 +2534,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                           min={0}
                           value={formData.directLaborCost?.amount || 0}
                           onChange={(v) => updateMoney('directLaborCost', v)}
-                          className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                          className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg tabular-nums font-semibold text-right"
                         />
                         <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.directLaborCost?.currency || formData.laborCost.currency}</span>
                         {renderCyclePicker(
@@ -2586,7 +2565,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       min={0}
                       value={formData.laborCost.amount}
                       onChange={(v) => updateMoney('laborCost', v)}
-                      className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                      className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg tabular-nums font-semibold text-right"
                     />
                     <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.laborCost.currency}</span>
                     {renderCyclePicker(
@@ -2606,7 +2585,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       min={0}
                       value={formData.utilityCost.amount}
                       onChange={(v) => updateMoney('utilityCost', v)}
-                      className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                      className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg tabular-nums font-semibold text-right"
                     />
                     <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.utilityCost.currency}</span>
                     {renderCyclePicker(
@@ -2631,7 +2610,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       min={0}
                       value={formData.otherOpex.amount}
                       onChange={(v) => updateMoney('otherOpex', v)}
-                      className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                      className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg tabular-nums font-semibold text-right"
                     />
                     <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.otherOpex.currency}</span>
                     {renderCyclePicker(
@@ -2652,7 +2631,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                         min={0}
                         value={formData.taxCost.amount}
                         onChange={(v) => updateMoney('taxCost', v)}
-                        className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                        className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg tabular-nums font-semibold text-right"
                       />
                       <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.taxCost.currency}</span>
                       {renderCyclePicker(
@@ -2697,7 +2676,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                               min={0}
                               value={it.value}
                               onChange={(v) => updateDynamicTaxItem(it.id, { value: Math.max(0, v) })}
-                              className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                              className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg tabular-nums font-semibold text-right"
                             />
                             <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.baseCurrency}</span>
                             <button type="button" onClick={() => removeDynamicTaxItem(it.id)} className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer shrink-0">
@@ -2738,7 +2717,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       placeholder={language === 'en' ? 'Enter 0 if no debt' : '无债务填 0'}
                       value={formData.existingDebtMonthlyPrincipal?.amount || 0}
                       onChange={(v) => updateMoney('existingDebtMonthlyPrincipal', v)}
-                      className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                      className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg tabular-nums font-semibold text-right"
                     />
                     <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.existingDebtMonthlyPrincipal?.currency || formData.baseCurrency}</span>
                     {renderCyclePicker(
@@ -2759,7 +2738,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       placeholder={language === 'en' ? 'Enter 0 if no interest' : '无利息填 0'}
                       value={formData.existingDebtMonthlyInterest?.amount || 0}
                       onChange={(v) => updateMoney('existingDebtMonthlyInterest', v)}
-                      className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                      className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg tabular-nums font-semibold text-right"
                     />
                     <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.existingDebtMonthlyInterest?.currency || formData.baseCurrency}</span>
                     {renderCyclePicker(
@@ -2788,7 +2767,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                         min={0}
                         value={it.amount}
                         onChange={(v) => updateDynamicRegistrationItem(it.id, { amount: v })}
-                        className="w-20 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                        className="w-20 shrink-0 p-1.5 border border-slate-200 rounded-lg tabular-nums font-semibold text-right"
                       />
                       <select
                         value={it.feeType}
@@ -2807,7 +2786,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                             min={1}
                             value={it.amortizationMonths}
                             onChange={(v) => updateDynamicRegistrationItem(it.id, { amortizationMonths: v })}
-                            className="w-14 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                            className="w-14 p-1.5 border border-slate-200 rounded-lg tabular-nums font-semibold text-right"
                           />
                           <span className="text-[11px] text-slate-500">{language === 'en' ? 'months' : '个月'}</span>
                         </div>
@@ -2836,7 +2815,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       placeholder={`约 ${regulatoryEstimate.registrationLocal}`}
                       value={formData.companyRegistrationCost.amount}
                       onChange={(v) => updateMoney('companyRegistrationCost', v)}
-                      className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                      className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg tabular-nums font-semibold text-right"
                     />
                     <div className="flex items-center gap-1 text-[11px] text-slate-500 shrink-0">
                       <span>÷</span>
@@ -2871,7 +2850,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       placeholder={`约 ${regulatoryEstimate.visaLocal}`}
                       value={formData.visaFeeCost.amount}
                       onChange={(v) => updateMoney('visaFeeCost', v)}
-                      className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                      className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg tabular-nums font-semibold text-right"
                     />
                     <div className="flex items-center gap-1 text-[11px] text-slate-500 shrink-0">
                       <span>÷</span>
@@ -2936,7 +2915,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                           {depreciationTable.rows.map((r) => (
                             <div key={r.category} className="p-1.5 rounded bg-sky-50 border border-sky-100">
                               <div className="text-slate-600">{r.label}</div>
-                              <div className="font-mono font-bold text-slate-900">
+                              <div className="tabular-nums font-bold text-slate-900">
                                 {language === 'en' ? `${r.years}y · ${r.annualRatePct}%/yr` : `${r.years}年 · 年折旧率${r.annualRatePct}%`}
                               </div>
                             </div>
@@ -2986,7 +2965,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                         onChange={(v) => updateDynamicEquipmentItem(it.id, { value: v })}
                         title={language === 'en' ? 'Purchase price' : '设备买价'}
                         placeholder={language === 'en' ? 'Price' : '买价'}
-                        className="w-20 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                        className="w-20 shrink-0 p-1.5 border border-slate-200 rounded-lg tabular-nums font-semibold text-right"
                       />
                       <div className="flex items-center gap-1 shrink-0">
                         <span className="text-[11px] text-slate-500">÷</span>
@@ -2995,7 +2974,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                           value={it.usefulLifeMonths}
                           onChange={(v) => updateDynamicEquipmentItem(it.id, { usefulLifeMonths: v })}
                           title={language === 'en' ? 'Months you expect to use it' : '预计能用多少个月'}
-                          className="w-14 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                          className="w-14 p-1.5 border border-slate-200 rounded-lg tabular-nums font-semibold text-right"
                         />
                         <span className="text-[11px] text-slate-500">{language === 'en' ? 'months' : '个月'}</span>
                       </div>
@@ -3073,7 +3052,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       placeholder={language === 'en' ? 'For small tools not listed above' : '未逐台列出的零散小型设备'}
                       value={formData.equipmentDepreciationCost.amount}
                       onChange={(v) => updateMoney('equipmentDepreciationCost', v)}
-                      className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                      className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg tabular-nums font-semibold text-right"
                     />
                     <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.equipmentDepreciationCost.currency}</span>
                     {renderCyclePicker(
@@ -3100,7 +3079,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                         min={0}
                         value={it.value}
                         onChange={(v) => updateDynamicOpexItem(it.id, { value: Math.max(0, v) })}
-                        className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                        className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg tabular-nums font-semibold text-right"
                         placeholder={it.suggestedAmount ? `${language === 'en' ? 'AI suggests' : 'AI建议'} ${it.suggestedAmount}` : (language === 'en' ? 'Amount' : '金额')}
                         title={it.suggestedAmount ? (language === 'en' ? `AI suggested reference amount: ${it.suggestedAmount} (for reference only, please fill in your real figure)` : `AI 建议参考金额：${it.suggestedAmount}（仅供参考，请填你的真实数字）`) : (language === 'en' ? 'Please fill in your real monthly amount' : '请填你的真实月度金额')}
                       />
@@ -3146,7 +3125,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                             min={0}
                             value={it.value}
                             onChange={(v) => updateOneTimeStartupItem(it.id, { value: Math.max(0, v) })}
-                            className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                            className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg tabular-nums font-semibold text-right"
                           />
                           <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.baseCurrency}</span>
                           <span className="text-[11px] text-slate-500 shrink-0">{language === 'en' ? 'one-time' : '一次性'}</span>
@@ -3166,7 +3145,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   )}
 
                   <div className="flex items-center justify-end flex-wrap gap-2 pt-2 border-t border-slate-200">
-                    <span className="text-[13px] font-black text-slate-900">
+                    <span className="text-[13px] font-bold text-slate-900">
                       {language === 'en' ? 'Total monthly expense:' : '花费清单合计：'}{' '}
                       {/* breakEven.monthlyCostTotal 刻意不含税费（与"每月现金消耗"口径保持一致，
                           详见 breakEvenCalculator.ts 注释），但这里的花费清单里"税金及规费"是
@@ -3182,9 +3161,9 @@ export const AssessmentForm: React.FC<FormProps> = ({
 
 
               {/* —— 模块 3：兜里有多少现金 & 初始投入（现金储备与投资模块） —— */}
-              <div className="p-5 rounded-2xl bg-gradient-to-br from-indigo-50/70 to-blue-50/40 border border-indigo-200 shadow-2xs space-y-4">
+              <div className="p-5 rounded-2xl bg-indigo-50/50 border border-indigo-200 shadow-2xs space-y-4">
                 <div className="flex items-center justify-between flex-wrap gap-2 border-b border-indigo-100 pb-3">
-                  <h4 className="text-sm font-black text-indigo-950 flex items-center gap-2">
+                  <h4 className="text-sm font-bold text-indigo-950 flex items-center gap-2">
                     <Wallet className="w-4 h-4 text-indigo-600" />
                     <span>{language === 'en' ? '3. Cash Reserve & Initial Investment' : '3. 兜里现金 & 初始投入'}</span>
                   </h4>
@@ -3197,7 +3176,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   {/* 可用现金备用金 */}
                   <div className="p-4 rounded-xl bg-white border-2 border-emerald-200 space-y-2 text-xs">
                     <div className="flex justify-between items-center">
-                      <label className="font-black text-slate-900 flex items-center gap-1 text-xs">
+                      <label className="font-bold text-slate-900 flex items-center gap-1 text-xs">
                         <span>{language === 'en' ? 'Current Available Cash Reserve' : '当前可用现金备用金'}</span>
                       </label>
                       <span className="text-xs font-bold text-slate-500">
@@ -3210,7 +3189,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       min={0}
                       value={formData.cashAndLiquidAssets.amount}
                       onChange={(v) => updateMoney('cashAndLiquidAssets', v)}
-                      className="w-full p-2.5 border border-emerald-300 rounded-xl font-black text-emerald-900 text-base bg-white"
+                      className="w-full p-2.5 border border-emerald-300 rounded-xl font-bold text-emerald-900 text-base bg-white"
                     />
                     <p className="text-[12px] text-slate-500">
                       {language === 'en'
@@ -3251,9 +3230,9 @@ export const AssessmentForm: React.FC<FormProps> = ({
 
 
               {/* —— 模块 4：AI 动态测算与风险校验（保本与回本分析） —— */}
-              <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-50/90 via-orange-50/50 to-amber-50/30 border-2 border-amber-300 shadow-xs space-y-4">
+              <div className="p-5 rounded-2xl bg-amber-50/60 border border-amber-200 shadow-xs space-y-4">
                 <div className="flex items-center justify-between flex-wrap gap-2 border-b border-amber-200 pb-3">
-                  <h4 className="text-sm font-black text-amber-950 flex items-center gap-2">
+                  <h4 className="text-sm font-bold text-amber-950 flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-amber-600" />
                     <span>{language === 'en' ? '4. AI Real-time Financial Analysis & Diagnostics' : '4. AI 实时财务测算与智能校验'}</span>
                   </h4>
@@ -3278,7 +3257,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   <div className="p-4 rounded-xl bg-white border border-amber-300 space-y-1.5 text-xs shadow-2xs">
                     <div className="flex items-center gap-2">
                       <Target className="w-4 h-4 text-amber-600 shrink-0" />
-                      <span className="font-black text-amber-950 text-sm">{language === 'en' ? 'AI Break-Even Revenue Threshold' : 'AI 算出的保本收入（不亏钱最低线）'}</span>
+                      <span className="font-bold text-amber-950 text-sm">{language === 'en' ? 'AI Break-Even Revenue Threshold' : 'AI 算出的保本收入（不亏钱最低线）'}</span>
                       <InfoTooltip
                         language={language}
                         text={
@@ -3292,7 +3271,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       {language === 'en' ? (
                         <>
                           You need to sell at least
-                          <span className="text-base font-black text-amber-950 mx-1.5 underline decoration-amber-400 decoration-2">
+                          <span className="text-base font-bold text-amber-950 mx-1.5 underline decoration-amber-400 decoration-2">
                             {formatMoney(breakEven.dailyBreakEvenRevenue, formData.baseCurrency)}
                           </span>
                           per day (at least <span className="font-bold">{formatMoney(breakEven.monthlyBreakEvenRevenue, formData.baseCurrency)}</span> per month) to avoid a loss.
@@ -3300,7 +3279,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       ) : (
                         <>
                           你每天至少要卖到
-                          <span className="text-base font-black text-amber-950 mx-1.5 underline decoration-amber-400 decoration-2">
+                          <span className="text-base font-bold text-amber-950 mx-1.5 underline decoration-amber-400 decoration-2">
                             {formatMoney(breakEven.dailyBreakEvenRevenue, formData.baseCurrency)}
                           </span>
                           （每月至少 <span className="font-bold">{formatMoney(breakEven.monthlyBreakEvenRevenue, formData.baseCurrency)}</span>）才不亏钱。
@@ -3318,7 +3297,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                 {/* 回本时间与目标反推 */}
                 {formData.initialInvestmentEstimate.amount > 0 && (
                   <div className="p-4 rounded-xl bg-white border border-indigo-200 space-y-3 text-xs shadow-2xs">
-                    <div className="flex items-center gap-2 font-black text-indigo-950 text-sm">
+                    <div className="flex items-center gap-2 font-bold text-indigo-950 text-sm">
                       <Target className="w-4 h-4 text-indigo-600" />
                       <span>{language === 'en' ? 'Payback Period & Target Required Revenue' : '回本时间预测与目标反推'}</span>
                     </div>
@@ -3331,7 +3310,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                           </b>
                           {payback.paybackMonths !== null ? (
                             <>
-                              , expected payback in <span className="text-base font-black text-indigo-900 mx-1.5">{payback.paybackMonths.toFixed(1)}</span> months.
+                              , expected payback in <span className="text-base font-bold text-indigo-900 mx-1.5">{payback.paybackMonths.toFixed(1)}</span> months.
                             </>
                           ) : (
                             '. Net surplus is not positive yet — payback period cannot be calculated until operational profit is positive.'
@@ -3346,7 +3325,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                           </b>
                           {payback.paybackMonths !== null ? (
                             <>
-                              ，预计 <span className="text-base font-black text-indigo-900 mx-1.5">{payback.paybackMonths.toFixed(1)}</span> 个月可以回本。
+                              ，预计 <span className="text-base font-bold text-indigo-900 mx-1.5">{payback.paybackMonths.toFixed(1)}</span> 个月可以回本。
                             </>
                           ) : (
                             '。当前净结余不为正，暂时算不出回本时间——先让经营结余为正，回本时间才有意义。'
@@ -3362,7 +3341,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                           min={1}
                           value={formData.targetPaybackMonths}
                           onChange={(v) => updateField('targetPaybackMonths', v)}
-                          className="w-20 p-1.5 border border-indigo-300 rounded-lg font-black text-indigo-900 text-center bg-white"
+                          className="w-20 p-1.5 border border-indigo-300 rounded-lg font-bold text-indigo-900 text-center bg-white"
                         />
                         <span className="font-bold text-indigo-900">{language === 'en' ? 'months, required monthly revenue:' : '个月内回本，至少要赚多少？'}</span>
                       </div>
@@ -3371,7 +3350,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                           {language === 'en' ? (
                             <>
                               Need monthly revenue of at least
-                              <span className="text-base font-black text-indigo-950 mx-1.5">
+                              <span className="text-base font-bold text-indigo-950 mx-1.5">
                                 {formatMoney(reverseTarget.requiredMonthlyRevenue, formData.baseCurrency)}
                               </span>
                               (approx. {formatMoney(reverseTarget.requiredDailyRevenue, formData.baseCurrency)} / day).
@@ -3379,7 +3358,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                           ) : (
                             <>
                               至少要做到的每月收入：
-                              <span className="text-base font-black text-indigo-950 mx-1.5">
+                              <span className="text-base font-bold text-indigo-950 mx-1.5">
                                 {formatMoney(reverseTarget.requiredMonthlyRevenue, formData.baseCurrency)}
                               </span>
                               （约每天 {formatMoney(reverseTarget.requiredDailyRevenue, formData.baseCurrency)}）。
@@ -3394,7 +3373,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                 {/* AI 异常数值提醒 */}
                 {anomalyWarnings.length > 0 && (
                   <div className="p-4 rounded-xl bg-rose-50/90 border-2 border-rose-300 space-y-2 text-xs">
-                    <div className="flex items-center gap-2 font-black text-rose-950">
+                    <div className="flex items-center gap-2 font-bold text-rose-950">
                       <AlertOctagon className="w-4 h-4 text-rose-600 shrink-0" />
                       <span>
                         {language === 'en'
@@ -3437,7 +3416,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                 {/* 已标注特殊理由的提醒 */}
                 {overriddenAnomalyWarnings.length > 0 && (
                   <div className="p-3.5 rounded-xl bg-white border border-slate-200 space-y-2 text-xs">
-                    <div className="flex items-center gap-2 font-black text-slate-700">
+                    <div className="flex items-center gap-2 font-bold text-slate-700">
                       <CheckCircle2 className="w-4 h-4 text-slate-500" />
                       <span>
                         {language === 'en'
@@ -3832,7 +3811,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-slate-700">
                 <div>
                   <span className="text-slate-500 block">{language === 'en' ? 'Project Name:' : '项目名称:'}</span>
-                  <span className="font-bold">{formData.projectName || (language === 'en' ? 'Untitled assessment' : '未命名自测')}</span>
+                  <span className="font-bold">{formData.projectName || (language === 'en' ? 'Untitled assessment' : '未命名项目')}</span>
                 </div>
                 <div>
                   <span className="text-slate-500 block">{language === 'en' ? 'Base Currency:' : '主报告币种:'}</span>
@@ -3880,8 +3859,8 @@ export const AssessmentForm: React.FC<FormProps> = ({
           )}
 
           {/* 底部常驻操作条：成本页很长，保存/出报告按钮始终贴在屏幕底部，不用滚到最下面才能点。
-              右侧留出空位，避免与全局右下角「AI 答疑」悬浮按钮重叠；移动端抬高到底部标签栏之上。 */}
-          <div className="sticky bottom-[4.5rem] md:bottom-4 z-30 mr-16 sm:mr-28 2xl:mr-0">
+              移动端抬高到底部标签栏之上。 */}
+          <div className="sticky bottom-[4.5rem] md:bottom-4 z-30">
             <div className="flex items-center justify-between gap-2 flex-wrap p-2.5 rounded-2xl bg-white/95 backdrop-blur border border-slate-200 shadow-lg">
               <div className="flex items-center gap-2">
                 <button
@@ -3896,7 +3875,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   type="button"
                   onClick={handleManualSave}
                   title={language === 'en' ? 'Save progress (Ctrl/⌘ + S)' : '保存填写进度（Ctrl/⌘ + S）'}
-                  className="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white rounded-xl text-xs font-bold shadow-sm cursor-pointer"
+                  className="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-white hover:bg-teal-50 text-teal-800 border border-teal-200 rounded-lg text-xs font-bold cursor-pointer"
                 >
                   <Save className="w-3.5 h-3.5" />
                   <span>{language === 'en' ? 'Save' : '保存'}</span>
@@ -3914,11 +3893,11 @@ export const AssessmentForm: React.FC<FormProps> = ({
               </div>
               <button
                 onClick={handleFinalSubmit}
-                className="flex items-center gap-2 px-4 sm:px-8 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-neutral-950 rounded-xl text-xs sm:text-sm font-black shadow-lg shadow-amber-500/30 transition-all cursor-pointer"
+                className="flex items-center gap-2 px-4 sm:px-8 py-2.5 bg-teal-700 hover:bg-teal-600 text-white rounded-lg text-sm font-bold shadow-sm transition-all cursor-pointer"
               >
                 <Sparkles className="w-4 h-4" />
-                <span className="sm:hidden">{language === 'en' ? 'Report' : '出报告'}</span>
-                <span className="hidden sm:inline">{language === 'en' ? 'Generate Health Report' : '出报告 · 生成评估报告'}</span>
+                <span className="sm:hidden">{language === 'en' ? 'Report' : '生成报告'}</span>
+                <span className="hidden sm:inline">{language === 'en' ? 'Generate report' : '生成体检报告'}</span>
               </button>
             </div>
           </div>

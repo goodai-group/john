@@ -1,21 +1,23 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { Suspense, lazy, useState } from 'react';
+import { Avatar, Button, Dropdown, Flex, Menu, Segmented, type MenuProps } from 'antd';
 import {
-  ShieldCheck,
-  FileText,
-  Sparkles,
-  Calculator,
+  Accessibility,
   BookOpen,
-  FolderKanban,
-  HelpCircle,
-  Globe,
-  LogOut,
-  LogIn,
-  Loader2,
+  Calculator,
   CheckCircle2,
+  FileText,
+  FolderKanban,
   GraduationCap,
-  Compass
+  HelpCircle,
+  LayoutGrid,
+  Loader2,
+  LogIn,
+  LogOut,
+  MessageCircle,
+  ShieldCheck,
+  Sparkles,
+  UserRound
 } from 'lucide-react';
-import { Menu } from 'antd';
 import { Language, ActiveTab, AppUser } from '../types';
 import { ChinaVpnSidebarLink } from './ChinaNetworkTip';
 import { isSuperAdmin } from '../lib/supabaseClient';
@@ -37,11 +39,27 @@ interface NavbarProps {
   isSigningIn?: boolean;
   /** 登录成功后的短暂过渡标记：为 true 时显示「✓ 登录成功」，代替登录按钮/头像 */
   justSignedIn?: boolean;
+  /** 「查看结果」进入哪一页：已有营收的项目看体检报告，尚未开业的看开业测算 */
+  resultTab: 'report' | 'feasibility';
 }
 
 /** 侧边栏宽度：与 App.tsx 中内容区的 md:pl-56 保持一致 */
 export const SIDEBAR_WIDTH_CLASS = 'md:w-56';
 
+const RESULT_TABS = ['report', 'feasibility'];
+const TOOL_TABS = ['simulator', 'standards', 'learning', 'admin'];
+
+export type IconType = React.ComponentType<{ className?: string }>;
+
+const MobileNavDrawers = lazy(() => import('./MobileNavDrawers').then((m) => ({ default: m.MobileNavDrawers })));
+
+/**
+ * 导航按「用户要办的事」组织，而不是按功能平铺：
+ *   我的生意：我的项目 → 填写数据 → 查看结果（体检报告 / 开业测算按项目阶段自动选择）
+ *   工具：沙盒试算、评分规则、商业学习（超级账户另有全部项目）
+ * 桌面端是左侧分组菜单；移动端是 5 个底部标签（项目 / 填写 / 结果 / 工具 / 我的），
+ * 工具与「我的」（语言、无障碍、指南、账号）收进底部抽屉，顶栏只保留品牌与 AI 答疑入口。
+ */
 export const Navbar: React.FC<NavbarProps> = ({
   activeTab,
   onTabChange,
@@ -49,298 +67,286 @@ export const Navbar: React.FC<NavbarProps> = ({
   onLanguageChange,
   onOpenAppGuide,
   onOpenAccessibility,
+  onOpenAiHelper,
   currentUser,
   onOpenAuth,
   onLogout,
   isSigningIn = false,
-  justSignedIn = false
+  justSignedIn = false,
+  resultTab
 }) => {
-  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  // 桌面侧边栏与移动端顶栏各渲染一份用户菜单（另一份只是被 CSS 隐藏，仍挂在 DOM 上），
-  // 必须各用各的 ref：此前共用一个 ref，会被后渲染的移动端那份覆盖，
-  // 导致 PC 上点「退出登录」时 mousedown 被判定为"点在菜单外"，菜单先被关掉，click 落空，退出无效。
-  const desktopUserMenuRef = useRef<HTMLDivElement>(null);
-  const mobileUserMenuRef = useRef<HTMLDivElement>(null);
+  const t = (zh: string, en: string) => (language === 'en' ? en : zh);
+  const [toolsOpen, setToolsOpen] = useState(false);
+  const [meOpen, setMeOpen] = useState(false);
+  const [drawersLoaded, setDrawersLoaded] = useState(false);
+  const openDrawer = (which: 'tools' | 'me') => {
+    setDrawersLoaded(true);
+    (which === 'tools' ? setToolsOpen : setMeOpen)(true);
+  };
+  const isAdmin = isSuperAdmin(currentUser);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node;
-      const insideMenu = [desktopUserMenuRef, mobileUserMenuRef].some((ref) => ref.current?.contains(target));
-      if (!insideMenu) {
-        setIsUserMenuOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  const selectedKey = RESULT_TABS.includes(activeTab) ? 'result' : activeTab;
+  const go = (key: string) => onTabChange((key === 'result' ? resultTab : key) as ActiveTab);
 
-  // 全部 6 大核心功能标签，桌面端侧边栏纵向平铺展示
-  const navItems: { id: ActiveTab; label: string; icon: any }[] = [
-    { id: 'form', label: language === 'zh' ? '快速体检' : 'Assessment', icon: FileText },
-    { id: 'report', label: language === 'zh' ? '体检报告' : 'Report', icon: Sparkles },
-    { id: 'feasibility', label: language === 'zh' ? '开业测算' : 'Launch', icon: Compass },
-    { id: 'simulator', label: language === 'zh' ? '沙盒试算' : 'Simulator', icon: Calculator },
-    { id: 'standards', label: language === 'zh' ? '评分规则' : 'Rules', icon: BookOpen },
-    { id: 'learning', label: language === 'zh' ? '商业学习' : 'Learn', icon: GraduationCap },
-    { id: 'projects', label: language === 'zh' ? '我的项目' : 'Projects', icon: FolderKanban },
-    ...(isSuperAdmin(currentUser)
-      ? [{ id: 'admin' as ActiveTab, label: language === 'zh' ? '全部项目' : 'All Projects', icon: ShieldCheck }]
+  const toolItems: { key: string; icon: IconType; label: string; desc: string }[] = [
+    {
+      key: 'simulator',
+      icon: Calculator,
+      label: t('沙盒试算', 'Simulator'),
+      desc: t('改改数字，看分数怎么变', 'Try numbers and watch the score change')
+    },
+    {
+      key: 'standards',
+      icon: BookOpen,
+      label: t('评分规则', 'Scoring rules'),
+      desc: t('每一分是怎么算出来的', 'How every point is calculated')
+    },
+    {
+      key: 'learning',
+      icon: GraduationCap,
+      label: t('商业学习', 'Learn'),
+      desc: t('小课程：看懂毛利、保本与现金', 'Short lessons on margin, break-even and cash')
+    },
+    ...(isAdmin
+      ? [
+          {
+            key: 'admin',
+            icon: ShieldCheck,
+            label: t('全部项目', 'All projects'),
+            desc: t('超级账户：查看所有用户项目', 'Super account: all users’ projects')
+          }
+        ]
       : [])
   ];
 
-  // 移动端屏幕宽度装不下全部 6 个标签（原先横向滚动但没有滚动提示，
-  // "我的项目"会被裁切到看不见也点不到）。改为固定底部 5 个高频标签，
-  // "评分规则"通过头部图标按钮单独触达，不占用底部空间。
-  const mobileBottomNavItems = navItems.filter((item) => item.id !== 'standards');
+  const menuItems: MenuProps['items'] = [
+    {
+      type: 'group',
+      label: t('我的生意', 'My business'),
+      children: [
+        { key: 'projects', icon: <FolderKanban className="w-4 h-4" />, label: t('我的项目', 'Projects') },
+        { key: 'form', icon: <FileText className="w-4 h-4" />, label: t('填写数据', 'Enter numbers') },
+        { key: 'result', icon: <Sparkles className="w-4 h-4" />, label: t('查看结果', 'Results') }
+      ]
+    },
+    {
+      type: 'group',
+      label: t('工具', 'Tools'),
+      children: toolItems.map((item) => {
+        const Icon = item.icon;
+        return { key: item.key, icon: <Icon className="w-4 h-4" />, label: item.label };
+      })
+    }
+  ];
 
-  // 普通渲染函数而非内部组件：内部组件每次渲染都是新类型，会让整个用户菜单反复卸载重挂
-  const renderUserBlock = (dark: boolean) => (
-    <>
-      {currentUser ? (
-        justSignedIn ? (
-          <div
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-700 text-xs font-bold whitespace-nowrap animate-in fade-in cursor-default"
-            title={language === 'zh' ? '您已成功登录' : 'You are signed in'}
-          >
-            <CheckCircle2 className="w-4 h-4" />
-            <span>{language === 'zh' ? '登录成功' : 'Signed in'}</span>
-          </div>
-        ) : (
-          <div className={`relative ${dark ? 'w-full' : ''}`} ref={dark ? desktopUserMenuRef : mobileUserMenuRef}>
-            <button
-              onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-              className={`flex items-center gap-2 p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl border transition-all cursor-pointer ${
-                dark
-                  ? 'bg-white/10 hover:bg-white/15 border-white/15 w-full'
-                  : 'bg-teal-50 hover:bg-teal-100 border-teal-200'
-              }`}
-            >
-              {currentUser.photoURL ? (
-                <img
-                  src={currentUser.photoURL}
-                  alt={currentUser.displayName || 'User'}
-                  referrerPolicy="no-referrer"
-                  className="w-6 h-6 rounded-full object-cover border border-teal-300 shrink-0"
-                />
-              ) : (
-                <div className="w-6 h-6 rounded-full bg-teal-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
-                  {(currentUser.displayName || currentUser.email || 'U').charAt(0).toUpperCase()}
-                </div>
-              )}
-              <span className={`text-xs font-bold truncate ${dark ? 'text-white' : 'text-teal-950 hidden sm:inline max-w-[120px]'}`}>
-                {currentUser.displayName || currentUser.email?.split('@')[0]}
-              </span>
-            </button>
+  const userName = currentUser?.displayName || currentUser?.email?.split('@')[0] || '';
+  const avatar = (size: number) =>
+    currentUser?.photoURL ? (
+      <Avatar size={size} src={currentUser.photoURL} alt={userName} />
+    ) : (
+      <Avatar size={size} style={{ background: '#0f766e' }}>
+        {(userName || 'U').charAt(0).toUpperCase()}
+      </Avatar>
+    );
 
-            {isUserMenuOpen && (
-              <div className={`absolute ${dark ? 'bottom-full mb-2 left-0' : 'right-0 mt-2'} w-60 rounded-2xl bg-white border border-neutral-200 shadow-xl p-3 z-50 animate-in fade-in`}>
-                <p className="text-xs font-bold text-neutral-900 truncate">
-                  {currentUser.displayName || (language === 'zh' ? 'Google 用户' : 'Google User')}
-                </p>
-                <p className="text-[13px] text-neutral-500 truncate mb-2">
-                  {currentUser.email}
-                </p>
-                <button
-                  onClick={() => {
-                    setIsUserMenuOpen(false);
-                    onTabChange('projects');
-                  }}
-                  className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-neutral-100 text-neutral-700 text-xs font-semibold"
-                >
-                  <FolderKanban className="w-4 h-4 text-teal-600" />
-                  <span>{language === 'zh' ? '查看我的所有项目' : 'View all my projects'}</span>
-                </button>
-                <button
-                  onClick={() => {
-                    setIsUserMenuOpen(false);
-                    onLogout();
-                  }}
-                  className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-rose-50 text-rose-700 text-xs font-semibold mt-1"
-                >
-                  <LogOut className="w-4 h-4" />
-                  <span>{language === 'zh' ? '退出登录' : 'Sign out'}</span>
-                </button>
-              </div>
-            )}
-          </div>
-        )
-      ) : (
-        <button
-          onClick={onOpenAuth}
-          disabled={isSigningIn || !onOpenAuth}
-          className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border shadow-xs transition-all cursor-pointer ${
-            dark
-              ? 'bg-white/10 hover:bg-white/15 text-white border-white/15 w-full'
-              : 'bg-white hover:bg-neutral-50 text-neutral-800 border-neutral-300'
-          }`}
-          title={language === 'zh' ? '登录账号（支持 Google 或邮箱密码），自动备份您的自测档案' : 'Sign in to back up your assessments to the cloud'}
-        >
-          {isSigningIn ? (
-            <Loader2 className={`w-3.5 h-3.5 animate-spin ${dark ? '' : 'text-teal-600'}`} />
-          ) : (
-            <LogIn className={`w-3.5 h-3.5 ${dark ? '' : 'text-teal-600'}`} />
-          )}
-          <span>
-            {dark
-              ? (language === 'zh' ? '登录同步存档' : 'Sign in to sync')
-              : (language === 'zh' ? '登录' : 'Sign in')}
-          </span>
-        </button>
-      )}
-    </>
+  const languageSwitch = (
+    <Segmented
+      size="small"
+      value={language}
+      onChange={(v) => onLanguageChange(v as Language)}
+      options={[
+        { value: 'zh', label: '中文' },
+        { value: 'en', label: 'EN' }
+      ]}
+    />
   );
+
+  // —— 桌面端账号区 ——
+  const desktopAccount = currentUser ? (
+    justSignedIn ? (
+      <Flex align="center" gap={6} className="px-3 py-2 rounded-lg bg-white/10 text-emerald-200 text-xs font-bold">
+        <CheckCircle2 className="w-4 h-4" />
+        {t('登录成功', 'Signed in')}
+      </Flex>
+    ) : (
+      <Dropdown
+        trigger={['click']}
+        placement="topLeft"
+        menu={{
+          items: [
+            { key: 'email', label: <span className="text-neutral-500">{currentUser.email}</span>, disabled: true },
+            { type: 'divider' },
+            { key: 'projects', icon: <FolderKanban className="w-4 h-4" />, label: t('我的所有项目', 'My projects') },
+            { key: 'logout', icon: <LogOut className="w-4 h-4" />, label: t('退出登录', 'Sign out'), danger: true }
+          ],
+          onClick: ({ key }) => {
+            if (key === 'logout') onLogout();
+            else if (key === 'projects') onTabChange('projects');
+          }
+        }}
+      >
+        <button className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 cursor-pointer text-left">
+          {avatar(24)}
+          <span className="text-xs font-bold text-white truncate">{userName}</span>
+        </button>
+      </Dropdown>
+    )
+  ) : (
+    <Button
+      block
+      ghost
+      icon={isSigningIn ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
+      disabled={isSigningIn || !onOpenAuth}
+      onClick={onOpenAuth}
+    >
+      {t('登录同步存档', 'Sign in to sync')}
+    </Button>
+  );
+
+  const bottomTabs: { key: string; icon: IconType; label: string }[] = [
+    { key: 'projects', icon: FolderKanban, label: t('项目', 'Projects') },
+    { key: 'form', icon: FileText, label: t('填写', 'Enter') },
+    { key: 'result', icon: Sparkles, label: t('结果', 'Results') },
+    { key: 'tools', icon: LayoutGrid, label: t('工具', 'Tools') },
+    { key: 'me', icon: UserRound, label: t('我的', 'Me') }
+  ];
+  const isBottomActive = (key: string) =>
+    key === 'tools' ? TOOL_TABS.includes(activeTab) : key === 'me' ? false : selectedKey === key;
+
 
   return (
     <>
-      {/* ============ Desktop Sidebar ============ */}
+      {/* ============ 桌面端侧边栏 ============ */}
       <aside
-        className={`hidden md:flex md:flex-col ${SIDEBAR_WIDTH_CLASS} md:fixed md:inset-y-0 md:left-0 z-40 bg-teal-900 text-white px-4 py-5`}
+        className={`hidden md:flex md:flex-col ${SIDEBAR_WIDTH_CLASS} md:fixed md:inset-y-0 md:left-0 z-40 bg-teal-900 text-white px-3 py-5 overflow-y-auto`}
       >
-        <div
-          className="flex items-center gap-2.5 cursor-pointer shrink-0 mb-6 px-1"
-          onClick={() => onTabChange('form')}
+        <button
+          className="flex items-center gap-2.5 cursor-pointer shrink-0 mb-4 px-2 text-left"
+          onClick={() => onTabChange('projects')}
         >
-          <div className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center text-white shrink-0">
+          <span className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center shrink-0">
             <ShieldCheck className="w-[18px] h-[18px]" />
-          </div>
-          <h1 className="text-sm font-bold text-white tracking-tight leading-tight">
-            {language === 'zh' ? '商宣商业模式检验' : 'BAM Financial Health'}
-          </h1>
-        </div>
+          </span>
+          <span className="text-sm font-bold leading-tight">{t('商宣商业模式检验', 'BAM Financial Health')}</span>
+        </button>
 
         <Menu
           theme="dark"
           mode="inline"
-          selectedKeys={[activeTab]}
-          onClick={({ key }) => onTabChange(key as ActiveTab)}
-          items={navItems.map((item) => {
-            const Icon = item.icon;
-            return { key: item.id, icon: <Icon className="w-4 h-4" />, label: item.label };
-          })}
+          selectedKeys={[selectedKey]}
+          onClick={({ key }) => go(key)}
+          items={menuItems}
           className="flex-1 border-e-0 bg-transparent"
         />
 
-        <div className="pt-4 mt-4 border-t border-white/10 space-y-3">
-          <ChinaVpnSidebarLink language={language} />
-          <div className="flex items-center gap-1">
-            {onOpenAccessibility && (
-              <button
-                onClick={onOpenAccessibility}
-                className="p-2 rounded-lg hover:bg-white/10 text-teal-200 transition-colors cursor-pointer"
-                title={language === 'zh' ? '无障碍 / 大字模式' : 'Accessibility / Large Font'}
-                aria-label={language === 'zh' ? '无障碍 / 大字模式' : 'Accessibility / Large Font'}
-              >
-                <Globe className="w-4 h-4" />
-              </button>
-            )}
-            {onOpenAppGuide && (
-              <button
-                onClick={onOpenAppGuide}
-                className="p-2 rounded-lg hover:bg-white/10 text-teal-200 transition-colors cursor-pointer"
-                title={language === 'zh' ? '使用指南' : 'Guide'}
-                aria-label={language === 'zh' ? '使用指南' : 'Guide'}
-              >
-                <HelpCircle className="w-4 h-4" />
-              </button>
-            )}
-            <button
-              onClick={() => onLanguageChange(language === 'zh' ? 'en' : 'zh')}
-              className="ml-auto px-2.5 py-1.5 rounded-lg hover:bg-white/10 text-teal-100 text-xs font-medium transition-colors cursor-pointer"
-            >
-              {language === 'zh' ? '中文 · EN' : 'EN · 中文'}
-            </button>
-          </div>
+        <Button
+          block
+          icon={<MessageCircle className="w-4 h-4" />}
+          className="mt-3"
+          onClick={() => (currentUser ? onOpenAiHelper() : onOpenAuth?.())}
+        >
+          {t('AI 答疑', 'Ask AI')}
+        </Button>
 
-          {renderUserBlock(true)}
+        <div className="pt-3 mt-3 border-t border-white/10 flex flex-col gap-3">
+          <ChinaVpnSidebarLink language={language} />
+          <Flex align="center" gap={4}>
+            <Button
+              type="text"
+              size="small"
+              icon={<Accessibility className="w-4 h-4 text-teal-100" />}
+              onClick={onOpenAccessibility}
+              title={t('大字 / 高对比度', 'Large text / high contrast')}
+              aria-label={t('大字 / 高对比度', 'Large text / high contrast')}
+            />
+            {onOpenAppGuide && (
+              <Button
+                type="text"
+                size="small"
+                icon={<HelpCircle className="w-4 h-4 text-teal-100" />}
+                onClick={onOpenAppGuide}
+                title={t('使用指南', 'Guide')}
+                aria-label={t('使用指南', 'Guide')}
+              />
+            )}
+            <span className="ml-auto">{languageSwitch}</span>
+          </Flex>
+          {desktopAccount}
         </div>
       </aside>
 
-      {/* ============ Mobile Top Bar ============ */}
+      {/* ============ 移动端顶栏：只留品牌与 AI 答疑 ============ */}
       <header className="md:hidden sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-neutral-200">
         <div className="px-4 py-2.5 flex items-center justify-between gap-3">
-          <div
-            className="flex items-center gap-2.5 cursor-pointer shrink-0"
-            onClick={() => onTabChange('form')}
-          >
-            <div className="w-8 h-8 bg-teal-600 rounded-lg flex items-center justify-center text-white shadow-sm">
+          <button className="flex items-center gap-2.5 min-w-0 cursor-pointer" onClick={() => onTabChange('projects')}>
+            <span className="w-8 h-8 bg-teal-700 rounded-lg flex items-center justify-center text-white shrink-0">
               <ShieldCheck className="w-4 h-4" />
-            </div>
-            <h1 className="text-sm font-bold text-neutral-900 tracking-tight">
-              {language === 'zh' ? '商宣商业模式检验' : 'BAM Financial Health'}
-            </h1>
-          </div>
-
-          <div className="flex items-center gap-1">
-            {onOpenAccessibility && (
-              <button
-                onClick={onOpenAccessibility}
-                className="p-2 rounded-lg hover:bg-neutral-100 text-neutral-500 transition-colors cursor-pointer"
-                title={language === 'zh' ? '无障碍 / 大字模式' : 'Accessibility / Large Font'}
-                aria-label={language === 'zh' ? '无障碍 / 大字模式' : 'Accessibility / Large Font'}
-              >
-                <Globe className="w-4 h-4 text-teal-600" />
-              </button>
-            )}
-
-            {onOpenAppGuide && (
-              <button
-                onClick={onOpenAppGuide}
-                className="p-2 rounded-lg hover:bg-neutral-100 text-neutral-500 transition-colors cursor-pointer"
-                title={language === 'zh' ? '使用指南' : 'Guide'}
-                aria-label={language === 'zh' ? '使用指南' : 'Guide'}
-              >
-                <HelpCircle className="w-4 h-4" />
-              </button>
-            )}
-
-            {/* "评分规则" 不在移动端底部导航中，改由此图标入口触达，避免底部标签超过 5 个 */}
-            <button
-              onClick={() => onTabChange('standards')}
-              className={`p-2 rounded-lg hover:bg-neutral-100 transition-colors cursor-pointer ${
-                activeTab === 'standards' ? 'text-teal-600 bg-teal-50' : 'text-neutral-500'
-              }`}
-              title={language === 'zh' ? '评分规则' : 'Scoring Rules'}
-              aria-label={language === 'zh' ? '评分规则' : 'Scoring Rules'}
-            >
-              <BookOpen className="w-4 h-4" />
-            </button>
-
-            <button
-              onClick={() => onLanguageChange(language === 'zh' ? 'en' : 'zh')}
-              className="px-2 py-1.5 rounded-lg hover:bg-neutral-100 text-neutral-600 text-xs font-medium transition-colors cursor-pointer"
-            >
-              <span>{language === 'zh' ? 'EN' : '中文'}</span>
-            </button>
-
-            {renderUserBlock(false)}
-          </div>
+            </span>
+            <span className="text-sm font-bold text-neutral-900 truncate">
+              {t('商宣商业模式检验', 'BAM Financial Health')}
+            </span>
+          </button>
+          {currentUser ? (
+            <Button type="primary" size="small" icon={<MessageCircle className="w-4 h-4" />} onClick={() => onOpenAiHelper()}>
+              {t('问 AI', 'Ask AI')}
+            </Button>
+          ) : (
+            <Button size="small" icon={<LogIn className="w-4 h-4" />} onClick={onOpenAuth} disabled={isSigningIn}>
+              {t('登录', 'Sign in')}
+            </Button>
+          )}
         </div>
       </header>
 
-      {/* ============ Mobile Fixed Bottom Tab Bar ============
-          固定 5 个高频标签，永远全部可见可点，不再依赖会被裁切、且没有滚动提示的横向滚动条。
-          AI 答疑已有全局右下角悬浮入口（见 App.tsx），此处不再重复放置，避免与其余标签抢位导致溢出。 */}
+      {/* ============ 移动端底部标签栏（5 个） ============ */}
       <nav
         className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-neutral-200 flex items-stretch"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+        aria-label={t('主导航', 'Main navigation')}
       >
-        {mobileBottomNavItems.map((item) => {
-          const isActive = activeTab === item.id;
+        {bottomTabs.map((item) => {
+          const active = isBottomActive(item.key);
           const Icon = item.icon;
           return (
             <button
-              key={item.id}
-              onClick={() => onTabChange(item.id)}
-              className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2 text-[12px] font-medium transition-colors cursor-pointer ${
-                isActive ? 'text-teal-700' : 'text-neutral-500'
+              key={item.key}
+              onClick={() =>
+                item.key === 'tools' ? openDrawer('tools') : item.key === 'me' ? openDrawer('me') : go(item.key)
+              }
+              aria-current={active ? 'page' : undefined}
+              className={`flex-1 min-h-14 flex flex-col items-center justify-center gap-0.5 text-xs cursor-pointer ${
+                active ? 'text-teal-700 font-bold' : 'text-neutral-500'
               }`}
             >
-              <Icon className={`w-[18px] h-[18px] ${isActive ? 'text-teal-700' : 'text-neutral-400'}`} />
-              <span className={isActive ? 'font-bold' : ''}>{item.label}</span>
+              <Icon className="w-5 h-5" />
+              <span>{item.label}</span>
             </button>
           );
         })}
       </nav>
+
+      {/* 抽屉只在第一次打开时才加载（antd Drawer 体积不小），不占首屏 JS */}
+      {drawersLoaded && (
+        <Suspense fallback={null}>
+          <MobileNavDrawers
+            language={language}
+            toolItems={toolItems}
+            toolsOpen={toolsOpen}
+            meOpen={meOpen}
+            onCloseTools={() => setToolsOpen(false)}
+            onCloseMe={() => setMeOpen(false)}
+            onTabChange={onTabChange}
+            currentUser={currentUser}
+            userName={userName}
+            avatar={avatar(40)}
+            languageSwitch={languageSwitch}
+            onOpenAuth={onOpenAuth}
+            onOpenAccessibility={onOpenAccessibility}
+            onOpenAppGuide={onOpenAppGuide}
+            onLogout={onLogout}
+          />
+        </Suspense>
+      )}
     </>
   );
 };

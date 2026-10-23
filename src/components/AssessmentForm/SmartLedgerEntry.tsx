@@ -208,7 +208,7 @@ export function SmartLedgerEntry({ language, baseCurrency, projectName, industry
   return (
     <div className="p-3 rounded-xl bg-teal-50/60 border border-teal-200 space-y-2.5">
       <div className="flex items-center justify-between flex-wrap gap-1.5">
-        <span className="text-[13px] font-black text-teal-950 flex items-center gap-1.5">
+        <span className="text-[13px] font-bold text-teal-950 flex items-center gap-1.5">
           <Sparkles className="w-3.5 h-3.5 text-teal-600" />
           {language === 'en' ? 'Smart ledger entry (AI auto-categorizes)' : '智能记账（AI 自动分类，无需自己选科目）'}
         </span>
@@ -234,7 +234,7 @@ export function SmartLedgerEntry({ language, baseCurrency, projectName, industry
                 value={row.amount}
                 onChange={(v) => updateRow(row.id, { amount: v })}
                 placeholder={language === 'en' ? 'Amount' : '金额'}
-                className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono text-right"
+                className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg tabular-nums text-right"
               />
               <span className="text-[11px] text-slate-500 shrink-0">{baseCurrency}</span>
               <select
@@ -310,7 +310,7 @@ export function SmartLedgerEntry({ language, baseCurrency, projectName, industry
                     min={1}
                     value={entry.classification.suggestedAmortizationMonths || 24}
                     onChange={(v) => updatePendingClassification(index, { suggestedAmortizationMonths: Math.max(1, Math.round(v || 24)) })}
-                    className="w-14 p-1 border border-slate-200 rounded font-mono text-right"
+                    className="w-14 p-1 border border-slate-200 rounded tabular-nums text-right"
                   />
                   <span>{language === 'en' ? 'months' : '个月'}</span>
                 </div>

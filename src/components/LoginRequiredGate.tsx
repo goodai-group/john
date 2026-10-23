@@ -19,12 +19,12 @@ export const LoginRequiredGate: React.FC<LoginRequiredGateProps> = ({
 }) => {
   return (
     <div className="max-w-md mx-auto px-4 py-20 text-center">
-      <div className="bg-white rounded-3xl p-8 sm:p-10 border-2 border-neutral-200 shadow-xs space-y-5">
+      <div className="bg-white rounded-xl p-8 sm:p-10 border border-neutral-200 shadow-xs space-y-5">
         <div className="w-16 h-16 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center mx-auto border border-teal-100 shadow-xs">
           <ShieldCheck className="w-8 h-8" />
         </div>
         <div>
-          <h3 className="text-lg font-black text-neutral-900">
+          <h3 className="text-lg font-bold text-neutral-900">
             {language === 'zh' ? '请先登录后使用' : 'Please Sign In to Continue'}
           </h3>
           <p className="text-xs text-neutral-500 font-medium max-w-sm mx-auto mt-2 leading-relaxed">
