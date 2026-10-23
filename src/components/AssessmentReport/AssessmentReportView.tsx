@@ -190,6 +190,46 @@ export const AssessmentReportView: React.FC<ReportViewProps> = ({
 
   const baseCurr = report.baseCurrency;
 
+  // 加权表里每个单项得分的算法说明（悬停「?」显示）。公式与 scoringEngine.ts 的 metrics 一一对应，
+  // 改了那边的打分公式这里要同步改。
+  const metricScoreExplanation = (m: AssessmentReport['metrics'][number]): string => {
+    const fullScoreAt = Number(getGrossMarginPolicy(report.industry).fullScoreAt.toFixed(1));
+    switch (m.key) {
+      case 'real_revenue_strength':
+        return t(
+          `得分 = min(100, round(真实收入占比))\n本项目：round(${realRevenueRatioPercent}) = ${m.score}`,
+          `Score = min(100, round(Real Revenue Ratio))\nThis project: round(${realRevenueRatioPercent}) = ${m.score}`
+        );
+      case 'gross_margin_rate':
+        return t(
+          `得分 = round(毛利率 ÷ ${fullScoreAt}% × 100)，限定在 0~100 之间（本行业毛利率达到 ${fullScoreAt}% 即满分，毛利率为负按 0 分）\n本项目：round(${grossMarginPercent} ÷ ${fullScoreAt} × 100) → ${m.score}`,
+          `Score = round(Gross Margin ÷ ${fullScoreAt}% × 100), clamped to 0–100 (full marks at ${fullScoreAt}% for this industry; negative margin scores 0)\nThis project: round(${grossMarginPercent} ÷ ${fullScoreAt} × 100) → ${m.score}`
+        );
+      case 'opex_efficiency':
+        return t(
+          `得分 = round(100 − 固定开销占比 × 1.1)，限定在 0~100 之间（固定开销占比 = 月运营开销 ÷ 月真实主营收入，越低分越高）\n本项目：round(100 − ${opexRatioPercent} × 1.1) → ${m.score}`,
+          `Score = round(100 − OPEX Ratio × 1.1), clamped to 0–100 (OPEX Ratio = Monthly OPEX ÷ Monthly Real Revenue; lower is better)\nThis project: round(100 − ${opexRatioPercent} × 1.1) → ${m.score}`
+        );
+      case 'net_margin_rate':
+        return t(
+          `得分 = round(净利润率 × 3.5)，限定在 0~100 之间（净利润率约 28.6% 即满分，亏损按 0 分）\n本项目：round(${netProfitMarginPercent} × 3.5) → ${m.score}`,
+          `Score = round(Net Margin × 3.5), clamped to 0–100 (full marks at ~28.6%; a loss scores 0)\nThis project: round(${netProfitMarginPercent} × 3.5) → ${m.score}`
+        );
+      case 'cash_buffer_runway':
+        return t(
+          `得分 = min(100, round(现金储备可支撑月数 × 22))（约 4.5 个月即满分）\n本项目：round(${cashRunwayMonths} × 22) → ${m.score}`,
+          `Score = min(100, round(Cash Runway Months × 22)) (full marks at ~4.5 months)\nThis project: round(${cashRunwayMonths} × 22) → ${m.score}`
+        );
+      case 'business_continuity':
+        return t(
+          `得分 = min(100, round(已运营月数 × 5 + 全职员工数 × 8))\n本项目：${m.actualValue} → ${m.score}`,
+          `Score = min(100, round(Months Operating × 5 + Full-time Employees × 8))\nThis project: ${m.actualValue} → ${m.score}`
+        );
+      default:
+        return t(`实测值 ${m.actualValue}，得分 ${m.score}`, `Actual ${m.actualValue}, score ${m.score}`);
+    }
+  };
+
   // Previous version comparison if available
   const prevVersion = allVersions.find((v) => v.version === report.version - 1);
   const scoreDiff = prevVersion ? report.totalScore - prevVersion.totalScore : 0;
@@ -1711,10 +1751,25 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                 </tr>
               </thead>
               <tbody>
-                {report.metrics.map((m) => (
+                {report.metrics.map((m, idx) => (
                   <tr key={`calc-metric-${m.key}`} className="border-t border-neutral-100">
                     <td className="py-1.5 pr-2 font-semibold text-neutral-800">{m.plainName || m.name}</td>
-                    <td className="py-1.5 pr-2 text-right font-mono text-neutral-700">{m.score}</td>
+                    <td className="py-1.5 pr-2 text-right font-mono text-neutral-700">
+                      <span className="inline-flex items-center justify-end gap-1">
+                        {m.score}
+                        <span
+                          className="relative group inline-flex cursor-help outline-none"
+                          tabIndex={0}
+                          aria-label={metricScoreExplanation(m)}
+                        >
+                          <HelpCircle className="w-3.5 h-3.5 text-neutral-400 group-hover:text-teal-600 group-focus:text-teal-600" />
+                          {/* 表格外层 overflow-x-auto 会裁掉越界的浮层：上半部分行向下弹出、下半部分行向上弹出 */}
+                          <span className={`hidden group-hover:block group-focus:block absolute right-0 ${idx < report.metrics.length / 2 ? 'top-5' : 'bottom-5'} z-20 w-72 p-2.5 rounded-xl bg-neutral-900 text-white text-[11px] leading-relaxed font-sans font-medium text-left whitespace-pre-line shadow-lg`}>
+                            {metricScoreExplanation(m)}
+                          </span>
+                        </span>
+                      </span>
+                    </td>
                     <td className="py-1.5 pr-2 text-right font-mono text-neutral-700">{m.weight}%</td>
                     <td className="py-1.5 pr-2 text-right font-mono font-bold text-teal-700">
                       {((m.score * m.weight) / 100).toFixed(1)}

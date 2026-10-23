@@ -270,7 +270,7 @@ export function runBusinessAssessment(formData: BusinessFormData): AssessmentRep
     {
       ...SCORING_METRIC_DEFINITIONS.opex_efficiency,
       key: 'opex_efficiency',
-      plainName: '运营固定开销占比（房租+工资等）',
+      plainName: '运营固定开销占比（房租+管理人工等）',
       score: Math.min(100, Math.max(0, Math.round(100 - opexRatioPercent * 1.1))),
       actualValue: `${opexRatioPercent}%`,
       status: opexRatioPercent <= 40 ? 'excellent' : opexRatioPercent <= 60 ? 'good' : 'poor',
