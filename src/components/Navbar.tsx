@@ -15,6 +15,7 @@ import {
   GraduationCap,
   Compass
 } from 'lucide-react';
+import { Menu } from 'antd';
 import { Language, ActiveTab, AppUser } from '../types';
 import { ChinaVpnSidebarLink } from './ChinaNetworkTip';
 import { isSuperAdmin } from '../lib/supabaseClient';
@@ -207,26 +208,17 @@ export const Navbar: React.FC<NavbarProps> = ({
           </h1>
         </div>
 
-        <nav className="flex-1 flex flex-col gap-1">
-          {navItems.map((item) => {
-            const isActive = activeTab === item.id;
+        <Menu
+          theme="dark"
+          mode="inline"
+          selectedKeys={[activeTab]}
+          onClick={({ key }) => onTabChange(key as ActiveTab)}
+          items={navItems.map((item) => {
             const Icon = item.icon;
-            return (
-              <button
-                key={item.id}
-                onClick={() => onTabChange(item.id)}
-                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[14px] font-medium transition-colors cursor-pointer text-left ${
-                  isActive
-                    ? 'bg-white text-teal-900 font-bold shadow-sm'
-                    : 'text-teal-100 hover:bg-white/10'
-                }`}
-              >
-                <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-teal-700' : 'text-teal-300'}`} />
-                <span>{item.label}</span>
-              </button>
-            );
+            return { key: item.id, icon: <Icon className="w-4 h-4" />, label: item.label };
           })}
-        </nav>
+          className="flex-1 border-e-0 bg-transparent"
+        />
 
         <div className="pt-4 mt-4 border-t border-white/10 space-y-3">
           <ChinaVpnSidebarLink language={language} />
@@ -340,10 +332,10 @@ export const Navbar: React.FC<NavbarProps> = ({
               key={item.id}
               onClick={() => onTabChange(item.id)}
               className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2 text-[12px] font-medium transition-colors cursor-pointer ${
-                isActive ? 'text-teal-600' : 'text-neutral-500'
+                isActive ? 'text-teal-700' : 'text-neutral-500'
               }`}
             >
-              <Icon className={`w-[18px] h-[18px] ${isActive ? 'text-teal-600' : 'text-neutral-400'}`} />
+              <Icon className={`w-[18px] h-[18px] ${isActive ? 'text-teal-700' : 'text-neutral-400'}`} />
               <span className={isActive ? 'font-bold' : ''}>{item.label}</span>
             </button>
           );

@@ -76,13 +76,18 @@ export function calculateBreakEvenRevenue(
   const { cogs, fixedOpex, otherOpex, tax, debtPayment, regulatoryCosts, monthlyBurn } =
     aggregateMonthlyCosts(formData, baseCurrency, customRateValue, customRateCode);
 
+  // monthlyCostTotal 保持"每月现金消耗"口径（不含税），供表单里与花费清单对账；
+  // 保本收入必须把税费也算进去——不交税不等于不亏钱。此前保本收入同样不含税，
+  // 与回本测算（paybackCalculator，含税）口径不一致：月收入恰好等于保本点时，
+  // 一处说"不亏了"，另一处却说"每月净结余为负、回不了本"。
   const monthlyCostTotal = monthlyBurn;
+  const monthlyBreakEvenRevenue = monthlyBurn + tax;
   const safeDays = Math.max(1, Math.round(operatingDaysPerMonth) || 30);
 
   return {
     monthlyCostTotal,
-    dailyBreakEvenRevenue: monthlyCostTotal / safeDays,
-    monthlyBreakEvenRevenue: monthlyCostTotal,
+    dailyBreakEvenRevenue: monthlyBreakEvenRevenue / safeDays,
+    monthlyBreakEvenRevenue,
     operatingDaysPerMonth: safeDays,
     costBreakdown: {
       cogs,
@@ -91,6 +96,6 @@ export function calculateBreakEvenRevenue(
       debtPayment,
       regulatoryCosts
     },
-    hasEnoughData: monthlyCostTotal > 0
+    hasEnoughData: monthlyBreakEvenRevenue > 0
   };
 }

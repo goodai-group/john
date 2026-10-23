@@ -3283,8 +3283,8 @@ export const AssessmentForm: React.FC<FormProps> = ({
                         language={language}
                         text={
                           language === 'en'
-                            ? `Based on monthly cost of ${formatMoney(breakEven.monthlyCostTotal, formData.baseCurrency)} (purchasing + rent/wages + taxes + debt repayment + amortizations), calculated over ${breakEven.operatingDaysPerMonth} operating days.`
-                            : `根据你已填的进货、房租人工、税金、还贷与折旧/许可成本合计 ${formatMoney(breakEven.monthlyCostTotal, formData.baseCurrency)} / 月，按每月经营 ${breakEven.operatingDaysPerMonth} 天估算。`
+                            ? `Based on monthly cost of ${formatMoney(breakEven.monthlyBreakEvenRevenue, formData.baseCurrency)} (purchasing + rent/wages + taxes + debt repayment + amortizations), calculated over ${breakEven.operatingDaysPerMonth} operating days.`
+                            : `根据你已填的进货、房租人工、税金、还贷与折旧/许可成本合计 ${formatMoney(breakEven.monthlyBreakEvenRevenue, formData.baseCurrency)} / 月，按每月经营 ${breakEven.operatingDaysPerMonth} 天估算。`
                         }
                       />
                     </div>

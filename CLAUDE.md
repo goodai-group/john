@@ -14,7 +14,11 @@
 
 ## 技术栈
 
-- 前端：React 19 + TypeScript + Vite 6 + Tailwind CSS 4
+- 前端：React 19 + TypeScript + Vite 6 + Tailwind CSS 4 + antd 6
+  - **新写/重写的页面统一用 antd 组件**（Card/Row/Col/Statistic/Table/Tag/Alert 等），主题令牌集中在
+    `src/theme/AntdProvider.tsx`，页头/容器用 `src/components/ui/PageHeader.tsx`；不要再手写一套圆角/字号/配色。
+    已迁移：开业测算、沙盒试算、评分规则、全部项目、桌面侧边栏菜单；表单、报告、我的项目等仍是 Tailwind 手写样式。
+  - antd 样式放在 CSS `@layer antd`（见 `src/index.css` 顶部层级声明），位于 Tailwind preflight 之后、工具类之前。
 - 后端：Express（本地用 `tsx` 跑 `server.ts`；Vercel 上由 `api/[...path].ts` 转发到同一套路由）
 - 数据：Supabase（Postgres + Auth，替代早期 Firebase 方案；`firebase-blueprint.json`/`firestore.rules` 是历史遗留，未在用）
 - AI：`@google/genai`（Gemini），无 key 或配额耗尽时自动回退到 `src/server/localEngine` 本地规则引擎

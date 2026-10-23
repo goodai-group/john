@@ -14,6 +14,7 @@ import { AccessibilityToolbar } from './components/AccessibilityToolbar';
 import { ChinaNetworkTip } from './components/ChinaNetworkTip';
 import { AuthModal, AuthMode } from './components/AuthModal';
 import { LoginRequiredGate } from './components/LoginRequiredGate';
+import { AntdProvider } from './theme/AntdProvider';
 
 // BUG-11 修复：这些是应用里最大的几个组件（AssessmentForm ~3000 行、
 // AssessmentReportView ~1700 行、AiRuleConsultationDrawer ~1100 行等），此前全部
@@ -703,7 +704,7 @@ export default function App() {
   // 后者此前在用户还没有任何项目时（activeProject 为 undefined）会把模拟数据合并到 undefined
   // 上，导致草稿既没有 id 也没有被写入 projects/activeProjectId，新挂载的表单直接忽略这份数据，
   // 表现为「点击带入正式申报表后表单一片空白，滑块调好的数字全部消失」。
-  const createBlankDraft = (): BusinessFormData => {
+  const createBlankDraft = (currency: string = 'USD'): BusinessFormData => {
     const newId = `proj-${Date.now()}`;
     return {
       id: newId,
@@ -714,7 +715,7 @@ export default function App() {
       industry: 'food_beverage',
       businessType: '社区小微零售与便民服务',
       businessStage: 'has_revenue',
-      initialInvestmentEstimate: { amount: 0, currency: 'USD' },
+      initialInvestmentEstimate: { amount: 0, currency },
       targetPaybackMonths: 12,
       anomalyOverrides: {},
       isSensitiveRegion: false,
@@ -722,7 +723,7 @@ export default function App() {
       regionDetail: '',
       contactChannel: '',
       anonymousOwnerName: '',
-      baseCurrency: 'USD',
+      baseCurrency: currency,
       hasMultipleRates: false,
       customExchangeRateType: '民间/日常兑换参考价',
       customExchangeRateValue: 1.0,
@@ -730,30 +731,30 @@ export default function App() {
       proofType: 'none',
       proofFiles: [],
       monthlyBreakdowns: [
-        { month: '2026-01', revenue: { amount: 0, currency: 'USD' } },
-        { month: '2026-02', revenue: { amount: 0, currency: 'USD' } },
-        { month: '2026-03', revenue: { amount: 0, currency: 'USD' } },
-        { month: '2026-04', revenue: { amount: 0, currency: 'USD' } },
-        { month: '2026-05', revenue: { amount: 0, currency: 'USD' } },
-        { month: '2026-06', revenue: { amount: 0, currency: 'USD' } }
+        { month: '2026-01', revenue: { amount: 0, currency } },
+        { month: '2026-02', revenue: { amount: 0, currency } },
+        { month: '2026-03', revenue: { amount: 0, currency } },
+        { month: '2026-04', revenue: { amount: 0, currency } },
+        { month: '2026-05', revenue: { amount: 0, currency } },
+        { month: '2026-06', revenue: { amount: 0, currency } }
       ],
-      monthlyRevenue: { amount: 0, currency: 'USD' },
-      monthlyRealOperatingRevenue: { amount: 0, currency: 'USD' },
-      monthlyExternalGrants: { amount: 0, currency: 'USD' },
-      cogsCost: { amount: 0, currency: 'USD' },
-      rentCost: { amount: 0, currency: 'USD' },
-      laborCost: { amount: 0, currency: 'USD' },
-      utilityCost: { amount: 0, currency: 'USD' },
-      taxCost: { amount: 0, currency: 'USD' },
-      otherOpex: { amount: 0, currency: 'USD' },
-      companyRegistrationCost: { amount: 0, currency: 'USD' },
+      monthlyRevenue: { amount: 0, currency },
+      monthlyRealOperatingRevenue: { amount: 0, currency },
+      monthlyExternalGrants: { amount: 0, currency },
+      cogsCost: { amount: 0, currency },
+      rentCost: { amount: 0, currency },
+      laborCost: { amount: 0, currency },
+      utilityCost: { amount: 0, currency },
+      taxCost: { amount: 0, currency },
+      otherOpex: { amount: 0, currency },
+      companyRegistrationCost: { amount: 0, currency },
       companyRegistrationAmortizationMonths: 12,
-      visaFeeCost: { amount: 0, currency: 'USD' },
+      visaFeeCost: { amount: 0, currency },
       visaFeeAmortizationMonths: 12,
-      equipmentDepreciationCost: { amount: 0, currency: 'USD' },
-      existingDebtMonthlyPayment: { amount: 0, currency: 'USD' },
-      cashAndLiquidAssets: { amount: 0, currency: 'USD' },
-      inventoryValue: { amount: 0, currency: 'USD' },
+      equipmentDepreciationCost: { amount: 0, currency },
+      existingDebtMonthlyPayment: { amount: 0, currency },
+      cashAndLiquidAssets: { amount: 0, currency },
+      inventoryValue: { amount: 0, currency },
       // BUG-06 修复：不再预填看起来像真数据的默认值——12个月、1名员工从未被用户确认过，
       // 却会静默计入"持续经营稳定性"评分，并触发"填写了1名员工但工资为0"的误报警告。
       // 改为 0（NumberField 会把 0 显示为空白输入框），未填项不再参与评分。
@@ -795,25 +796,27 @@ export default function App() {
     return persistProjectToCloud(saved);
   };
 
-  // Apply simulator values into form
+  // 沙盒试算「带入正式申报表」：始终新建一份草稿项目。
+  // 此前会直接把试算数值合并进当前项目（哪怕它已经提交过），且不清空原有的成本明细，
+  // 既会静默覆盖用户已有的数据，又会导致表单合计与试算结果对不上。
   const handleApplySimulatorToForm = (simulatedData: Partial<BusinessFormData>) => {
-    // 没有任何已有项目时（如全新账号第一次使用沙盒试算器），activeProject 为 undefined，
-    // 必须先造一份全新草稿并把它正式加入 projects/activeProjectId，模拟数据才不会成为
-    // 一份没有归属、不会被表单读取的孤儿数据。
-    const base = activeProject || createBlankDraft();
-    const updated = {
+    const base = createBlankDraft(simulatedData.baseCurrency || 'USD');
+    const stamp = new Date().toLocaleString(language === 'zh' ? 'zh-CN' : 'en-US', {
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    const draft: BusinessFormData = {
       ...base,
       ...simulatedData,
       id: base.id,
+      projectName: language === 'zh' ? `沙盒试算 ${stamp}` : `Simulator ${stamp}`,
       updatedAt: new Date().toISOString()
     };
-    saveActiveDraft(updated);
-    const latestProjects = loadStoredProjects();
-    const isNewProject = !latestProjects.some((p) => p.id === updated.id);
-    const updatedList = isNewProject ? [updated, ...latestProjects] : latestProjects.map((p) => (p.id === updated.id ? updated : p));
-    setProjects(updatedList);
-    saveStoredProjects(updatedList);
-    if (isNewProject) setActiveProjectId(updated.id);
+    saveActiveDraft(draft);
+    upsertProjectLocally(draft);
+    setActiveProjectId(draft.id);
     navigateTo('form');
   };
 
@@ -905,6 +908,7 @@ export default function App() {
   };
 
   return (
+    <AntdProvider language={language}>
     <div
       className={`min-h-screen bg-warm text-neutral-900 transition-all font-sans ${
         largeFont ? 'text-base leading-relaxed font-medium' : 'text-sm'
@@ -1078,6 +1082,8 @@ export default function App() {
         {activeTab === 'feasibility' && (
           <FeasibilityBriefPage
             project={activeProject}
+            projects={projects}
+            onSelectProject={setActiveProjectId}
             language={language}
             onGoToForm={() => navigateTo('form')}
           />
@@ -1227,5 +1233,6 @@ export default function App() {
         </div>
       )}
     </div>
+    </AntdProvider>
   );
 }

@@ -1,18 +1,21 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Loader2, RefreshCw, Search, ShieldCheck, AlertCircle } from 'lucide-react';
+import { Alert, Button, Card, Checkbox, Empty, Flex, Grid, Input, Segmented, Spin, Table, Tag, Typography, type TableColumnsType } from 'antd';
+import { RefreshCw, ShieldCheck } from 'lucide-react';
 import { AppUser, Language } from '../types';
 import { AdminProjectRow, fetchAllProjectsForAdmin, isSuperAdmin } from '../lib/supabaseClient';
 import { formatMoney } from '../lib/currencies';
+import { INDUSTRY_BENCHMARKS } from '../lib/industryBenchmarks';
+import { PageContainer, PageHeader } from '../components/ui/PageHeader';
 
 type HealthKey = 'PASS' | 'REVIEW' | 'FAIL' | 'NONE';
 
 const healthKeyOf = (r: AdminProjectRow): HealthKey => r.health?.status ?? 'NONE';
 
-const HEALTH_META: Record<HealthKey, { zh: string; en: string; cls: string }> = {
-  PASS: { zh: '健康', en: 'Healthy', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  REVIEW: { zh: '需关注', en: 'Needs review', cls: 'bg-amber-50 text-amber-700 border-amber-200' },
-  FAIL: { zh: '不达标', en: 'At risk', cls: 'bg-red-50 text-red-700 border-red-200' },
-  NONE: { zh: '未评估', en: 'Not assessed', cls: 'bg-neutral-100 text-neutral-500 border-neutral-200' }
+const HEALTH_META: Record<HealthKey, { zh: string; en: string; color: string }> = {
+  PASS: { zh: '健康', en: 'Healthy', color: 'success' },
+  REVIEW: { zh: '需关注', en: 'Needs review', color: 'warning' },
+  FAIL: { zh: '不达标', en: 'At risk', color: 'error' },
+  NONE: { zh: '未评估', en: 'Not assessed', color: 'default' }
 };
 const HEALTH_ORDER: HealthKey[] = ['FAIL', 'REVIEW', 'PASS', 'NONE'];
 
@@ -23,7 +26,8 @@ interface AdminProjectsPageProps {
 
 /** 超级账户专用：只读查看所有用户提交的项目 */
 export const AdminProjectsPage: React.FC<AdminProjectsPageProps> = ({ currentUser, language }) => {
-  const t = (zh: string, en: string) => (language === 'en' ? en : zh);
+  const isEn = language === 'en';
+  const t = (zh: string, en: string) => (isEn ? en : zh);
   const [rows, setRows] = useState<AdminProjectRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,6 +36,7 @@ export const AdminProjectsPage: React.FC<AdminProjectsPageProps> = ({ currentUse
   const [healthFilter, setHealthFilter] = useState<HealthKey | 'ALL'>('ALL');
 
   const allowed = isSuperAdmin(currentUser);
+  const screens = Grid.useBreakpoint();
 
   const load = async () => {
     setLoading(true);
@@ -50,16 +55,28 @@ export const AdminProjectsPage: React.FC<AdminProjectsPageProps> = ({ currentUse
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allowed, currentUser?.uid]);
 
+  // 行业字段存的是内部 key（如 food_beverage），展示时换成可读名称
+  const industryLabel = (r: AdminProjectRow) => {
+    const id = r.data.industry;
+    const bench = INDUSTRY_BENCHMARKS.find((b) => b.id === id);
+    if (bench) return isEn ? bench.nameEn : bench.nameZh.split(' (')[0];
+    if (r.data.customIndustryName) return r.data.customIndustryName;
+    // 不在基准库里的行业 key（如 artisan_handicraft）至少转成可读的单词
+    return (id || '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  };
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return rows.filter((r) => {
       if (onlySubmitted && !r.isSubmitted) return false;
       if (healthFilter !== 'ALL' && healthKeyOf(r) !== healthFilter) return false;
       if (!q) return true;
-      return [r.data.projectName, r.data.industry, r.ownerEmail, r.data.regionCountry]
-        .some((s) => (s || '').toLowerCase().includes(q));
+      return [r.data.projectName, r.data.industry, industryLabel(r), r.ownerEmail, r.data.regionCountry].some((s) =>
+        (s || '').toLowerCase().includes(q)
+      );
     });
-  }, [rows, query, onlySubmitted, healthFilter]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, query, onlySubmitted, healthFilter, language]);
 
   const counts = useMemo(() => {
     const c: Record<HealthKey, number> = { PASS: 0, REVIEW: 0, FAIL: 0, NONE: 0 };
@@ -71,144 +88,175 @@ export const AdminProjectsPage: React.FC<AdminProjectsPageProps> = ({ currentUse
 
   if (!allowed) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-16 text-center text-neutral-500 text-sm">
-        {t('仅超级账户可访问此页面。', 'This page is for super accounts only.')}
-      </div>
+      <PageContainer width="max-w-3xl">
+        <Alert type="warning" showIcon title={t('仅超级账户可访问此页面。', 'This page is for super accounts only.')} />
+      </PageContainer>
     );
   }
 
+  // 单元格渲染：桌面表格与移动端卡片共用同一套
+  const cell = {
+    name: (r: AdminProjectRow) => (
+      <>
+        <Typography.Text strong>{r.data.projectName || t('（未命名）', '(untitled)')}</Typography.Text>
+        <Typography.Text type="secondary" className="ml-1 text-xs">
+          v{r.data.version}
+        </Typography.Text>
+      </>
+    ),
+    owner: (r: AdminProjectRow) => r.ownerEmail || r.data.ownerEmail || '—',
+    industry: (r: AdminProjectRow) => (
+      <>
+        <div>{industryLabel(r) || '—'}</div>
+        {r.data.regionCountry && <div className="text-xs text-neutral-500">{r.data.regionCountry}</div>}
+      </>
+    ),
+    revenue: (r: AdminProjectRow) => (
+      <span className="tabular-nums whitespace-nowrap">
+        {r.data.monthlyRevenue?.amount != null
+          ? formatMoney(Number(r.data.monthlyRevenue.amount), r.data.monthlyRevenue.currency || r.data.baseCurrency)
+          : '—'}
+      </span>
+    ),
+    health: (r: AdminProjectRow) => {
+      const meta = HEALTH_META[healthKeyOf(r)];
+      return (
+        <Flex vertical gap={2} align="flex-start">
+          <Tag color={meta.color} className="me-0">
+            {isEn ? meta.en : meta.zh}
+          </Tag>
+          {r.health && (
+            <span className="text-xs text-neutral-500 tabular-nums whitespace-nowrap">
+              {r.health.score ?? '—'}
+              {t('分', ' pts')} · {r.health.tier ?? '—'}
+              {r.health.gatePassed === false && (
+                <Typography.Text type="danger" className="ml-1 text-xs">
+                  {t('红线未过', 'Gate failed')}
+                </Typography.Text>
+              )}
+            </span>
+          )}
+        </Flex>
+      );
+    },
+    status: (r: AdminProjectRow) =>
+      r.isSubmitted ? (
+        <Tag color="success" className="me-0">
+          {t('已提交', 'Submitted')}
+        </Tag>
+      ) : (
+        <Tag className="me-0">{t('草稿', 'Draft')}</Tag>
+      ),
+    updated: (r: AdminProjectRow) => (
+      <span className="whitespace-nowrap text-neutral-500">
+        {r.updatedAt ? new Date(r.updatedAt).toLocaleString(isEn ? 'en-US' : 'zh-CN', {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit'
+            }) : '—'}
+      </span>
+    )
+  };
+
+  const columns: TableColumnsType<AdminProjectRow> = [
+    { title: t('项目', 'Project'), key: 'name', width: 180, render: (_, r) => cell.name(r) },
+    { title: t('提交人', 'Owner'), key: 'owner', width: 180, ellipsis: true, render: (_, r) => cell.owner(r) },
+    { title: t('行业 / 地区', 'Industry / Region'), key: 'industry', width: 160, render: (_, r) => cell.industry(r) },
+    { title: t('月流水', 'Monthly revenue'), key: 'revenue', align: 'right', render: (_, r) => cell.revenue(r) },
+    { title: t('健康状况', 'Health'), key: 'health', render: (_, r) => cell.health(r) },
+    { title: t('状态', 'Status'), key: 'status', render: (_, r) => cell.status(r) },
+    {
+      title: t('更新时间', 'Updated'),
+      key: 'updatedAt',
+      sorter: (a, b) => new Date(a.updatedAt || 0).getTime() - new Date(b.updatedAt || 0).getTime(),
+      defaultSortOrder: 'descend',
+      render: (_, r) => cell.updated(r)
+    }
+  ];
+
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 space-y-5">
-      <div className="bg-white rounded-3xl p-6 border-2 border-neutral-200 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1 text-[12px] font-mono font-bold uppercase tracking-wider text-teal-700">
-            <ShieldCheck className="w-4 h-4" /> SUPER ACCOUNT
-          </div>
-          <h2 className="text-xl font-black text-neutral-900">{t('全部用户项目（只读）', 'All Users’ Projects (read-only)')}</h2>
-          <p className="text-xs text-neutral-500 mt-0.5">
-            {t(`共 ${rows.length} 个项目，当前显示 ${filtered.length} 个`, `${rows.length} projects, showing ${filtered.length}`)}
-          </p>
-        </div>
-        <button
-          onClick={load}
-          disabled={loading}
-          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-neutral-300 text-sm font-bold hover:bg-neutral-50 disabled:opacity-50 cursor-pointer"
-        >
-          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-          {t('刷新', 'Refresh')}
-        </button>
+    <PageContainer>
+      <PageHeader
+        icon={<ShieldCheck className="w-5 h-5" />}
+        title={t('全部用户项目', 'All users’ projects')}
+        tags={<Tag>{t('只读', 'Read-only')}</Tag>}
+        description={t(`共 ${rows.length} 个项目，当前显示 ${filtered.length} 个`, `${rows.length} projects, showing ${filtered.length}`)}
+        extra={
+          <Button icon={<RefreshCw className="w-4 h-4" />} loading={loading} onClick={load}>
+            {t('刷新', 'Refresh')}
+          </Button>
+        }
+      />
+
+      <div className="overflow-x-auto -mx-1 px-1">
+        <Segmented
+          value={healthFilter}
+          onChange={(v) => setHealthFilter(v as HealthKey | 'ALL')}
+          options={[
+            { value: 'ALL', label: `${t('全部', 'All')} ${rows.length}` },
+            ...HEALTH_ORDER.map((k) => ({
+              value: k,
+              label: `${isEn ? HEALTH_META[k].en : HEALTH_META[k].zh} ${counts[k]}`
+            }))
+          ]}
+        />
       </div>
 
-      <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t('按健康状况筛选', 'Filter by health')}>
-        <button
-          onClick={() => setHealthFilter('ALL')}
-          className={`px-3 py-1.5 rounded-full border text-sm font-bold cursor-pointer ${
-            healthFilter === 'ALL' ? 'bg-neutral-900 text-white border-neutral-900' : 'bg-white text-neutral-700 border-neutral-300'
-          }`}
-        >
-          {t('全部', 'All')} {rows.length}
-        </button>
-        {HEALTH_ORDER.map((k) => (
-          <button
-            key={k}
-            onClick={() => setHealthFilter(healthFilter === k ? 'ALL' : k)}
-            className={`px-3 py-1.5 rounded-full border text-sm font-bold cursor-pointer ${HEALTH_META[k].cls} ${
-              healthFilter === k ? 'ring-2 ring-offset-1 ring-neutral-900' : ''
-            }`}
-          >
-            {t(HEALTH_META[k].zh, HEALTH_META[k].en)} {counts[k]}
-          </button>
-        ))}
-      </div>
-
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[220px]">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={t('搜索项目名 / 行业 / 提交人邮箱 / 国家', 'Search name / industry / owner email / country')}
-            className="w-full pl-9 pr-3 py-2 rounded-xl border border-neutral-300 text-sm"
-          />
-        </div>
-        <label className="inline-flex items-center gap-2 text-sm text-neutral-700 cursor-pointer">
-          <input type="checkbox" checked={onlySubmitted} onChange={(e) => setOnlySubmitted(e.target.checked)} />
+      <Flex wrap gap={12} align="center">
+        <Input.Search
+          allowClear
+          className="flex-1 min-w-56"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={t('搜索项目名 / 行业 / 提交人邮箱 / 国家', 'Search name / industry / owner email / country')}
+        />
+        <Checkbox checked={onlySubmitted} onChange={(e) => setOnlySubmitted(e.target.checked)}>
           {t('仅已提交', 'Submitted only')}
-        </label>
-      </div>
+        </Checkbox>
+      </Flex>
 
-      {error && (
-        <div className="flex items-start gap-2 p-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700">
-          <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" /> {error}
-        </div>
+      {error && <Alert type="error" showIcon title={error} />}
+
+      {screens.md === false ? (
+        <Spin spinning={loading}>
+          {filtered.length === 0 ? (
+            <Card variant="borderless">
+              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('暂无项目', 'No projects')} />
+            </Card>
+          ) : (
+            <Flex vertical gap={12}>
+              {filtered.map((r) => (
+                <Card key={r.data.id} size="small" variant="borderless" className="shadow-xs">
+                  <Flex justify="space-between" align="flex-start" gap={8}>
+                    <div className="min-w-0">{cell.name(r)}</div>
+                    {cell.status(r)}
+                  </Flex>
+                  <div className="text-neutral-500 text-xs truncate mt-0.5">{cell.owner(r)}</div>
+                  <div className="mt-2 text-sm">{cell.industry(r)}</div>
+                  <Flex justify="space-between" align="flex-end" gap={8} className="mt-2">
+                    {cell.health(r)}
+                    <div className="text-right">{cell.revenue(r)}</div>
+                  </Flex>
+                  <div className="mt-2 text-xs">{cell.updated(r)}</div>
+                </Card>
+              ))}
+            </Flex>
+          )}
+        </Spin>
+      ) : (
+        <Table
+          rowKey={(r) => r.data.id}
+          columns={columns}
+          dataSource={filtered}
+          loading={loading}
+          scroll={{ x: 'max-content' }}
+          pagination={{ pageSize: 20, hideOnSinglePage: true, showSizeChanger: false }}
+          locale={{ emptyText: t('暂无项目', 'No projects') }}
+          className="rounded-lg overflow-hidden shadow-xs"
+        />
       )}
-
-      <div className="bg-white rounded-3xl border-2 border-neutral-200 overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-neutral-50 text-neutral-500 text-xs text-left">
-            <tr>
-              <th className="px-4 py-3">{t('项目', 'Project')}</th>
-              <th className="px-4 py-3">{t('提交人', 'Owner')}</th>
-              <th className="px-4 py-3">{t('行业 / 地区', 'Industry / Region')}</th>
-              <th className="px-4 py-3 text-right">{t('月流水', 'Monthly revenue')}</th>
-              <th className="px-4 py-3">{t('健康状况', 'Health')}</th>
-              <th className="px-4 py-3">{t('状态', 'Status')}</th>
-              <th className="px-4 py-3">{t('更新时间', 'Updated')}</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-neutral-100">
-            {filtered.map((r) => (
-              <tr key={r.data.id} className="hover:bg-neutral-50">
-                <td className="px-4 py-3 font-bold text-neutral-900">
-                  {r.data.projectName || t('（未命名）', '(untitled)')}
-                  <span className="ml-1 text-xs font-normal text-neutral-400">v{r.data.version}</span>
-                </td>
-                <td className="px-4 py-3 text-neutral-700">{r.ownerEmail || r.data.ownerEmail || '—'}</td>
-                <td className="px-4 py-3 text-neutral-600">
-                  {[r.data.industry, r.data.regionCountry].filter(Boolean).join(' / ') || '—'}
-                </td>
-                <td className="px-4 py-3 text-right tabular-nums">
-                  {r.data.monthlyRevenue?.amount != null
-                    ? formatMoney(Number(r.data.monthlyRevenue.amount), r.data.monthlyRevenue.currency || r.data.baseCurrency)
-                    : '—'}
-                </td>
-                <td className="px-4 py-3 whitespace-nowrap">
-                  <span className={`px-2 py-0.5 rounded-full border text-xs font-bold ${HEALTH_META[healthKeyOf(r)].cls}`}>
-                    {t(HEALTH_META[healthKeyOf(r)].zh, HEALTH_META[healthKeyOf(r)].en)}
-                  </span>
-                  {r.health && (
-                    <span className="ml-2 text-xs text-neutral-500 tabular-nums">
-                      {r.health.score ?? '—'}{t('分', ' pts')} · {r.health.tier ?? '—'}
-                      {r.health.gatePassed === false && (
-                        <span className="ml-1 text-red-600 font-bold">{t('红线未过', 'Gate failed')}</span>
-                      )}
-                    </span>
-                  )}
-                </td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                      r.isSubmitted ? 'bg-emerald-50 text-emerald-700' : 'bg-neutral-100 text-neutral-500'
-                    }`}
-                  >
-                    {r.isSubmitted ? t('已提交', 'Submitted') : t('草稿', 'Draft')}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-neutral-500 whitespace-nowrap">
-                  {r.updatedAt ? new Date(r.updatedAt).toLocaleString() : '—'}
-                </td>
-              </tr>
-            ))}
-            {!loading && filtered.length === 0 && (
-              <tr>
-                <td colSpan={7} className="px-4 py-10 text-center text-neutral-400">
-                  {t('暂无项目', 'No projects')}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
+    </PageContainer>
   );
 };
