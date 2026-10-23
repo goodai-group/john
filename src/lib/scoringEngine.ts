@@ -200,7 +200,7 @@ export function runBusinessAssessment(formData: BusinessFormData): AssessmentRep
       plainDescription: noFinancialDataEntered
         ? '尚未填写任何收入或成本数据，无法判定，请先填写月流水与开支。'
         : grossProfit >= totalOpex
-          ? '赚取的毛利足够支付每月房租、工人工资与水电网络等基础开销。'
+          ? '赚取的毛利足够支付每月房租、管理人工费用与水电网络等基础开销。'
           : '每月毛利润不足以支付日常租金与工资，经营处于入不敷出状态。',
       improvementTip: 'OPEX 超标时，通常可以从精简人工冗余成本、转租分摊固定租金或削减杂费入手。'
     },
@@ -270,7 +270,7 @@ export function runBusinessAssessment(formData: BusinessFormData): AssessmentRep
     {
       ...SCORING_METRIC_DEFINITIONS.opex_efficiency,
       key: 'opex_efficiency',
-      plainName: '运营固定开销占比（房租+工资等）',
+      plainName: '运营固定开销占比（房租+管理人工等）',
       score: Math.min(100, Math.max(0, Math.round(100 - opexRatioPercent * 1.1))),
       actualValue: `${opexRatioPercent}%`,
       status: opexRatioPercent <= 40 ? 'excellent' : opexRatioPercent <= 60 ? 'good' : 'poor',

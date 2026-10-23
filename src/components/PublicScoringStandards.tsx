@@ -147,7 +147,7 @@ export const PublicScoringStandards: React.FC<StandardsProps> = ({ language }) =
             </div>
             <p className="text-neutral-600 font-medium">
               {language === 'zh'
-                ? '大白话：每月赚出来的毛利润，必须能够全额包住房租、工人工资与水电网络等固定支出。'
+                ? '大白话：每月赚出来的毛利润，必须能够全额包住房租、管理人工费用与水电网络等固定支出。'
                 : 'Plain language: Your monthly gross profit must fully cover fixed costs such as rent, wages, and utilities.'}
             </p>
             <p className="text-teal-900 bg-teal-50/80 p-2.5 rounded-xl border border-teal-100 font-medium">
@@ -273,7 +273,7 @@ export const PublicScoringStandards: React.FC<StandardsProps> = ({ language }) =
                 <td className="p-3.5 font-medium">
                   <div className="text-neutral-900 font-bold">OPEX Overhead / {language === 'zh' ? '运营固定开支占比' : 'Fixed Overhead Ratio'}</div>
                   <div className="text-neutral-400">
-                    {language === 'zh' ? '每月房租、工人工资与日常杂费' : 'Monthly rent, wages, and routine miscellaneous fees'}
+                    {language === 'zh' ? '每月房租、管理人工费用与日常杂费' : 'Monthly rent, wages, and routine miscellaneous fees'}
                   </div>
                 </td>
                 <td className="p-3.5 font-mono font-bold text-teal-600">{SCORING_METRIC_DEFINITIONS.opex_efficiency.weight}%</td>
