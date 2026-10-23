@@ -1,3 +1,4 @@
+import { Alert, Button, Card, Checkbox, Col, Dropdown, Flex, Input, Modal, Progress, Row, Select, Statistic, Table, Tag, Tooltip, Typography } from 'antd';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   AssessmentReport,
@@ -44,6 +45,7 @@ import { formatMoney } from '../../lib/currencies';
 import { getGrossMarginPolicy, usesDirectServiceLabor } from '../../lib/grossMarginPolicy';
 import { getAuthHeaders } from '../../lib/supabaseClient';
 import { gateCodeLabel, tierLabel } from '../../lib/healthStatus';
+import { INDUSTRY_BENCHMARKS } from '../../lib/industryBenchmarks';
 
 interface ReportViewProps {
   report: AssessmentReport;
@@ -99,20 +101,7 @@ export const AssessmentReportView: React.FC<ReportViewProps> = ({
 }) => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmed, setDeleteConfirmed] = useState(false);
-  // 移动端把"彻底删除"这类危险操作从主按钮行里拿出来，收进"更多"里，
-  // 避免和"复制摘要/重新测算"这些日常操作挤在一起换行、造成误触。
-  const [showMoreActions, setShowMoreActions] = useState(false);
-  const moreActionsRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (moreActionsRef.current && !moreActionsRef.current.contains(event.target as Node)) {
-        setShowMoreActions(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  // 「彻底删除」这类危险操作收进「更多」下拉菜单（antd Dropdown），与日常操作分开，避免误触。
   // Default to simple plain language mode
   const [viewMode, setViewMode] = useState<'simple' | 'detailed'>('simple');
   const [copiedSummary, setCopiedSummary] = useState(false);
@@ -181,6 +170,12 @@ export const AssessmentReportView: React.FC<ReportViewProps> = ({
   // 不是另一套估算逻辑——用于下方「计算方法与过程」区块逐步展示税金这一步的代入过程。
   const taxAmountDerived = Math.max(0, operatingProfit - netProfit);
   const baseCurr = report.baseCurrency;
+  // 行业字段存的是内部 key（如 education_training），展示时换成可读名称
+  const industryDisplayName = (() => {
+    const bench = INDUSTRY_BENCHMARKS.find((b) => b.id === report.industry);
+    if (bench) return language === 'en' ? bench.nameEn : bench.nameZh.split(' (')[0];
+    return (report.industry || '').replace(/_/g, ' ');
+  })();
   // 税金来源：生成报告时由引擎记录（见 costAggregation.ts 的 taxBreakdown），旧报告没有该字段。
   const taxBreakdown = report.normalizedFinancials.taxBreakdown;
   const taxSourceDetail = !taxBreakdown
@@ -513,167 +508,114 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
     .join(' ');
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8 space-y-6 print:p-0">
+    <div className="max-w-5xl mx-auto px-3 sm:px-6 py-4 sm:py-6 flex flex-col gap-4 print:p-0">
       {/* Top Action Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-xl border border-neutral-200 shadow-xs print:hidden">
-        <div className="flex items-center flex-wrap gap-3">
-          {/* 当前视图标识：默认只展示"小白速览"，专业明细降级为报告底部的次级入口 */}
-          <div className="flex items-center space-x-1.5 px-3 py-1.5 rounded-2xl bg-neutral-100 border border-neutral-200 text-neutral-700">
-            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-            <span className="text-xs font-bold">{viewMode === 'simple' ? t('小白速览（默认）', 'Simple View (Default)') : t('专业明细', 'Professional Detail')}</span>
-          </div>
+      <Card variant="borderless" size="small" className="shadow-xs print:hidden">
+        <Flex wrap gap={12} justify="space-between" align="center">
+          <Flex wrap gap={8} align="center">
+            {/* 当前视图标识：默认只展示"小白速览"，专业明细降级为报告底部的次级入口 */}
+            <Tag icon={<Sparkles className="w-3.5 h-3.5 inline mr-1 text-amber-500" />} className="me-0">
+              {viewMode === 'simple' ? t('小白速览（默认）', 'Simple view (default)') : t('专业明细', 'Professional detail')}
+            </Tag>
 
-          {/* Version Switcher */}
-          {allVersions.length > 1 && (
-            <div className="flex items-center gap-2 text-xs font-bold text-neutral-700 bg-neutral-50 px-3 py-1.5 rounded-2xl border border-neutral-200">
-              <span className="text-neutral-400 text-[12px]">{t('历史版本:', 'Version history:')}</span>
-              <select
-                value={report.version}
-                onChange={(e) => onSelectVersion?.(Number(e.target.value))}
-                className="font-bold bg-transparent text-teal-600 focus:outline-hidden"
-              >
-                {allVersions.map((v) => (
-                  <option key={`${v.id}-v${v.version}`} value={v.version}>
-                    v{v.version} ({new Date(v.createdAt).toLocaleDateString()}) - {v.totalScore}{t('分', ' pts')}
-                  </option>
-                ))}
-              </select>
-
-              <button
-                onClick={() => setShowVersionDiff(!showVersionDiff)}
-                className={`p-1 rounded-lg border text-[13px] font-bold flex items-center gap-1 cursor-pointer ${
-                  showVersionDiff ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-neutral-600 border-neutral-200'
-                }`}
-                title={t('查看与上一版本的得分变化对比', 'View score changes compared to the previous version')}
-              >
-                <GitCompare className="w-3 h-3" />
-                <span>{t('对比', 'Compare')}</span>
-              </button>
-            </div>
-          )}
-        </div>
-
-        <div className="flex items-center flex-wrap gap-2">
-          <button
-            onClick={handleCopySummary}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-2xl border text-xs font-bold transition-colors cursor-pointer ${
-              copiedSummary
-                ? 'bg-emerald-100 border-emerald-300 text-emerald-700'
-                : 'bg-white hover:bg-neutral-50 border-neutral-300 text-neutral-700 shadow-xs'
-            }`}
-          >
-            {copiedSummary ? (
-              <>
-                <CheckCheck className="w-3.5 h-3.5 text-emerald-600" />
-                <span className="text-emerald-700">{t('已复制✓', 'Copied ✓')}</span>
-              </>
-            ) : (
-              <>
-                <Copy className="w-3.5 h-3.5" />
-                <span>{t('复制摘要', 'Copy Summary')}</span>
-              </>
+            {/* Version Switcher */}
+            {allVersions.length > 1 && (
+              <Flex align="center" gap={6}>
+                <Typography.Text type="secondary" className="text-xs">
+                  {t('历史版本', 'Version')}
+                </Typography.Text>
+                <Select
+                  size="small"
+                  popupMatchSelectWidth={false}
+                  value={report.version}
+                  onChange={(v) => onSelectVersion?.(Number(v))}
+                  options={allVersions.map((v) => ({
+                    value: v.version,
+                    label: `v${v.version} (${new Date(v.createdAt).toLocaleDateString()}) - ${v.totalScore}${t('分', ' pts')}`
+                  }))}
+                />
+                <Button
+                  size="small"
+                  type={showVersionDiff ? 'primary' : 'default'}
+                  icon={<GitCompare className="w-3.5 h-3.5" />}
+                  onClick={() => setShowVersionDiff(!showVersionDiff)}
+                  title={t('查看与上一版本的得分变化对比', 'View score changes compared to the previous version')}
+                >
+                  {t('对比', 'Compare')}
+                </Button>
+              </Flex>
             )}
-          </button>
+          </Flex>
 
-          <button
-            onClick={onReAssess}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-white hover:bg-neutral-50 border border-neutral-300 text-neutral-700 text-xs font-bold transition-colors cursor-pointer shadow-xs"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span>{t('重新测算', 'Re-assess')}</span>
-          </button>
-
-          <button
-            onClick={handlePrint}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-teal-900 hover:bg-teal-800 border border-teal-900 text-white text-xs font-bold transition-colors cursor-pointer shadow-sm"
-          >
-            <Printer className="w-3.5 h-3.5" />
-            <span className="sm:hidden">{t('导出 PDF', 'Export PDF')}</span>
-            <span className="hidden sm:inline">{t('导出体检卡 PDF', 'Export Report PDF')}</span>
-          </button>
-
-          {/* 次要/危险操作收进"更多"菜单，与上面的日常操作按钮分开，避免误触彻底删除 */}
-          <div className="relative" ref={moreActionsRef}>
-            <button
-              onClick={() => setShowMoreActions((v) => !v)}
-              className="flex items-center gap-1 px-2.5 py-2 rounded-2xl bg-white hover:bg-neutral-50 border border-neutral-300 text-neutral-700 text-xs font-bold transition-colors cursor-pointer shadow-xs"
-              title={t('更多操作', 'More actions')}
-              aria-haspopup="true"
-              aria-expanded={showMoreActions}
+          <Flex wrap gap={8} align="center">
+            <Button
+              icon={copiedSummary ? <CheckCheck className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+              onClick={handleCopySummary}
             >
-              <MoreVertical className="w-3.5 h-3.5" />
-            </button>
-
-            {showMoreActions && (
-              <div className="absolute right-0 mt-2 w-48 rounded-2xl bg-white border border-neutral-200 shadow-xl p-1.5 z-50 animate-in fade-in">
-                <button
-                  onClick={() => {
-                    setShowMoreActions(false);
-                    handleExportJson();
-                  }}
-                  className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-neutral-100 text-neutral-700 text-xs font-bold cursor-pointer"
-                >
-                  <FileDown className="w-3.5 h-3.5" />
-                  <span>{t('备份（导出 JSON）', 'Backup (Export JSON)')}</span>
-                </button>
-                <div className="my-1 border-t border-neutral-100" />
-                <button
-                  onClick={() => {
-                    setShowMoreActions(false);
-                    setShowDeleteModal(true);
-                  }}
-                  className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl text-rose-600 hover:bg-rose-50 text-xs font-bold cursor-pointer"
-                  title={t('撤回并物理删除该项目全部数据', 'Withdraw and permanently delete all data for this project')}
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>{t('彻底删除', 'Delete Permanently')}</span>
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+              {copiedSummary ? t('已复制 ✓', 'Copied ✓') : t('复制摘要', 'Copy summary')}
+            </Button>
+            <Button icon={<RotateCcw className="w-4 h-4" />} onClick={onReAssess}>
+              {t('重新测算', 'Re-assess')}
+            </Button>
+            <Button type="primary" icon={<Printer className="w-4 h-4" />} onClick={handlePrint}>
+              <span className="sm:hidden">{t('导出 PDF', 'Export PDF')}</span>
+              <span className="hidden sm:inline">{t('导出体检卡 PDF', 'Export report PDF')}</span>
+            </Button>
+            {/* 次要/危险操作收进"更多"菜单，与上面的日常操作按钮分开，避免误触彻底删除 */}
+            <Dropdown
+              trigger={['click']}
+              placement="bottomRight"
+              menu={{
+                items: [
+                  { key: 'json', icon: <FileDown className="w-4 h-4" />, label: t('备份（导出 JSON）', 'Backup (export JSON)') },
+                  { type: 'divider' },
+                  {
+                    key: 'delete',
+                    danger: true,
+                    icon: <Trash2 className="w-4 h-4" />,
+                    label: t('彻底删除', 'Delete permanently'),
+                    title: t('撤回并物理删除该项目全部数据', 'Withdraw and permanently delete all data for this project')
+                  }
+                ],
+                onClick: ({ key }) => (key === 'json' ? handleExportJson() : setShowDeleteModal(true))
+              }}
+            >
+              <Button icon={<MoreVertical className="w-4 h-4" />} aria-label={t('更多操作', 'More actions')} />
+            </Dropdown>
+          </Flex>
+        </Flex>
+      </Card>
 
       {/* Version Diff Banner when enabled */}
       {showVersionDiff && prevVersion && (
-        <div className="bg-teal-50 border-2 border-teal-200 rounded-xl p-5 shadow-xs flex flex-wrap items-center justify-between gap-4 animate-in fade-in">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-2xl bg-teal-600 text-white flex items-center justify-center font-bold">
-              <GitCompare className="w-5 h-5" />
-            </div>
-            <div>
-              <h4 className="text-xs font-bold text-neutral-900">
-                {t(`对比上一版本 (v${prevVersion.version} ➔ v${report.version})`, `Compared to previous version (v${prevVersion.version} ➔ v${report.version})`)}
-              </h4>
-              <p className="text-[13px] text-neutral-500">
-                {t('优化措施落地后的数据变化趋势', 'Data trends after optimization measures were implemented')}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4 text-xs font-bold">
-            <div className="bg-white px-3 py-1.5 rounded-xl border border-teal-100 flex items-center space-x-1.5">
-              <span className="text-neutral-500">{t('得分变化:', 'Score change:')}</span>
-              <span className={scoreDiff >= 0 ? 'text-emerald-600 tabular-nums' : 'text-rose-600 tabular-nums'}>
-                {scoreDiff >= 0 ? `+${scoreDiff}` : scoreDiff} {t('分', 'pts')}
-              </span>
-            </div>
-
-            <div className="bg-white px-3 py-1.5 rounded-xl border border-teal-100 flex items-center space-x-1.5">
-              <span className="text-neutral-500">{t('利润率变化:', 'Margin change:')}</span>
-              <span className={marginDiff >= 0 ? 'text-emerald-600 tabular-nums' : 'text-rose-600 tabular-nums'}>
-                {marginDiff >= 0 ? `+${marginDiff}%` : `${marginDiff}%`}
-              </span>
-            </div>
-
-            <div className="bg-white px-3 py-1.5 rounded-xl border border-teal-100 flex items-center space-x-1.5">
-              <span className="text-neutral-500">{t('备用金支撑:', 'Cash runway:')}</span>
-              <span className={runwayDiff >= 0 ? 'text-emerald-600 tabular-nums' : 'text-rose-600 tabular-nums'}>
-                {runwayDiff >= 0 ? `+${runwayDiff}${t('月', ' mo')}` : `${runwayDiff}${t('月', ' mo')}`}
-              </span>
-            </div>
-          </div>
-        </div>
+        <Card
+          size="small"
+          className="border-teal-200 bg-teal-50"
+          title={
+            <Flex align="center" gap={8}>
+              <GitCompare className="w-4 h-4 text-teal-700" />
+              {t(`对比上一版本 (v${prevVersion.version} ➔ v${report.version})`, `Compared to previous version (v${prevVersion.version} ➔ v${report.version})`)}
+            </Flex>
+          }
+        >
+          <Row gutter={16}>
+            {[
+              { key: 'score', label: t('得分变化', 'Score change'), value: scoreDiff, suffix: t('分', 'pts') },
+              { key: 'margin', label: t('利润率变化', 'Margin change'), value: marginDiff, suffix: '%' },
+              { key: 'runway', label: t('备用金支撑', 'Cash runway'), value: runwayDiff, suffix: t('月', 'mo') }
+            ].map((d) => (
+              <Col xs={8} key={d.key}>
+                <Statistic
+                  title={d.label}
+                  value={d.value}
+                  prefix={d.value >= 0 ? '+' : ''}
+                  suffix={d.suffix}
+                  styles={{ content: { fontSize: 18, color: d.value >= 0 ? '#389e0d' : '#cf1322' } }}
+                />
+              </Col>
+            ))}
+          </Row>
+        </Card>
       )}
 
       {/* ========================================================================= */}
@@ -682,62 +624,55 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
       {viewMode === 'simple' && (
         <div className="space-y-6 animate-in fade-in duration-200">
           {/* Card 1: Health Headline & Verdict */}
-          <div className="bg-white border border-neutral-200 rounded-xl p-6 sm:p-8 shadow-xs space-y-4">
+          <Card variant="borderless" className="shadow-xs" styles={{ body: { display: 'flex', flexDirection: 'column', gap: 16 } }}>
             <div className="flex flex-wrap items-start gap-5">
               {/* Score Ring：用环形进度条直观呈现综合得分，替代原先单独的方块得分卡 */}
-              <div className="relative w-20 h-20 sm:w-24 sm:h-24 shrink-0">
-                <svg viewBox="0 0 100 100" className="w-20 h-20 sm:w-24 sm:h-24 -rotate-90">
-                  <circle cx="50" cy="50" r="44" fill="none" stroke="#eae4d6" strokeWidth="9" />
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="44"
-                    fill="none"
-                    stroke={scoreRingColor}
-                    strokeWidth="9"
-                    strokeLinecap="round"
-                    strokeDasharray={`${(Math.max(0, Math.min(100, report.totalScore)) / 100) * 2 * Math.PI * 44} ${2 * Math.PI * 44}`}
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-2xl sm:text-3xl tabular-nums font-bold text-neutral-900 leading-none">
-                    {report.totalScore}
+              <Progress
+                type="circle"
+                size={96}
+                percent={Math.max(0, Math.min(100, report.totalScore))}
+                strokeColor={scoreRingColor}
+                format={() => (
+                  <span className="flex flex-col items-center leading-none">
+                    <span className="text-2xl font-bold text-neutral-900 tabular-nums">{report.totalScore}</span>
+                    <span className="text-xs text-neutral-400 mt-1">/ 100</span>
                   </span>
-                  <span className="text-[12px] text-neutral-400 font-bold mt-0.5">/ 100 {t('分', '')}</span>
-                </div>
-              </div>
+                )}
+              />
 
               <div className="flex-1 min-w-[220px]">
                 <div className="flex flex-wrap items-center gap-2 mb-2">
-                  <span className={`text-xs font-bold px-3 py-1 rounded-full border ${health.badgeColor} flex items-center space-x-1.5`}>
-                    <span>{health.trafficIcon}</span>
-                    <span>{health.badge}</span>
-                  </span>
+                  <Tag
+                    color={health.trafficIcon === '🟢' ? 'success' : health.trafficIcon === '🔴' ? 'error' : 'warning'}
+                    className="me-0 text-sm"
+                  >
+                    {health.badge}
+                  </Tag>
                   <span className="text-xs text-neutral-500" title={t('评级档位见「评分规则」页', 'See Scoring Rules for tier ranges')}>
                     {t('评级', 'Tier')} {tierLabel(report.tier, language)}
                   </span>
                   <a
                     href="#gate-calc"
                     title={t('点击查看 5 项红线逐项判定与计算过程', 'Click to see each of the 5 gates and how it is calculated')}
-                    className={`text-xs font-bold px-3 py-1 rounded-full border flex items-center space-x-1.5 hover:underline ${
-                      !report.gatePassed
-                        ? 'bg-rose-50 border-rose-200 text-rose-800'
-                        : hasCriticalWeakness
-                        ? 'bg-amber-50 border-amber-200 text-amber-800'
-                        : 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                    }`}
                   >
-                    {report.gatePassed ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertOctagon className="w-3.5 h-3.5" />}
-                    <span>
-                      {report.gatePassed
-                        ? t('红线全部通过', 'All gates passed')
-                        : t('红线未全部通过', 'Gates not all passed')}
+                    <Tag
+                      color={!report.gatePassed ? 'error' : hasCriticalWeakness ? 'warning' : 'success'}
+                      icon={
+                        report.gatePassed ? (
+                          <CheckCircle2 className="w-3.5 h-3.5 inline mr-1" />
+                        ) : (
+                          <AlertOctagon className="w-3.5 h-3.5 inline mr-1" />
+                        )
+                      }
+                      className="me-0 cursor-pointer"
+                    >
+                      {report.gatePassed ? t('红线全部通过', 'All gates passed') : t('红线未全部通过', 'Gates not all passed')}
                       {' · '}
                       {t(
                         `通过 ${report.gates.length - (report.failedGates?.length || 0)}/${report.gates.length} 项`,
                         `${report.gates.length - (report.failedGates?.length || 0)}/${report.gates.length} passed`
                       )}
-                    </span>
+                    </Tag>
                   </a>
                 </div>
                 <div className="text-xs text-neutral-400 font-medium mb-1">
@@ -751,10 +686,13 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                 </p>
                 {/* Data sanity warning: when revenue is unrealistically small OR ratios are out of healthy range */}
                 {(monthlyRealRevenue > 0 && monthlyRealRevenue < 1000) || cogsPct >= 80 || opexRatioPercent >= 200 ? (
-                  <div className="mt-3 p-3 rounded-xl bg-amber-50 border-2 border-amber-300 flex items-start gap-2 text-amber-900">
-                    <span className="text-xl leading-none mt-0.5">⚠️</span>
+                  <Alert
+                    className="mt-3"
+                    type="warning"
+                    showIcon
+                    title={t('数据合理性提示', 'Data sanity notice')}
+                    description={
                     <div className="text-xs leading-relaxed">
-                      <strong className="font-bold">{t('数据合理性提示：', 'Data sanity notice: ')}</strong>
                       {monthlyRealRevenue > 0 && monthlyRealRevenue < 1000 ? (
                         language === 'zh' ? (
                           <span>月营收仅 <strong>{formatMoney(monthlyRealRevenue, baseCurr)}</strong> 异常小，请检查是否把「年营业额」误填为月流水，或漏报真实生意规模。</span>
@@ -778,22 +716,19 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                         )}</span>
                       )}
                     </div>
-                  </div>
+                    }
+                  />
                 ) : null}
                 <p className="text-[13px] sm:text-xs text-neutral-500 font-medium mt-1.5 leading-relaxed max-w-3xl">
                   {t('大白话：', 'In plain terms: ')}{getPlainVerdict()}
                 </p>
 
                 {/* 红线合规状态：从专业明细模式精简为一行，默认就能看见 */}
-                <div
-                  className={`mt-3 inline-flex flex-wrap items-center gap-x-2 gap-y-1 px-3 py-1.5 rounded-xl border-2 text-xs font-bold ${
-                    !report.gatePassed
-                      ? 'bg-rose-50 border-rose-200 text-rose-800'
-                      : hasCriticalWeakness
-                      ? 'bg-amber-50 border-amber-200 text-amber-800'
-                      : 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                  }`}
-                >
+                <Alert
+                  className="mt-3"
+                  type={!report.gatePassed ? 'error' : hasCriticalWeakness ? 'warning' : 'success'}
+                  title={
+                  <div className="text-xs">
                   {report.gatePassed ? (
                     <span className="flex items-center gap-1.5">
                       <ShieldCheck className={`w-3.5 h-3.5 ${hasCriticalWeakness ? 'text-amber-600' : 'text-emerald-600'}`} />
@@ -828,13 +763,15 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                       </ul>
                     </div>
                   )}
-                </div>
+                  </div>
+                  }
+                />
               </div>
             </div>
-          </div>
+          </Card>
 
           {/* Card 2: "Where does 100 Yuan go?" (钱流向图) */}
-          <div className="bg-white border border-neutral-200 rounded-xl p-6 sm:p-8 shadow-xs space-y-5">
+          <Card variant="borderless" className="shadow-xs" styles={{ body: { display: 'flex', flexDirection: 'column', gap: 20 } }}>
             <div>
               <div className="flex items-center space-x-2">
                 <Wallet className="w-4 h-4 text-emerald-600" />
@@ -849,7 +786,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
 
             {/* Stacked Visual Bar */}
             <div className="space-y-2">
-              <div className="h-9 w-full rounded-2xl overflow-hidden flex shadow-inner border border-neutral-200 bg-neutral-100">
+              <div className="h-9 w-full rounded-lg overflow-hidden flex shadow-inner border border-neutral-200 bg-neutral-100">
                 {/* 1. COGS Bar */}
                 {cogsPct > 0 && (
                   <div
@@ -902,7 +839,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
 
               {/* Legend Bento Cards */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2">
-                <div className="bg-amber-50/70 border border-amber-200 p-3 rounded-2xl">
+                <div className="bg-amber-50/70 border border-amber-200 p-3 rounded-lg">
                   <div className="flex items-center space-x-1.5 text-xs text-amber-800 font-bold mb-1">
                     <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0"></span>
                     <span>{hasDirectLabor ? t('1. 营业成本（物料+一线人工）', '1. Cost of Revenue (materials + direct labor)') : t('1. 进货采购成本', '1. Purchasing Cost')}</span>
@@ -916,7 +853,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                   </div>
                 </div>
 
-                <div className="bg-teal-50/70 border border-teal-200 p-3 rounded-2xl">
+                <div className="bg-teal-50/70 border border-teal-200 p-3 rounded-lg">
                   <div className="flex items-center space-x-1.5 text-xs text-teal-800 font-bold mb-1">
                     <span className="w-2.5 h-2.5 rounded-full bg-teal-500 shrink-0"></span>
                     <span>{t('2. 房租与管理人工费用', '2. Rent & Admin Labor')}</span>
@@ -930,7 +867,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                   </div>
                 </div>
 
-                <div className="bg-neutral-100 border border-neutral-200 p-3 rounded-2xl">
+                <div className="bg-neutral-100 border border-neutral-200 p-3 rounded-lg">
                   <div className="flex items-center space-x-1.5 text-xs text-neutral-700 font-bold mb-1">
                     <span className="w-2.5 h-2.5 rounded-full bg-neutral-400 shrink-0"></span>
                     <span>{t('3. 税费与杂支', '3. Taxes & Other')}</span>
@@ -944,7 +881,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                   </div>
                 </div>
 
-                <div className="bg-emerald-50/70 border border-emerald-200 p-3 rounded-2xl">
+                <div className="bg-emerald-50/70 border border-emerald-200 p-3 rounded-lg">
                   <div className="flex items-center space-x-1.5 text-xs text-emerald-800 font-bold mb-1">
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0"></span>
                     <span>{t('4. 真正落袋净利', '4. Actual Net Profit')}</span>
@@ -959,10 +896,10 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                 </div>
               </div>
             </div>
-          </div>
+          </Card>
 
           {/* Card 3: 4 Core Practical Questions (老板最关心的 4 个核心问题) */}
-          <div className="bg-white border border-neutral-200 rounded-xl p-6 sm:p-8 shadow-xs space-y-4">
+          <Card variant="borderless" className="shadow-xs" styles={{ body: { display: 'flex', flexDirection: 'column', gap: 16 } }}>
             <div>
               <div className="flex items-center space-x-2">
                 <Store className="w-4 h-4 text-teal-600" />
@@ -977,7 +914,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Question 1: Profitability */}
-              <div className="p-5 rounded-2xl bg-neutral-50 border border-neutral-200 flex flex-col justify-between space-y-3">
+              <div className="p-5 rounded-lg bg-neutral-50 border border-neutral-200 flex flex-col justify-between space-y-3">
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="text-[12px] font-bold text-neutral-400 mb-0.5">
@@ -987,14 +924,12 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                       {t('1. 这个生意到底能不能赚到钱？', '1. Is this business actually making money?')}
                     </h4>
                   </div>
-                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold tabular-nums ${
-                    netProfit > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
-                  }`}>
+                  <Tag color={netProfit > 0 ? 'success' : 'error'} className="me-0">
                     {netProfit > 0 ? t('🟢 稳定盈利', '🟢 Stably Profitable') : t('🔴 发生亏损', '🔴 Losing Money')}
-                  </span>
+                  </Tag>
                 </div>
 
-                <div className="bg-white p-3 rounded-xl border border-neutral-200">
+                <div className="bg-white p-3 rounded-lg border border-neutral-200">
                   <div className="text-2xl tabular-nums font-bold text-neutral-900">
                     {formatMoney(netProfit, baseCurr)}
                     <span className="text-xs text-neutral-500 font-medium ml-2">{t('/ 每月净赚', '/ net profit per month')}</span>
@@ -1011,7 +946,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
               </div>
 
               {/* Question 2: Margin Health */}
-              <div className="p-5 rounded-2xl bg-neutral-50 border border-neutral-200 flex flex-col justify-between space-y-3">
+              <div className="p-5 rounded-lg bg-neutral-50 border border-neutral-200 flex flex-col justify-between space-y-3">
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="text-[12px] font-bold text-neutral-400 mb-0.5">
@@ -1021,14 +956,12 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                       {t('2. 产品卖得贵不贵，毛利空间够不够大？', '2. Are prices right — is gross margin wide enough?')}
                     </h4>
                   </div>
-                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold tabular-nums ${
-                    grossMarginPercent >= 30 ? 'bg-emerald-100 text-emerald-800' : grossMarginPercent >= 20 ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800'
-                  }`}>
+                  <Tag color={grossMarginPercent >= 30 ? 'success' : grossMarginPercent >= 20 ? 'warning' : 'error'} className="me-0">
                     {grossMarginPercent >= 30 ? t('🟢 空间充足', '🟢 Ample Margin') : grossMarginPercent >= 20 ? t('🟡 刚好及格', '🟡 Just Passing') : t('🔴 毛利过低', '🔴 Margin Too Thin')}
-                  </span>
+                  </Tag>
                 </div>
 
-                <div className="bg-white p-3 rounded-xl border border-neutral-200">
+                <div className="bg-white p-3 rounded-lg border border-neutral-200">
                   <div className="text-2xl tabular-nums font-bold text-neutral-900">
                     {grossMarginPercent}%
                     <span className="text-xs text-neutral-500 font-medium ml-2">
@@ -1046,7 +979,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
               </div>
 
               {/* Question 3: OPEX Burden */}
-              <div className="p-5 rounded-2xl bg-neutral-50 border border-neutral-200 flex flex-col justify-between space-y-3">
+              <div className="p-5 rounded-lg bg-neutral-50 border border-neutral-200 flex flex-col justify-between space-y-3">
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="text-[12px] font-bold text-neutral-400 mb-0.5">
@@ -1056,14 +989,12 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                       {t('3. 房租和管理人工费用开销重不重？', '3. Are rent and admin labor costs too heavy a burden?')}
                     </h4>
                   </div>
-                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold tabular-nums ${
-                    opexRatioPercent <= 45 ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-                  }`}>
+                  <Tag color={opexRatioPercent <= 45 ? 'success' : 'warning'} className="me-0">
                     {opexRatioPercent <= 45 ? t('🟢 负担轻便', '🟢 Manageable') : t('🟡 稍显沉重', '🟡 Somewhat Heavy')}
-                  </span>
+                  </Tag>
                 </div>
 
-                <div className="bg-white p-3 rounded-xl border border-neutral-200">
+                <div className="bg-white p-3 rounded-lg border border-neutral-200">
                   <div className="text-2xl tabular-nums font-bold text-neutral-900">
                     {opexRatioPercent}%
                     <span className="text-xs text-neutral-500 font-medium ml-2">
@@ -1081,7 +1012,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
               </div>
 
               {/* Question 4: Cash Runway */}
-              <div className="p-5 rounded-2xl bg-neutral-50 border border-neutral-200 flex flex-col justify-between space-y-3">
+              <div className="p-5 rounded-lg bg-neutral-50 border border-neutral-200 flex flex-col justify-between space-y-3">
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="text-[12px] font-bold text-neutral-400 mb-0.5">
@@ -1091,14 +1022,12 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                       {t('4. 万一生意突发断流，账上备用金能撑多久？', '4. If revenue suddenly stopped, how long would cash reserves last?')}
                     </h4>
                   </div>
-                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold tabular-nums ${
-                    cashRunwayMonths >= 3 ? 'bg-emerald-100 text-emerald-800' : cashRunwayMonths >= 2 ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800'
-                  }`}>
+                  <Tag color={cashRunwayMonths >= 3 ? 'success' : cashRunwayMonths >= 2 ? 'warning' : 'error'} className="me-0">
                     {cashRunwayMonths >= 3 ? t('🟢 安全宽裕', '🟢 Safe & Ample') : cashRunwayMonths >= 2 ? t('🟡 稍显紧凑', '🟡 A Bit Tight') : t('🔴 必须补充', '🔴 Needs Urgent Top-up')}
-                  </span>
+                  </Tag>
                 </div>
 
-                <div className="bg-white p-3 rounded-xl border border-neutral-200">
+                <div className="bg-white p-3 rounded-lg border border-neutral-200">
                   <div className="text-2xl tabular-nums font-bold text-neutral-900">
                     {cashRunwayMonths} {t('个月', 'months')}
                   </div>
@@ -1112,10 +1041,10 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                 </p>
               </div>
             </div>
-          </div>
+          </Card>
 
           {/* Card 5: Actionable Checklist & Live Gemini Deep Diagnosis */}
-          <div className="bg-teal-900 border border-teal-800 rounded-xl p-6 sm:p-8 shadow-sm text-white space-y-5">
+          <div className="bg-teal-900 border border-teal-800 rounded-lg p-6 sm:p-8 shadow-sm text-white space-y-5">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center space-x-2 text-amber-400">
                 <Sparkles className="w-5 h-5" />
@@ -1124,19 +1053,19 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                 </h3>
               </div>
 
-              <button
+              <Button size="small"
                 onClick={handleFetchAiDiagnosis}
                 disabled={isAiDiagnosing}
-                className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+
               >
                 <Sparkles className={`w-3.5 h-3.5 ${isAiDiagnosing ? 'animate-spin' : ''}`} />
                 <span>{isAiDiagnosing ? t('Gemini 正在分析业务数据...', 'Gemini is analyzing your data...') : t('获取 Gemini 3.7 AI 实时深度战略诊断', 'Get Gemini 3.7 AI Deep Diagnosis')}</span>
-              </button>
+              </Button>
             </div>
 
             {/* AI Custom Feedback if loaded */}
             {aiCustomDiagnosis && (
-              <div className="bg-amber-950/40 border border-amber-500/40 rounded-2xl p-4 text-xs space-y-2 animate-in fade-in">
+              <div className="bg-amber-950/40 border border-amber-500/40 rounded-lg p-4 text-xs space-y-2 animate-in fade-in">
                 <div className="font-bold text-amber-300 flex items-center gap-1.5">
                   <Sparkles className="w-4 h-4" />
                   <span>{t('Gemini 3.7 定制诊断：', 'Gemini 3.7 Custom Diagnosis: ')}{aiCustomDiagnosis.summaryHeadline || t('已完成实时深度诊断', 'Live deep diagnosis complete')}</span>
@@ -1183,7 +1112,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                   <div
                     key={`action-${i}-${advice}`}
                     onClick={() => toggleActionCompleted(advice)}
-                    className={`p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between space-y-3 ${
+                    className={`p-5 rounded-lg border transition-all cursor-pointer flex flex-col justify-between space-y-3 ${
                       isDone
                         ? 'bg-emerald-950/40 border-emerald-500/50 text-emerald-100'
                         : 'bg-teal-800/80 border-teal-700 hover:border-teal-500 text-teal-50'
@@ -1194,12 +1123,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                         <span className={`text-[12px] font-bold px-2 py-0.5 rounded-lg border ${priorityStyle.className}`}>
                           {language === 'en' ? priorityStyle.label[1] : priorityStyle.label[0]}
                         </span>
-                        <input
-                          type="checkbox"
-                          checked={isDone || false}
-                          onChange={() => {}}
-                          className="w-4 h-4 text-emerald-500 rounded cursor-pointer"
-                        />
+                        <Checkbox checked={isDone || false} aria-label={title} />
                       </div>
                       <h4 className={`font-bold text-sm ${isDone ? 'text-emerald-300 line-through' : 'text-white'}`}>
                         {title}
@@ -1218,13 +1142,13 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
             </div>
 
             <div className="pt-2 flex justify-end">
-              <button
+              <Button size="small" type="text"
                 onClick={() => setViewMode('detailed')}
-                className="text-xs text-neutral-400 hover:text-white flex items-center space-x-1 transition-colors cursor-pointer"
+
               >
                 <span>{t('想看更深入的雷达透视图与原始财务公式？点击切换至专业财务明细模式', 'Want the radar chart and raw formulas? Switch to the professional detail view')}</span>
                 <ArrowRight className="w-3.5 h-3.5" />
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -1236,22 +1160,20 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
       {viewMode === 'detailed' && (
         <div className="space-y-6 animate-in fade-in duration-200">
           {/* 返回小白速览：专业明细仅作为次级的按需查看入口 */}
-          <button
+          <Button size="small" icon={<ArrowLeft className="w-3.5 h-3.5" />}
             onClick={() => setViewMode('simple')}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-neutral-100 hover:bg-neutral-200/80 border border-neutral-200 text-neutral-700 text-xs font-bold transition-colors cursor-pointer print:hidden"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>{t('返回小白速览', 'Back to Simple View')}</span>
-          </button>
+
+          ><span>{t('返回小白速览', 'Back to Simple View')}</span>
+          </Button>
           {/* Main Bento Grid Header Section */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
             {/* Left Bento: Project Identity & Specs */}
-            <div className="lg:col-span-8 bg-white border border-neutral-200 rounded-xl p-6 sm:p-8 shadow-xs flex flex-col justify-between space-y-4">
+            <div className="lg:col-span-8 bg-white border border-neutral-200 rounded-lg p-6 sm:p-8 shadow-xs flex flex-col justify-between space-y-4">
               <div>
                 <div className="flex items-center space-x-2 mb-3">
-                  <span className="text-[12px] font-bold text-teal-700 bg-teal-50 px-3 py-1 rounded-full border border-teal-100">
-                    {t('工场服事标准体检评估报告', 'Standard Ministry Business Assessment Report')}
-                  </span>
+                  <Tag color="cyan" className="me-0">
+                    {t('体检评估报告', 'Assessment report')}
+                  </Tag>
                   <span className="text-[12px] text-neutral-400 font-medium">
                     {t('生成时间:', 'Generated:')} {new Date(report.createdAt).toLocaleDateString()}
                   </span>
@@ -1261,35 +1183,35 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                   {report.projectName || t('未命名项目', 'Untitled project')}
                 </h2>
                 <p className="text-xs text-neutral-500 font-medium mt-1">
-                  {t('行业领域：', 'Industry: ')}{report.industry} ｜ {t('版本：', 'Version: ')}v{report.version} ｜ {t('基准币种：', 'Base currency: ')}{report.baseCurrency}
+                  {t('行业领域：', 'Industry: ')}{industryDisplayName} ｜ {t('版本：', 'Version: ')}v{report.version} ｜ {t('基准币种：', 'Base currency: ')}{report.baseCurrency}
                 </p>
               </div>
 
               {/* Status Pills */}
               <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-neutral-100">
                 {report.dataMinimizationNotice && (
-                  <span className="text-xs bg-amber-50 text-amber-800 font-semibold px-3 py-1 rounded-xl border border-amber-200 flex items-center space-x-1.5">
+                  <span className="text-xs bg-amber-50 text-amber-800 font-semibold px-3 py-1 rounded-lg border border-amber-200 flex items-center space-x-1.5">
                     <ShieldCheck className="w-3.5 h-3.5 text-amber-600 shrink-0" />
                     <span>{t('敏感安全脱敏模式', 'Sensitive/Redacted Mode')}</span>
                   </span>
                 )}
 
                 {report.customRateNotice && (
-                  <span className="text-xs bg-teal-50 text-teal-800 font-semibold px-3 py-1 rounded-xl border border-teal-200 flex items-center space-x-1.5">
+                  <span className="text-xs bg-teal-50 text-teal-800 font-semibold px-3 py-1 rounded-lg border border-teal-200 flex items-center space-x-1.5">
                     <DollarSign className="w-3.5 h-3.5 text-teal-600 shrink-0" />
                     <span>{report.customRateNotice}</span>
                   </span>
                 )}
 
                 {grossMarginNoticeText && (
-                  <div className="basis-full text-xs bg-amber-50 text-amber-900 font-semibold px-3 py-2 rounded-xl border border-amber-300 flex items-start space-x-1.5 leading-relaxed">
+                  <div className="basis-full text-xs bg-amber-50 text-amber-900 font-semibold px-3 py-2 rounded-lg border border-amber-300 flex items-start space-x-1.5 leading-relaxed">
                     <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
                     <span>{grossMarginNoticeText}</span>
                   </div>
                 )}
 
                 {report.estimatedMonthsCount > 0 && (
-                  <span className="text-xs bg-cyan-50 text-cyan-800 font-semibold px-3 py-1 rounded-xl border border-cyan-200 flex items-center space-x-1.5">
+                  <span className="text-xs bg-cyan-50 text-cyan-800 font-semibold px-3 py-1 rounded-lg border border-cyan-200 flex items-center space-x-1.5">
                     <Sparkles className="w-3.5 h-3.5 text-cyan-600 shrink-0" />
                     <span>{t(`流水断点平滑估算已确认 (${report.estimatedMonthsCount} 个月)`, `Revenue-gap smoothing estimate confirmed (${report.estimatedMonthsCount} months)`)}</span>
                   </span>
@@ -1298,14 +1220,14 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
             </div>
 
             {/* Right Bento: Total Score & Grade */}
-            <div className="lg:col-span-4 bg-teal-900 text-white rounded-xl p-6 sm:p-8 shadow-sm flex flex-col justify-between border border-teal-800">
+            <div className="lg:col-span-4 bg-teal-900 text-white rounded-lg p-6 sm:p-8 shadow-sm flex flex-col justify-between border border-teal-800">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-teal-200">
                   {t('综合得分', 'Overall score')}
                 </span>
-                <span className="text-xs bg-teal-800 text-emerald-400 px-3 py-1 rounded-full font-bold border border-teal-700">
+                <Tag color="cyan" className="me-0">
                   {t('评级', 'Tier')} {tierLabel(report.tier, language)}
-                </span>
+                </Tag>
               </div>
 
               <div className="py-4">
@@ -1338,18 +1260,18 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
           </div>
 
           {/* Section 2: Gate Checks Bento Grid (P0) */}
-          <div className="bg-white border border-neutral-200 rounded-xl p-6 sm:p-8 shadow-xs space-y-4">
+          <Card variant="borderless" className="shadow-xs" styles={{ body: { display: 'flex', flexDirection: 'column', gap: 16 } }}>
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-base font-bold text-neutral-900 flex items-center space-x-2">
                   <ShieldCheck className="w-5 h-5 text-teal-600" />
-                  <span>{t(`${report.gates.length} 项一票否决门槛红线 (Gate Checks)`, `${report.gates.length} Pass/Fail Gate Checks`)}</span>
+                  <span>{t(`${report.gates.length} 项红线（一票否决）`, `${report.gates.length} pass/fail gates`)}</span>
                 </h3>
                 <p className="text-xs text-neutral-500 font-medium mt-0.5">
                   {t('依据标准规范，任何一项触发即判定商业模式存在资金断流或倒挂风险。', 'Per standard policy, triggering any one gate indicates the business model has a cash-flow breakdown or margin-inversion risk.')}
                 </p>
               </div>
-              <span className={`text-xs font-bold px-3 py-1.5 rounded-2xl border ${
+              <span className={`text-xs font-bold px-3 py-1.5 rounded-lg border ${
                 report.gatePassed
                   ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                   : 'bg-rose-50 text-rose-800 border-rose-200'
@@ -1362,7 +1284,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
               {report.gates.map((g) => (
                 <div
                   key={g.code}
-                  className={`p-4 rounded-2xl border-2 flex items-start space-x-3 ${
+                  className={`p-4 rounded-lg border-2 flex items-start space-x-3 ${
                     g.status === 'PASS'
                       ? 'bg-emerald-50/50 border-emerald-200 text-emerald-950'
                       : 'bg-rose-50/70 border-rose-200 text-rose-950'
@@ -1394,12 +1316,12 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                 </div>
               ))}
             </div>
-          </div>
+          </Card>
 
           {/* Section 3: 5 Radar Dimensions & Visual Spider Chart */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
             {/* Visual Radar SVG Box */}
-            <div className="lg:col-span-5 bg-white border border-neutral-200 rounded-xl p-6 shadow-xs flex flex-col justify-between space-y-4">
+            <div className="lg:col-span-5 bg-white border border-neutral-200 rounded-lg p-6 shadow-xs flex flex-col justify-between space-y-4">
               <div>
                 <h3 className="text-base font-bold text-neutral-900">{t('5 维能力雷达透视', '5-Dimension Radar View')}</h3>
                 <p className="text-xs text-neutral-500 font-medium">{t('对比行业前 20% 标杆基准线', 'Compared to the top-20% industry benchmark')}</p>
@@ -1500,7 +1422,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
             </div>
 
             {/* 5 Dimensions Details List */}
-            <div className="lg:col-span-7 bg-white border border-neutral-200 rounded-xl p-6 shadow-xs flex flex-col justify-between space-y-3">
+            <div className="lg:col-span-7 bg-white border border-neutral-200 rounded-lg p-6 shadow-xs flex flex-col justify-between space-y-3">
               <div>
                 <h3 className="text-base font-bold text-neutral-900">{t('5 维得分明细', '5-Dimension Score Breakdown')}</h3>
                 <p className="text-xs text-neutral-500 font-medium">{t('每项满分 100 分，加权综合后构成总分 100 分', 'Each dimension is scored out of 100; the weighted sum forms the total score out of 100')}</p>
@@ -1508,7 +1430,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
 
               <div className="space-y-3">
                 {report.radarScores.map((dim, i) => (
-                  <div key={`dim-${dim.dimensionPlain || dim.dimension}-${i}`} className="p-3 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-1.5">
+                  <div key={`dim-${dim.dimensionPlain || dim.dimension}-${i}`} className="p-3 bg-neutral-50 rounded-lg border border-neutral-200 space-y-1.5">
                     <div className="flex items-center justify-between text-xs font-bold text-neutral-900">
                       <span>{dim.dimensionPlain || dim.dimension}</span>
                       <span className="tabular-nums text-teal-700 text-sm">
@@ -1516,12 +1438,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                       </span>
                     </div>
                     {/* Progress Bar */}
-                    <div className="h-2 w-full bg-neutral-200 rounded-full overflow-hidden flex">
-                      <div
-                        style={{ width: `${Math.min(100, dim.score)}%` }}
-                        className="bg-teal-600 rounded-full transition-all"
-                      ></div>
-                    </div>
+                    <Progress percent={Math.min(100, dim.score)} showInfo={false} size="small" className="m-0" />
                     <div className="flex items-center justify-between text-[13px] text-neutral-500">
                       <span>{dim.dimension}</span>
                       <span>{t('行业标杆:', 'Benchmark:')} {dim.benchmark}/100</span>
@@ -1533,10 +1450,10 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
           </div>
 
           {/* Section 4: Key Normalized Financial Metrics Cards */}
-          <div className="bg-white border border-neutral-200 rounded-xl p-6 sm:p-8 shadow-xs space-y-4">
+          <Card variant="borderless" className="shadow-xs" styles={{ body: { display: 'flex', flexDirection: 'column', gap: 16 } }}>
             <h3 className="text-base font-bold text-neutral-900">{t('标准化财务指标核算', 'Normalized Financial Metrics')}</h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="p-4 rounded-2xl bg-neutral-50 border border-neutral-200">
+              <div className="p-4 rounded-lg bg-neutral-50 border border-neutral-200">
                 <div className="text-[12px] text-neutral-400 font-bold">{t('月真实毛利率', 'Monthly Gross Margin')}</div>
                 <div className="text-xl tabular-nums font-bold text-neutral-900 mt-1">
                   {grossMarginPercent}%
@@ -1544,7 +1461,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                 <div className="text-[13px] text-neutral-500 mt-0.5">{t('月毛利', 'Gross profit')} {formatMoney(grossProfit, baseCurr)}</div>
               </div>
 
-              <div className="p-4 rounded-2xl bg-neutral-50 border border-neutral-200">
+              <div className="p-4 rounded-lg bg-neutral-50 border border-neutral-200">
                 <div className="text-[12px] text-neutral-400 font-bold">{t('月净利润率', 'Monthly Net Margin')}</div>
                 <div className="text-xl tabular-nums font-bold text-neutral-900 mt-1">
                   {netProfitMarginPercent}%
@@ -1552,7 +1469,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                 <div className="text-[13px] text-neutral-500 mt-0.5">{t('净利润', 'Net profit')} {formatMoney(netProfit, baseCurr)}</div>
               </div>
 
-              <div className="p-4 rounded-2xl bg-neutral-50 border border-neutral-200">
+              <div className="p-4 rounded-lg bg-neutral-50 border border-neutral-200">
                 <div className="text-[12px] text-neutral-400 font-bold">{t('固定开销占比', 'Overhead ratio')}</div>
                 <div className="text-xl tabular-nums font-bold text-neutral-900 mt-1">
                   {opexRatioPercent}%
@@ -1560,7 +1477,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                 <div className="text-[13px] text-neutral-500 mt-0.5">{t('固定开销', 'Fixed costs')} {formatMoney(monthlyOpex, baseCurr)}</div>
               </div>
 
-              <div className="p-4 rounded-2xl bg-neutral-50 border border-neutral-200">
+              <div className="p-4 rounded-lg bg-neutral-50 border border-neutral-200">
                 <div className="text-[12px] text-neutral-400 font-bold">{t('备用金支撑月数', 'Cash Runway (Months)')}</div>
                 <div className="text-xl tabular-nums font-bold text-neutral-900 mt-1">
                   {cashRunwayMonths} {t('个月', 'months')}
@@ -1568,7 +1485,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                 <div className="text-[13px] text-neutral-500 mt-0.5">{t('安全底线为 ≥ 3.0 月', 'Safe threshold is ≥ 3.0 months')}</div>
               </div>
 
-              <div className="p-4 rounded-2xl bg-neutral-50 border border-neutral-200">
+              <div className="p-4 rounded-lg bg-neutral-50 border border-neutral-200">
                 <div className="text-[12px] text-neutral-400 font-bold">{t('税前利润 (PBT)', 'Pre-Tax Profit (PBT)')}</div>
                 <div className="text-xl tabular-nums font-bold text-neutral-900 mt-1">
                   {formatMoney(operatingProfit, baseCurr)}
@@ -1576,7 +1493,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                 <div className="text-[13px] text-neutral-500 mt-0.5">{t('毛利润 − 固定开销合计', 'Gross profit − total overhead')}</div>
               </div>
 
-              <div className="p-4 rounded-2xl bg-neutral-50 border border-neutral-200">
+              <div className="p-4 rounded-lg bg-neutral-50 border border-neutral-200">
                 <div className="text-[12px] text-neutral-400 font-bold">{t('真实收入占比', 'Real Revenue Ratio')}</div>
                 <div className="text-xl tabular-nums font-bold text-neutral-900 mt-1">
                   {realRevenueRatioPercent}%
@@ -1584,7 +1501,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                 <div className="text-[13px] text-neutral-500 mt-0.5">{t('红线安全底线为 ≥ 60%', 'Safe threshold is ≥ 60%')}</div>
               </div>
             </div>
-          </div>
+          </Card>
 
         </div>
       )}
@@ -1593,7 +1510,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
           任何人拿这份报告都能不依赖系统本身、自己重新核对一遍每一个数字是怎么来的。
           放在 simple/detailed 视图切换之外、始终无条件渲染：用户不应该被要求先手动切到
           "专业明细模式"才能看到计算过程与公式。 */}
-      <div className="bg-white border border-neutral-200 rounded-xl p-6 sm:p-8 shadow-xs space-y-5">
+      <Card variant="borderless" className="shadow-xs" styles={{ body: { display: 'flex', flexDirection: 'column', gap: 20 } }}>
         <div>
           <h3 className="text-base font-bold text-neutral-900 flex items-center gap-2">
             <Calculator className="w-4 h-4 text-teal-700 shrink-0" />
@@ -1609,7 +1526,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
 
         {/* 5.1 核心财务指标：公式 + 本项目实际代入数字 */}
         <div className="space-y-2">
-          <h4 className="text-[13px] font-bold text-neutral-800 uppercase tracking-wide">
+          <h4 className="text-[13px] font-bold text-neutral-800">
             {t('一、核心财务指标的算法', '1. Core Financial Metric Formulas')}
           </h4>
           <div className="space-y-2">
@@ -1677,7 +1594,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                   : `${debtServiceCoverageRatio}x`
               }
             ].map((row, i) => (
-              <div key={`calc-core-${i}`} className="p-3 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-1">
+              <div key={`calc-core-${i}`} className="p-3 bg-neutral-50 rounded-lg border border-neutral-200 space-y-1">
                 <div className="text-xs font-bold text-neutral-900">{row.label}</div>
                 <div className="text-[12px] text-neutral-500">{row.formula}</div>
                 <div className="text-[12px] tabular-nums text-teal-700 font-bold break-all">{row.substitution}</div>
@@ -1692,7 +1609,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
         {/* 5.2 五项红线：逐项公式 + 本项目代入值。任一项不是 PASS（含 GATE-2 的 WARNING）即算未通过，
             顶部「红线未全部通过 · 通过 x/5 项」徽章链接到这里。 */}
         <div id="gate-calc" className="space-y-2 scroll-mt-24">
-          <h4 className="text-[13px] font-bold text-neutral-800 uppercase tracking-wide">
+          <h4 className="text-[13px] font-bold text-neutral-800">
             {t('二、5 项红线（一票否决）的判定算法', '2. The 5 Pass/Fail Gates')}
           </h4>
           <p className="text-[12px] text-neutral-500">
@@ -1742,7 +1659,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
               const statusLabel =
                 g.status === 'PASS' ? t('✅ 通过', '✅ Pass') : g.status === 'WARNING' ? t('⚠️ 警告（未通过）', '⚠️ Warning (not passed)') : t('❌ 未通过', '❌ Fail');
               return (
-                <div key={`calc-gate-${g.code}`} className="p-3 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-1">
+                <div key={`calc-gate-${g.code}`} className="p-3 bg-neutral-50 rounded-lg border border-neutral-200 space-y-1">
                   <div className="flex items-center justify-between gap-2 flex-wrap">
                     <div className="text-xs font-bold text-neutral-900">
                       <span className="mr-1.5">{gateCodeLabel(g.code, language)}</span>
@@ -1762,59 +1679,55 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
 
         {/* 5.3 综合得分：逐项加权求和的完整过程 */}
         <div className="space-y-2">
-          <h4 className="text-[13px] font-bold text-neutral-800 uppercase tracking-wide">
+          <h4 className="text-[13px] font-bold text-neutral-800">
             {t('三、综合得分的加权求和过程', '3. Weighted Total Score Calculation')}
           </h4>
           <p className="text-[12px] text-neutral-500">
             {t('综合得分 = Σ（单项得分 × 权重）÷ 100，逐项得分与权重如下：', 'Total Score = Σ (item score × weight) ÷ 100. Each item:')}
           </p>
-          <div className="overflow-x-auto">
-            <table className="w-full text-[12px] border-collapse">
-              <thead>
-                <tr className="text-left text-neutral-400 tabular-nums uppercase text-[11px]">
-                  <th className="py-1.5 pr-2 font-bold">{t('维度', 'Dimension')}</th>
-                  <th className="py-1.5 pr-2 font-bold text-right">{t('单项得分', 'Score')}</th>
-                  <th className="py-1.5 pr-2 font-bold text-right">{t('权重', 'Weight')}</th>
-                  <th className="py-1.5 pr-2 font-bold text-right">{t('加权得分', 'Weighted')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.metrics.map((m, idx) => (
-                  <tr key={`calc-metric-${m.key}`} className="border-t border-neutral-100">
-                    <td className="py-1.5 pr-2 font-semibold text-neutral-800">{m.plainName || m.name}</td>
-                    <td className="py-1.5 pr-2 text-right tabular-nums text-neutral-700">
-                      <span className="inline-flex items-center justify-end gap-1">
-                        {m.score}
-                        <span
-                          className="relative group inline-flex cursor-help outline-none"
-                          tabIndex={0}
-                          aria-label={metricScoreExplanation(m)}
-                        >
-                          <HelpCircle className="w-3.5 h-3.5 text-neutral-400 group-hover:text-teal-600 group-focus:text-teal-600" />
-                          {/* 表格外层 overflow-x-auto 会裁掉越界的浮层：上半部分行向下弹出、下半部分行向上弹出 */}
-                          <span className={`hidden group-hover:block group-focus:block absolute right-0 ${idx < report.metrics.length / 2 ? 'top-5' : 'bottom-5'} z-20 w-72 p-2.5 rounded-xl bg-neutral-900 text-white text-[11px] leading-relaxed font-sans font-medium text-left whitespace-pre-line shadow-lg`}>
-                            {metricScoreExplanation(m)}
-                          </span>
-                        </span>
-                      </span>
-                    </td>
-                    <td className="py-1.5 pr-2 text-right tabular-nums text-neutral-700">{m.weight}%</td>
-                    <td className="py-1.5 pr-2 text-right tabular-nums font-bold text-teal-700">
-                      {((m.score * m.weight) / 100).toFixed(1)}
-                    </td>
-                  </tr>
-                ))}
-                <tr className="border-t-2 border-neutral-300">
-                  <td className="py-1.5 pr-2 font-bold text-neutral-900" colSpan={3}>
-                    {t('加权求和（四舍五入）', 'Weighted Sum (rounded)')}
-                  </td>
-                  <td className="py-1.5 pr-2 text-right tabular-nums font-bold text-neutral-900">
-                    {report.metrics.reduce((acc, m) => acc + (m.score * m.weight) / 100, 0).toFixed(1)} ≈ {Math.min(report.totalScore, Math.round(report.metrics.reduce((acc, m) => acc + (m.score * m.weight) / 100, 0)))}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+          <Table
+            size="small"
+            rowKey="key"
+            pagination={false}
+            scroll={{ x: 'max-content' }}
+            dataSource={report.metrics}
+            columns={[
+              { title: t('维度', 'Dimension'), key: 'name', render: (_, m) => m.plainName || m.name },
+              {
+                title: t('单项得分', 'Score'),
+                key: 'score',
+                align: 'right',
+                render: (_, m) => (
+                  <Tooltip title={<span className="whitespace-pre-line">{metricScoreExplanation(m)}</span>}>
+                    <span className="inline-flex items-center gap-1 cursor-help tabular-nums">
+                      {m.score}
+                      <HelpCircle className="w-3.5 h-3.5 text-neutral-400" />
+                    </span>
+                  </Tooltip>
+                )
+              },
+              { title: t('权重', 'Weight'), key: 'weight', align: 'right', render: (_, m) => `${m.weight}%` },
+              {
+                title: t('加权得分', 'Weighted'),
+                key: 'weighted',
+                align: 'right',
+                render: (_, m) => <span className="font-bold text-teal-700 tabular-nums">{((m.score * m.weight) / 100).toFixed(1)}</span>
+              }
+            ]}
+            summary={() => (
+              <Table.Summary.Row>
+                <Table.Summary.Cell index={0} colSpan={3}>
+                  <strong>{t('加权求和（四舍五入）', 'Weighted sum (rounded)')}</strong>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={1} align="right">
+                  <strong className="tabular-nums">
+                    {report.metrics.reduce((acc, m) => acc + (m.score * m.weight) / 100, 0).toFixed(1)} ≈{' '}
+                    {Math.min(report.totalScore, Math.round(report.metrics.reduce((acc, m) => acc + (m.score * m.weight) / 100, 0)))}
+                  </strong>
+                </Table.Summary.Cell>
+              </Table.Summary.Row>
+            )}
+          />
           <p className="text-[12px] text-neutral-500">
             {report.gatePassed
               ? t(
@@ -1826,29 +1739,28 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                   `This project has at least one failed gate, so per the rules the score is capped at 54 (min(rounded weighted sum, 54)), giving a final score of ${report.totalScore} and an automatic REJECT tier, bypassing the tier table below.`
                 )}
           </p>
-          <div className="overflow-x-auto">
-            <table className="w-full text-[12px] border-collapse">
-              <thead>
-                <tr className="text-left text-neutral-400 tabular-nums uppercase text-[11px]">
-                  <th className="py-1.5 pr-2 font-bold">{t('条件', 'Condition')}</th>
-                  <th className="py-1.5 pr-2 font-bold">{t('评级', 'Tier')}</th>
-                </tr>
-              </thead>
-              <tbody className="text-neutral-700 tabular-nums">
-                <tr className="border-t border-neutral-100"><td className="py-1">{t('任一红线未通过', 'Any gate fails')}</td><td className="py-1 font-bold">REJECT</td></tr>
-                <tr className="border-t border-neutral-100"><td className="py-1">{t('全部通过 且 总分 ≥ 88', 'All pass & score ≥ 88')}</td><td className="py-1 font-bold">AAA</td></tr>
-                <tr className="border-t border-neutral-100"><td className="py-1">{t('全部通过 且 总分 ≥ 80', 'All pass & score ≥ 80')}</td><td className="py-1 font-bold">AA</td></tr>
-                <tr className="border-t border-neutral-100"><td className="py-1">{t('全部通过 且 总分 ≥ 70', 'All pass & score ≥ 70')}</td><td className="py-1 font-bold">A</td></tr>
-                <tr className="border-t border-neutral-100"><td className="py-1">{t('全部通过 且 总分 ≥ 60', 'All pass & score ≥ 60')}</td><td className="py-1 font-bold">BBB</td></tr>
-                <tr className="border-t border-neutral-100"><td className="py-1">{t('全部通过 且 总分 < 60', 'All pass & score < 60')}</td><td className="py-1 font-bold">BB</td></tr>
-              </tbody>
-            </table>
-          </div>
+          <Table
+            size="small"
+            rowKey="tier"
+            pagination={false}
+            dataSource={[
+              { tier: 'REJECT', cond: t('任一红线未通过', 'Any gate fails') },
+              { tier: 'AAA', cond: t('全部通过 且 总分 ≥ 88', 'All pass & score ≥ 88') },
+              { tier: 'AA', cond: t('全部通过 且 总分 ≥ 80', 'All pass & score ≥ 80') },
+              { tier: 'A', cond: t('全部通过 且 总分 ≥ 70', 'All pass & score ≥ 70') },
+              { tier: 'BBB', cond: t('全部通过 且 总分 ≥ 60', 'All pass & score ≥ 60') },
+              { tier: 'BB', cond: t('全部通过 且 总分 < 60', 'All pass & score < 60') }
+            ]}
+            columns={[
+              { title: t('条件', 'Condition'), dataIndex: 'cond', key: 'cond' },
+              { title: t('评级', 'Tier'), key: 'tier', render: (_, r) => <strong>{tierLabel(r.tier, language)}</strong> }
+            ]}
+          />
         </div>
 
         {/* 5.4 五维雷达得分公式（每项满分 100，仅用于雷达图直观展示，不直接参与上方加权总分） */}
         <div className="space-y-2">
-          <h4 className="text-[13px] font-bold text-neutral-800 uppercase tracking-wide">
+          <h4 className="text-[13px] font-bold text-neutral-800">
             {t('四、5 维雷达图各维度算法', '4. 5-Dimension Radar Score Formulas')}
           </h4>
           <p className="text-[12px] text-neutral-500">
@@ -1865,7 +1777,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
               t('负债偿付安全性 = 无负债则 95，否则 min(100, max(15, round(DSCR × 35)))', 'Solvency & Debt Buffer = 95 if debt-free, else min(100, max(15, round(DSCR × 35)))'),
               t('持续经营稳定性 = min(100, max(20, round(已运营月数 × 6 + 15)))', 'Continuity & Transparency = min(100, max(20, round(Operating Months × 6 + 15)))')
             ].map((line, i) => (
-              <div key={`radar-formula-${i}`} className="text-[12px] tabular-nums text-neutral-700 bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-1.5">
+              <div key={`radar-formula-${i}`} className="text-[12px] tabular-nums text-neutral-700 bg-neutral-50 border border-neutral-200 rounded-lg px-3 py-1.5">
                 {line}
               </div>
             ))}
@@ -1874,7 +1786,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
 
         {/* 5.5 币种与汇率折算说明 */}
         <div className="space-y-1.5">
-          <h4 className="text-[13px] font-bold text-neutral-800 uppercase tracking-wide">
+          <h4 className="text-[13px] font-bold text-neutral-800">
             {t('五、币种折算口径', '5. Currency Conversion Basis')}
           </h4>
           <p className="text-[12px] text-neutral-500">
@@ -1887,64 +1799,45 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
               : t('本项目未使用自定义汇率，按系统内置参考汇率折算。', 'This project used the built-in reference exchange rate, not a custom rate.')}
           </p>
         </div>
-      </div>
+      </Card>
 
       {/* Data Withdrawal & Deletion Modal (P0) */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 backdrop-blur-xs p-4 animate-in fade-in">
-          <div className="bg-white rounded-xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-neutral-200 text-neutral-800 space-y-4">
-            <div className="flex items-center gap-3 text-rose-600">
-              <div className="w-12 h-12 rounded-2xl bg-rose-100 flex items-center justify-center">
-                <Trash2 className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-neutral-900">
-                  {t('确认撤回并彻底删除该项目数据？', 'Confirm withdrawal and permanent deletion of this project?')}
-                </h3>
-                <p className="text-xs text-neutral-500">{t('依据 BAM-PRD-2026-V1.4 数据安全规范第 10 节', 'Per BAM-PRD-2026-V1.4 Data Security Policy, Section 10')}</p>
-              </div>
-            </div>
-
-            <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 text-xs text-rose-900 space-y-2">
-              <p className="font-bold">{t('⚠️ 撤回后果说明（请仔细阅读）：', '⚠️ Consequences of withdrawal (please read carefully):')}</p>
-              <ul className="list-disc pl-4 space-y-1 text-rose-800">
-                <li>{t('该项目的所有表单数据、财务流水记录将被立即物理粉碎删除；', 'All form data and financial records for this project will be permanently destroyed immediately;')}</li>
-                <li>{t('已生成的所有历史版本诊断报告（v1, v2...）将立即永久失效并清除；', 'All previously generated report versions (v1, v2...) will be permanently invalidated and erased;')}</li>
-                <li>{t('此操作为即时生效、全程自助，无需联系任何人，且不可撤销。', 'This action takes effect immediately, requires no approval, and cannot be undone.')}</li>
-              </ul>
-            </div>
-
-            <label className="flex items-center gap-2 text-xs font-semibold text-neutral-800 cursor-pointer pt-2">
-              <input
-                type="checkbox"
-                checked={deleteConfirmed}
-                onChange={(e) => setDeleteConfirmed(e.target.checked)}
-                className="w-4 h-4 text-rose-600 rounded"
-              />
-              <span>{t('我已充分知晓撤回影响，确认永久销毁该项目全部数据', 'I fully understand the consequences and confirm permanent deletion of all project data')}</span>
-            </label>
-
-            <div className="flex justify-end gap-2 pt-3 border-t border-neutral-100">
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                className="px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-bold rounded-xl cursor-pointer"
-              >
-                {t('取消', 'Cancel')}
-              </button>
-              <button
-                disabled={!deleteConfirmed}
-                onClick={() => {
-                  setShowDeleteModal(false);
-                  onDeleteAndRecall();
-                }}
-                className="px-4 py-2 bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-sm transition-colors cursor-pointer"
-              >
-                {t('确认彻底删除', 'Confirm Permanent Deletion')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        open={showDeleteModal}
+        onCancel={() => setShowDeleteModal(false)}
+        title={
+          <Flex align="center" gap={8}>
+            <Trash2 className="w-5 h-5 text-red-500" />
+            {t('确认撤回并彻底删除该项目数据？', 'Confirm withdrawal and permanent deletion of this project?')}
+          </Flex>
+        }
+        okText={t('确认彻底删除', 'Confirm permanent deletion')}
+        cancelText={t('取消', 'Cancel')}
+        okButtonProps={{ danger: true, disabled: !deleteConfirmed }}
+        onOk={() => {
+          setShowDeleteModal(false);
+          onDeleteAndRecall();
+        }}
+      >
+        <Typography.Paragraph type="secondary" className="text-xs">
+          {t('依据 BAM-PRD-2026-V1.4 数据安全规范第 10 节', 'Per BAM-PRD-2026-V1.4 Data Security Policy, Section 10')}
+        </Typography.Paragraph>
+        <Alert
+          type="error"
+          showIcon
+          title={t('撤回后果说明（请仔细阅读）', 'Consequences of withdrawal (please read carefully)')}
+          description={
+            <ul className="list-disc pl-4 space-y-1">
+              <li>{t('该项目的所有表单数据、财务流水记录将被立即物理粉碎删除；', 'All form data and financial records for this project will be permanently destroyed immediately;')}</li>
+              <li>{t('已生成的所有历史版本诊断报告（v1, v2...）将立即永久失效并清除；', 'All previously generated report versions (v1, v2...) will be permanently invalidated and erased;')}</li>
+              <li>{t('此操作为即时生效、全程自助，无需联系任何人，且不可撤销。', 'This action takes effect immediately, requires no approval, and cannot be undone.')}</li>
+            </ul>
+          }
+        />
+        <Checkbox className="mt-4" checked={deleteConfirmed} onChange={(e) => setDeleteConfirmed(e.target.checked)}>
+          {t('我已充分知晓撤回影响，确认永久销毁该项目全部数据', 'I fully understand the consequences and confirm permanent deletion of all project data')}
+        </Checkbox>
+      </Modal>
     </div>
   );
 };

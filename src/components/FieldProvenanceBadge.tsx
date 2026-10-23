@@ -1,3 +1,4 @@
+import { Button } from 'antd';
 import React from 'react';
 import { CheckCircle2, Sparkles, Wand2 } from 'lucide-react';
 import { Language } from '../types';
@@ -93,7 +94,7 @@ export function PendingConfirmationsBar({
   const isEn = language === 'en';
 
   return (
-    <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 flex items-start gap-3">
+    <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 flex items-start gap-3">
       <Sparkles className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
       <div className="min-w-0 flex-1">
         <p className="text-sm font-bold text-amber-900">
@@ -108,13 +109,13 @@ export function PendingConfirmationsBar({
         </p>
       </div>
       {onDismiss && (
-        <button
-          type="button"
+        <Button size="small" className="shrink-0"
+         
           onClick={onDismiss}
-          className="text-[12px] font-bold text-amber-700 hover:text-amber-900 shrink-0 cursor-pointer"
+         
         >
           {isEn ? 'Got it' : '知道了'}
-        </button>
+        </Button>
       )}
     </div>
   );

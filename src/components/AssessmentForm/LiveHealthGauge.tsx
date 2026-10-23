@@ -78,11 +78,11 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
 
   if (!isReady) {
     return (
-      <div className="bg-white rounded-xl p-6 sm:p-7 border-2 border-dashed border-neutral-200 shadow-sm space-y-6">
+      <div className="bg-white rounded-lg p-6 sm:p-7 border-2 border-dashed border-neutral-200 shadow-sm space-y-6">
         {/* Header (muted) */}
         <div className="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-neutral-100">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-2xl bg-neutral-100 text-neutral-400 flex items-center justify-center shadow-sm">
+            <div className="w-10 h-10 rounded-lg bg-neutral-100 text-neutral-400 flex items-center justify-center shadow-sm">
               <Activity className="w-5 h-5" />
             </div>
             <div>
@@ -103,7 +103,7 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
                 -- <span className="text-sm text-neutral-300">/ 100</span>
               </span>
             </div>
-            <span className="px-3.5 py-2 rounded-2xl font-bold text-sm border bg-neutral-100 text-neutral-500 border-neutral-200">
+            <span className="px-3.5 py-2 rounded-lg font-bold text-sm border bg-neutral-100 text-neutral-500 border-neutral-200">
               {language === 'en' ? 'Awaiting Input' : '待填写'}
             </span>
           </div>
@@ -121,11 +121,11 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
   }
 
   return (
-    <div className="bg-white rounded-xl p-6 sm:p-7 border-2 border-teal-200 shadow-sm space-y-6">
+    <div className="bg-white rounded-lg p-6 sm:p-7 border border-teal-200 shadow-sm space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-neutral-100">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-2xl bg-teal-600 text-white flex items-center justify-center shadow-sm">
+          <div className="w-10 h-10 rounded-lg bg-teal-600 text-white flex items-center justify-center shadow-sm">
             <Activity className="w-5 h-5" />
           </div>
           <div>
@@ -148,7 +148,7 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
             </span>
           </div>
           <span
-            className={`px-3.5 py-2 rounded-2xl font-bold text-sm border shadow-xs ${
+            className={`px-3.5 py-2 rounded-lg font-bold text-sm border shadow-xs ${
               report.tier === 'AAA' || report.tier === 'AA'
                 ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
                 : report.tier === 'A' || report.tier === 'BBB'
@@ -166,7 +166,7 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
       {/* Grid of Gauges */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {/* Gauge 1: Cash Battery */}
-        <div className={`p-5 rounded-2xl border-2 ${batteryColor} space-y-3`}>
+        <div className={`p-5 rounded-lg border-2 ${batteryColor} space-y-3`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               {runwayNum < 1.5 ? (
@@ -214,7 +214,7 @@ export const LiveHealthGauge: React.FC<LiveHealthGaugeProps> = ({
         </div>
 
         {/* Gauge 2: 100 Yuan Flow Breakdown Bar */}
-        <div className="p-5 rounded-2xl bg-neutral-50 border border-neutral-200 space-y-3 text-sm">
+        <div className="p-5 rounded-lg bg-neutral-50 border border-neutral-200 space-y-3 text-sm">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2 font-bold text-neutral-900">
               <PieChart className="w-5 h-5 text-teal-600" />

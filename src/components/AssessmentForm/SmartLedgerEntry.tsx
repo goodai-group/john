@@ -1,3 +1,4 @@
+import { Button, Input, Select } from 'antd';
 import React, { useEffect, useRef, useState } from 'react';
 import { Sparkles, Trash2, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
 import {
@@ -206,7 +207,7 @@ export function SmartLedgerEntry({ language, baseCurrency, projectName, industry
   };
 
   return (
-    <div className="p-3 rounded-xl bg-teal-50/60 border border-teal-200 space-y-2.5">
+    <div className="p-3 rounded-lg bg-teal-50/60 border border-teal-200 space-y-2.5">
       <div className="flex items-center justify-between flex-wrap gap-1.5">
         <span className="text-[13px] font-bold text-teal-950 flex items-center gap-1.5">
           <Sparkles className="w-3.5 h-3.5 text-teal-600" />
@@ -223,50 +224,47 @@ export function SmartLedgerEntry({ language, baseCurrency, projectName, industry
         {rows.map((row) => (
           <div key={row.id}>
             <div className="flex items-center gap-1.5 flex-wrap">
-              <input
-                type="text"
+              <Input size="small" className="basis-full sm:basis-0 sm:flex-1 min-w-[8rem]"
+
                 value={row.name}
                 onChange={(e) => updateRow(row.id, { name: e.target.value })}
                 placeholder={language === 'en' ? 'e.g. Coffee beans / Shop rent / Utilities' : '例如：咖啡豆 / 铺租 / 水电费'}
-                className="flex-1 min-w-[8rem] p-1.5 border border-slate-200 rounded-lg font-semibold text-slate-800"
-              />
+                />
               <NumberField
                 value={row.amount}
                 onChange={(v) => updateRow(row.id, { amount: v })}
                 placeholder={language === 'en' ? 'Amount' : '金额'}
-                className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg tabular-nums text-right"
+                className="w-24 shrink-0 p-1.5 border border-neutral-200 rounded-lg tabular-nums text-right"
               />
-              <span className="text-[11px] text-slate-500 shrink-0">{baseCurrency}</span>
-              <select
+              <span className="text-[11px] text-neutral-500 shrink-0">{baseCurrency}</span>
+              <Select
+                size="small"
+                className="shrink-0"
+                popupMatchSelectWidth={false}
                 value={row.cycle}
-                onChange={(e) => updateRow(row.id, { cycle: e.target.value as BillingCycle })}
-                className="p-1.5 border border-slate-200 rounded-lg text-[12px] font-semibold text-slate-700 bg-white cursor-pointer shrink-0"
-              >
-                {(['monthly', 'quarterly', 'annual', 'one_time'] as BillingCycle[]).map((c) => (
-                  <option key={c} value={c}>
-                    {BILLING_CYCLE_LABELS[c][language]}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => updateRow(row.id, { cycle: v as BillingCycle })}
+                options={(['monthly', 'quarterly', 'annual', 'one_time'] as BillingCycle[]).map((c) => ({
+                  value: c,
+                  label: BILLING_CYCLE_LABELS[c][language]
+                }))}
+              />
               {row.classifying && <Loader2 className="w-3.5 h-3.5 text-teal-600 animate-spin shrink-0" />}
-              <button type="button" onClick={() => removeRow(row.id)} className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer shrink-0">
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
+              <Button size="small" type="text" danger icon={<Trash2 className="w-3.5 h-3.5" />} className="shrink-0" onClick={() => removeRow(row.id)} />
             </div>
             {row.error && (
               <p className="text-[11px] text-rose-600 font-bold flex items-center gap-1 pl-1 pt-0.5">
                 <span>⚠️</span>
                 <span>{row.error}</span>
-                <button type="button" onClick={() => runClassify(row.id)} className="underline hover:text-rose-700 cursor-pointer">
+                <Button size="small" type="link" className="px-0" onClick={() => runClassify(row.id)}>
                   {language === 'en' ? 'Retry' : '重试'}
-                </button>
+                </Button>
               </p>
             )}
           </div>
         ))}
-        <button type="button" onClick={addRow} className="text-[12px] px-2 py-1 rounded border border-slate-300 text-slate-700 font-bold hover:bg-slate-100 cursor-pointer">
+        <Button size="small" onClick={addRow}>
           {language === 'en' ? '+ Add a line' : '＋ 添加一行'}
-        </button>
+        </Button>
       </div>
 
       {pendingConfirm.length > 0 && (
@@ -285,52 +283,47 @@ export function SmartLedgerEntry({ language, baseCurrency, projectName, industry
                 </p>
               )}
               <div className="flex items-center justify-between flex-wrap gap-1.5">
-                <span className="text-[13px] font-bold text-slate-800">
+                <span className="text-[13px] font-bold text-neutral-800">
                   {entry.row.name} · {entry.row.amount.toLocaleString()} {baseCurrency} · {BILLING_CYCLE_LABELS[entry.row.cycle][language]}
                 </span>
-                <select
+                <Select
+                  size="small"
+                  status="warning"
+                  popupMatchSelectWidth={false}
                   value={entry.classification.category}
-                  onChange={(e) => updatePendingClassification(index, { category: e.target.value as LedgerCategory })}
-                  className="p-1.5 border border-amber-400 rounded-lg text-[12px] font-bold text-amber-800 bg-white cursor-pointer"
-                >
-                  {EXPENSE_LEDGER_CATEGORIES.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {LEDGER_CATEGORY_LABELS[cat][language]}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(v) => updatePendingClassification(index, { category: v as LedgerCategory })}
+                  options={EXPENSE_LEDGER_CATEGORIES.map((cat) => ({ value: cat, label: LEDGER_CATEGORY_LABELS[cat][language] }))}
+                />
               </div>
-              <p className="text-[11px] text-slate-500">
+              <p className="text-[11px] text-neutral-500">
                 {entry.classification.reasoning} · {language === 'en' ? 'confidence' : '置信度'} {Math.round(entry.classification.confidence * 100)}%
               </p>
               {entry.classification.category === 'CAPEX_DEPRECIATION' && entry.row.cycle === 'one_time' && (
-                <div className="flex items-center gap-1.5 text-[11px] text-slate-600">
+                <div className="flex items-center gap-1.5 text-[11px] text-neutral-600">
                   <span>{language === 'en' ? 'Amortize over' : '分摊到未来'}</span>
                   <NumberField
                     min={1}
                     value={entry.classification.suggestedAmortizationMonths || 24}
                     onChange={(v) => updatePendingClassification(index, { suggestedAmortizationMonths: Math.max(1, Math.round(v || 24)) })}
-                    className="w-14 p-1 border border-slate-200 rounded tabular-nums text-right"
+                    className="w-14 p-1 border border-neutral-200 rounded tabular-nums text-right"
                   />
                   <span>{language === 'en' ? 'months' : '个月'}</span>
                 </div>
               )}
               <div className="flex items-center gap-2 pt-0.5">
-                <button
-                  type="button"
+                <Button size="small" type="primary" icon={<CheckCircle2 className="w-3.5 h-3.5" />}
+
                   onClick={() => confirmPending(index)}
-                  className="inline-flex items-center gap-1 text-[12px] px-2.5 py-1 rounded-lg bg-emerald-600 text-white font-bold hover:bg-emerald-700 cursor-pointer"
-                >
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  {language === 'en' ? 'Confirm & record' : '确认并记入'}
-                </button>
-                <button
-                  type="button"
+
+                >{language === 'en' ? 'Confirm & record' : '确认并记入'}
+                </Button>
+                <Button size="small"
+
                   onClick={() => discardPending(index)}
-                  className="text-[12px] px-2 py-1 rounded border border-slate-300 text-slate-600 font-bold hover:bg-slate-100 cursor-pointer"
+
                 >
                   {language === 'en' ? 'Discard' : '不记录'}
-                </button>
+                </Button>
               </div>
             </div>
           ))}
@@ -338,7 +331,7 @@ export function SmartLedgerEntry({ language, baseCurrency, projectName, industry
       )}
 
       {appliedLog.length > 0 && (
-        <p className="text-[11px] text-slate-500">
+        <p className="text-[11px] text-neutral-500">
           {language === 'en' ? 'Recorded: ' : '已记入：'}
           {appliedLog.map((e, i) => (
             <span key={e.id}>
