@@ -712,6 +712,24 @@ export const AssessmentForm: React.FC<FormProps> = ({
     }));
   };
 
+  // 修复：智能记账把分类为 TAX 的条目记进 dynamicTaxItems，但表单此前从未渲染这份清单——
+  // 「税金及规费」输入框为 0 时 costAggregation.ts 会改用这份明细合计，报告里就冒出一笔
+  // 用户在页面上找不到来源的税金。补上展示/编辑/删除入口，让这笔钱可见可核实。
+  const updateDynamicTaxItem = (id: string, patch: Partial<{ label: string; value: number }>) => {
+    setFormData((prev) => ({
+      ...prev,
+      dynamicTaxItems: (prev.dynamicTaxItems || []).map((it) => (it.id === id ? { ...it, ...patch } : it)),
+      updatedAt: new Date().toISOString()
+    }));
+  };
+  const removeDynamicTaxItem = (id: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      dynamicTaxItems: (prev.dynamicTaxItems || []).filter((it) => it.id !== id),
+      updatedAt: new Date().toISOString()
+    }));
+  };
+
   // 修复：智能记账（SmartLedgerEntry）把"一次性且未给出摊销月数"的支出记进 oneTimeStartupItems
   // （见 ledgerMapping.ts 注释：不摊销就不该算进月度指标），但这份清单此前在整个表单里没有任何
   // UI 入口——用户点「确认并记入」后钱就悄悄进了一个没人能看到、也不参与保本/回本任何计算的
@@ -2656,6 +2674,39 @@ export const AssessmentForm: React.FC<FormProps> = ({
                         </button>
                       )}
                     </div>
+                    {(formData.dynamicTaxItems || []).length > 0 && (
+                      <div className="space-y-1.5 pl-3 border-l-2 border-slate-200 ml-1.5">
+                        <p className="text-[11px] text-slate-500 leading-relaxed">
+                          {(formData.taxCost.amount || 0) > 0
+                            ? (language === 'en'
+                                ? 'Tax items recorded via smart bookkeeping (NOT counted: the "Taxes & Fees" amount above takes precedence):'
+                                : '智能记账记入的税费明细（当前不计入：上方「税金及规费」已填金额，以上方为准）：')
+                            : (language === 'en'
+                                ? 'Tax items recorded via smart bookkeeping (counted as monthly tax because the amount above is 0):'
+                                : '智能记账记入的税费明细（上方填 0，因此按这些明细合计计税）：')}
+                        </p>
+                        {(formData.dynamicTaxItems || []).map((it) => (
+                          <div key={it.id} className="flex items-center gap-1.5 flex-wrap">
+                            <input
+                              type="text"
+                              value={it.label}
+                              onChange={(e) => updateDynamicTaxItem(it.id, { label: e.target.value })}
+                              className="flex-1 min-w-[7rem] p-1.5 border border-slate-200 rounded-lg font-semibold text-slate-800"
+                            />
+                            <NumberField
+                              min={0}
+                              value={it.value}
+                              onChange={(v) => updateDynamicTaxItem(it.id, { value: Math.max(0, v) })}
+                              className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                            />
+                            <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.baseCurrency}</span>
+                            <button type="button" onClick={() => removeDynamicTaxItem(it.id)} className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer shrink-0">
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     {/* 反馈问题1第1/3层：默认值应有来源标注，数据不全时诚实告知，而不是一个空白框 */}
                     <p className="text-[11px] text-slate-500 pl-1.5 leading-relaxed">
                       {formData.regionCountry

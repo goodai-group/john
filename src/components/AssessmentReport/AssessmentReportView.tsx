@@ -41,7 +41,7 @@ import {
   Calculator
 } from 'lucide-react';
 import { formatMoney } from '../../lib/currencies';
-import { usesDirectServiceLabor } from '../../lib/grossMarginPolicy';
+import { getGrossMarginPolicy, usesDirectServiceLabor } from '../../lib/grossMarginPolicy';
 import { getAuthHeaders } from '../../lib/supabaseClient';
 
 interface ReportViewProps {
@@ -156,7 +156,8 @@ export const AssessmentReportView: React.FC<ReportViewProps> = ({
   } = report.normalizedFinancials;
 
   // 毛利口径（会计口径）：营业成本 = 物料/进货 + 直接服务人工。有直接服务人工时，
-  // 各处"进货采购"标签改称营业成本，"房租工人工资"改称房租与管理人工，避免口径与数字对不上。
+  // 各处"进货采购"标签改称营业成本，避免口径与数字对不上。OPEX 里的人工只剩管理人工，
+  // 一律称"管理人工费用"。
   const monthlyDirectLabor = report.normalizedFinancials.monthlyDirectLabor || 0;
   const hasDirectLabor = monthlyDirectLabor > 0;
   // 毛利口径调整前生成的服务型行业旧报告：当时一线人员工资全部算在 OPEX，毛利率偏高。
@@ -231,7 +232,7 @@ Core Operations Data Overview:
 - Monthly real operating revenue: ${formatMoney(monthlyRealRevenue, baseCurr)}
 - Monthly net profit: ${formatMoney(netProfit, baseCurr)} (net margin ${netProfitMarginPercent}%)
 - ${hasDirectLabor ? `Cost of revenue (materials + direct labor ${formatMoney(monthlyDirectLabor, baseCurr)})` : 'Materials/purchasing cost (COGS)'}: ${formatMoney(monthlyCogs, baseCurr)} (gross margin ${grossMarginPercent}%)
-- Monthly rent & ${hasDirectLabor ? 'admin staff' : 'staff'} cost: ${formatMoney(monthlyOpex, baseCurr)} (${opexRatioPercent}% of revenue)
+- Monthly rent & admin labor cost: ${formatMoney(monthlyOpex, baseCurr)} (${opexRatioPercent}% of revenue)
 - Emergency cash reserve: covers ${cashRunwayMonths} months of fixed costs
 ${
   report.dynamicCogsItems?.length
@@ -259,7 +260,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
 - 每月真实经营收入：${formatMoney(monthlyRealRevenue, baseCurr)}
 - 每月结余净产出：${formatMoney(netProfit, baseCurr)} (净利润率 ${netProfitMarginPercent}%)
 - ${hasDirectLabor ? `营业成本（物料 + 直接服务人工 ${formatMoney(monthlyDirectLabor, baseCurr)}）` : '原材料/进货采购花销'}：${formatMoney(monthlyCogs, baseCurr)} (毛利率 ${grossMarginPercent}%)
-- 每月租金与${hasDirectLabor ? '管理人工' : '同工'}支出：${formatMoney(monthlyOpex, baseCurr)} (占进账 ${opexRatioPercent}%)
+- 每月租金与管理人工费用支出：${formatMoney(monthlyOpex, baseCurr)} (占进账 ${opexRatioPercent}%)
 - 应急储备金水库：能支撑 ${cashRunwayMonths} 个月固定开销
 ${
   report.dynamicCogsItems?.length
@@ -333,8 +334,8 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
         badgeColor: 'bg-emerald-50 text-emerald-800 border-emerald-200',
         verdictTitle: t('每月不仅稳稳赚钱，而且手里留有充足的救命钱！', 'The business is profitable every month, and there is ample emergency cash on hand!'),
         verdictDesc: t(
-          `扣掉全部进货、房租与工人工资后，每月能稳稳揣进 ${formatMoney(netProfit, baseCurr)} 纯利，账上备用金足够支撑 ${cashRunwayMonths} 个月，抗风险能力非常强。`,
-          `After deducting all purchasing, rent, and wages, the business nets a stable ${formatMoney(netProfit, baseCurr)} in profit each month, with enough cash reserve to cover ${cashRunwayMonths} months — very strong resilience.`
+          `扣掉全部进货、房租与管理人工费用后，每月能稳稳揣进 ${formatMoney(netProfit, baseCurr)} 纯利，账上备用金足够支撑 ${cashRunwayMonths} 个月，抗风险能力非常强。`,
+          `After deducting all purchasing, rent, and admin labor costs, the business nets a stable ${formatMoney(netProfit, baseCurr)} in profit each month, with enough cash reserve to cover ${cashRunwayMonths} months — very strong resilience.`
         ),
         trafficIcon: '🟢'
       };
@@ -651,8 +652,10 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                     <span>{health.trafficIcon}</span>
                     <span>{report.tier} {t('等级', 'Tier')} · {health.badge}</span>
                   </span>
-                  <span
-                    className={`text-xs font-bold px-3 py-1 rounded-full border flex items-center space-x-1.5 ${
+                  <a
+                    href="#gate-calc"
+                    title={t('点击查看 5 项红线逐项判定与计算过程', 'Click to see each of the 5 gates and how it is calculated')}
+                    className={`text-xs font-bold px-3 py-1 rounded-full border flex items-center space-x-1.5 hover:underline ${
                       !report.gatePassed
                         ? 'bg-rose-50 border-rose-200 text-rose-800'
                         : hasCriticalWeakness
@@ -666,9 +669,12 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                         ? t('红线全部通过', 'All gates passed')
                         : t('红线未全部通过', 'Gates not all passed')}
                       {' · '}
-                      {report.gates.length - (report.failedGates?.length || 0)}/{report.gates.length}
+                      {t(
+                        `通过 ${report.gates.length - (report.failedGates?.length || 0)}/${report.gates.length} 项`,
+                        `${report.gates.length - (report.failedGates?.length || 0)}/${report.gates.length} passed`
+                      )}
                     </span>
-                  </span>
+                  </a>
                 </div>
                 <div className="text-xs text-neutral-400 font-medium mb-1">
                   {t('项目名称', 'Project')}：<strong className="text-neutral-800 font-bold">{report.projectName}</strong>
@@ -767,7 +773,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                 </h3>
               </div>
               <p className="text-xs text-neutral-500 font-medium mt-0.5">
-                {t('直观拆解你的每笔营业额流向：多少付了进货成本、多少交了房租工人工资、多少真正落入口袋。', 'A breakdown of every dollar of revenue: how much goes to inventory, rent & wages, and how much you actually keep.')}
+                {t('直观拆解你的每笔营业额流向：多少付了进货成本、多少交了房租与管理人工费用、多少真正落入口袋。', 'A breakdown of every dollar of revenue: how much goes to inventory, rent & admin labor, and how much you actually keep.')}
               </p>
             </div>
 
@@ -795,13 +801,9 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                     key="breakdown-opex"
                     style={{ width: `${opexPct}%` }}
                     className="bg-teal-500 text-white flex items-center justify-center text-xs font-mono font-bold transition-all relative group"
-                    title={
-                      hasDirectLabor
-                        ? t(`房租与管理人工: ${opexPct}% (${formatMoney(monthlyOpex, baseCurr)})`, `Rent & Admin Wages: ${opexPct}% (${formatMoney(monthlyOpex, baseCurr)})`)
-                        : t(`房租与工人工资: ${opexPct}% (${formatMoney(monthlyOpex, baseCurr)})`, `Rent & Wages: ${opexPct}% (${formatMoney(monthlyOpex, baseCurr)})`)
-                    }
+                    title={t(`房租与管理人工费用: ${opexPct}% (${formatMoney(monthlyOpex, baseCurr)})`, `Rent & Admin Labor: ${opexPct}% (${formatMoney(monthlyOpex, baseCurr)})`)}
                   >
-                    {opexPct >= 10 && <span>{hasDirectLabor ? t(`房租管理 ${opexPct}元`, `Rent/Admin ${opexPct}`) : t(`房租人工 ${opexPct}元`, `Rent/Wages ${opexPct}`)}</span>}
+                    {opexPct >= 10 && <span>{t(`房租管理 ${opexPct}元`, `Rent/Admin ${opexPct}`)}</span>}
                   </div>
                 )}
                 {/* 3. Taxes & Other */}
@@ -847,7 +849,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                 <div className="bg-teal-50/70 border border-teal-200 p-3 rounded-2xl">
                   <div className="flex items-center space-x-1.5 text-xs text-teal-800 font-bold mb-1">
                     <span className="w-2.5 h-2.5 rounded-full bg-teal-500 shrink-0"></span>
-                    <span>{hasDirectLabor ? t('2. 房租与管理人工', '2. Rent & Admin Wages') : t('2. 房租工人工资', '2. Rent & Wages')}</span>
+                    <span>{t('2. 房租与管理人工费用', '2. Rent & Admin Labor')}</span>
                   </div>
                   <div className="text-base font-mono font-black text-neutral-900">
                     {opexPct} {t('块钱', '')}
@@ -969,7 +971,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                 </div>
 
                 <p className="text-xs text-neutral-600 font-medium">
-                  {t('大白话：毛利是包住所有房租和发工资的源泉，毛利率越高，抵御供货商涨价的能力越强。', 'In plain terms: gross profit is what covers rent and wages — the higher the margin, the more cushion against supplier price hikes.')}
+                  {t('大白话：毛利是包住所有房租和管理人工费用的源泉，毛利率越高，抵御供货商涨价的能力越强。', 'In plain terms: gross profit is what covers rent and admin labor costs — the higher the margin, the more cushion against supplier price hikes.')}
                 </p>
               </div>
 
@@ -981,7 +983,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                       QUESTION 03
                     </div>
                     <h4 className="text-sm font-bold text-neutral-900">
-                      {t('3. 房租和工人工资开销重不重？', '3. Is rent and payroll too heavy a burden?')}
+                      {t('3. 房租和管理人工费用开销重不重？', '3. Are rent and admin labor costs too heavy a burden?')}
                     </h4>
                   </div>
                   <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold font-mono ${
@@ -1004,7 +1006,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                 </div>
 
                 <p className="text-xs text-neutral-600 font-medium">
-                  {t('大白话：每月雷打不动要付出去的店租和员工薪资，只要毛利润能轻松包住，小店就不会慌。', 'In plain terms: rent and wages are fixed monthly costs — as long as gross profit comfortably covers them, the business stays stable.')}
+                  {t('大白话：每月雷打不动要付出去的店租和管理人工费用，只要毛利润能轻松包住，小店就不会慌。', 'In plain terms: rent and admin labor are fixed monthly costs — as long as gross profit comfortably covers them, the business stays stable.')}
                 </p>
               </div>
 
@@ -1562,7 +1564,10 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
               },
               {
                 label: t('税金及规费', 'Taxes & Levies'),
-                formula: t('由税前利润与净利润反推：税金 = 税前利润 − 净利润', 'Derived from PBT and Net Profit: Tax = PBT − Net Profit'),
+                formula: t(
+                  '税金取表单「税金及规费」一栏的月度金额；该栏为 0 时，改用智能记账记入的税费明细合计。此处由税前利润与净利润反推核对：税金 = 税前利润 − 净利润',
+                  'Tax is the monthly "Taxes & Fees" amount from the form; when that field is 0, the total of tax items recorded via smart bookkeeping is used instead. Cross-checked here from PBT and Net Profit: Tax = PBT − Net Profit'
+                ),
                 substitution: `${formatMoney(operatingProfit, baseCurr)} − ${formatMoney(netProfit, baseCurr)} = ${formatMoney(taxAmountDerived, baseCurr)}`
               },
               {
@@ -1610,10 +1615,81 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
           </div>
         </div>
 
-        {/* 5.2 综合得分：逐项加权求和的完整过程 */}
+        {/* 5.2 五项红线：逐项公式 + 本项目代入值。任一项不是 PASS（含 GATE-2 的 WARNING）即算未通过，
+            顶部「红线未全部通过 · 通过 x/5 项」徽章链接到这里。 */}
+        <div id="gate-calc" className="space-y-2 scroll-mt-24">
+          <h4 className="text-[13px] font-black text-neutral-800 uppercase tracking-wide">
+            {t('二、5 项红线（一票否决）的判定算法', '2. The 5 Pass/Fail Gates')}
+          </h4>
+          <p className="text-[12px] text-neutral-500">
+            {t(
+              '每项红线只有「通过」与「未通过」两种结论（毛利率一项介于警告线与通过线之间时标为「警告」，同样算未通过）。任一项未通过，综合得分封顶 54 分、评级直接判为 REJECT。收入与成本都为 0 时，红线 1/3/4 因数据不足判为未通过。',
+              'Each gate is either passed or not (the gross-margin gate shows "Warning" between its warning and pass lines, which also counts as not passed). If any gate is not passed, the score is capped at 54 and the tier is REJECT. With zero revenue and costs, gates 1/3/4 fail for insufficient data.'
+            )}
+          </p>
+          <div className="space-y-2">
+            {report.gates.map((g) => {
+              const marginPolicy = getGrossMarginPolicy(report.industry);
+              const rule: Record<string, { formula: string; substitution: string }> = {
+                'GATE-1': {
+                  formula: t(
+                    '真实收入占比 = 月真实主营收入 ÷（月真实主营收入 + 月外部捐赠/补贴）× 100%，≥ 60% 为通过',
+                    'Real Revenue Ratio = Monthly Real Revenue ÷ (Monthly Real Revenue + Monthly External Grants) × 100%; pass if ≥ 60%'
+                  ),
+                  substitution: `${formatMoney(monthlyRealRevenue, baseCurr)} ÷ (${formatMoney(monthlyRealRevenue, baseCurr)} + ${formatMoney(monthlyExternalGrants, baseCurr)}) × 100% = ${realRevenueRatioPercent}% ${realRevenueRatioPercent >= 60 ? '≥' : '<'} 60%`
+                },
+                'GATE-2': {
+                  formula: t(
+                    `毛利率 =（月真实主营收入 − 月营业成本）÷ 月真实主营收入 × 100%；本行业 ≥ ${marginPolicy.passAt}% 通过，${marginPolicy.warnAt}%~${marginPolicy.passAt}% 警告，< ${marginPolicy.warnAt}% 未通过`,
+                    `Gross Margin = (Monthly Real Revenue − Monthly COGS) ÷ Monthly Real Revenue × 100%; for this industry ≥ ${marginPolicy.passAt}% passes, ${marginPolicy.warnAt}%–${marginPolicy.passAt}% warns, < ${marginPolicy.warnAt}% fails`
+                  ),
+                  substitution: `(${formatMoney(monthlyRealRevenue, baseCurr)} − ${formatMoney(monthlyCogs, baseCurr)}) ÷ ${formatMoney(monthlyRealRevenue, baseCurr)} × 100% = ${grossMarginPercent}%`
+                },
+                'GATE-3': {
+                  formula: t(
+                    '毛利润 ≥ 月运营开销 OPEX（房租 + 管理人工费用 + 水电 + 其他开销 + 注册/签证/设备折旧月摊）为通过',
+                    'Pass if Gross Profit ≥ Monthly OPEX (rent + admin labor + utilities + other + monthly registration/visa/depreciation)'
+                  ),
+                  substitution: `${formatMoney(grossProfit, baseCurr)} ${grossProfit >= monthlyOpex ? '≥' : '<'} ${formatMoney(monthlyOpex, baseCurr)}`
+                },
+                'GATE-4': {
+                  formula: t('净利润 PAT = 毛利润 − 月运营开销 − 税金及规费，≥ 0 为通过', 'Net Profit (PAT) = Gross Profit − Monthly OPEX − Taxes; pass if ≥ 0'),
+                  substitution: `${formatMoney(grossProfit, baseCurr)} − ${formatMoney(monthlyOpex, baseCurr)} − ${formatMoney(taxAmountDerived, baseCurr)} = ${formatMoney(netProfit, baseCurr)} ${netProfit >= 0 ? '≥' : '<'} 0`
+                },
+                'GATE-5': {
+                  formula: t(
+                    '无负债直接通过；有负债时 DSCR = max(0, 税前利润 PBT) ÷ 每月还贷本息，≥ 1.25x 为通过',
+                    'Passes if debt-free; otherwise DSCR = max(0, PBT) ÷ Monthly Debt Payment, pass if ≥ 1.25x'
+                  ),
+                  substitution: g.currentValue === '无债务' ? t('本项目无负债', 'This project has no debt') : `max(0, ${formatMoney(operatingProfit, baseCurr)}) ÷ ${t('每月还贷本息', 'monthly debt payment')} = ${g.currentValue}`
+                }
+              };
+              const row = rule[g.code];
+              const statusLabel =
+                g.status === 'PASS' ? t('✅ 通过', '✅ Pass') : g.status === 'WARNING' ? t('⚠️ 警告（未通过）', '⚠️ Warning (not passed)') : t('❌ 未通过', '❌ Fail');
+              return (
+                <div key={`calc-gate-${g.code}`} className="p-3 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-1">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="text-xs font-black text-neutral-900">
+                      <span className="font-mono mr-1.5">{g.code}</span>
+                      {g.plainName || g.name}
+                    </div>
+                    <span className={`text-[11px] font-bold ${g.status === 'PASS' ? 'text-emerald-700' : 'text-rose-700'}`}>{statusLabel}</span>
+                  </div>
+                  <div className="text-[12px] text-neutral-500">{row ? row.formula : `${t('门槛', 'Threshold')}: ${g.threshold}`}</div>
+                  <div className="text-[12px] font-mono text-teal-700 font-bold break-all">
+                    {g.currentValue.startsWith('—') ? g.currentValue : row ? row.substitution : g.currentValue}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 5.3 综合得分：逐项加权求和的完整过程 */}
         <div className="space-y-2">
           <h4 className="text-[13px] font-black text-neutral-800 uppercase tracking-wide">
-            {t('二、综合得分的加权求和过程', '2. Weighted Total Score Calculation')}
+            {t('三、综合得分的加权求和过程', '3. Weighted Total Score Calculation')}
           </h4>
           <p className="text-[12px] text-neutral-500">
             {t('综合得分 = Σ（单项得分 × 权重）÷ 100，逐项得分与权重如下：', 'Total Score = Σ (item score × weight) ÷ 100. Each item:')}
@@ -1681,10 +1757,10 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
           </div>
         </div>
 
-        {/* 5.3 五维雷达得分公式（每项满分 100，仅用于雷达图直观展示，不直接参与上方加权总分） */}
+        {/* 5.4 五维雷达得分公式（每项满分 100，仅用于雷达图直观展示，不直接参与上方加权总分） */}
         <div className="space-y-2">
           <h4 className="text-[13px] font-black text-neutral-800 uppercase tracking-wide">
-            {t('三、5 维雷达图各维度算法', '3. 5-Dimension Radar Score Formulas')}
+            {t('四、5 维雷达图各维度算法', '4. 5-Dimension Radar Score Formulas')}
           </h4>
           <p className="text-[12px] text-neutral-500">
             {t(
@@ -1707,10 +1783,10 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
           </div>
         </div>
 
-        {/* 5.4 币种与汇率折算说明 */}
+        {/* 5.5 币种与汇率折算说明 */}
         <div className="space-y-1.5">
           <h4 className="text-[13px] font-black text-neutral-800 uppercase tracking-wide">
-            {t('四、币种折算口径', '4. Currency Conversion Basis')}
+            {t('五、币种折算口径', '5. Currency Conversion Basis')}
           </h4>
           <p className="text-[12px] text-neutral-500">
             {t(
