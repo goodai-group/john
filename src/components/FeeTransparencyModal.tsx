@@ -42,7 +42,7 @@ export const FeeTransparencyModal: React.FC<FeeModalProps> = ({ isOpen, onClose,
           </div>
           <p className="text-xs text-emerald-700 leading-relaxed">
             {language === 'zh'
-              ? '为了支持海外小微经营者自主开展商业模式自测与自我提升，本平台的核心功能全部开放免费使用，无任何后续追溯收费。'
+              ? '为了支持海外小微经营者自主开展商业模式体检与自我提升，本平台的核心功能全部开放免费使用，无任何后续追溯收费。'
               : 'To support overseas micro-business owners in self-assessing and improving their business model, all core platform features are free to use, with no retroactive charges of any kind.'}
           </p>
         </div>
@@ -51,7 +51,7 @@ export const FeeTransparencyModal: React.FC<FeeModalProps> = ({ isOpen, onClose,
           <div className="flex items-start gap-3 p-2.5 rounded-lg bg-slate-50 border border-slate-100">
             <RefreshCw className="w-4 h-4 text-sky-600 shrink-0 mt-0.5" />
             <div>
-              <span className="font-semibold text-slate-900">{language === 'zh' ? '无限次自测与更新评估：' : 'Unlimited self-assessments and updates:'}</span>
+              <span className="font-semibold text-slate-900">{language === 'zh' ? '无限次体检与更新评估：' : 'Unlimited self-assessments and updates:'}</span>
               <span>
                 {language === 'zh'
                   ? ' 用户可随时根据实际经营情况反复更新数字、重新评估、对比历史版本（v1, v2, v3...），无需担忧次数限制产生扣费。'
@@ -92,7 +92,7 @@ export const FeeTransparencyModal: React.FC<FeeModalProps> = ({ isOpen, onClose,
           </span>
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors cursor-pointer"
+            className="px-4 py-2 bg-teal-700 hover:bg-teal-600 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors cursor-pointer"
           >
             {language === 'zh' ? '我已知晓，继续使用' : 'I Understand, Continue'}
           </button>

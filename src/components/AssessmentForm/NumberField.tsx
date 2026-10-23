@@ -1,10 +1,25 @@
 import React, { useEffect, useState } from 'react';
+import { InputNumber } from 'antd';
 
-interface NumberFieldProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange' | 'type'> {
+interface NumberFieldProps {
   value: number;
   onChange: (value: number) => void;
   /** 显式允许负数（本表单目前没有任何金额/数量/月数字段需要负数，默认关闭）。 */
   allowNegative?: boolean;
+  min?: number | string;
+  max?: number | string;
+  step?: number | string;
+  placeholder?: string;
+  title?: string;
+  disabled?: boolean;
+  id?: string;
+  className?: string;
+  style?: React.CSSProperties;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode'];
+  'aria-label'?: string;
+  'aria-describedby'?: string;
+  onBlur?: React.FocusEventHandler<HTMLInputElement>;
+  onFocus?: React.FocusEventHandler<HTMLInputElement>;
 }
 
 // BUG-07 修复：本表单里的 NumberField 全部是金额/数量/月数一类只应为非负数的字段，
@@ -14,66 +29,79 @@ interface NumberFieldProps extends Omit<React.InputHTMLAttributes<HTMLInputEleme
 // 越界时钳位并通过 title 提示 + 红色描边就地反馈，而不是像以前那样悄悄改数、什么都不说。
 const DEFAULT_MAX_AMOUNT = 100_000_000;
 
-/** 去掉多余的前导 0（"012" -> "12"），但保留单独的 "0" 与小数点前的 "0"（"0.5"） */
-function stripLeadingZeros(raw: string): string {
-  const negative = raw.startsWith('-');
-  const body = negative ? raw.slice(1) : raw;
-  const match = body.match(/^0+(\d.*)$/);
-  const normalized = match ? match[1] : body;
-  return negative ? `-${normalized}` : normalized;
-}
+/**
+ * 调用方的 className 里还留着旧的 Tailwind 输入框外观（padding/边框/圆角/字重），
+ * 套在 antd InputNumber 上会和组件自身样式打架；这里只保留尺寸与弹性布局相关的类。
+ */
+const LAYOUT_CLASS = /^(w-|min-w-|max-w-|flex|shrink|grow|basis-|self-|col-span|hidden|sm:|md:|lg:)/;
+const layoutClasses = (className?: string) =>
+  (className || '')
+    .split(/\s+/)
+    .filter((c) => LAYOUT_CLASS.test(c))
+    .join(' ');
 
 /**
- * 受控数字输入框，内部维护一份独立于外部数值的文本草稿，只在外部 value 真正变化时
+ * 受控数字输入（antd InputNumber）。内部维护一份独立于外部数值的草稿，只在外部 value 真正变化时
  * （AI 重新填充、切换项目等）才用它覆盖草稿，用户自己打字期间不会被每次 render 打断。
  *
- * 原生 <input type="number" value={amount}> 直接绑定数字的问题：清空后 Number('') 变成 0，
- * React 又把 DOM 值强制渲染回字面量 "0"——这个 "0" 删不掉，用户接着输入就会变成 "0546"
- * 这类带前导 0 的错误值；而单纯用 value={amount || ''} 派生显示值又会导致用户主动输入 "0"
- * 的瞬间被吃成空白。用本地草稿把「输入中的文本」和「已提交的数值」分开即可两者都不再发生。
+ * 0 显示为空白输入框（未填写），但用户主动输入 "0" 时不会被立刻吃掉。
  */
-export function NumberField({ value, onChange, allowNegative, min, max, title, style, ...rest }: NumberFieldProps) {
-  const [draft, setDraft] = useState(() => (value === 0 ? '' : String(value)));
+export function NumberField({
+  value,
+  onChange,
+  allowNegative,
+  min,
+  max,
+  step,
+  title,
+  className,
+  style,
+  ...rest
+}: NumberFieldProps) {
+  const [draft, setDraft] = useState<number | null>(() => (value === 0 ? null : value));
   const [outOfRangeMessage, setOutOfRangeMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    const parsed = draft === '' ? 0 : Number(draft);
-    if (Number.isNaN(parsed) || parsed !== value) {
-      setDraft(value === 0 ? '' : String(value));
-    }
+    if ((draft ?? 0) !== value) setDraft(value === 0 ? null : value);
     // 仅在外部 value 变化时重新同步草稿，草稿自身变化不应触发这个 effect
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
   const effectiveMin = min !== undefined ? Number(min) : allowNegative ? -Infinity : 0;
   const effectiveMax = max !== undefined ? Number(max) : DEFAULT_MAX_AMOUNT;
+  // 旧调用方用 p-1 / p-1.5 / p-0.5 表示「清单行内的紧凑输入框」，对应 antd 的 small 尺寸
+  const compact = /\bp-(0\.5|1|1\.5)\b/.test(className || '');
+  const alignRight = /\btext-right\b/.test(className || '');
+  const alignCenter = /\btext-center\b/.test(className || '');
 
   return (
-    <input
+    <InputNumber
       {...rest}
-      type="number"
-      min={min}
-      max={max}
+      className={`${layoutClasses(className)} ${/\bw-/.test(className || '') ? '' : 'w-full'}`.trim()}
+      style={style}
+      step={step === undefined ? undefined : Number(step)}
+      controls={false}
+      size={compact ? 'small' : 'middle'}
       value={draft}
+      status={outOfRangeMessage ? 'error' : undefined}
       title={outOfRangeMessage ? `${outOfRangeMessage}${title ? ` · ${title}` : ''}` : title}
-      style={outOfRangeMessage ? { ...style, borderColor: '#e11d48', boxShadow: '0 0 0 1px #e11d48' } : style}
-      onChange={(e) => {
-        const raw = stripLeadingZeros(e.target.value);
-        setDraft(raw);
-        const parsed = raw === '' ? 0 : Number(raw);
-        if (Number.isNaN(parsed)) return;
-        if (parsed < effectiveMin) {
+      styles={alignRight || alignCenter ? { input: { textAlign: alignRight ? 'right' : 'center' } } : undefined}
+      onChange={(v) => {
+        const parsed = typeof v === 'number' && !Number.isNaN(v) ? v : null;
+        setDraft(parsed);
+        const n = parsed ?? 0;
+        if (n < effectiveMin) {
           setOutOfRangeMessage(`不能小于 ${effectiveMin}，已按 ${effectiveMin} 计算`);
           onChange(effectiveMin);
           return;
         }
-        if (parsed > effectiveMax) {
+        if (n > effectiveMax) {
           setOutOfRangeMessage(`超过合理上限，已按 ${effectiveMax.toLocaleString()} 计算`);
           onChange(effectiveMax);
           return;
         }
         setOutOfRangeMessage(null);
-        onChange(parsed);
+        onChange(n);
       }}
     />
   );

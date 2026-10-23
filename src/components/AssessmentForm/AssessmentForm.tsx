@@ -1,5 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import {
+  Alert,
+  Button,
+  Card,
+  Checkbox,
+  Col,
+  Collapse,
+  Descriptions,
+  Flex,
+  Form,
+  Input,
+  Modal,
+  Radio,
+  Row,
+  Select,
+  Steps,
+  Switch,
+  Tag,
+  Tooltip,
+  Typography
+} from 'antd';
+import {
   ShieldAlert,
   Sparkles,
   HelpCircle,
@@ -105,33 +126,19 @@ async function callInferBusinessStructure(projectName: string): Promise<Inferred
   }
 }
 
-/** 标题旁的说明图标：默认只显示一个"?"，鼠标悬停/点击后才展开解释文字，避免正文里堆砌大段叙事 */
+/** 标题旁的说明图标：默认只显示一个"?"，悬停或点击后才展开解释文字，避免正文里堆砌大段叙事 */
 function InfoTooltip({ text, language }: { text: string; language?: Language }) {
-  const [open, setOpen] = useState(false);
   return (
-    <span className="relative inline-flex align-middle">
+    <Tooltip title={text} trigger={['hover', 'click']}>
       <button
         type="button"
-        onMouseEnter={() => setOpen(true)}
-        onMouseLeave={() => setOpen(false)}
-        onClick={(e) => {
-          e.preventDefault();
-          setOpen((o) => !o);
-        }}
-        className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-300/80 hover:bg-slate-400 text-white text-[10px] font-black leading-none shrink-0"
+        onClick={(e) => e.preventDefault()}
+        className="inline-flex items-center align-middle text-neutral-400 hover:text-teal-700 cursor-help"
         aria-label={language === 'en' ? 'Info' : '说明'}
       >
-        ?
+        <HelpCircle className="w-4 h-4" />
       </button>
-      {open && (
-        <span
-          role="tooltip"
-          className="absolute z-30 top-5 left-0 w-64 p-2.5 rounded-lg bg-slate-900 text-white text-[12px] leading-relaxed shadow-xl"
-        >
-          {text}
-        </span>
-      )}
-    </span>
+    </Tooltip>
   );
 }
 
@@ -475,37 +482,41 @@ export const AssessmentForm: React.FC<FormProps> = ({
   // 反馈第6点「给开发的补充说明」：提醒应在对应字段旁就地展示，不要只集中到提交时统一弹窗——
   // 用户填到后面才被告知前面有问题，返工成本很高。这里从已算好的 anomalyWarnings 里按字段取出，
   // 就地渲染在该字段下方，和底部的汇总列表共用同一份数据、同一套"标注特殊理由"交互。
+  // 「标注理由」：此前用浏览器原生 window.prompt，样式无法统一、手机上体验很差，改为 antd 弹窗
+  const [reasonPrompt, setReasonPrompt] = useState<{ field: string; text: string } | null>(null);
+  const askAnomalyReason = (field: string) => setReasonPrompt({ field, text: '' });
+
+  // 确认框：此前用 window.confirm，样式无法统一；改为 antd 弹窗，返回 Promise<boolean>
+  const [modal, modalContextHolder] = Modal.useModal();
+  const confirmAsync = (content: string, okText?: string) =>
+    new Promise<boolean>((resolve) => {
+      modal.confirm({
+        title: language === 'en' ? 'Please confirm' : '请确认',
+        content: <div className="whitespace-pre-line">{content}</div>,
+        okText: okText || (language === 'en' ? 'OK' : '确定'),
+        cancelText: language === 'en' ? 'Cancel' : '取消',
+        onOk: () => resolve(true),
+        onCancel: () => resolve(false)
+      });
+    });
+
   const renderInlineAnomalies = (fieldKey: string) => {
     const matches = anomalyWarnings.filter((w) => w.field === fieldKey);
     if (matches.length === 0) return null;
     return (
-      <div className="mt-2 space-y-1.5">
+      <div className="mt-2 flex flex-col gap-1.5">
         {matches.map((w, idx) => (
-          <div
+          <Alert
             key={`${fieldKey}-inline-${idx}`}
-            className={`p-2 rounded-lg border flex items-start gap-1.5 text-[12px] ${
-              w.severity === 'error'
-                ? 'bg-rose-100/70 border-rose-300 text-rose-900'
-                : 'bg-amber-50/70 border-amber-300 text-amber-900'
-            }`}
-          >
-            <span className="font-bold shrink-0">{w.severity === 'error' ? '⚠️' : '💡'}</span>
-            <span className="flex-1 font-medium">{language === 'en' ? w.messageEn : w.messageZh}</span>
-            <button
-              type="button"
-              onClick={() => {
-                const reason = window.prompt(
-                  language === 'en'
-                    ? 'Is this value genuinely unusual? Briefly explain why:'
-                    : '这个数值确实特殊？简单说明原因（AI 只记录，不做判断）：'
-                );
-                if (reason && reason.trim()) setAnomalyOverride(w.field, reason.trim());
-              }}
-              className="text-[11px] shrink-0 px-1.5 py-0.5 rounded bg-white/80 border border-current font-bold hover:bg-white cursor-pointer"
-            >
-              {language === 'en' ? 'Note' : '标注理由'}
-            </button>
-          </div>
+            type={w.severity === 'error' ? 'error' : 'warning'}
+            showIcon
+            title={language === 'en' ? w.messageEn : w.messageZh}
+            action={
+              <Button size="small" onClick={() => askAnomalyReason(w.field)}>
+                {language === 'en' ? 'Note' : '标注理由'}
+              </Button>
+            }
+          />
         ))}
       </div>
     );
@@ -806,27 +817,26 @@ export const AssessmentForm: React.FC<FormProps> = ({
     const cycle: BillingCycle = item.cycle || 'monthly';
     return (
       <div className="flex items-center gap-1 shrink-0">
-        <select
+        <Select
+          size="small"
           value={cycle}
-          onChange={(e) => onCycleChange(e.target.value as BillingCycle)}
-          className="p-1.5 border border-slate-200 rounded-lg text-[12px] font-semibold text-slate-700 bg-white cursor-pointer"
-        >
-          {(['monthly', 'quarterly', 'annual', 'one_time'] as BillingCycle[]).map((c) => (
-            <option key={c} value={c}>
-              {BILLING_CYCLE_LABELS[c][language]}
-            </option>
-          ))}
-        </select>
+          onChange={(v) => onCycleChange(v as BillingCycle)}
+          popupMatchSelectWidth={false}
+          options={(['monthly', 'quarterly', 'annual', 'one_time'] as BillingCycle[]).map((c) => ({
+            value: c,
+            label: BILLING_CYCLE_LABELS[c][language]
+          }))}
+        />
         {cycle === 'one_time' && (
           <div className="flex items-center gap-1">
-            <span className="text-[11px] text-slate-500">{language === 'en' ? 'over' : '÷'}</span>
+            <span className="text-[11px] text-neutral-500">{language === 'en' ? 'over' : '÷'}</span>
             <NumberField
               min={1}
               value={item.amortizationMonths || 12}
               onChange={(v) => onAmortizationChange(Math.max(1, Math.round(v || 12)))}
-              className="w-12 p-1.5 border border-slate-200 rounded-lg font-mono text-right"
+              className="w-12 p-1.5 border border-neutral-200 rounded-lg tabular-nums text-right"
             />
-            <span className="text-[11px] text-slate-500">{language === 'en' ? 'mo' : '个月'}</span>
+            <span className="text-[11px] text-neutral-500">{language === 'en' ? 'mo' : '个月'}</span>
           </div>
         )}
       </div>
@@ -1074,10 +1084,10 @@ export const AssessmentForm: React.FC<FormProps> = ({
 
   // 「经营月均总流水」的币种下拉：与「高级设置」里的主报告币种走同一套同步逻辑，
   // 确认后一次性把所有金额字段（成本/开支/现金等）都切到新币种，避免用户逐一手动改。
-  const handleRevenueCurrencyChange = (value: CurrencyCode) => {
+  const handleRevenueCurrencyChange = async (value: CurrencyCode) => {
     if (value === formData.monthlyRevenue.currency) return;
     setCurrencyTouched(true);
-    const ok = window.confirm(
+    const ok = await confirmAsync(
       language === 'en'
         ? `Also switch every other amount field (costs, expenses, cash, etc.) on this form to ${value}? Choose Cancel to change only Total Revenue's currency.`
         : `是否将本表单其他所有金额字段（成本、开支、现金等）也一并切换为 ${value}？选择"取消"则只修改总流水这一项的币种。`
@@ -1300,9 +1310,9 @@ export const AssessmentForm: React.FC<FormProps> = ({
   };
 
   /** 将动态成本项恢复为 AI 上次建议的结构（含预估金额） */
-  const restoreAiSuggestion = () => {
+  const restoreAiSuggestion = async () => {
     if (!aiSuggested) return;
-    const ok = window.confirm(
+    const ok = await confirmAsync(
       language === 'en'
         ? 'Restoring the AI suggestion will fill the line-item amounts with the AI\'s estimate (for reference only, not your actual cost).\n\nTip: change the numbers back to your real values to avoid inaccurate data.\n\nConfirm restore?'
         : '恢复 AI 建议会把明细金额填回 AI 的估值（仅供参考，不代表你的真实成本）。\n\n建议：把数字改回你的实际值，避免数据失真。\n\n确认要恢复吗？'
@@ -1580,8 +1590,8 @@ export const AssessmentForm: React.FC<FormProps> = ({
 
   // —— 两步流程定义 ——
   const stepsList = [
-    { num: 1, title: language === 'en' ? 'What\'s your business?' : '生意叫什么？' },
-    { num: 2, title: language === 'en' ? 'Revenue, expenses & cash on hand' : '赚多少、花多少、兜里有多少现金' }
+    { num: 1, title: language === 'en' ? 'Your business' : '生意叫什么' },
+    { num: 2, title: language === 'en' ? 'Money in & out' : '赚多少、花多少' }
   ];
 
   // —— 断点流水按需出现：仅当月度数据存在缺口（中间某月为 0 且前后有值）时显示 ——
@@ -1628,9 +1638,9 @@ export const AssessmentForm: React.FC<FormProps> = ({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  const handleSaveAsNew = () => {
+  const handleSaveAsNew = async () => {
     if (!onSaveAsNewProject) return;
-    const ok = window.confirm(
+    const ok = await confirmAsync(
       language === 'en'
         ? 'Save the currently filled-in data as a brand-new project (the original project will be left untouched)?'
         : '把当前已填写的内容另存为一个全新项目（原项目保持不变）？'
@@ -1650,502 +1660,520 @@ export const AssessmentForm: React.FC<FormProps> = ({
     });
   };
 
+  const en = language === 'en';
+  const stageOptions = (
+    en
+      ? [
+          { value: 'not_started', label: 'Not started', desc: 'Not open yet — estimate cost and target earnings first' },
+          { value: 'has_prototype', label: 'Have a prototype', desc: 'Tried on a small scale, no stable revenue yet' },
+          { value: 'has_revenue', label: 'Have revenue', desc: 'Currently operating, want a real-numbers check-up' }
+        ]
+      : [
+          { value: 'not_started', label: '尚未启动', desc: '还没开业，先估算成本和要赚多少' },
+          { value: 'has_prototype', label: '已有原型', desc: '小范围试过，还没稳定营收' },
+          { value: 'has_revenue', label: '已有营收', desc: '正在经营，想体检真实数字' }
+        ]
+  ) as { value: BusinessStage; label: string; desc: string }[];
+
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+    <div className="max-w-4xl mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-4">
+      {modalContextHolder}
+      <Modal
+        open={reasonPrompt !== null}
+        title={en ? 'Why is this value unusual?' : '这个数值确实特殊？'}
+        okText={en ? 'Save note' : '保存理由'}
+        cancelText={en ? 'Cancel' : '取消'}
+        okButtonProps={{ disabled: !reasonPrompt?.text.trim() }}
+        onCancel={() => setReasonPrompt(null)}
+        onOk={() => {
+          if (reasonPrompt?.text.trim()) setAnomalyOverride(reasonPrompt.field, reasonPrompt.text.trim());
+          setReasonPrompt(null);
+        }}
+      >
+        <Typography.Paragraph type="secondary">
+          {en ? 'Briefly explain why. AI only records it and does not judge.' : '简单说明原因（AI 只记录，不做判断）。'}
+        </Typography.Paragraph>
+        <Input.TextArea
+          autoFocus
+          rows={3}
+          value={reasonPrompt?.text || ''}
+          onChange={(e) => setReasonPrompt((p) => (p ? { ...p, text: e.target.value } : p))}
+        />
+      </Modal>
+
       {/* BUG-12 修复："正在编辑"提示条：默认载入的是上一个已提交项目而非空白新项目时，
           明确告知用户当前在编辑哪个项目，并提供"另存为新项目"以避免误覆盖原数据。 */}
       {isEditingExistingProject && (
-        <div className="flex items-center justify-between flex-wrap gap-3 px-4 py-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900">
-          <p className="text-xs sm:text-sm font-bold">
-            {language === 'en' ? 'Editing: ' : '正在编辑：'}
-            <span className="font-black">{formData.projectName || (language === 'en' ? 'Untitled project' : '未命名项目')}</span>
-            {language === 'en'
-              ? ' — saving will update this existing project, not create a new one.'
-              : '——提交后会更新此项目，不会新建。'}
-          </p>
-          {onSaveAsNewProject && (
-            <button
-              type="button"
-              onClick={handleSaveAsNew}
-              className="shrink-0 px-3 py-1.5 rounded-xl bg-white border border-amber-300 text-amber-900 text-xs font-bold hover:bg-amber-100 transition-colors cursor-pointer"
-            >
-              {language === 'en' ? 'Save as new project' : '另存为新项目'}
-            </button>
-          )}
-        </div>
+        <Alert
+          type="warning"
+          showIcon
+          title={
+            <>
+              {en ? 'Editing: ' : '正在编辑：'}
+              <strong>{formData.projectName || (en ? 'Untitled project' : '未命名项目')}</strong>
+              {en ? ' — saving will update this existing project, not create a new one.' : '——提交后会更新此项目，不会新建。'}
+            </>
+          }
+          action={
+            onSaveAsNewProject && (
+              <Button size="small" onClick={handleSaveAsNew}>
+                {en ? 'Save as new project' : '另存为新项目'}
+              </Button>
+            )
+          }
+        />
       )}
 
-      {/* 1. Slim Header */}
-      <div className="bg-white rounded-3xl p-4 sm:p-5 border border-neutral-200 shadow-xs space-y-4">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <p className="text-xs sm:text-sm text-neutral-500 font-medium max-w-2xl">
-            {language === 'en'
-              ? 'Enter your name and numbers — AI infers the rest. Two steps to a full health report.'
-              : '只要两步：先告诉生意叫什么，再填上赚多少、花多少。AI 自动补齐行业、币种与成本结构，30 秒出报告。'}
-          </p>
-
-          <div className="flex items-center gap-3">
-            {saveStatus && (
-              <span className="text-xs text-emerald-800 font-bold bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200 flex items-center space-x-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                <span>{saveStatus}</span>
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Step Indicator（两步） */}
-        <div className="grid grid-cols-2 gap-2 pt-3 border-t border-neutral-100">
-          {stepsList.map((s) => (
-            <button
-              key={s.num}
-              onClick={() => setCurrentStep(s.num)}
-              className={`p-3 rounded-2xl text-left border transition-all cursor-pointer ${
-                currentStep === s.num
-                  ? 'bg-neutral-900 border-neutral-800 text-white shadow-md'
-                  : 'bg-neutral-50 border-neutral-200/80 text-neutral-500 hover:bg-neutral-100'
-              }`}
-            >
-              <div className="text-[12px] font-mono font-bold uppercase tracking-wider opacity-80 mb-0.5">
-                STEP 0{s.num}
-              </div>
-              <div className="text-xs font-bold truncate">{s.title}</div>
-            </button>
-          ))}
-        </div>
-      </div>
+      {/* 步骤条：此前是说明文字 + 「草稿已暂存」徽标 + 两张大步骤卡，手机上第一个输入框前要先滚过半屏。
+          改为一行紧凑步骤条，自动暂存状态降级为一行小字。 */}
+      <Card variant="borderless" size="small" className="shadow-xs">
+        <Steps
+          size="small"
+          responsive={false}
+          current={currentStep - 1}
+          onChange={(i) => setCurrentStep(i + 1)}
+          items={stepsList.map((s) => ({ title: s.title }))}
+        />
+        {saveStatus && (
+          <Typography.Text type="secondary" className="mt-2 text-xs flex items-center gap-1">
+            <CheckCircle2 className="w-3.5 h-3.5 text-teal-600" />
+            {saveStatus}
+          </Typography.Text>
+        )}
+      </Card>
 
       {/* STEP 1: 生意叫什么？ */}
       {currentStep === 1 && (
-        <div className="space-y-6">
-          <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
-            <div className="text-center space-y-1.5">
-              <h3 className="text-xl sm:text-2xl font-black text-slate-900 flex items-center justify-center gap-2">
-                <FileText className="w-5 h-5 text-teal-600" />
-                <span>{language === 'en' ? '1. What\'s your business?' : '1. 生意叫什么？'}</span>
-              </h3>
-              <p className="text-xs text-slate-500 font-medium">
-                {language === 'en'
-                  ? 'Just the name. AI guesses the industry from it (shown right below the name, editable), plus currency and cost structure.'
-                  : '只填名字。AI 会根据名称推测所属行业（名称下方显示，不对可直接改），并自动推断币种与成本结构。'}
-              </p>
-            </div>
+        <div className="flex flex-col gap-4">
+          <Card
+            variant="borderless"
+            className="shadow-xs"
+            title={en ? "What's your business?" : '生意叫什么？'}
+          >
+            <Typography.Paragraph type="secondary" className="text-xs">
+              {en
+                ? 'Just the name. AI guesses the industry from it (shown right below the name, editable), plus currency and cost structure.'
+                : '只填名字。AI 会根据名称推测所属行业（名称下方显示，不对可直接改），并自动推断币种与成本结构。'}
+            </Typography.Paragraph>
 
-            {/* 唯一主输入：项目名称 */}
-            <div>
-              <label htmlFor="bam-project-name" className="block text-xs font-bold text-slate-700 mb-1.5">
-                {language === 'en' ? 'Project / Business Name' : '项目 / 店铺名称'} <span className="text-rose-500">*</span>
-              </label>
-              <input
-                id="bam-project-name"
-                type="text"
-                placeholder={language === 'en' ? 'e.g. Sunshine Bakery Cafe' : '例如：阳光工坊社区烘焙店'}
-                value={formData.projectName}
-                onChange={(e) => handleProjectNameChange(e.target.value)}
-                onBlur={() => void ensureBusinessInference()}
-                className={`w-full p-4 border-2 rounded-2xl text-base font-bold text-slate-900 shadow-2xs focus:ring-1 focus:ring-teal-500 ${
-                  nameError ? 'border-rose-400 focus:border-rose-600' : 'border-teal-200 focus:border-teal-600'
-                }`}
-              />
-              {nameError && (
-                <p className="text-xs text-rose-600 font-bold mt-1.5 animate-in fade-in">
-                  ⚠️ {nameError}
-                </p>
-              )}
-              {/* 预留一行高度：名称框失焦即显示「AI 正在推算…」，若此处从 0 高度撑开会把下方按钮挤走，吞掉用户正在点的「下一步」 */}
-              <div className="mt-2 text-[13px] space-y-1 min-h-5">
-                {inferState === 'loading' && (
-                  <span className="text-teal-500 font-semibold animate-pulse">
-                    {language === 'en' ? 'AI is inferring industry, currency and cost structure…' : 'AI 正在推算行业、币种与成本结构…'}
-                  </span>
-                )}
-                {inferState === 'done' && (
-                  <span className="text-emerald-600 font-semibold">
-                    {language === 'en' ? '✓ AI has auto-filled the fields — edit them or click "Restore AI Suggestion"' : '✓ AI 已自动预填，可修改或点「恢复 AI 建议」'}
-                  </span>
-                )}
-                {inferState === 'error' && (
-                  <span className="text-amber-600 font-semibold">
-                    {inferErrorReason && /quota|配额|冷却/i.test(inferErrorReason)
-                      ? (language === 'en'
-                          ? 'AI free quota is temporarily exhausted (cooling down ~90s) — please wait a moment and retry, or fill in the fields manually for now.'
-                          : 'AI 免费额度暂时用尽（冷却约 90 秒），请稍后重试，或先手动填写成本与收入项目。')
-                      : (language === 'en' ? 'AI is temporarily unavailable — please select the industry manually and fill in the cost/revenue items yourself.' : 'AI 暂时不可用，请手动选择行业并自行填写成本与收入项目。')}
-                    <ChinaVpnInlineLink language={language} />
-                    <button
-                      type="button"
-                      onClick={() => formData.projectName.trim().length >= 2 && runBusinessInference(formData.projectName.trim())}
-                      className="ml-1 underline font-bold hover:text-amber-700 cursor-pointer"
-                    >
-                      {language === 'en' ? 'Retry' : '重新推算'}
-                    </button>
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* 所属行业：不让用户一上来就选，由项目名称自动推测（输入时本地关键词即时推测，
-                名称填完后 AI 校正），这里只展示结果并允许一键修改。 */}
-            {formData.projectName.trim().length >= 2 && (
-              <div className="-mt-3 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-2">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-bold text-slate-700">{language === 'en' ? 'Industry:' : '所属行业：'}</span>
-                  {industrySource === 'pending' ? (
-                    <span className="text-slate-500">
-                      {inferState === 'loading'
-                        ? (language === 'en' ? 'AI is guessing from the name…' : 'AI 正在根据名称推测…')
-                        : inferState === 'error' || inferState === 'done'
-                          ? (language === 'en' ? 'AI could not guess it — please choose it yourself' : 'AI 暂时没能推测出来，请点右侧「自己选」')
-                          : (language === 'en' ? 'AI will guess it once you finish the name' : '名称填完后 AI 自动推测')}
+            <Form layout="vertical" requiredMark component="div">
+              {/* 唯一主输入：项目名称 */}
+              <Form.Item
+                label={en ? 'Project / Business Name' : '项目 / 店铺名称'}
+                required
+                htmlFor="bam-project-name"
+                validateStatus={nameError ? 'error' : undefined}
+                help={
+                  nameError || (
+                    // 预留一行高度：名称框失焦即显示「AI 正在推算…」，若此处从 0 高度撑开会把下方按钮挤走，吞掉用户正在点的「下一步」
+                    <span className="block min-h-5 text-[13px]">
+                      {inferState === 'loading' && (
+                        <span className="text-teal-600 animate-pulse">
+                          {en ? 'AI is inferring industry, currency and cost structure…' : 'AI 正在推算行业、币种与成本结构…'}
+                        </span>
+                      )}
+                      {inferState === 'done' && (
+                        <span className="text-green-700">
+                          {en
+                            ? '✓ AI has auto-filled the fields — edit them or click "Restore AI Suggestion"'
+                            : '✓ AI 已自动预填，可修改或点「恢复 AI 建议」'}
+                        </span>
+                      )}
+                      {inferState === 'error' && (
+                        <span className="text-amber-700">
+                          {inferErrorReason && /quota|配额|冷却/i.test(inferErrorReason)
+                            ? en
+                              ? 'AI free quota is temporarily exhausted (cooling down ~90s) — please wait a moment and retry, or fill in the fields manually for now.'
+                              : 'AI 免费额度暂时用尽（冷却约 90 秒），请稍后重试，或先手动填写成本与收入项目。'
+                            : en
+                              ? 'AI is temporarily unavailable — please select the industry manually and fill in the cost/revenue items yourself.'
+                              : 'AI 暂时不可用，请手动选择行业并自行填写成本与收入项目。'}
+                          <ChinaVpnInlineLink language={language} />
+                          <Button
+                            type="link"
+                            size="small"
+                            onClick={() =>
+                              formData.projectName.trim().length >= 2 && runBusinessInference(formData.projectName.trim())
+                            }
+                          >
+                            {en ? 'Retry' : '重新推算'}
+                          </Button>
+                        </span>
+                      )}
                     </span>
-                  ) : (
+                  )
+                }
+              >
+                <Input
+                  id="bam-project-name"
+                  size="large"
+                  placeholder={en ? 'e.g. Sunshine Bakery Cafe' : '例如：阳光工坊社区烘焙店'}
+                  value={formData.projectName}
+                  onChange={(e) => handleProjectNameChange(e.target.value)}
+                  onBlur={() => void ensureBusinessInference()}
+                />
+              </Form.Item>
+
+              {/* 所属行业：不让用户一上来就选，由项目名称自动推测（输入时本地关键词即时推测，
+                  名称填完后 AI 校正），这里只展示结果并允许一键修改。 */}
+              {formData.projectName.trim().length >= 2 && (
+                <div className="mb-6 p-3 rounded-lg bg-neutral-50 border border-neutral-100 flex flex-col gap-2">
+                  <Flex align="center" gap={8} wrap>
+                    <Typography.Text type="secondary">{en ? 'Industry:' : '所属行业：'}</Typography.Text>
+                    {industrySource === 'pending' ? (
+                      <Typography.Text type="secondary">
+                        {inferState === 'loading'
+                          ? en
+                            ? 'AI is guessing from the name…'
+                            : 'AI 正在根据名称推测…'
+                          : inferState === 'error' || inferState === 'done'
+                            ? en
+                              ? 'AI could not guess it — please choose it yourself'
+                              : 'AI 暂时没能推测出来，请点右侧「自己选」'
+                            : en
+                              ? 'AI will guess it once you finish the name'
+                              : '名称填完后 AI 自动推测'}
+                      </Typography.Text>
+                    ) : (
+                      <>
+                        <Typography.Text strong>{industryLabel}</Typography.Text>
+                        <Tag color={industrySource === 'user' ? 'default' : 'purple'} className="me-0">
+                          {industrySource === 'user'
+                            ? en
+                              ? 'Set by you'
+                              : '你已选择'
+                            : industrySource === 'ai'
+                              ? en
+                                ? 'AI guess'
+                                : 'AI 推测'
+                              : en
+                                ? 'Guessed from name'
+                                : '根据名称初步推测'}
+                        </Tag>
+                      </>
+                    )}
+                    <Button type="link" size="small" className="ml-auto px-0" onClick={() => setIsEditingIndustry((v) => !v)}>
+                      {isEditingIndustry
+                        ? en
+                          ? 'Done'
+                          : '完成'
+                        : industrySource === 'pending'
+                          ? en
+                            ? 'Choose myself'
+                            : '自己选'
+                          : en
+                            ? 'Not right? Change'
+                            : '不对？修改'}
+                    </Button>
+                  </Flex>
+                  {isEditingIndustry && (
                     <>
-                      <span className="font-black text-slate-900">{industryLabel}</span>
-                      <span
-                        className={`text-[11px] px-1.5 py-0.5 rounded font-bold ${
-                          industrySource === 'user' ? 'bg-slate-200 text-slate-700' : 'bg-violet-100 text-violet-700'
-                        }`}
-                      >
-                        {industrySource === 'user'
-                          ? (language === 'en' ? 'Set by you' : '你已选择')
-                          : industrySource === 'ai'
-                            ? (language === 'en' ? 'AI guess' : 'AI 推测')
-                            : (language === 'en' ? 'Guessed from name' : '根据名称初步推测')}
-                      </span>
+                      <SearchableSelect
+                        value={formData.industry}
+                        onChange={(v) => {
+                          handleIndustryChange(v);
+                          if (v !== CUSTOM_INDUSTRY_VALUE) setIsEditingIndustry(false);
+                        }}
+                        options={industryOptions}
+                        placeholder={en ? 'Select industry' : '请选择行业'}
+                      />
+                      {formData.industry === CUSTOM_INDUSTRY_VALUE && (
+                        <Input
+                          placeholder={en ? 'Please enter your industry' : '请输入所属行业领域'}
+                          value={customIndustry}
+                          onChange={(e) => handleCustomIndustryInput(e.target.value)}
+                        />
+                      )}
                     </>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => setIsEditingIndustry((v) => !v)}
-                    className="ml-auto text-teal-700 font-bold underline hover:text-teal-600 cursor-pointer"
-                  >
-                    {isEditingIndustry
-                      ? (language === 'en' ? 'Done' : '完成')
-                      : industrySource === 'pending'
-                        ? (language === 'en' ? 'Choose myself' : '自己选')
-                        : (language === 'en' ? 'Not right? Change' : '不对？修改')}
-                  </button>
                 </div>
-                {isEditingIndustry && (
-                  <div className="space-y-2">
-                    <SearchableSelect
-                      value={formData.industry}
-                      onChange={(v) => {
-                        handleIndustryChange(v);
-                        if (v !== CUSTOM_INDUSTRY_VALUE) setIsEditingIndustry(false);
-                      }}
-                      options={industryOptions}
-                      placeholder={language === 'en' ? '-- Select industry --' : '-- 请选择行业 --'}
-                      controlClassName="w-full p-2.5 border border-slate-300 rounded-xl font-medium text-slate-800 bg-white"
-                    />
-                    {formData.industry === CUSTOM_INDUSTRY_VALUE && (
-                      <input
-                        type="text"
-                        placeholder={language === 'en' ? 'Please enter your industry' : '请输入所属行业领域'}
-                        value={customIndustry}
-                        onChange={(e) => handleCustomIndustryInput(e.target.value)}
-                        className="w-full p-2.5 border-2 border-teal-300 rounded-xl font-medium text-slate-800"
-                      />
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
+              )}
 
-            {/* 公司注册所在国家/地区：放在第一步，因为它直接决定主报告币种，
-                并作为后面「花费清单」里税收/注册/签证参考值的唯一权威信号源。 */}
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
-                <Building2 className="w-3.5 h-3.5 text-teal-600" />
-                <span>{language === 'en' ? 'Company Registration Country / Region' : '公司注册所在国家/地区'}</span>
-              </label>
-              <SearchableSelect
-                value={formData.regionCountry}
-                onChange={handleRegionCountryChange}
-                options={countryOptions}
-                placeholder={language === 'en' ? '-- Select where your company is registered --' : '-- 请选择公司注册所在国家/地区 --'}
-                controlClassName="w-full p-3 border-2 border-teal-200 rounded-2xl font-bold text-slate-900 bg-white"
-                isClearable
-              />
-              <p className="text-[12px] text-slate-500 mt-1">
-                {language === 'en'
-                  ? 'Determines your base currency and the tax/registration/visa reference values shown later — you can still override any of them yourself.'
-                  : '将决定主报告币种，以及后面「花费清单」里的税收/注册/签证参考值——你随时可以在下方自行修改覆盖。'}
-              </p>
-              {formData.regionCountry && (
-                statesForRegionCountry.length > 0 ? (
+              {/* 公司注册所在国家/地区：放在第一步，因为它直接决定主报告币种，
+                  并作为后面「花费清单」里税收/注册/签证参考值的唯一权威信号源。 */}
+              <Form.Item
+                label={en ? 'Company Registration Country / Region' : '公司注册所在国家/地区'}
+                extra={
+                  en
+                    ? 'Determines your base currency and the tax/registration/visa reference values shown later — you can still override any of them yourself.'
+                    : '将决定主报告币种，以及后面「花费清单」里的税收/注册/签证参考值——你随时可以在下方自行修改覆盖。'
+                }
+              >
+                <Flex vertical gap={8}>
                   <SearchableSelect
-                    value={formData.regionDetail}
-                    onChange={(v) => updateField('regionDetail', v)}
-                    options={stateOptions}
-                    placeholder={language === 'en' ? '-- Select state/province (optional) --' : '-- 请选择省/州（可选）--'}
-                    controlClassName="w-full p-2 mt-1.5 border border-slate-200 rounded-lg font-semibold text-slate-900 bg-white"
+                    value={formData.regionCountry}
+                    onChange={handleRegionCountryChange}
+                    options={countryOptions}
+                    placeholder={en ? 'Select where your company is registered' : '请选择公司注册所在国家/地区'}
                     isClearable
                   />
-                ) : (
-                  <input
-                    type="text"
-                    value={formData.regionDetail}
-                    onChange={(e) => updateField('regionDetail', e.target.value)}
-                    placeholder={
-                      language === 'en'
-                        ? 'This region has no state/province list — enter manually (optional)'
-                        : '该地区暂无省/州列表，可手动填写（可选）'
-                    }
-                    className="w-full p-2 mt-1.5 border border-slate-200 rounded-lg font-medium text-slate-900 bg-white"
-                  />
-                )
-              )}
-            </div>
+                  {formData.regionCountry &&
+                    (statesForRegionCountry.length > 0 ? (
+                      <SearchableSelect
+                        value={formData.regionDetail}
+                        onChange={(v) => updateField('regionDetail', v)}
+                        options={stateOptions}
+                        placeholder={en ? 'Select state/province (optional)' : '请选择省/州（可选）'}
+                        isClearable
+                      />
+                    ) : (
+                      <Input
+                        value={formData.regionDetail}
+                        onChange={(e) => updateField('regionDetail', e.target.value)}
+                        placeholder={
+                          en
+                            ? 'This region has no state/province list — enter manually (optional)'
+                            : '该地区暂无省/州列表，可手动填写（可选）'
+                        }
+                      />
+                    ))}
+                </Flex>
+              </Form.Item>
 
-            {/* 所处阶段：决定后面是「填真实数字体检」还是「先估算未来」 */}
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
-                <Briefcase className="w-3.5 h-3.5 text-teal-600" />
-                <span>{language === 'en' ? 'Current stage' : '目前所处阶段'}</span>
-              </label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                {(
-                  (
-                    language === 'en'
-                      ? [
-                          { value: 'not_started', label: 'Not started', desc: 'Not open yet — estimate cost and target earnings first' },
-                          { value: 'has_prototype', label: 'Have a prototype', desc: 'Tried on a small scale, no stable revenue yet' },
-                          { value: 'has_revenue', label: 'Have revenue', desc: 'Currently operating, want a real-numbers check-up' }
-                        ]
-                      : [
-                          { value: 'not_started', label: '尚未启动', desc: '还没开业，先估算成本和要赚多少' },
-                          { value: 'has_prototype', label: '已有原型', desc: '小范围试过，还没稳定营收' },
-                          { value: 'has_revenue', label: '已有营收', desc: '正在经营，想体检真实数字' }
-                        ]
-                  ) as { value: BusinessStage; label: string; desc: string }[]
-                ).map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => updateField('businessStage', opt.value)}
-                    className={`text-left p-3 rounded-xl border-2 transition-colors cursor-pointer ${
-                      formData.businessStage === opt.value
-                        ? 'border-teal-600 bg-teal-50'
-                        : 'border-slate-200 bg-white hover:border-teal-300'
-                    }`}
-                  >
-                    <span className="block text-xs font-black text-slate-900">{opt.label}</span>
-                    <span className="block text-[12px] text-slate-500 mt-0.5">{opt.desc}</span>
-                  </button>
-                ))}
-              </div>
-              {formData.businessStage !== 'has_revenue' && (
-                <p className="text-[12px] text-amber-700 font-medium mt-1.5">
-                  {language === 'en'
-                    ? "You don't have real revenue yet — just enter the next numbers as estimates/assumptions; the system will clearly label them as such."
-                    : '你还没有真实营收，下一步的数字都当作「预估/假设」来填即可，系统会明确标注这是假设。'}
-                </p>
-              )}
-            </div>
+              {/* 所处阶段：决定后面是「填真实数字体检」还是「先估算未来」 */}
+              <Form.Item
+                label={en ? 'Current stage' : '目前所处阶段'}
+                extra={
+                  formData.businessStage !== 'has_revenue'
+                    ? en
+                      ? "You don't have real revenue yet — just enter the next numbers as estimates/assumptions; the system will clearly label them as such."
+                      : '你还没有真实营收，下一步的数字都当作「预估/假设」来填即可，系统会明确标注这是假设。'
+                    : undefined
+                }
+              >
+                <Radio.Group
+                  value={formData.businessStage}
+                  onChange={(e) => updateField('businessStage', e.target.value as BusinessStage)}
+                  className="w-full"
+                >
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {stageOptions.map((opt) => (
+                      <label
+                        key={opt.value}
+                        className={`flex items-start gap-2 p-3 rounded-lg border cursor-pointer transition-colors text-sm ${
+                          formData.businessStage === opt.value
+                            ? 'border-teal-700 bg-teal-50'
+                            : 'border-neutral-200 bg-white hover:border-teal-300'
+                        }`}
+                      >
+                        <Radio value={opt.value} className="mt-0.5" />
+                        <span>
+                          <span className="block font-medium text-neutral-900">{opt.label}</span>
+                          <span className="block text-xs text-neutral-500 mt-0.5">{opt.desc}</span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </Radio.Group>
+              </Form.Item>
+            </Form>
 
             {/* AI 推断结果摘要 */}
             {inferState === 'done' && formData.projectName.trim().length >= 2 && (
-              <div className="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-200 text-xs space-y-2">
-                <div className="flex items-center gap-2 font-bold text-emerald-950">
-                  <Sparkles className="w-4 h-4 text-emerald-600" />
-                  <span>
-                    {language === 'en'
-                      ? `AI has auto-configured based on "${formData.projectName.trim()}"`
-                      : `AI 已根据「${formData.projectName.trim()}」完成自动配置`}
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-emerald-900">
-                  <div className="p-2.5 rounded-xl bg-white/70 border border-emerald-100">
-                    <span className="text-emerald-600 block font-bold text-[12px] uppercase tracking-wider mb-0.5">{language === 'en' ? 'Industry' : '所属行业'}</span>
-                    <span className="font-bold">{industryLabel}</span>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-white/70 border border-emerald-100">
-                    <span className="text-emerald-600 block font-bold text-[12px] uppercase tracking-wider mb-0.5">{language === 'en' ? 'Base Currency' : '主报告币种'}</span>
-                    <span className="font-bold">{formData.baseCurrency}</span>
-                  </div>
-                </div>
-                <p className="text-[13px] text-emerald-700">
-                  {language === 'en'
-                    ? 'Cost structure and estimated revenue have also been pre-filled — you can edit them to your real numbers in the next step.'
-                    : '成本结构与预估流水也已预填，下一步可直接修改成你的真实数字。'}
-                </p>
-              </div>
+              <Alert
+                className="mb-4"
+                type="success"
+                showIcon
+                icon={<Sparkles className="w-4 h-4" />}
+                title={
+                  en
+                    ? `AI has auto-configured based on "${formData.projectName.trim()}"`
+                    : `AI 已根据「${formData.projectName.trim()}」完成自动配置`
+                }
+                description={
+                  <>
+                    <Descriptions
+                      size="small"
+                      column={{ xs: 1, sm: 2 }}
+                      className="my-2"
+                      items={[
+                        { key: 'industry', label: en ? 'Industry' : '所属行业', children: industryLabel },
+                        { key: 'currency', label: en ? 'Base currency' : '主报告币种', children: formData.baseCurrency }
+                      ]}
+                    />
+                    {en
+                      ? 'Cost structure and estimated revenue have also been pre-filled — you can edit them to your real numbers in the next step.'
+                      : '成本结构与预估流水也已预填，下一步可直接修改成你的真实数字。'}
+                  </>
+                }
+              />
             )}
 
             {/* 高级设置：把复杂藏在小箭头后面 */}
-            <div className="border border-slate-200 rounded-2xl overflow-hidden">
-              <button
-                type="button"
-                onClick={() => setShowAdvanced(!showAdvanced)}
-                className="w-full flex items-center justify-between px-4 py-3.5 bg-slate-50/80 hover:bg-slate-100 text-xs font-bold text-slate-800 transition-colors cursor-pointer"
-              >
-                <span className="flex items-center gap-2">
-                  <Settings2 className="w-4 h-4 text-teal-600" />
-                  {language === 'en' ? 'Advanced Settings (Currency / Exchange Rate / Safe Mode)' : '高级设置（币种 / 汇率 / 安全模式）'}
-                </span>
-                <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
-              </button>
+            <Collapse
+              activeKey={showAdvanced ? ['advanced'] : []}
+              onChange={(keys) => setShowAdvanced((Array.isArray(keys) ? keys : [keys]).includes('advanced'))}
+              items={[
+                {
+                  key: 'advanced',
+                  label: (
+                    <Flex align="center" gap={8}>
+                      <Settings2 className="w-4 h-4 text-teal-700" />
+                      {en ? 'Advanced settings (currency / exchange rate / safe mode)' : '高级设置（币种 / 汇率 / 安全模式）'}
+                    </Flex>
+                  ),
+                  children: (
+                    <Flex vertical gap={16}>
+                      <Form layout="vertical" component="div">
+                        <Form.Item
+                          label={en ? 'Base currency' : '主报告币种'}
+                          required
+                          extra={
+                            en
+                              ? 'All other currency amounts will automatically be converted to this base currency using the exchange rate.'
+                              : '后续所有其他币种金额将自动依据汇率折算为该主币种。'
+                          }
+                          className="mb-0"
+                        >
+                          <Flex vertical gap={8} className="sm:max-w-sm">
+                            <SearchableSelect
+                              value={formData.baseCurrency}
+                              onChange={handleCurrencyChange}
+                              options={currencyOptions}
+                              placeholder={en ? 'Select currency' : '请选择币种'}
+                            />
+                            {formData.baseCurrency === CUSTOM_CURRENCY_VALUE && (
+                              <Input
+                                placeholder={
+                                  en ? 'Enter a 3-letter currency code, e.g. SLE / MVR / PGK' : '请输入 3 字母币种代码，例如：SLE / MVR / PGK'
+                                }
+                                value={customCurrencyCode}
+                                onChange={(e) => handleCustomCurrencyInput(e.target.value)}
+                              />
+                            )}
+                          </Flex>
+                        </Form.Item>
+                      </Form>
 
-              {showAdvanced && (
-                <div className="p-4 sm:p-5 space-y-6 text-xs bg-white">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-slate-700 font-bold mb-1">
-                        {language === 'en' ? 'Base Currency' : '主报告币种 (Base Currency)'} <span className="text-rose-500">*</span>
-                      </label>
-                      <SearchableSelect
-                        value={formData.baseCurrency}
-                        onChange={handleCurrencyChange}
-                        options={currencyOptions}
-                        placeholder={language === 'en' ? '-- Select currency --' : '-- 请选择币种 --'}
-                        controlClassName="w-full p-2.5 border border-slate-300 rounded-xl font-bold text-slate-800 bg-white"
-                      />
-                      {formData.baseCurrency === CUSTOM_CURRENCY_VALUE && (
-                        <input
-                          type="text"
-                          placeholder={language === 'en' ? 'Enter a 3-letter currency code, e.g. SLE / MVR / PGK' : '请输入 3 字母币种代码，例如：SLE / MVR / PGK'}
-                          value={customCurrencyCode}
-                          onChange={(e) => handleCustomCurrencyInput(e.target.value)}
-                          className="mt-2 w-full p-2.5 border-2 border-teal-300 rounded-xl font-bold text-slate-800"
-                        />
-                      )}
-                      <p className="text-[13px] text-slate-400 mt-1">
-                        {language === 'en'
-                          ? 'All other currency amounts will automatically be converted to this base currency using the exchange rate.'
-                          : '后续所有其他币种金额将自动依据汇率折算为该主币种。'}
-                      </p>
-                    </div>
-                  </div>
+                      {/* 多重汇率标注 */}
+                      <Card size="small" className="bg-neutral-50">
+                        <Checkbox
+                          checked={formData.hasMultipleRates}
+                          onChange={(e) => updateField('hasMultipleRates', e.target.checked)}
+                        >
+                          {en
+                            ? 'This country has multiple exchange rates (official rate differs greatly from the informal/actual rate)'
+                            : '本国存在多重汇率（官方汇率与民间/实际兑换汇率差距悬殊）'}
+                        </Checkbox>
+                        {formData.hasMultipleRates && (
+                          <Form layout="vertical" component="div" className="mt-3">
+                            <Row gutter={12}>
+                              <Col xs={24} sm={12}>
+                                <Form.Item
+                                  label={en ? 'Actual exchange rate (1 USD ≈ how much local currency)' : '实际兑换汇率数值 (1 USD ≈ 多少当地货币)'}
+                                  className="mb-2"
+                                >
+                                  <NumberField
+                                    value={formData.customExchangeRateValue || 0}
+                                    onChange={(v) => updateField('customExchangeRateValue', v)}
+                                  />
+                                </Form.Item>
+                              </Col>
+                              <Col xs={24} sm={12}>
+                                <Form.Item
+                                  label={en ? 'Rate type and source' : '汇率类型与来源说明'}
+                                  htmlFor="bam-exchange-rate-source"
+                                  className="mb-2"
+                                >
+                                  <Input
+                                    id="bam-exchange-rate-source"
+                                    placeholder={
+                                      en
+                                        ? 'e.g. daily rate from local chamber of commerce / street cash exchange rate'
+                                        : '例如：当地商会日常兑换价 / 街区现金汇兑价'
+                                    }
+                                    value={formData.customExchangeRateType || ''}
+                                    onChange={(e) => updateField('customExchangeRateType', e.target.value)}
+                                  />
+                                </Form.Item>
+                              </Col>
+                            </Row>
+                          </Form>
+                        )}
+                      </Card>
 
-                  {/* 多重汇率标注 */}
-                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
-                    <label className="flex items-center gap-2 font-bold text-slate-800 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={formData.hasMultipleRates}
-                        onChange={(e) => updateField('hasMultipleRates', e.target.checked)}
-                        className="w-4 h-4 rounded text-teal-600 focus:ring-teal-500"
-                      />
-                      <span>{language === 'en' ? 'This country has multiple exchange rates (official rate differs greatly from the informal/actual rate)' : '本国存在多重汇率（官方汇率与民间/实际兑换汇率差距悬殊）'}</span>
-                    </label>
-
-                    {formData.hasMultipleRates && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-200">
-                        <div>
-                          <label className="block text-slate-600 font-medium mb-1">
-                            {language === 'en' ? 'Actual exchange rate (1 USD ≈ how much local currency)' : '实际兑换汇率数值 (1 USD ≈ 多少当地货币)'}
-                          </label>
-                          <NumberField
-                            placeholder=""
-                            value={formData.customExchangeRateValue || 0}
-                            onChange={(v) => updateField('customExchangeRateValue', v)}
-                            className="w-full p-2 border border-slate-300 rounded-lg font-bold text-slate-800 bg-white"
+                      {/* 敏感地区数据安全模式开关 (P0) */}
+                      <Card size="small" className={formData.isSensitiveRegion ? 'bg-amber-50 border-amber-200' : 'bg-neutral-50'}>
+                        <Flex justify="space-between" align="flex-start" gap={12}>
+                          <div>
+                            <Flex align="center" gap={8} wrap className="mb-1">
+                              <ShieldAlert
+                                className={`w-4 h-4 ${formData.isSensitiveRegion ? 'text-amber-600' : 'text-neutral-400'}`}
+                              />
+                              <Typography.Text strong>{en ? 'Sensitive region safe mode' : '敏感地区数据安全模式'}</Typography.Text>
+                              <Tag color="gold" className="me-0">
+                                {en ? 'Core protection' : '核心保障'}
+                              </Tag>
+                            </Flex>
+                            <Typography.Paragraph type="secondary" className="text-xs mb-0">
+                              {en
+                                ? 'For users in regions with sensitive information disclosure or strict regulation. Enabling this automatically triggers: geo-anonymization, original documents optional, original images discarded after OCR, and a data-minimization note added to the report — this never affects your score.'
+                                : '适合身处外部信息披露敏感、监管严苛地区的用户。开启后自动触发：地理信息脱敏、原始凭证全选填、OCR 后原图不保留、报告加注数据最小化说明——绝不影响得分。'}
+                            </Typography.Paragraph>
+                          </div>
+                          <Switch
+                            checked={formData.isSensitiveRegion}
+                            onChange={(checked) => updateField('isSensitiveRegion', checked)}
+                            aria-label={en ? 'Sensitive region safe mode' : '敏感地区数据安全模式'}
                           />
-                        </div>
-                        <div>
-                          <label htmlFor="bam-exchange-rate-source" className="block text-slate-600 font-medium mb-1">{language === 'en' ? 'Rate type and source' : '汇率类型与来源说明'}</label>
-                          <input
-                            id="bam-exchange-rate-source"
-                            type="text"
-                            placeholder={language === 'en' ? 'e.g. daily rate from local chamber of commerce / street cash exchange rate' : '例如：当地商会日常兑换价 / 街区现金汇兑价'}
-                            value={formData.customExchangeRateType || ''}
-                            onChange={(e) => updateField('customExchangeRateType', e.target.value)}
-                            className="w-full p-2 border border-slate-300 rounded-lg text-slate-800 bg-white"
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                        </Flex>
 
-                  {/* 敏感地区数据安全模式开关 (P0) */}
-                  <div
-                    className={`p-4 rounded-2xl border transition-all ${
-                      formData.isSensitiveRegion
-                        ? 'bg-amber-50/80 border-amber-300 shadow-xs'
-                        : 'bg-slate-50 border-slate-200'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <ShieldAlert
-                            className={`w-4 h-4 ${formData.isSensitiveRegion ? 'text-amber-600' : 'text-slate-400'}`}
-                          />
-                          <span className="font-bold text-slate-900 text-xs">
-                            {language === 'en' ? 'Sensitive Region Safe Mode' : '敏感地区数据安全模式 (Sensitive Safe Mode)'}
-                          </span>
-                          <span className="text-[12px] bg-amber-200/80 text-amber-900 font-bold px-1.5 py-0.5 rounded">
-                            {language === 'en' ? 'Core Protection' : '核心保障'}
-                          </span>
-                        </div>
-                        <p className="text-[13px] text-slate-600 leading-relaxed">
-                          {language === 'en'
-                            ? 'For users in regions with sensitive information disclosure or strict regulation. Enabling this automatically triggers: geo-anonymization, original documents optional, original images discarded after OCR, and a data-minimization note added to the report — this never affects your score.'
-                            : '适合身处外部信息披露敏感、监管严苛地区的用户。开启后自动触发：地理信息脱敏、原始凭证全选填、OCR 后原图不保留、报告加注数据最小化说明——绝不影响得分。'}
-                        </p>
-                      </div>
+                        {formData.isSensitiveRegion && (
+                          <Form layout="vertical" component="div" className="mt-3">
+                            <Row gutter={12}>
+                              <Col xs={24} sm={12}>
+                                <Form.Item
+                                  label={en ? 'Country / macro region (no specific city required)' : '所在国家 / 宏观大区（不要求具体城市）'}
+                                  htmlFor="bam-sensitive-region-country"
+                                  className="mb-2"
+                                >
+                                  <Input
+                                    id="bam-sensitive-region-country"
+                                    placeholder={en ? 'e.g. North Africa/Middle East region or Southeast Asia' : '例如：北非/中东大区 或 东南亚地区'}
+                                    value={formData.regionCountry}
+                                    onChange={(e) => updateField('regionCountry', e.target.value)}
+                                  />
+                                </Form.Item>
+                              </Col>
+                              <Col xs={24} sm={12}>
+                                <Form.Item
+                                  label={en ? 'Contact channel (anonymous alias or internal ID allowed)' : '联系渠道（允许填写匿名代号或内部ID）'}
+                                  htmlFor="bam-sensitive-contact-channel"
+                                  className="mb-2"
+                                >
+                                  <Input
+                                    id="bam-sensitive-contact-channel"
+                                    placeholder="Telegram: @coop_rep_09"
+                                    value={formData.contactChannel}
+                                    onChange={(e) => updateField('contactChannel', e.target.value)}
+                                  />
+                                </Form.Item>
+                              </Col>
+                            </Row>
+                          </Form>
+                        )}
+                      </Card>
+                    </Flex>
+                  )
+                }
+              ]}
+            />
+          </Card>
 
-                      <label className="relative inline-flex items-center cursor-pointer shrink-0">
-                        <input
-                          type="checkbox"
-                          checked={formData.isSensitiveRegion}
-                          onChange={(e) => updateField('isSensitiveRegion', e.target.checked)}
-                          className="sr-only peer"
-                        />
-                        <div className="w-11 h-6 bg-slate-300 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
-                      </label>
-                    </div>
-
-                    {formData.isSensitiveRegion && (
-                      <div className="mt-4 pt-3 border-t border-amber-200 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                          <label htmlFor="bam-sensitive-region-country" className="block text-amber-900 font-bold mb-1">
-                            {language === 'en' ? 'Country / Macro Region (no specific city required)' : '所在国家 / 宏观大区（不要求具体城市）'}
-                          </label>
-                          <input
-                            id="bam-sensitive-region-country"
-                            type="text"
-                            placeholder={language === 'en' ? 'e.g. North Africa/Middle East region or Southeast Asia' : '例如：北非/中东大区 或 东南亚地区'}
-                            value={formData.regionCountry}
-                            onChange={(e) => updateField('regionCountry', e.target.value)}
-                            className="w-full p-2 border border-amber-300 rounded-lg bg-white font-medium"
-                          />
-                        </div>
-                        <div>
-                          <label htmlFor="bam-sensitive-contact-channel" className="block text-amber-900 font-bold mb-1">
-                            {language === 'en' ? 'Contact Channel (anonymous alias or internal ID allowed)' : '联系渠道（允许填写匿名代号或内部ID）'}
-                          </label>
-                          <input
-                            id="bam-sensitive-contact-channel"
-                            type="text"
-                            placeholder={language === 'en' ? 'e.g. Telegram: @coop_rep_09' : '例如：Telegram: @coop_rep_09'}
-                            value={formData.contactChannel}
-                            onChange={(e) => updateField('contactChannel', e.target.value)}
-                            className="w-full p-2 border border-amber-300 rounded-lg bg-white font-medium"
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="flex justify-end flex-col items-end gap-2">
+          {/* 手机上「下一步」吸在底部标签栏之上，不用滚到最下面才能点 */}
+          <div className="sticky bottom-[4.5rem] md:static z-30 flex justify-end">
             {/* 不用 disabled：名称框失焦即开始推算，若这里禁用，用户这一下点击会被吞掉；
                 推算进行中点击会等待同一次推算完成后再进入下一步。 */}
-            <button
+            <Button
+              type="primary"
+              size="large"
+              className="w-full md:w-auto shadow-lg md:shadow-none"
+              loading={inferState === 'loading'}
               aria-busy={inferState === 'loading'}
               onClick={async () => {
                 const name = formData.projectName.trim();
                 if (!name) {
-                  setNameError(
-                    language === 'en'
-                      ? 'Please enter project / business name'
-                      : '请输入项目/店铺名称'
-                  );
+                  setNameError(en ? 'Please enter project / business name' : '请输入项目/店铺名称');
                   return;
                 }
                 setNameError(null);
@@ -2154,258 +2182,327 @@ export const AssessmentForm: React.FC<FormProps> = ({
                 await ensureBusinessInference();
                 setCurrentStep(2);
               }}
-              className="flex items-center gap-1.5 px-6 py-2.5 bg-teal-600 hover:bg-teal-500 disabled:opacity-60 disabled:cursor-wait text-white rounded-xl text-xs font-bold shadow-md shadow-teal-600/20 transition-all cursor-pointer"
             >
-              <span>
-                {inferState === 'loading'
-                  ? (language === 'en' ? 'AI is inferring…' : 'AI 正在推算…')
-                  : (language === 'en' ? 'Next: Revenue & Expenses' : '下一步：赚多少、花多少')}
-              </span>
+              {inferState === 'loading'
+                ? en
+                  ? 'AI is inferring…'
+                  : 'AI 正在推算…'
+                : en
+                  ? 'Next: Revenue & Expenses'
+                  : '下一步：赚多少、花多少'}
               <ArrowRight className="w-4 h-4" />
-            </button>
+            </Button>
           </div>
         </div>
       )}
 
       {/* STEP 2: 赚多少、花多少、兜里有多少现金（清晰分块纵向排版） */}
       {currentStep === 2 && (
-        <div className="space-y-6">
+        <div className="flex flex-col gap-4">
           {/* 待确认汇总：让用户知道还有几项 AI 建议没被采纳。
               刻意不自动采纳 —— 幻觉数字到不了评分引擎的前提，就是必须由用户亲自确认。 */}
           <PendingConfirmationsBar count={pendingSuggestionCount} language={language} />
 
-          <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
-            <div className="border-b border-slate-100 pb-3">
-              <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
-                <Wallet className="w-5 h-5 text-teal-600" />
-                <span>{language === 'en' ? '2. Revenue, expenses & cash on hand' : '2. 赚多少、花多少、兜里有多少现金'}</span>
-              </h3>
-              <p className="text-xs text-slate-500">
-                {language === 'en'
-                  ? 'Enter by category: revenue, costs & expenses, cash reserve. AI will calculate break-even and payback periods in real-time.'
-                  : '分模块清晰录入：收入、成本与开支、现金备用金，AI 实时计算保本与回本。'}
-              </p>
-            </div>
+          <Card
+            variant="borderless"
+            className="shadow-xs"
+            title={
+              <Flex align="center" gap={8}>
+                <Wallet className="w-5 h-5 text-teal-700" />
+                {en ? 'Revenue, expenses & cash on hand' : '赚多少、花多少、兜里有多少现金'}
+              </Flex>
+            }
+          >
+            <Typography.Paragraph type="secondary" className="text-xs">
+              {en
+                ? 'Enter by category: revenue, costs & expenses, cash reserve. AI will calculate break-even and payback periods in real-time.'
+                : '分模块清晰录入：收入、成本与开支、现金备用金，AI 实时计算保本与回本。'}
+            </Typography.Paragraph>
 
             {/* 清晰模块化纵向流式排版 */}
-            <div className="flex flex-col space-y-6">
+            <div className="flex flex-col gap-4">
 
               {/* —— 模块 1：赚多少（收入模块） —— */}
-              <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-50/80 to-teal-50/40 border border-emerald-200 shadow-2xs space-y-4">
-                <div className="flex items-center justify-between flex-wrap gap-2 border-b border-emerald-100 pb-3">
-                  <h4 className="text-sm font-black text-emerald-950 flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4 text-emerald-600" />
-                    <span>{language === 'en' ? '1. Revenue (Monthly Income)' : '1. 赚多少（每月收入）'}</span>
-                  </h4>
-                  <span className="text-[12px] bg-emerald-100 text-emerald-800 font-bold px-2.5 py-0.5 rounded-full">
-                    {language === 'en' ? 'Monthly Inflow' : '月度现金流入'}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 gap-4">
+              <Card
+                size="small"
+                className="border-green-200"
+                styles={{ header: { background: '#f6ffed' } }}
+                title={
+                  <Flex align="center" gap={8}>
+                    <TrendingUp className="w-4 h-4 text-green-600" />
+                    {en ? '1. Revenue (monthly income)' : '1. 赚多少（每月收入）'}
+                  </Flex>
+                }
+                extra={<Tag color="green" className="me-0">{en ? 'Monthly inflow' : '月度现金流入'}</Tag>}
+              >
+                <Flex vertical gap={16}>
                   {/* F8 经营月均总流水 */}
-                  <div className="p-4 rounded-xl bg-white border-2 border-teal-200 shadow-2xs space-y-2.5 text-xs">
-                    <div className="flex items-center justify-between flex-wrap gap-2">
-                      <div>
-                        <label className="font-black text-slate-900 text-sm flex items-center gap-1.5">
-                          <span>{language === 'en' ? 'Average Monthly Total Revenue' : '经营月均总流水'}</span>
-                          <span className="text-[12px] bg-teal-600 text-white font-bold px-2 py-0.5 rounded-full">
-                            {language === 'en' ? 'Total Turnover' : '总营业额'}
-                          </span>
-                          <InfoTooltip language={language} text={language === 'en'
-                            ? 'In plain terms: all the cash customers pay into your pocket, before deducting purchasing, rent and labor! If you have church subsidies, charity donations or relief funds, list them separately below so they are not mistakenly counted as real operating revenue.'
-                            : '大白话：客人买单进你口袋的全部毛钱，尚未扣除进货、房租与人工！若有教会补助、慈善捐赠或救济资金，请在下方单独列出，不会被误计入真实经营占比。'} />
-                        </label>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => onOpenAiHelper?.(language === 'en' ? 'Is average monthly total revenue income or something else?' : '经营月均总流水是收入还是什么？')}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-teal-100 hover:bg-teal-200 text-teal-800 text-[13px] font-bold transition-colors cursor-pointer"
+                  <div>
+                    <Flex justify="space-between" align="center" wrap gap={8} className="mb-2">
+                      <Flex align="center" gap={6} wrap>
+                        <Typography.Text strong>{en ? 'Average monthly total revenue' : '经营月均总流水'}</Typography.Text>
+                        <Tag color="cyan" className="me-0">{en ? 'Total turnover' : '总营业额'}</Tag>
+                        <InfoTooltip
+                          language={language}
+                          text={
+                            en
+                              ? 'In plain terms: all the cash customers pay into your pocket, before deducting purchasing, rent and labor! If you have church subsidies, charity donations or relief funds, list them separately below so they are not mistakenly counted as real operating revenue.'
+                              : '大白话：客人买单进你口袋的全部毛钱，尚未扣除进货、房租与人工！若有教会补助、慈善捐赠或救济资金，请在下方单独列出，不会被误计入真实经营占比。'
+                          }
+                        />
+                      </Flex>
+                      <Flex align="center" gap={6}>
+                        <Button
+                          size="small"
+                          icon={<Sparkles className="w-3.5 h-3.5" />}
+                          onClick={() =>
+                            onOpenAiHelper?.(en ? 'Is average monthly total revenue income or something else?' : '经营月均总流水是收入还是什么？')
+                          }
                         >
-                          <Sparkles className="w-3 h-3 text-teal-600" />
-                          <span>{language === 'en' ? 'Ask AI' : 'AI解答'}</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setShowBenchmarkPanel((v) => !v)}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-[13px] font-bold transition-colors cursor-pointer"
-                        >
-                          <BarChart3 className="w-3 h-3 text-emerald-700" />
-                          <span>{language === 'en' ? 'Check Benchmarks' : '查基准'}</span>
-                        </button>
+                          {en ? 'Ask AI' : 'AI 解答'}
+                        </Button>
+                        <Button size="small" icon={<BarChart3 className="w-3.5 h-3.5" />} onClick={() => setShowBenchmarkPanel((v) => !v)}>
+                          {en ? 'Benchmarks' : '查基准'}
+                        </Button>
                         <SearchableSelect
                           value={formData.monthlyRevenue.currency}
                           onChange={(v) => handleRevenueCurrencyChange(v as CurrencyCode)}
                           options={compactCurrencyOptions}
-                          placeholder={language === 'en' ? 'Currency' : '币种'}
-                          controlClassName="px-2 py-1.5 rounded-lg border border-slate-300 font-bold bg-white text-slate-700 text-xs shadow-2xs whitespace-nowrap"
+                          placeholder={en ? 'Currency' : '币种'}
+                          controlClassName="text-xs"
                         />
-                      </div>
-                    </div>
+                      </Flex>
+                    </Flex>
                     {/* 反馈：不再手动填总额，由下方「按销量算出真实经营收入」的必填项自动算出，
                         和 COGS 的物料成本细则同一个思路——细项算总数，而不是让用户重复填一遍笼统总额。 */}
-                    <div className={`w-full p-3 border-2 rounded-xl font-black text-base shadow-2xs ${
-                      estimatedRevenue != null ? 'border-teal-200 bg-white text-slate-900' : 'border-dashed border-slate-300 bg-slate-50 text-slate-400'
-                    }`}>
+                    <div
+                      className={`px-3 py-2 rounded-lg border text-base ${
+                        estimatedRevenue != null
+                          ? 'border-teal-200 bg-white text-neutral-900 font-semibold'
+                          : 'border-dashed border-neutral-300 bg-neutral-50 text-neutral-400'
+                      }`}
+                    >
                       {estimatedRevenue != null
                         ? formatMoney(formData.monthlyRevenue.amount, formData.monthlyRevenue.currency)
-                        : (language === 'en' ? 'Fill in the required fields below to calculate' : '请先在下方填写必填项，自动算出')}
+                        : en
+                          ? 'Fill in the required fields below to calculate'
+                          : '请先在下方填写必填项，自动算出'}
                     </div>
                     {estimatedRevenue != null && (
-                      <p className="text-[13px] text-teal-700 font-semibold">
-                        {language === 'en'
+                      <Typography.Text type="secondary" className="text-xs block mt-1">
+                        {en
                           ? `= real operating revenue ${formatMoney(formData.monthlyRealOperatingRevenue.amount, formData.monthlyRealOperatingRevenue.currency)} + external grants`
                           : `= 真实经营收入 ${formatMoney(formData.monthlyRealOperatingRevenue.amount, formData.monthlyRealOperatingRevenue.currency)} + 外部支持款/机构赠款`}
-                      </p>
+                      </Typography.Text>
                     )}
 
-                    {showBenchmarkPanel && (() => {
-                      const benchmark = getIndustryBenchmark(formData.industry);
-                      const [lowUsd, highUsd] = benchmark.typicalMonthlyRevenueUsdRange;
-                      const low = convertToTargetCurrency({ amount: lowUsd, currency: 'USD' }, formData.baseCurrency);
-                      const high = convertToTargetCurrency({ amount: highUsd, currency: 'USD' }, formData.baseCurrency);
-                      return (
-                        <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 space-y-1.5">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[13px] font-black text-emerald-900">
-                              {language === 'en' ? benchmark.nameEn : benchmark.nameZh}
-                            </span>
-                            <button type="button" onClick={() => onOpenAiHelper?.(language === 'en' ? 'What are the average revenue and profit benchmarks across industries?' : '各行业大数据平均流水与利润基准是多少？')} className="text-[12px] text-emerald-700 underline cursor-pointer">
-                              {language === 'en' ? 'Ask AI for details' : 'AI 详细解答'}
-                            </button>
-                          </div>
-                          <p className="text-[13px] text-emerald-800">
-                            {language === 'en' ? 'Typical monthly revenue: ' : '同行月均流水参考区间：'}
-                            <span className="font-bold">{formatMoney(low, formData.baseCurrency)} – {formatMoney(high, formData.baseCurrency)}</span>
-                          </p>
-                          <p className="text-[12px] text-emerald-700">
-                            {language === 'en'
-                              ? `Gross margin ${benchmark.typicalGrossMargin} · Opex ratio ${benchmark.typicalOpexRatio} · Net margin ${benchmark.typicalNetMargin} · Cash runway ${benchmark.typicalCashRunway}`
-                              : `毛利率 ${benchmark.typicalGrossMargin} · 费用率 ${benchmark.typicalOpexRatio} · 净利率 ${benchmark.typicalNetMargin} · 现金跑道 ${benchmark.typicalCashRunway}`}
-                          </p>
-                          <p className="text-[11px] text-emerald-600">
-                            {language === 'en'
-                              ? `Converted from a USD reference range at an approximate rate — for directional comparison only, not an audited figure.`
-                              : `按近似汇率从美元参考区间换算为 ${formData.baseCurrency} 展示，仅供方向性参考，非精确审计数字。`}
-                          </p>
-                        </div>
-                      );
-                    })()}
+                    {showBenchmarkPanel &&
+                      (() => {
+                        const benchmark = getIndustryBenchmark(formData.industry);
+                        const [lowUsd, highUsd] = benchmark.typicalMonthlyRevenueUsdRange;
+                        const low = convertToTargetCurrency({ amount: lowUsd, currency: 'USD' }, formData.baseCurrency);
+                        const high = convertToTargetCurrency({ amount: highUsd, currency: 'USD' }, formData.baseCurrency);
+                        return (
+                          <Alert
+                            className="mt-2"
+                            type="success"
+                            title={
+                              <Flex justify="space-between" align="center" gap={8} wrap>
+                                <span>{en ? benchmark.nameEn : benchmark.nameZh}</span>
+                                <Button
+                                  type="link"
+                                  size="small"
+                                  className="px-0"
+                                  onClick={() =>
+                                    onOpenAiHelper?.(
+                                      en
+                                        ? 'What are the average revenue and profit benchmarks across industries?'
+                                        : '各行业大数据平均流水与利润基准是多少？'
+                                    )
+                                  }
+                                >
+                                  {en ? 'Ask AI for details' : 'AI 详细解答'}
+                                </Button>
+                              </Flex>
+                            }
+                            description={
+                              <>
+                                <div>
+                                  {en ? 'Typical monthly revenue: ' : '同行月均流水参考区间：'}
+                                  <strong>
+                                    {formatMoney(low, formData.baseCurrency)} – {formatMoney(high, formData.baseCurrency)}
+                                  </strong>
+                                </div>
+                                <div className="text-xs">
+                                  {en
+                                    ? `Gross margin ${benchmark.typicalGrossMargin} · Overhead ratio ${benchmark.typicalOpexRatio} · Net margin ${benchmark.typicalNetMargin} · Cash runway ${benchmark.typicalCashRunway}`
+                                    : `毛利率 ${benchmark.typicalGrossMargin} · 固定开销占比 ${benchmark.typicalOpexRatio} · 净利率 ${benchmark.typicalNetMargin} · 备用金 ${benchmark.typicalCashRunway}`}
+                                </div>
+                                <div className="text-xs opacity-70">
+                                  {en
+                                    ? 'Converted from a USD reference range at an approximate rate — for directional comparison only, not an audited figure.'
+                                    : `按近似汇率从美元参考区间换算为 ${formData.baseCurrency} 展示，仅供方向性参考，非精确审计数字。`}
+                                </div>
+                              </>
+                            }
+                          />
+                        );
+                      })()}
                   </div>
 
                   {/* 外部支持款 / 机构赠款（原「真实客户主营销售收入」手动输入已删除，
                       改由下方「按销量算出真实经营收入」必填项算出） */}
-                  <div className="p-4 rounded-xl bg-white border border-amber-200 space-y-2 text-xs">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <label className="font-bold text-amber-950 flex items-center gap-1.5">
-                          <span>{language === 'en' ? 'Of which: external support / institutional grants' : '其中：外部支持款 / 机构赠款'}</span>
-                          <InfoTooltip language={language} text={language === 'en' ? 'Business revenue truly paid by customers, excluding any loans from friends/family or relief subsidies.' : '排除任何亲友借款、救济补贴后，真正由客户买单带来的生意收入。'} />
-                        </label>
-                      </div>
+                  <div>
+                    <Flex justify="space-between" align="center" gap={8} className="mb-2">
+                      <Flex align="center" gap={6}>
+                        <Typography.Text strong>
+                          {en ? 'Of which: external support / institutional grants' : '其中：外部支持款 / 机构赠款'}
+                        </Typography.Text>
+                        <InfoTooltip
+                          language={language}
+                          text={
+                            en
+                              ? 'Business revenue truly paid by customers, excluding any loans from friends/family or relief subsidies.'
+                              : '排除任何亲友借款、救济补贴后，真正由客户买单带来的生意收入。'
+                          }
+                        />
+                      </Flex>
                       <SearchableSelect
                         value={formData.monthlyExternalGrants.currency}
-                        onChange={(v) =>
-                          updateMoney('monthlyExternalGrants', formData.monthlyExternalGrants.amount, v as CurrencyCode)
-                        }
+                        onChange={(v) => updateMoney('monthlyExternalGrants', formData.monthlyExternalGrants.amount, v as CurrencyCode)}
                         options={codeOnlyCurrencyOptions}
-                        placeholder={language === 'en' ? 'Currency' : '币种'}
-                        controlClassName="px-2 py-1 rounded border border-amber-300 font-bold bg-white text-amber-900 whitespace-nowrap"
+                        placeholder={en ? 'Currency' : '币种'}
+                        controlClassName="text-xs"
                       />
-                    </div>
+                    </Flex>
                     <NumberField
                       inputMode="numeric"
                       min={0}
-                      placeholder={language === 'en' ? 'Enter 0 if none' : '无则填 0'}
+                      placeholder={en ? 'Enter 0 if none' : '无则填 0'}
                       value={formData.monthlyExternalGrants.amount}
                       onChange={(v) => updateMoney('monthlyExternalGrants', v)}
-                      className="w-full p-2.5 border border-amber-300 rounded-xl font-bold text-amber-950 bg-white"
                     />
-                    <p className="text-[12px] text-amber-700">
-                      {language === 'en'
+                    <Typography.Text type="secondary" className="text-xs block mt-1">
+                      {en
                         ? 'Church subsidies, charity donations or relief funds listed here will not be miscounted as real customer revenue.'
                         : '教会补助、慈善捐赠或救济资金单独列出，不会误计为真实经营占比。'}
-                    </p>
-                    <p className="text-[12px] text-amber-800 bg-amber-100 border border-amber-300 rounded-lg p-1.5 font-semibold">
-                      {language === 'en'
-                        ? 'Reminder: in most places this is NOT taxable revenue, but it is not automatically excluded from "Taxes & Fees" below. Please confirm your local tax rules before filling that in.'
-                        : '提醒：这笔钱在大多数地区不属于应税营业收入，但不会自动从下方「税金及规费」里扣除，请自行核实当地税法后再填写税金一栏。'}
-                    </p>
+                    </Typography.Text>
+                    <Alert
+                      className="mt-2"
+                      type="warning"
+                      showIcon
+                      title={
+                        en
+                          ? 'Reminder: in most places this is NOT taxable revenue, but it is not automatically excluded from "Taxes & Fees" below. Please confirm your local tax rules before filling that in.'
+                          : '提醒：这笔钱在大多数地区不属于应税营业收入，但不会自动从下方「税金及规费」里扣除，请自行核实当地税法后再填写税金一栏。'
+                      }
+                    />
                   </div>
 
                   {/* 按销量算出真实经营收入：必填，二选一路径填完整（都填的话两者需一致） */}
-                  <div className={`p-4 rounded-xl bg-white border-2 space-y-3 text-xs ${revenueEstimateError ? 'border-rose-400' : 'border-teal-200'}`}>
-                    <div>
-                      <label className="font-black text-slate-900 text-sm flex items-center gap-1.5">
-                        <Sparkles className="w-3.5 h-3.5 text-teal-600" />
-                        <span>{language === 'en' ? 'Calculate real operating revenue from sales volume' : '按销量算出真实经营收入'}</span>
-                        <span className="text-rose-500">*</span>
-                      </label>
-                      <p className="text-[12px] text-slate-500 mt-0.5">
-                        {language === 'en'
-                          ? 'Fill in one of the two methods below completely (if you fill both, they must agree) — used to calculate "Real operating revenue" and "Average monthly total revenue" above.'
-                          : '下面两种算法选一种填完整即可（都填的话两者需要一致），用来自动算出上方「真实经营收入」与「经营月均总流水」。'}
-                      </p>
-                    </div>
+                  <Card
+                    size="small"
+                    className={revenueEstimateError ? 'border-red-400' : 'border-teal-200'}
+                    title={
+                      <Flex align="center" gap={6}>
+                        <Sparkles className="w-4 h-4 text-teal-700" />
+                        {en ? 'Calculate real operating revenue from sales volume' : '按销量算出真实经营收入'}
+                        <span className="text-red-500">*</span>
+                      </Flex>
+                    }
+                  >
+                    <Typography.Paragraph type="secondary" className="text-xs">
+                      {en
+                        ? 'Fill in one of the two methods below completely (if you fill both, they must agree) — used to calculate "Real operating revenue" and "Average monthly total revenue" above.'
+                        : '下面两种算法选一种填完整即可（都填的话两者需要一致），用来自动算出上方「真实经营收入」与「经营月均总流水」。'}
+                    </Typography.Paragraph>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="p-3 rounded-xl bg-teal-50/50 border border-teal-200 space-y-1.5">
-                        <span className="text-[12px] font-black text-teal-800">{language === 'en' ? 'Method 1: by units sold' : '方式一：按销量'}</span>
-                        <label className="text-[12px] font-bold text-slate-600 block">{language === 'en' ? 'Units sold / mo' : '月销售总量'}</label>
-                        <NumberField inputMode="numeric" min={0} value={formData.revenueDetailEstimate?.unitsSold || 0} onChange={(v) => updateRevenueDetail({ unitsSold: v || undefined })} className="w-full p-2 border border-teal-200 rounded-lg font-semibold bg-white" />
-                      </div>
-                      <div className="p-3 rounded-xl bg-teal-50/50 border border-teal-200 space-y-1.5">
-                        <span className="text-[12px] font-black text-teal-800">{language === 'en' ? 'Method 2: by foot traffic' : '方式二：按客流量'}</span>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <label className="text-[12px] font-bold text-slate-600 block">{language === 'en' ? 'Monthly foot traffic' : '月客流量'}</label>
-                            <NumberField inputMode="numeric" min={0} value={formData.revenueDetailEstimate?.monthlyFootfall || 0} onChange={(v) => updateRevenueDetail({ monthlyFootfall: v || undefined })} className="w-full p-2 border border-teal-200 rounded-lg font-semibold bg-white" />
-                          </div>
-                          <div>
-                            <label className="text-[12px] font-bold text-slate-600 block">{language === 'en' ? 'Conversion rate %' : '成交率(%)'}</label>
-                            <NumberField inputMode="numeric" min={0} value={formData.revenueDetailEstimate?.conversionRatePercent || 0} onChange={(v) => updateRevenueDetail({ conversionRatePercent: v || undefined })} className="w-full p-2 border border-teal-200 rounded-lg font-semibold bg-white" />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                    <Form layout="vertical" component="div">
+                      <Row gutter={12}>
+                        <Col xs={24} sm={12}>
+                          <Card size="small" className="bg-teal-50/50 h-full" title={en ? 'Method 1: by units sold' : '方式一：按销量'}>
+                            <Form.Item label={en ? 'Units sold / mo' : '月销售总量'} className="mb-0">
+                              <NumberField
+                                inputMode="numeric"
+                                min={0}
+                                value={formData.revenueDetailEstimate?.unitsSold || 0}
+                                onChange={(v) => updateRevenueDetail({ unitsSold: v || undefined })}
+                              />
+                            </Form.Item>
+                          </Card>
+                        </Col>
+                        <Col xs={24} sm={12} className="mt-3 sm:mt-0">
+                          <Card size="small" className="bg-teal-50/50 h-full" title={en ? 'Method 2: by foot traffic' : '方式二：按客流量'}>
+                            <Row gutter={8}>
+                              <Col span={12}>
+                                <Form.Item label={en ? 'Monthly foot traffic' : '月客流量'} className="mb-0">
+                                  <NumberField
+                                    inputMode="numeric"
+                                    min={0}
+                                    value={formData.revenueDetailEstimate?.monthlyFootfall || 0}
+                                    onChange={(v) => updateRevenueDetail({ monthlyFootfall: v || undefined })}
+                                  />
+                                </Form.Item>
+                              </Col>
+                              <Col span={12}>
+                                <Form.Item label={en ? 'Conversion rate %' : '成交率(%)'} className="mb-0">
+                                  <NumberField
+                                    inputMode="numeric"
+                                    min={0}
+                                    value={formData.revenueDetailEstimate?.conversionRatePercent || 0}
+                                    onChange={(v) => updateRevenueDetail({ conversionRatePercent: v || undefined })}
+                                  />
+                                </Form.Item>
+                              </Col>
+                            </Row>
+                          </Card>
+                        </Col>
+                      </Row>
 
-                    <div>
-                      <label className="text-[12px] font-bold text-slate-600 block">{language === 'en' ? 'Avg unit price (used by both methods)' : '客单价/平均单价（两种方式都要用到）'}</label>
-                      <NumberField inputMode="numeric" min={0} value={formData.revenueDetailEstimate?.avgUnitPrice || 0} onChange={(v) => updateRevenueDetail({ avgUnitPrice: v || undefined })} className="w-full sm:w-1/2 p-2 border border-slate-300 rounded-lg font-semibold" />
-                    </div>
+                      <Form.Item
+                        label={en ? 'Avg unit price (used by both methods)' : '客单价/平均单价（两种方式都要用到）'}
+                        className="mt-3 mb-0"
+                      >
+                        <NumberField
+                          inputMode="numeric"
+                          min={0}
+                          value={formData.revenueDetailEstimate?.avgUnitPrice || 0}
+                          onChange={(v) => updateRevenueDetail({ avgUnitPrice: v || undefined })}
+                          className="w-full sm:w-1/2"
+                        />
+                      </Form.Item>
+                    </Form>
 
                     {renderInlineAnomalies('revenueDetailEstimate')}
 
                     {estimatedRevenue != null && (
-                      <p className="text-[13px] font-semibold text-teal-700">
-                        {language === 'en'
+                      <Typography.Text className="text-teal-700 block mt-2">
+                        {en
                           ? `≈ ${Math.round(resolvedUnitsSold(formData.revenueDetailEstimate) || 0)} orders/mo × unit price = real operating revenue ${formatMoney(estimatedRevenue, formData.monthlyRevenue.currency)}`
                           : `月成单数约 ${Math.round(resolvedUnitsSold(formData.revenueDetailEstimate) || 0)} 件 × 客单价 = 真实经营收入约 ${formatMoney(estimatedRevenue, formData.monthlyRevenue.currency)}`}
-                      </p>
+                      </Typography.Text>
                     )}
 
-                    {revenueEstimateError && (
-                      <p className="text-[12px] text-rose-600 font-bold flex items-start gap-1">
-                        <span>⚠️</span><span>{revenueEstimateError}</span>
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
+                    {revenueEstimateError && <Alert className="mt-2" type="error" showIcon title={revenueEstimateError} />}
+                  </Card>
+                </Flex>
+              </Card>
 
 
               {/* —— 模块 2：花多少（成本与开支模块） —— */}
-              <div className="p-5 rounded-2xl bg-gradient-to-br from-rose-50/70 to-slate-50 border border-rose-200 shadow-2xs space-y-4">
-                <div className="flex items-center justify-between flex-wrap gap-2 border-b border-rose-100 pb-3">
-                  <h4 className="text-sm font-black text-rose-950 flex items-center gap-2">
-                    <Layers className="w-4 h-4 text-rose-600" />
-                    <span>{language === 'en' ? '2. Costs & Expenses (Monthly Outflow)' : '2. 花多少（每月成本与开支）'}</span>
-                  </h4>
-                  <span className="text-[12px] bg-rose-100 text-rose-800 font-bold px-2.5 py-0.5 rounded-full">
-                    {language === 'en' ? 'Monthly Expenses' : '月度运营开支'}
-                  </span>
-                </div>
+              <Card
+                size="small"
+                className="border-red-200"
+                styles={{ header: { background: '#fff1f0' } }}
+                title={
+                  <Flex align="center" gap={8}>
+                    <Layers className="w-4 h-4 text-red-500" />
+                    {en ? '2. Costs & expenses (monthly outflow)' : '2. 花多少（每月成本与开支）'}
+                  </Flex>
+                }
+                extra={<Tag color="red" className="me-0">{en ? 'Monthly expenses' : '月度开支'}</Tag>}
+              >
+                <Flex vertical gap={12}>
 
                 <SmartLedgerEntry
                   language={language}
@@ -2420,68 +2517,64 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     反馈原文：这些都不应该分类列出，应该直接在花费清单里展示。
                     固定类目（房租/人工/水电/税金/还贷）结构上始终存在，「删除」即把金额清零；
                     动态类目（材料/其他开支/注册/设备）可随时整行新增或删除。 */}
-                <div className="p-4 rounded-xl bg-white border border-slate-200 space-y-2 text-xs">
+                <div className="p-4 rounded-lg bg-white border border-neutral-200 space-y-2 text-xs">
                   <div className="flex items-center justify-between flex-wrap gap-2">
-                    <span className="text-[13px] font-black text-slate-900">
+                    <span className="text-[13px] font-bold text-neutral-900">
                       {language === 'en' ? 'Your expense items (add/remove/edit)' : '你的花费清单（可增删改）'}
                       {(cogsTouched || opexTouched) && (
-                        <span className="ml-1.5 inline-block text-[11px] px-1 py-0.5 rounded bg-amber-100 text-amber-700 font-bold align-middle">{language === 'en' ? 'Manually adjusted' : '已手动调整'}</span>
+                        <Tag color="gold" className="ml-1.5">{language === 'en' ? 'Manually adjusted' : '已手动调整'}</Tag>
                       )}
                     </span>
                     <div className="flex items-center gap-2">
-                      <button
-                        type="button"
+                      <Button size="small" icon={<Sparkles className="w-3.5 h-3.5" />}
+
                         onClick={() => onOpenAiHelper?.(language === 'en' ? 'How should I estimate my purchasing/material cost? Does it include freight?' : '进货成本大概怎么算？包含运费吗？')}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-700 text-[13px] font-bold transition-colors cursor-pointer"
-                      >
-                        <Sparkles className="w-3 h-3 text-teal-600" />
-                        <span>{language === 'en' ? 'Ask AI' : 'AI咨询'}</span>
-                      </button>
-                      <button
-                        type="button"
+
+                      ><span>{language === 'en' ? 'Ask AI' : 'AI咨询'}</span>
+                      </Button>
+                      <Button size="small" icon={<RefreshCw className="w-3.5 h-3.5" />}
+
                         onClick={restoreAiSuggestion}
-                        className="text-[12px] px-2 py-0.5 rounded bg-rose-100 text-rose-700 font-bold hover:bg-rose-200 cursor-pointer"
-                      >
-                        <RefreshCw className="inline w-3 h-3 mr-0.5" />{language === 'en' ? 'Restore AI Suggestion' : '恢复 AI 建议'}
-                      </button>
+
+                      >{language === 'en' ? 'Restore AI Suggestion' : '恢复 AI 建议'}
+                      </Button>
                     </div>
                   </div>
-                  {cogsFieldMeta.tip && <p className="text-[12px] text-slate-500">{cogsFieldMeta.tip}</p>}
+                  {cogsFieldMeta.tip && <p className="text-[12px] text-neutral-500">{cogsFieldMeta.tip}</p>}
 
                   {/* 材料/教学耗材类条目（AI 按行业推断，可自由增删改） */}
                   {(formData.dynamicCogsItems || []).map((it) => (
                     <div key={it.id} className="flex items-center gap-1.5 flex-wrap">
-                      <input
-                        type="text"
+                      <Input size="small" className="basis-full sm:basis-0 sm:flex-1 min-w-[7rem]"
+
                         value={it.label}
                         onChange={(e) => updateDynamicCogsItem(it.id, { label: e.target.value })}
-                        className="flex-1 min-w-[7rem] p-1.5 border border-slate-200 rounded-lg font-semibold text-slate-800"
-                      />
+                        />
                       <NumberField
                         value={it.quantity || 0}
                         onChange={(v) => updateDynamicCogsItem(it.id, { quantity: v || undefined })}
-                        className="w-16 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono text-right"
+                        className="w-16 shrink-0 p-1.5 border border-neutral-200 rounded-lg tabular-nums text-right"
                         placeholder={language === 'en' ? 'Qty' : '进货量'}
                         title={language === 'en' ? 'Purchase quantity (optional)' : '进货量（选填）'}
                       />
-                      <span className="text-[11px] text-slate-500 shrink-0">×</span>
+                      <span className="text-[11px] text-neutral-500 shrink-0">×</span>
                       <NumberField
                         value={it.unitCost || 0}
                         onChange={(v) => updateDynamicCogsItem(it.id, { unitCost: v || undefined })}
-                        className="w-20 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono text-right"
+                        className="w-20 shrink-0 p-1.5 border border-neutral-200 rounded-lg tabular-nums text-right"
                         placeholder={language === 'en' ? 'Unit cost' : '进货单价'}
                         title={language === 'en' ? 'Unit purchase cost (optional)' : '进货单价（选填）'}
                       />
-                      <span className="text-[11px] text-slate-500 shrink-0">=</span>
+                      <span className="text-[11px] text-neutral-500 shrink-0">=</span>
                       <NumberField
                         value={it.value}
                         onChange={(v) => updateDynamicCogsItem(it.id, { value: v })}
                         disabled={Boolean(it.quantity && it.unitCost)}
-                        className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right disabled:bg-slate-50 disabled:text-slate-500"
+                        className="w-24 shrink-0 p-1.5 border border-neutral-200 rounded-lg tabular-nums font-semibold text-right disabled:bg-neutral-50 disabled:text-neutral-500"
                         placeholder={it.suggestedAmount ? `${language === 'en' ? 'AI suggests' : 'AI建议'} ${it.suggestedAmount}` : (language === 'en' ? 'Amount' : '金额')}
                         title={it.suggestedAmount ? (language === 'en' ? `AI suggested reference amount: ${it.suggestedAmount} (for reference only, please fill in your real figure)` : `AI 建议参考金额：${it.suggestedAmount}（仅供参考，请填你的真实数字）`) : (language === 'en' ? 'Please fill in your real monthly amount, or fill quantity × unit cost above' : '请填你的真实月度金额，或改为在左边填进货量×进货单价')}
                       />
-                      <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.baseCurrency}</span>
+                      <span className="text-[12px] text-neutral-500 whitespace-nowrap shrink-0 pl-0.5">{formData.baseCurrency}</span>
                       {renderCyclePicker(
                         it,
                         (cycle) => updateDynamicCogsItem(it.id, { cycle }),
@@ -2493,39 +2586,35 @@ export const AssessmentForm: React.FC<FormProps> = ({
                           language={language}
                         />
                       ) : null}
-                      <button type="button" onClick={() => removeDynamicCogsItem(it.id)} className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer shrink-0">
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      <Button size="small" type="text" danger icon={<Trash2 className="w-3.5 h-3.5" />} className="shrink-0" onClick={() => removeDynamicCogsItem(it.id)} />
                     </div>
                   ))}
 
                   {/* 修复：此前 COGS 明细只能靠「AI结构推断成功」或在高级设置里重新选一次行业模板
                       才能生成条目——本地没配置 AI 密钥时 AI 推断必定失败，普通用户实际上完全
                       没有办法给 COGS 添加自定义行项目，这里补一个手动新增入口兜底。 */}
-                  <button type="button" onClick={addDynamicCogsItem} className="text-[12px] px-2 py-1 rounded border border-slate-300 text-slate-700 font-bold hover:bg-slate-100 cursor-pointer">
+                  <Button size="small" onClick={addDynamicCogsItem}>
                     {language === 'en' ? '+ Add material cost item' : '＋ 添加物料成本项'}
-                  </button>
+                  </Button>
 
                   {/* 固定类目：场地租金/员工工资/水电网络/税金及规费/偿还债务——结构上始终存在，
                       「删除」即把金额清零，与其他条目共用同一份清单展示，不再单独分栏。 */}
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="flex-1 min-w-[7rem] p-1.5 font-semibold text-slate-800">{language === 'en' ? 'Rent & Property' : '场地租金与物业'}</span>
+                    <span className="basis-full sm:basis-0 sm:flex-1 min-w-[7rem] font-medium text-neutral-800">{language === 'en' ? 'Rent & Property' : '场地租金与物业'}</span>
                     <NumberField
                       inputMode="numeric"
                       min={0}
                       value={formData.rentCost.amount}
                       onChange={(v) => updateMoney('rentCost', v)}
-                      className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                      className="w-24 shrink-0 p-1.5 border border-neutral-200 rounded-lg tabular-nums font-semibold text-right"
                     />
-                    <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.rentCost.currency}</span>
+                    <span className="text-[12px] text-neutral-500 whitespace-nowrap shrink-0 pl-0.5">{formData.rentCost.currency}</span>
                     {renderCyclePicker(
                       formData.rentCost,
                       (cycle) => updateMoneyCycle('rentCost', cycle),
                       (months) => updateMoneyAmortization('rentCost', months)
                     )}
-                    <button type="button" onClick={() => updateMoney('rentCost', 0)} title={language === 'en' ? 'Reset to 0 (fixed category, cannot remove the row)' : '清零该项（此为固定类目，不可整行移除）'} className="p-1 text-slate-400 hover:text-amber-600 cursor-pointer shrink-0">
-                      <Eraser className="w-3.5 h-3.5" />
-                    </button>
+                    <Button size="small" type="text" icon={<Eraser className="w-3.5 h-3.5" />} className="shrink-0" onClick={() => updateMoney('rentCost', 0)} title={language === 'en' ? 'Reset to 0 (fixed category, cannot remove the row)' : '清零该项（此为固定类目，不可整行移除）'} />
                   </div>
 
                   {needsLaborSplitPrompt && (
@@ -2536,12 +2625,12 @@ export const AssessmentForm: React.FC<FormProps> = ({
                           : `毛利口径已按会计准则调整：${directLaborFieldMeta.who}的工资属于营业成本，要在算毛利之前扣除。你现在把全部人工都填在「管理与行政人工」里，毛利率会偏高，请把一线人员的工资拆到「直接服务人工」一栏。`}
                       </p>
                       <div className="flex flex-wrap gap-2">
-                        <button type="button" onClick={moveAllLaborToDirect} className="text-[12px] px-2 py-1 rounded border border-amber-400 bg-white font-bold text-amber-800 hover:bg-amber-100 cursor-pointer">
+                        <Button size="small" onClick={moveAllLaborToDirect}>
                           {language === 'en' ? 'Move all labor to direct labor (adjust afterwards)' : '全部转为直接服务人工（之后再把行政人员的部分改回去）'}
-                        </button>
-                        <button type="button" onClick={keepLaborAsManagement} className="text-[12px] px-2 py-1 rounded border border-slate-300 bg-white font-bold text-slate-700 hover:bg-slate-100 cursor-pointer">
+                        </Button>
+                        <Button size="small" onClick={keepLaborAsManagement}>
                           {language === 'en' ? 'All of it is admin/management staff, keep as is' : '都是行政/管理人员，保持不变'}
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   )}
@@ -2549,25 +2638,23 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   {showDirectLaborRow && (
                     <div className="space-y-0.5">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="flex-1 min-w-[7rem] p-1.5 font-semibold text-slate-800">{directLaborFieldMeta.label}</span>
+                        <span className="basis-full sm:basis-0 sm:flex-1 min-w-[7rem] font-medium text-neutral-800">{directLaborFieldMeta.label}</span>
                         <NumberField
                           inputMode="numeric"
                           min={0}
                           value={formData.directLaborCost?.amount || 0}
                           onChange={(v) => updateMoney('directLaborCost', v)}
-                          className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                          className="w-24 shrink-0 p-1.5 border border-neutral-200 rounded-lg tabular-nums font-semibold text-right"
                         />
-                        <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.directLaborCost?.currency || formData.laborCost.currency}</span>
+                        <span className="text-[12px] text-neutral-500 whitespace-nowrap shrink-0 pl-0.5">{formData.directLaborCost?.currency || formData.laborCost.currency}</span>
                         {renderCyclePicker(
                           formData.directLaborCost || {},
                           (cycle) => updateMoneyCycle('directLaborCost', cycle),
                           (months) => updateMoneyAmortization('directLaborCost', months)
                         )}
-                        <button type="button" onClick={() => updateMoney('directLaborCost', 0)} title={language === 'en' ? 'Reset to 0 (fixed category, cannot remove the row)' : '清零该项（此为固定类目，不可整行移除）'} className="p-1 text-slate-400 hover:text-amber-600 cursor-pointer shrink-0">
-                          <Eraser className="w-3.5 h-3.5" />
-                        </button>
+                        <Button size="small" type="text" icon={<Eraser className="w-3.5 h-3.5" />} className="shrink-0" onClick={() => updateMoney('directLaborCost', 0)} title={language === 'en' ? 'Reset to 0 (fixed category, cannot remove the row)' : '清零该项（此为固定类目，不可整行移除）'} />
                       </div>
-                      <p className="px-1.5 text-[11px] text-slate-500 leading-relaxed">
+                      <p className="px-1.5 text-[11px] text-neutral-500 leading-relaxed">
                         {language === 'en'
                           ? `Wages of ${directLaborFieldMeta.who}. Counted as cost of revenue (deducted before gross profit). Front desk, admin, enrollment/sales and manager pay goes in the next row.`
                           : `${directLaborFieldMeta.who}的工资/课酬，属于营业成本，在算毛利之前扣除；前台、行政、招生、店长等人员工资请填在下一行。`}
@@ -2576,7 +2663,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   )}
 
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="flex-1 min-w-[7rem] p-1.5 font-semibold text-slate-800">
+                    <span className="basis-full sm:basis-0 sm:flex-1 min-w-[7rem] font-medium text-neutral-800">
                       {showDirectLaborRow
                         ? (language === 'en' ? 'Admin & Management Staff Wages' : '管理与行政人工（前台/行政/招生/店长）')
                         : (language === 'en' ? 'Staff Wages & Labor Costs' : '员工工资与人工支出')}
@@ -2586,37 +2673,33 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       min={0}
                       value={formData.laborCost.amount}
                       onChange={(v) => updateMoney('laborCost', v)}
-                      className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                      className="w-24 shrink-0 p-1.5 border border-neutral-200 rounded-lg tabular-nums font-semibold text-right"
                     />
-                    <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.laborCost.currency}</span>
+                    <span className="text-[12px] text-neutral-500 whitespace-nowrap shrink-0 pl-0.5">{formData.laborCost.currency}</span>
                     {renderCyclePicker(
                       formData.laborCost,
                       (cycle) => updateMoneyCycle('laborCost', cycle),
                       (months) => updateMoneyAmortization('laborCost', months)
                     )}
-                    <button type="button" onClick={() => updateMoney('laborCost', 0)} title={language === 'en' ? 'Reset to 0 (fixed category, cannot remove the row)' : '清零该项（此为固定类目，不可整行移除）'} className="p-1 text-slate-400 hover:text-amber-600 cursor-pointer shrink-0">
-                      <Eraser className="w-3.5 h-3.5" />
-                    </button>
+                    <Button size="small" type="text" icon={<Eraser className="w-3.5 h-3.5" />} className="shrink-0" onClick={() => updateMoney('laborCost', 0)} title={language === 'en' ? 'Reset to 0 (fixed category, cannot remove the row)' : '清零该项（此为固定类目，不可整行移除）'} />
                   </div>
 
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="flex-1 min-w-[7rem] p-1.5 font-semibold text-slate-800">{language === 'en' ? 'Utilities, Internet & Misc.' : '水电网络杂费'}</span>
+                    <span className="basis-full sm:basis-0 sm:flex-1 min-w-[7rem] font-medium text-neutral-800">{language === 'en' ? 'Utilities, Internet & Misc.' : '水电网络杂费'}</span>
                     <NumberField
                       inputMode="numeric"
                       min={0}
                       value={formData.utilityCost.amount}
                       onChange={(v) => updateMoney('utilityCost', v)}
-                      className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                      className="w-24 shrink-0 p-1.5 border border-neutral-200 rounded-lg tabular-nums font-semibold text-right"
                     />
-                    <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.utilityCost.currency}</span>
+                    <span className="text-[12px] text-neutral-500 whitespace-nowrap shrink-0 pl-0.5">{formData.utilityCost.currency}</span>
                     {renderCyclePicker(
                       formData.utilityCost,
                       (cycle) => updateMoneyCycle('utilityCost', cycle),
                       (months) => updateMoneyAmortization('utilityCost', months)
                     )}
-                    <button type="button" onClick={() => updateMoney('utilityCost', 0)} title={language === 'en' ? 'Reset to 0 (fixed category, cannot remove the row)' : '清零该项（此为固定类目，不可整行移除）'} className="p-1 text-slate-400 hover:text-amber-600 cursor-pointer shrink-0">
-                      <Eraser className="w-3.5 h-3.5" />
-                    </button>
+                    <Button size="small" type="text" icon={<Eraser className="w-3.5 h-3.5" />} className="shrink-0" onClick={() => updateMoney('utilityCost', 0)} title={language === 'en' ? 'Reset to 0 (fixed category, cannot remove the row)' : '清零该项（此为固定类目，不可整行移除）'} />
                   </div>
 
                   {/* 修复：otherOpex 是 costAggregation.ts 里真实参与"花费清单合计"计算的字段
@@ -2625,58 +2708,54 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       清单合计就会悄悄比用户在页面上能看到的逐行相加结果多出一块，用户根本无从
                       核实这笔钱是什么。补上这一行，让它跟房租/人工/水电一样可见、可核实、可清零。 */}
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="flex-1 min-w-[7rem] p-1.5 font-semibold text-slate-800">{language === 'en' ? 'Other Daily Operating Expenses' : '其他日常经营开销'}</span>
+                    <span className="basis-full sm:basis-0 sm:flex-1 min-w-[7rem] font-medium text-neutral-800">{language === 'en' ? 'Other Daily Operating Expenses' : '其他日常经营开销'}</span>
                     <NumberField
                       inputMode="numeric"
                       min={0}
                       value={formData.otherOpex.amount}
                       onChange={(v) => updateMoney('otherOpex', v)}
-                      className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                      className="w-24 shrink-0 p-1.5 border border-neutral-200 rounded-lg tabular-nums font-semibold text-right"
                     />
-                    <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.otherOpex.currency}</span>
+                    <span className="text-[12px] text-neutral-500 whitespace-nowrap shrink-0 pl-0.5">{formData.otherOpex.currency}</span>
                     {renderCyclePicker(
                       formData.otherOpex,
                       (cycle) => updateMoneyCycle('otherOpex', cycle),
                       (months) => updateMoneyAmortization('otherOpex', months)
                     )}
-                    <button type="button" onClick={() => updateMoney('otherOpex', 0)} title={language === 'en' ? 'Reset to 0 (fixed category, cannot remove the row)' : '清零该项（此为固定类目，不可整行移除）'} className="p-1 text-slate-400 hover:text-amber-600 cursor-pointer shrink-0">
-                      <Eraser className="w-3.5 h-3.5" />
-                    </button>
+                    <Button size="small" type="text" icon={<Eraser className="w-3.5 h-3.5" />} className="shrink-0" onClick={() => updateMoney('otherOpex', 0)} title={language === 'en' ? 'Reset to 0 (fixed category, cannot remove the row)' : '清零该项（此为固定类目，不可整行移除）'} />
                   </div>
 
                   <div className="space-y-1.5">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="flex-1 min-w-[7rem] p-1.5 font-semibold text-slate-800">{language === 'en' ? 'Taxes & Fees' : '税金及规费'}</span>
+                      <span className="basis-full sm:basis-0 sm:flex-1 min-w-[7rem] font-medium text-neutral-800">{language === 'en' ? 'Taxes & Fees' : '税金及规费'}</span>
                       <NumberField
                         inputMode="numeric"
                         min={0}
                         value={formData.taxCost.amount}
                         onChange={(v) => updateMoney('taxCost', v)}
-                        className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                        className="w-24 shrink-0 p-1.5 border border-neutral-200 rounded-lg tabular-nums font-semibold text-right"
                       />
-                      <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.taxCost.currency}</span>
+                      <span className="text-[12px] text-neutral-500 whitespace-nowrap shrink-0 pl-0.5">{formData.taxCost.currency}</span>
                       {renderCyclePicker(
                         formData.taxCost,
                         (cycle) => updateMoneyCycle('taxCost', cycle),
                         (months) => updateMoneyAmortization('taxCost', months)
                       )}
-                      <button type="button" onClick={() => updateMoney('taxCost', 0)} title={language === 'en' ? 'Reset to 0 (fixed category, cannot remove the row)' : '清零该项（此为固定类目，不可整行移除）'} className="p-1 text-slate-400 hover:text-amber-600 cursor-pointer shrink-0">
-                        <Eraser className="w-3.5 h-3.5" />
-                      </button>
+                      <Button size="small" type="text" icon={<Eraser className="w-3.5 h-3.5" />} className="shrink-0" onClick={() => updateMoney('taxCost', 0)} title={language === 'en' ? 'Reset to 0 (fixed category, cannot remove the row)' : '清零该项（此为固定类目，不可整行移除）'} />
                       {formData.taxCost.amount > 0 && (
-                        <button
-                          type="button"
+                        <Button size="small" className="shrink-0"
+
                           onClick={() => updateMoney('taxCost', Math.round((Number(formData.taxCost.amount) || 0) / 12))}
-                          className="text-[11px] px-2 py-0.5 rounded border border-slate-300 text-slate-600 font-bold hover:bg-slate-100 cursor-pointer shrink-0"
+
                           title={language === 'en' ? 'I entered an annual amount — convert to monthly' : '我填的是年度金额，帮我换算成月度'}
                         >
                           {language === 'en' ? '÷12 (annual → monthly)' : '按年填的？÷12'}
-                        </button>
+                        </Button>
                       )}
                     </div>
                     {(formData.dynamicTaxItems || []).length > 0 && (
-                      <div className="space-y-1.5 pl-3 border-l-2 border-slate-200 ml-1.5">
-                        <p className="text-[11px] text-slate-500 leading-relaxed">
+                      <div className="space-y-1.5 pl-3 border-l-2 border-neutral-200 ml-1.5">
+                        <p className="text-[11px] text-neutral-500 leading-relaxed">
                           {(formData.taxCost.amount || 0) > 0
                             ? (language === 'en'
                                 ? 'Tax items recorded via smart bookkeeping (NOT counted: the "Taxes & Fees" amount above takes precedence):'
@@ -2687,28 +2766,25 @@ export const AssessmentForm: React.FC<FormProps> = ({
                         </p>
                         {(formData.dynamicTaxItems || []).map((it) => (
                           <div key={it.id} className="flex items-center gap-1.5 flex-wrap">
-                            <input
-                              type="text"
+                            <Input size="small" className="basis-full sm:basis-0 sm:flex-1 min-w-[7rem]"
+
                               value={it.label}
                               onChange={(e) => updateDynamicTaxItem(it.id, { label: e.target.value })}
-                              className="flex-1 min-w-[7rem] p-1.5 border border-slate-200 rounded-lg font-semibold text-slate-800"
-                            />
+                              />
                             <NumberField
                               min={0}
                               value={it.value}
                               onChange={(v) => updateDynamicTaxItem(it.id, { value: Math.max(0, v) })}
-                              className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                              className="w-24 shrink-0 p-1.5 border border-neutral-200 rounded-lg tabular-nums font-semibold text-right"
                             />
-                            <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.baseCurrency}</span>
-                            <button type="button" onClick={() => removeDynamicTaxItem(it.id)} className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer shrink-0">
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            <span className="text-[12px] text-neutral-500 whitespace-nowrap shrink-0 pl-0.5">{formData.baseCurrency}</span>
+                            <Button size="small" type="text" danger icon={<Trash2 className="w-3.5 h-3.5" />} className="shrink-0" onClick={() => removeDynamicTaxItem(it.id)} />
                           </div>
                         ))}
                       </div>
                     )}
                     {/* 反馈问题1第1/3层：默认值应有来源标注，数据不全时诚实告知，而不是一个空白框 */}
-                    <p className="text-[11px] text-slate-500 pl-1.5 leading-relaxed">
+                    <p className="text-[11px] text-neutral-500 pl-1.5 leading-relaxed">
                       {formData.regionCountry
                         ? (language === 'en'
                             ? `Reference for ${regulatoryEstimate.countryLabel}: ${regulatoryEstimate.corporateTaxRateHint}. ${regulatoryEstimate.sourceNote}`
@@ -2731,45 +2807,41 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       两者性质不同，拆成两行各自可填/可选周期。旧的 existingDebtMonthlyPayment
                       字段不再作为编辑入口，只在存量项目里由上面的初始化逻辑一次性搬进"本金"。 */}
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="flex-1 min-w-[7rem] p-1.5 font-semibold text-slate-800">{language === 'en' ? 'Monthly Debt Repayment — Principal' : '每月偿还债务 - 本金'}</span>
+                    <span className="basis-full sm:basis-0 sm:flex-1 min-w-[7rem] font-medium text-neutral-800">{language === 'en' ? 'Monthly Debt Repayment — Principal' : '每月偿还债务 - 本金'}</span>
                     <NumberField
                       inputMode="numeric"
                       min={0}
                       placeholder={language === 'en' ? 'Enter 0 if no debt' : '无债务填 0'}
                       value={formData.existingDebtMonthlyPrincipal?.amount || 0}
                       onChange={(v) => updateMoney('existingDebtMonthlyPrincipal', v)}
-                      className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                      className="w-24 shrink-0 p-1.5 border border-neutral-200 rounded-lg tabular-nums font-semibold text-right"
                     />
-                    <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.existingDebtMonthlyPrincipal?.currency || formData.baseCurrency}</span>
+                    <span className="text-[12px] text-neutral-500 whitespace-nowrap shrink-0 pl-0.5">{formData.existingDebtMonthlyPrincipal?.currency || formData.baseCurrency}</span>
                     {renderCyclePicker(
                       formData.existingDebtMonthlyPrincipal || { amount: 0, currency: formData.baseCurrency },
                       (cycle) => updateMoneyCycle('existingDebtMonthlyPrincipal', cycle),
                       (months) => updateMoneyAmortization('existingDebtMonthlyPrincipal', months)
                     )}
-                    <button type="button" onClick={() => updateMoney('existingDebtMonthlyPrincipal', 0)} title={language === 'en' ? 'Reset to 0 (fixed category, cannot remove the row)' : '清零该项（此为固定类目，不可整行移除）'} className="p-1 text-slate-400 hover:text-amber-600 cursor-pointer shrink-0">
-                      <Eraser className="w-3.5 h-3.5" />
-                    </button>
+                    <Button size="small" type="text" icon={<Eraser className="w-3.5 h-3.5" />} className="shrink-0" onClick={() => updateMoney('existingDebtMonthlyPrincipal', 0)} title={language === 'en' ? 'Reset to 0 (fixed category, cannot remove the row)' : '清零该项（此为固定类目，不可整行移除）'} />
                   </div>
 
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="flex-1 min-w-[7rem] p-1.5 font-semibold text-slate-800">{language === 'en' ? 'Monthly Debt Repayment — Interest' : '每月偿还债务 - 利息'}</span>
+                    <span className="basis-full sm:basis-0 sm:flex-1 min-w-[7rem] font-medium text-neutral-800">{language === 'en' ? 'Monthly Debt Repayment — Interest' : '每月偿还债务 - 利息'}</span>
                     <NumberField
                       inputMode="numeric"
                       min={0}
                       placeholder={language === 'en' ? 'Enter 0 if no interest' : '无利息填 0'}
                       value={formData.existingDebtMonthlyInterest?.amount || 0}
                       onChange={(v) => updateMoney('existingDebtMonthlyInterest', v)}
-                      className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                      className="w-24 shrink-0 p-1.5 border border-neutral-200 rounded-lg tabular-nums font-semibold text-right"
                     />
-                    <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.existingDebtMonthlyInterest?.currency || formData.baseCurrency}</span>
+                    <span className="text-[12px] text-neutral-500 whitespace-nowrap shrink-0 pl-0.5">{formData.existingDebtMonthlyInterest?.currency || formData.baseCurrency}</span>
                     {renderCyclePicker(
                       formData.existingDebtMonthlyInterest || { amount: 0, currency: formData.baseCurrency },
                       (cycle) => updateMoneyCycle('existingDebtMonthlyInterest', cycle),
                       (months) => updateMoneyAmortization('existingDebtMonthlyInterest', months)
                     )}
-                    <button type="button" onClick={() => updateMoney('existingDebtMonthlyInterest', 0)} title={language === 'en' ? 'Reset to 0 (fixed category, cannot remove the row)' : '清零该项（此为固定类目，不可整行移除）'} className="p-1 text-slate-400 hover:text-amber-600 cursor-pointer shrink-0">
-                      <Eraser className="w-3.5 h-3.5" />
-                    </button>
+                    <Button size="small" type="text" icon={<Eraser className="w-3.5 h-3.5" />} className="shrink-0" onClick={() => updateMoney('existingDebtMonthlyInterest', 0)} title={language === 'en' ? 'Reset to 0 (fixed category, cannot remove the row)' : '清零该项（此为固定类目，不可整行移除）'} />
                   </div>
                   {renderInlineAnomalies('existingDebtMonthlyPrincipal')}
 
@@ -2777,58 +2849,56 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       与上面的条目共用同一份清单展示。 */}
                   {(formData.dynamicRegistrationCostItems || []).map((it) => (
                     <div key={it.id} className="flex items-center gap-1.5 flex-wrap">
-                      <input
-                        type="text"
+                      <Input size="small" className="basis-full sm:basis-0 sm:flex-1 min-w-[7rem]"
+
                         value={it.label}
                         onChange={(e) => updateDynamicRegistrationItem(it.id, { label: e.target.value })}
                         placeholder={language === 'en' ? 'e.g. Business license' : '例如：营业执照'}
-                        className="flex-1 min-w-[7rem] p-1.5 border border-slate-200 rounded-lg font-semibold text-slate-800"
-                      />
+                        />
                       <NumberField
                         min={0}
                         value={it.amount}
                         onChange={(v) => updateDynamicRegistrationItem(it.id, { amount: v })}
-                        className="w-20 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                        className="w-20 shrink-0 p-1.5 border border-neutral-200 rounded-lg tabular-nums font-semibold text-right"
                       />
-                      <select
+                      <Select
+                        size="small"
+                        className="shrink-0"
+                        popupMatchSelectWidth={false}
                         value={it.feeType}
-                        onChange={(e) =>
-                          updateDynamicRegistrationItem(it.id, { feeType: e.target.value as 'one_time' | 'annual' })
-                        }
-                        className="p-1.5 border border-slate-200 rounded-lg font-semibold text-slate-800 bg-white shrink-0"
-                      >
-                        <option value="one_time">{language === 'en' ? 'One-time' : '一次性'}</option>
-                        <option value="annual">{language === 'en' ? 'Annual' : '年度'}</option>
-                      </select>
+                        onChange={(v) => updateDynamicRegistrationItem(it.id, { feeType: v as 'one_time' | 'annual' })}
+                        options={[
+                          { value: 'one_time', label: en ? 'One-time' : '一次性' },
+                          { value: 'annual', label: en ? 'Annual' : '年度' }
+                        ]}
+                      />
                       {it.feeType === 'one_time' ? (
                         <div className="flex items-center gap-1 shrink-0">
-                          <span className="text-[11px] text-slate-500">÷</span>
+                          <span className="text-[11px] text-neutral-500">÷</span>
                           <NumberField
                             min={1}
                             value={it.amortizationMonths}
                             onChange={(v) => updateDynamicRegistrationItem(it.id, { amortizationMonths: v })}
-                            className="w-14 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                            className="w-14 p-1.5 border border-neutral-200 rounded-lg tabular-nums font-semibold text-right"
                           />
-                          <span className="text-[11px] text-slate-500">{language === 'en' ? 'months' : '个月'}</span>
+                          <span className="text-[11px] text-neutral-500">{language === 'en' ? 'months' : '个月'}</span>
                         </div>
                       ) : (
-                        <span className="text-[11px] text-slate-500 shrink-0">{language === 'en' ? '÷ 12 months' : '÷ 12 个月'}</span>
+                        <span className="text-[11px] text-neutral-500 shrink-0">{language === 'en' ? '÷ 12 months' : '÷ 12 个月'}</span>
                       )}
-                      <button type="button" onClick={() => removeDynamicRegistrationItem(it.id)} className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer shrink-0">
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      <Button size="small" type="text" danger icon={<Trash2 className="w-3.5 h-3.5" />} className="shrink-0" onClick={() => removeDynamicRegistrationItem(it.id)} />
                     </div>
                   ))}
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="flex-1 min-w-[7rem] p-1.5 font-semibold text-slate-800">
+                    <span className="basis-full sm:basis-0 sm:flex-1 min-w-[7rem] font-medium text-neutral-800">
                       {language === 'en' ? 'Other registration/license fee' : '其他补充注册/执照费用'}
-                      <button
-                        type="button"
+                      <Button size="small" type="link" className="ml-2 px-0"
+
                         onClick={() => updateMoney('companyRegistrationCost', regulatoryEstimate.registrationLocal)}
-                        className="ml-2 text-[11px] underline text-teal-700 font-bold hover:text-teal-900 cursor-pointer"
+
                       >
                         {language === 'en' ? 'Use AI value' : '填入AI估值'}
-                      </button>
+                      </Button>
                     </span>
                     <NumberField
                       inputMode="numeric"
@@ -2836,34 +2906,32 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       placeholder={`约 ${regulatoryEstimate.registrationLocal}`}
                       value={formData.companyRegistrationCost.amount}
                       onChange={(v) => updateMoney('companyRegistrationCost', v)}
-                      className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                      className="w-24 shrink-0 p-1.5 border border-neutral-200 rounded-lg tabular-nums font-semibold text-right"
                     />
-                    <div className="flex items-center gap-1 text-[11px] text-slate-500 shrink-0">
+                    <div className="flex items-center gap-1 text-[11px] text-neutral-500 shrink-0">
                       <span>÷</span>
                       <NumberField
                         min={1}
                         value={formData.companyRegistrationAmortizationMonths}
                         onChange={(v) => updateField('companyRegistrationAmortizationMonths', v)}
-                        className="w-12 p-0.5 border border-slate-200 rounded text-center font-bold"
+                        className="w-12 p-0.5 border border-neutral-200 rounded text-center font-bold"
                       />
                       <span>{language === 'en' ? 'months' : '个月'}</span>
                     </div>
-                    <button type="button" onClick={() => updateMoney('companyRegistrationCost', 0)} title={language === 'en' ? 'Reset to 0 (fixed category, cannot remove the row)' : '清零该项（此为固定类目，不可整行移除）'} className="p-1 text-slate-400 hover:text-amber-600 cursor-pointer shrink-0">
-                      <Eraser className="w-3.5 h-3.5" />
-                    </button>
+                    <Button size="small" type="text" icon={<Eraser className="w-3.5 h-3.5" />} className="shrink-0" onClick={() => updateMoney('companyRegistrationCost', 0)} title={language === 'en' ? 'Reset to 0 (fixed category, cannot remove the row)' : '清零该项（此为固定类目，不可整行移除）'} />
                   </div>
 
                   {/* 签证与工作许可费用 */}
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="flex-1 min-w-[7rem] p-1.5 font-semibold text-slate-800">
+                    <span className="basis-full sm:basis-0 sm:flex-1 min-w-[7rem] font-medium text-neutral-800">
                       {language === 'en' ? 'Visa & Work Permits' : '签证与工作许可费用'}
-                      <button
-                        type="button"
+                      <Button size="small" type="link" className="ml-2 px-0"
+
                         onClick={() => updateMoney('visaFeeCost', regulatoryEstimate.visaLocal)}
-                        className="ml-2 text-[11px] underline text-teal-700 font-bold hover:text-teal-900 cursor-pointer"
+
                       >
                         {language === 'en' ? 'Use AI value' : '填入AI估值'}
-                      </button>
+                      </Button>
                     </span>
                     <NumberField
                       inputMode="numeric"
@@ -2871,21 +2939,19 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       placeholder={`约 ${regulatoryEstimate.visaLocal}`}
                       value={formData.visaFeeCost.amount}
                       onChange={(v) => updateMoney('visaFeeCost', v)}
-                      className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                      className="w-24 shrink-0 p-1.5 border border-neutral-200 rounded-lg tabular-nums font-semibold text-right"
                     />
-                    <div className="flex items-center gap-1 text-[11px] text-slate-500 shrink-0">
+                    <div className="flex items-center gap-1 text-[11px] text-neutral-500 shrink-0">
                       <span>÷</span>
                       <NumberField
                         min={1}
                         value={formData.visaFeeAmortizationMonths}
                         onChange={(v) => updateField('visaFeeAmortizationMonths', v)}
-                        className="w-12 p-0.5 border border-slate-200 rounded text-center font-bold"
+                        className="w-12 p-0.5 border border-neutral-200 rounded text-center font-bold"
                       />
                       <span>{language === 'en' ? 'months' : '个月'}</span>
                     </div>
-                    <button type="button" onClick={() => updateMoney('visaFeeCost', 0)} title={language === 'en' ? 'Reset to 0 (fixed category, cannot remove the row)' : '清零该项（此为固定类目，不可整行移除）'} className="p-1 text-slate-400 hover:text-amber-600 cursor-pointer shrink-0">
-                      <Eraser className="w-3.5 h-3.5" />
-                    </button>
+                    <Button size="small" type="text" icon={<Eraser className="w-3.5 h-3.5" />} className="shrink-0" onClick={() => updateMoney('visaFeeCost', 0)} title={language === 'en' ? 'Reset to 0 (fixed category, cannot remove the row)' : '清零该项（此为固定类目，不可整行移除）'} />
                   </div>
 
                   {/* 设备月度折旧：逐台填「设备值 + 预计使用月数」，月度折旧（设备值÷使用月数）自动求和。
@@ -2898,31 +2964,29 @@ export const AssessmentForm: React.FC<FormProps> = ({
                         {language === 'en' ? 'Equipment depreciation (spread purchase cost over its useful life)' : '设备折旧（把买设备的钱摊到能用的每个月）'}
                       </span>
                       <div className="flex items-center gap-1.5">
-                        <button
-                          type="button"
+                        <Button size="small" icon={<HelpCircle className="w-3.5 h-3.5" />}
+
                           onClick={() => setShowDepreciationGuide((v) => !v)}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white border border-sky-200 text-sky-700 text-[12px] font-bold hover:bg-sky-100 cursor-pointer"
-                        >
-                          <HelpCircle className="w-3 h-3" />
-                          {language === 'en' ? 'How do I fill this in?' : '折旧怎么填？'}
-                        </button>
-                        <button
-                          type="button"
+
+                        >{language === 'en' ? 'How do I fill this in?' : '折旧怎么填？'}
+                        </Button>
+                        <Button size="small" type="primary"
+
                           onClick={addDynamicEquipmentItem}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-sky-600 text-white text-[12px] font-bold hover:bg-sky-500 cursor-pointer"
+
                         >
                           + {language === 'en' ? 'Add equipment' : '添加设备'}
-                        </button>
+                        </Button>
                       </div>
                     </div>
                     {showDepreciationGuide && (
-                      <div className="p-2.5 rounded-lg bg-white border border-sky-100 space-y-2 text-[12px] text-slate-700 leading-relaxed">
+                      <div className="p-2.5 rounded-lg bg-white border border-sky-100 space-y-2 text-[12px] text-neutral-700 leading-relaxed">
                         <p>
                           {language === 'en'
                             ? 'Depreciation = purchase price ÷ months you expect to use it. Annual depreciation rate = 1 ÷ useful years (5 years → 20% per year).'
                             : '折旧 = 设备买价 ÷ 预计能用多少个月；年折旧率 = 1 ÷ 能用的年数（能用 5 年 → 每年折旧 20%）。'}
                         </p>
-                        <p className="text-slate-500">
+                        <p className="text-neutral-500">
                           {language === 'en'
                             ? `Example: a fridge bought for 3,600 that lasts 5 years (60 months) costs 3,600 ÷ 60 = 60 per month. Just enter the price and pick the months or the annual rate — the system does the maths.`
                             : '例：花 3,600 买的冰箱能用 5 年（60 个月），每月折旧 = 3,600 ÷ 60 = 60。你只需填买价，再选使用月数或年折旧率，系统自动算。'}
@@ -2935,14 +2999,14 @@ export const AssessmentForm: React.FC<FormProps> = ({
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                           {depreciationTable.rows.map((r) => (
                             <div key={r.category} className="p-1.5 rounded bg-sky-50 border border-sky-100">
-                              <div className="text-slate-600">{r.label}</div>
-                              <div className="font-mono font-bold text-slate-900">
+                              <div className="text-neutral-600">{r.label}</div>
+                              <div className="tabular-nums font-bold text-neutral-900">
                                 {language === 'en' ? `${r.years}y · ${r.annualRatePct}%/yr` : `${r.years}年 · 年折旧率${r.annualRatePct}%`}
                               </div>
                             </div>
                           ))}
                         </div>
-                        <p className="text-[11px] text-slate-500">{depreciationTable.note}</p>
+                        <p className="text-[11px] text-neutral-500">{depreciationTable.note}</p>
                         {!depreciationTable.isLocal && (
                           <p className="text-[11px] text-amber-700 font-semibold">
                             {language === 'en'
@@ -2953,7 +3017,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       </div>
                     )}
                     {(formData.dynamicEquipmentItems || []).length === 0 && (
-                      <p className="text-[12px] text-slate-500">
+                      <p className="text-[12px] text-neutral-500">
                         {language === 'en'
                           ? 'Bought machines, fridges, computers or a vehicle? Click "Add equipment" and enter each one — no need to compute depreciation yourself.'
                           : '买了机器、冰柜、电脑或车辆？点「添加设备」逐台填买价即可，不用自己算折旧。'}
@@ -2973,67 +3037,58 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     return (
                     <div key={it.id} className="space-y-1">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <input
-                        type="text"
+                      <Input size="small" className="basis-full sm:basis-0 sm:flex-1 min-w-[7rem]"
+
                         value={it.label}
                         onChange={(e) => updateDynamicEquipmentItem(it.id, { label: e.target.value })}
                         placeholder={language === 'en' ? 'e.g. Freezer / Laptop / Delivery van' : '例如：冰柜 / 笔记本电脑 / 送货车'}
-                        className="flex-1 min-w-[7rem] p-1.5 border border-slate-200 rounded-lg font-semibold text-slate-800"
-                      />
+                        />
                       <NumberField
                         min={0}
                         value={it.value}
                         onChange={(v) => updateDynamicEquipmentItem(it.id, { value: v })}
                         title={language === 'en' ? 'Purchase price' : '设备买价'}
                         placeholder={language === 'en' ? 'Price' : '买价'}
-                        className="w-20 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                        className="w-20 shrink-0 p-1.5 border border-neutral-200 rounded-lg tabular-nums font-semibold text-right"
                       />
                       <div className="flex items-center gap-1 shrink-0">
-                        <span className="text-[11px] text-slate-500">÷</span>
+                        <span className="text-[11px] text-neutral-500">÷</span>
                         <NumberField
                           min={1}
                           value={it.usefulLifeMonths}
                           onChange={(v) => updateDynamicEquipmentItem(it.id, { usefulLifeMonths: v })}
                           title={language === 'en' ? 'Months you expect to use it' : '预计能用多少个月'}
-                          className="w-14 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                          className="w-14 p-1.5 border border-neutral-200 rounded-lg tabular-nums font-semibold text-right"
                         />
-                        <span className="text-[11px] text-slate-500">{language === 'en' ? 'months' : '个月'}</span>
+                        <span className="text-[11px] text-neutral-500">{language === 'en' ? 'months' : '个月'}</span>
                       </div>
                       {!isPreconverted && (
-                      <select
-                        value={yearsValue}
-                        onChange={(e) => e.target.value && updateDynamicEquipmentItem(it.id, { usefulLifeMonths: Number(e.target.value) * 12 })}
-                        title={language === 'en' ? 'Or pick by annual depreciation rate' : '或者直接按年折旧率选'}
-                        className="shrink-0 p-1.5 border border-slate-200 rounded-lg bg-white text-[12px] font-semibold text-slate-700"
-                      >
-                        {!yearsValue && (
-                          <option value="">
-                            {language === 'en' ? `Rate ${ratePct}%/yr` : `年折旧率 ${ratePct}%`}
-                          </option>
-                        )}
-                        {RATE_YEAR_OPTIONS.map((y) => (
-                          <option key={y} value={y}>
-                            {language === 'en'
-                              ? `${Math.round((100 / y) * 10) / 10}%/yr (${y}y)`
-                              : `年折旧率 ${Math.round((100 / y) * 10) / 10}%（${y}年）`}
-                          </option>
-                        ))}
-                      </select>
+                      <Select
+                        size="small"
+                        className="shrink-0"
+                        popupMatchSelectWidth={false}
+                        value={yearsValue || undefined}
+                        placeholder={en ? `Rate ${ratePct}%/yr` : `年折旧率 ${ratePct}%`}
+                        onChange={(v) => v && updateDynamicEquipmentItem(it.id, { usefulLifeMonths: Number(v) * 12 })}
+                        title={en ? 'Or pick by annual depreciation rate' : '或者直接按年折旧率选'}
+                        options={RATE_YEAR_OPTIONS.map((y) => ({
+                          value: String(y),
+                          label: en
+                            ? `${Math.round((100 / y) * 10) / 10}%/yr (${y}y)`
+                            : `年折旧率 ${Math.round((100 / y) * 10) / 10}%（${y}年）`
+                        }))}
+                      />
                       )}
-                      <button
-                        type="button"
+                      <Button size="small" type="text" icon={<Search className="w-3.5 h-3.5" />} className="shrink-0"
+
                         onClick={() => openEquipmentSearch(it.label)}
                         title={language === 'en' ? 'Search this equipment online (Google Shopping / marketplace)' : '在网上搜索该设备（谷歌购物/二手市场）'}
-                        className="p-1 text-slate-400 hover:text-teal-600 cursor-pointer shrink-0"
-                      >
-                        <Search className="w-3.5 h-3.5" />
-                      </button>
-                      <button type="button" onClick={() => removeDynamicEquipmentItem(it.id)} className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer shrink-0">
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+
+                       />
+                      <Button size="small" type="text" danger icon={<Trash2 className="w-3.5 h-3.5" />} className="shrink-0" onClick={() => removeDynamicEquipmentItem(it.id)} />
                     </div>
                     {isPreconverted ? (
-                    <div className="pl-1 text-[11px] text-slate-500">
+                    <div className="pl-1 text-[11px] text-neutral-500">
                       {language === 'en'
                         ? 'Recorded via smart ledger — amount is already the monthly depreciation.'
                         : '由智能记账记入：金额已是折算好的每月折旧额。'}
@@ -3046,16 +3101,16 @@ export const AssessmentForm: React.FC<FormProps> = ({
                           : `${sug.categoryLabel} · ${sug.regionLabel}参考：${sug.years} 年 ≈ 年折旧率 ${sug.annualRatePct}%`}
                       </span>
                       {it.usefulLifeMonths !== sug.months && (
-                        <button
-                          type="button"
+                        <Button size="small"
+
                           onClick={() => updateDynamicEquipmentItem(it.id, { usefulLifeMonths: sug.months })}
-                          className="px-1.5 py-0.5 rounded bg-sky-100 hover:bg-sky-200 text-sky-800 font-bold cursor-pointer"
+
                         >
                           {language === 'en' ? `Use ${sug.months} months` : `套用 ${sug.months} 个月`}
-                        </button>
+                        </Button>
                       )}
                       {monthlyDep > 0 && (
-                        <span className="text-slate-500">
+                        <span className="text-neutral-500">
                           {language === 'en' ? '→ monthly ' : '→ 每月折旧 '}
                           {formatMoney(Math.round(monthlyDep), formData.equipmentDepreciationCost.currency)}
                         </span>
@@ -3066,45 +3121,42 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     );
                   })}
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="flex-1 min-w-[7rem] p-1.5 font-semibold text-slate-800">{language === 'en' ? 'Other equipment depreciation' : '其他补充设备折旧'}</span>
+                    <span className="basis-full sm:basis-0 sm:flex-1 min-w-[7rem] font-medium text-neutral-800">{language === 'en' ? 'Other equipment depreciation' : '其他补充设备折旧'}</span>
                     <NumberField
                       inputMode="numeric"
                       min={0}
                       placeholder={language === 'en' ? 'For small tools not listed above' : '未逐台列出的零散小型设备'}
                       value={formData.equipmentDepreciationCost.amount}
                       onChange={(v) => updateMoney('equipmentDepreciationCost', v)}
-                      className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                      className="w-24 shrink-0 p-1.5 border border-neutral-200 rounded-lg tabular-nums font-semibold text-right"
                     />
-                    <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.equipmentDepreciationCost.currency}</span>
+                    <span className="text-[12px] text-neutral-500 whitespace-nowrap shrink-0 pl-0.5">{formData.equipmentDepreciationCost.currency}</span>
                     {renderCyclePicker(
                       formData.equipmentDepreciationCost,
                       (cycle) => updateMoneyCycle('equipmentDepreciationCost', cycle),
                       (months) => updateMoneyAmortization('equipmentDepreciationCost', months)
                     )}
-                    <button type="button" onClick={() => updateMoney('equipmentDepreciationCost', 0)} title={language === 'en' ? 'Reset to 0 (fixed category, cannot remove the row)' : '清零该项（此为固定类目，不可整行移除）'} className="p-1 text-slate-400 hover:text-amber-600 cursor-pointer shrink-0">
-                      <Eraser className="w-3.5 h-3.5" />
-                    </button>
+                    <Button size="small" type="text" icon={<Eraser className="w-3.5 h-3.5" />} className="shrink-0" onClick={() => updateMoney('equipmentDepreciationCost', 0)} title={language === 'en' ? 'Reset to 0 (fixed category, cannot remove the row)' : '清零该项（此为固定类目，不可整行移除）'} />
                   </div>
 
                   {/* 动态花费项：不再提供手动「＋添加」入口——新条目统一走上面的智能记账
                       （SmartLedgerEntry）自动分类记入，这里只负责展示/编辑/删除已有条目。 */}
                   {(formData.dynamicOpexItems || []).map((it) => (
                     <div key={it.id} className="flex items-center gap-1.5 flex-wrap">
-                      <input
-                        type="text"
+                      <Input size="small" className="basis-full sm:basis-0 sm:flex-1 min-w-[7rem]"
+
                         value={it.label}
                         onChange={(e) => updateDynamicOpexItem(it.id, { label: e.target.value })}
-                        className="flex-1 min-w-[7rem] p-1.5 border border-slate-200 rounded-lg font-semibold text-slate-800"
-                      />
+                        />
                       <NumberField
                         min={0}
                         value={it.value}
                         onChange={(v) => updateDynamicOpexItem(it.id, { value: Math.max(0, v) })}
-                        className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                        className="w-24 shrink-0 p-1.5 border border-neutral-200 rounded-lg tabular-nums font-semibold text-right"
                         placeholder={it.suggestedAmount ? `${language === 'en' ? 'AI suggests' : 'AI建议'} ${it.suggestedAmount}` : (language === 'en' ? 'Amount' : '金额')}
                         title={it.suggestedAmount ? (language === 'en' ? `AI suggested reference amount: ${it.suggestedAmount} (for reference only, please fill in your real figure)` : `AI 建议参考金额：${it.suggestedAmount}（仅供参考，请填你的真实数字）`) : (language === 'en' ? 'Please fill in your real monthly amount' : '请填你的真实月度金额')}
                       />
-                      <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.baseCurrency}</span>
+                      <span className="text-[12px] text-neutral-500 whitespace-nowrap shrink-0 pl-0.5">{formData.baseCurrency}</span>
                       {renderCyclePicker(
                         it,
                         (cycle) => updateDynamicOpexItem(it.id, { cycle }),
@@ -3116,9 +3168,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                           language={language}
                         />
                       ) : null}
-                      <button type="button" onClick={() => removeDynamicOpexItem(it.id)} className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer shrink-0">
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      <Button size="small" type="text" danger icon={<Trash2 className="w-3.5 h-3.5" />} className="shrink-0" onClick={() => removeDynamicOpexItem(it.id)} />
                     </div>
                   ))}
 
@@ -3128,34 +3178,31 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       这份清单，用户确认记账后钱就像消失了一样。这里补一个独立小节让它可见/可编辑/
                       可删除，并提示用户可以手动累加进下方「初始投资估算」。 */}
                   {(formData.oneTimeStartupItems || []).length > 0 && (
-                    <div className="pt-2 mt-1 border-t border-dashed border-slate-300 space-y-1.5">
-                      <p className="text-[12px] font-bold text-slate-500">
+                    <div className="pt-2 mt-1 border-t border-dashed border-neutral-300 space-y-1.5">
+                      <p className="text-[12px] font-bold text-neutral-500">
                         {language === 'en'
                           ? 'One-time startup costs (not counted in the monthly figures above — add them into "Initial Investment Estimate" below if relevant)'
                           : '一次性启动成本（不计入上方月度测算，如适用请手动累加进下方「初始投资估算」）'}
                       </p>
                       {(formData.oneTimeStartupItems || []).map((it) => (
                         <div key={it.id} className="flex items-center gap-1.5 flex-wrap">
-                          <input
-                            type="text"
+                          <Input size="small" className="basis-full sm:basis-0 sm:flex-1 min-w-[7rem]"
+
                             value={it.label}
                             onChange={(e) => updateOneTimeStartupItem(it.id, { label: e.target.value })}
-                            className="flex-1 min-w-[7rem] p-1.5 border border-slate-200 rounded-lg font-semibold text-slate-800"
-                          />
+                            />
                           <NumberField
                             min={0}
                             value={it.value}
                             onChange={(v) => updateOneTimeStartupItem(it.id, { value: Math.max(0, v) })}
-                            className="w-24 shrink-0 p-1.5 border border-slate-200 rounded-lg font-mono font-semibold text-right"
+                            className="w-24 shrink-0 p-1.5 border border-neutral-200 rounded-lg tabular-nums font-semibold text-right"
                           />
-                          <span className="text-[12px] text-slate-500 whitespace-nowrap shrink-0 pl-0.5">{formData.baseCurrency}</span>
-                          <span className="text-[11px] text-slate-500 shrink-0">{language === 'en' ? 'one-time' : '一次性'}</span>
-                          <button type="button" onClick={() => removeOneTimeStartupItem(it.id)} className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer shrink-0">
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                          <span className="text-[12px] text-neutral-500 whitespace-nowrap shrink-0 pl-0.5">{formData.baseCurrency}</span>
+                          <span className="text-[11px] text-neutral-500 shrink-0">{language === 'en' ? 'one-time' : '一次性'}</span>
+                          <Button size="small" type="text" danger icon={<Trash2 className="w-3.5 h-3.5" />} className="shrink-0" onClick={() => removeOneTimeStartupItem(it.id)} />
                         </div>
                       ))}
-                      <p className="text-[12px] text-slate-500 text-right">
+                      <p className="text-[12px] text-neutral-500 text-right">
                         {language === 'en' ? 'One-time startup costs total: ' : '一次性启动成本合计：'}
                         {formatMoney(
                           (formData.oneTimeStartupItems || []).reduce((sum, it) => sum + (Number(it.value) || 0), 0),
@@ -3165,8 +3212,8 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     </div>
                   )}
 
-                  <div className="flex items-center justify-end flex-wrap gap-2 pt-2 border-t border-slate-200">
-                    <span className="text-[13px] font-black text-slate-900">
+                  <div className="flex items-center justify-end flex-wrap gap-2 pt-2 border-t border-neutral-200">
+                    <span className="text-[13px] font-bold text-neutral-900">
                       {language === 'en' ? 'Total monthly expense:' : '花费清单合计：'}{' '}
                       {/* breakEven.monthlyCostTotal 刻意不含税费（与"每月现金消耗"口径保持一致，
                           详见 breakEvenCalculator.ts 注释），但这里的花费清单里"税金及规费"是
@@ -3178,29 +3225,32 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     </span>
                   </div>
                 </div>
-              </div>
+                </Flex>
+              </Card>
 
 
               {/* —— 模块 3：兜里有多少现金 & 初始投入（现金储备与投资模块） —— */}
-              <div className="p-5 rounded-2xl bg-gradient-to-br from-indigo-50/70 to-blue-50/40 border border-indigo-200 shadow-2xs space-y-4">
-                <div className="flex items-center justify-between flex-wrap gap-2 border-b border-indigo-100 pb-3">
-                  <h4 className="text-sm font-black text-indigo-950 flex items-center gap-2">
+              <Card
+                size="small"
+                className="border-indigo-200"
+                styles={{ header: { background: '#f0f5ff' } }}
+                title={
+                  <Flex align="center" gap={8}>
                     <Wallet className="w-4 h-4 text-indigo-600" />
-                    <span>{language === 'en' ? '3. Cash Reserve & Initial Investment' : '3. 兜里现金 & 初始投入'}</span>
-                  </h4>
-                  <span className="text-[12px] bg-indigo-100 text-indigo-800 font-bold px-2.5 py-0.5 rounded-full">
-                    {language === 'en' ? 'Capital & Liquidity' : '资本与资金链储备'}
-                  </span>
-                </div>
+                    {en ? '3. Cash reserve & initial investment' : '3. 兜里现金 & 初始投入'}
+                  </Flex>
+                }
+                extra={<Tag color="geekblue" className="me-0">{en ? 'Capital & liquidity' : '资本与资金链储备'}</Tag>}
+              >
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* 可用现金备用金 */}
-                  <div className="p-4 rounded-xl bg-white border-2 border-emerald-200 space-y-2 text-xs">
+                  <div className="flex flex-col gap-2">
                     <div className="flex justify-between items-center">
-                      <label className="font-black text-slate-900 flex items-center gap-1 text-xs">
+                      <label className="font-bold text-neutral-900 flex items-center gap-1 text-xs">
                         <span>{language === 'en' ? 'Current Available Cash Reserve' : '当前可用现金备用金'}</span>
                       </label>
-                      <span className="text-xs font-bold text-slate-500">
+                      <span className="text-xs font-bold text-neutral-500">
                         {formData.cashAndLiquidAssets.currency}
                         {language === 'en' ? ' (balance, not periodic)' : '（当前余额，非周期性）'}
                       </span>
@@ -3210,9 +3260,9 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       min={0}
                       value={formData.cashAndLiquidAssets.amount}
                       onChange={(v) => updateMoney('cashAndLiquidAssets', v)}
-                      className="w-full p-2.5 border border-emerald-300 rounded-xl font-black text-emerald-900 text-base bg-white"
+                      className="w-full p-2.5 border border-emerald-300 rounded-lg font-bold text-emerald-900 text-base bg-white"
                     />
-                    <p className="text-[12px] text-slate-500">
+                    <p className="text-[12px] text-neutral-500">
                       {language === 'en'
                         ? 'Includes bank deposits and mobile money that can cover urgent operational risks.'
                         : '包含可随时支取的银行存款、移动支付资金等，用于抵御风险。'}
@@ -3220,13 +3270,13 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   </div>
 
                   {/* 初始投资估算 */}
-                  <div className="p-4 rounded-xl bg-white border border-amber-300 space-y-2 text-xs">
+                  <div className="flex flex-col gap-2">
                     <div className="flex justify-between items-center">
-                      <label className="font-bold text-slate-900 flex items-center gap-1 text-xs">
+                      <label className="font-bold text-neutral-900 flex items-center gap-1 text-xs">
                         <Target className="w-3.5 h-3.5 text-amber-600" />
                         <span>{language === 'en' ? 'Initial Investment Estimate' : '初始投资估算（一次性投入）'}</span>
                       </label>
-                      <span className="text-xs font-bold text-slate-500">
+                      <span className="text-xs font-bold text-neutral-500">
                         {formData.initialInvestmentEstimate.currency}
                         {language === 'en' ? ' (one-time)' : '（一次性）'}
                       </span>
@@ -3237,7 +3287,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       placeholder={language === 'en' ? 'renovation + equipment + stock' : '例如：装修+设备+首批进货'}
                       value={formData.initialInvestmentEstimate.amount}
                       onChange={(v) => updateMoney('initialInvestmentEstimate', v)}
-                      className="w-full p-2.5 border border-amber-300 rounded-xl font-bold text-amber-900 bg-white"
+                      className="w-full p-2.5 border border-amber-300 rounded-lg font-bold text-amber-900 bg-white"
                     />
                     <p className="text-[12px] text-amber-700">
                       {language === 'en'
@@ -3247,44 +3297,45 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     {renderInlineAnomalies('initialInvestmentEstimate')}
                   </div>
                 </div>
-              </div>
+              </Card>
 
 
               {/* —— 模块 4：AI 动态测算与风险校验（保本与回本分析） —— */}
-              <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-50/90 via-orange-50/50 to-amber-50/30 border-2 border-amber-300 shadow-xs space-y-4">
-                <div className="flex items-center justify-between flex-wrap gap-2 border-b border-amber-200 pb-3">
-                  <h4 className="text-sm font-black text-amber-950 flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-amber-600" />
-                    <span>{language === 'en' ? '4. AI Real-time Financial Analysis & Diagnostics' : '4. AI 实时财务测算与智能校验'}</span>
-                  </h4>
+              <Card
+                size="small"
+                className="border-amber-200"
+                styles={{ header: { background: '#fffbe6' }, body: { display: 'flex', flexDirection: 'column', gap: 12 } }}
+                title={
+                  <Flex align="center" gap={8}>
+                    <Sparkles className="w-4 h-4 text-amber-500" />
+                    {en ? '4. Live analysis & checks' : '4. 实时测算与智能校验'}
+                  </Flex>
+                }
+                extra={
                   <div className="flex items-center gap-2">
-                    <span className="text-[12px] bg-amber-200 text-amber-900 font-bold px-2.5 py-0.5 rounded-full">
-                      {language === 'en' ? 'Live Auto-Calculations' : 'AI 动态计算'}
-                    </span>
-                    <button
-                      type="button"
+                    <Button size="small" icon={<RefreshCw className="w-3.5 h-3.5" />}
+
                       onClick={refreshModule4}
                       title={language === 'en' ? 'Force refresh these numbers now' : '立即强制重新计算以上数字'}
-                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white border border-amber-300 text-amber-800 text-[12px] font-bold hover:bg-amber-100 cursor-pointer transition-colors"
-                    >
-                      <RefreshCw className="w-3 h-3" />
-                      <span>{module4JustRefreshed ? (language === 'en' ? '✓ Refreshed' : '✓ 已刷新') : (language === 'en' ? 'Refresh' : '手动刷新')}</span>
-                    </button>
+
+                    ><span>{module4JustRefreshed ? (language === 'en' ? '✓ Refreshed' : '✓ 已刷新') : (language === 'en' ? 'Refresh' : '手动刷新')}</span>
+                    </Button>
                   </div>
-                </div>
+                }
+              >
 
                 {/* AI 算出的保本收入 */}
                 {breakEven.hasEnoughData ? (
-                  <div className="p-4 rounded-xl bg-white border border-amber-300 space-y-1.5 text-xs shadow-2xs">
+                  <div className="p-4 rounded-lg bg-white border border-amber-300 space-y-1.5 text-xs">
                     <div className="flex items-center gap-2">
                       <Target className="w-4 h-4 text-amber-600 shrink-0" />
-                      <span className="font-black text-amber-950 text-sm">{language === 'en' ? 'AI Break-Even Revenue Threshold' : 'AI 算出的保本收入（不亏钱最低线）'}</span>
+                      <span className="font-bold text-amber-950 text-sm">{language === 'en' ? 'AI Break-Even Revenue Threshold' : 'AI 算出的保本收入（不亏钱最低线）'}</span>
                       <InfoTooltip
                         language={language}
                         text={
                           language === 'en'
-                            ? `Based on monthly cost of ${formatMoney(breakEven.monthlyCostTotal, formData.baseCurrency)} (purchasing + rent/wages + taxes + debt repayment + amortizations), calculated over ${breakEven.operatingDaysPerMonth} operating days.`
-                            : `根据你已填的进货、房租人工、税金、还贷与折旧/许可成本合计 ${formatMoney(breakEven.monthlyCostTotal, formData.baseCurrency)} / 月，按每月经营 ${breakEven.operatingDaysPerMonth} 天估算。`
+                            ? `Based on monthly cost of ${formatMoney(breakEven.monthlyBreakEvenRevenue, formData.baseCurrency)} (purchasing + rent/wages + taxes + debt repayment + amortizations), calculated over ${breakEven.operatingDaysPerMonth} operating days.`
+                            : `根据你已填的进货、房租人工、税金、还贷与折旧/许可成本合计 ${formatMoney(breakEven.monthlyBreakEvenRevenue, formData.baseCurrency)} / 月，按每月经营 ${breakEven.operatingDaysPerMonth} 天估算。`
                         }
                       />
                     </div>
@@ -3292,7 +3343,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       {language === 'en' ? (
                         <>
                           You need to sell at least
-                          <span className="text-base font-black text-amber-950 mx-1.5 underline decoration-amber-400 decoration-2">
+                          <span className="text-base font-bold text-amber-950 mx-1.5 underline decoration-amber-400 decoration-2">
                             {formatMoney(breakEven.dailyBreakEvenRevenue, formData.baseCurrency)}
                           </span>
                           per day (at least <span className="font-bold">{formatMoney(breakEven.monthlyBreakEvenRevenue, formData.baseCurrency)}</span> per month) to avoid a loss.
@@ -3300,7 +3351,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       ) : (
                         <>
                           你每天至少要卖到
-                          <span className="text-base font-black text-amber-950 mx-1.5 underline decoration-amber-400 decoration-2">
+                          <span className="text-base font-bold text-amber-950 mx-1.5 underline decoration-amber-400 decoration-2">
                             {formatMoney(breakEven.dailyBreakEvenRevenue, formData.baseCurrency)}
                           </span>
                           （每月至少 <span className="font-bold">{formatMoney(breakEven.monthlyBreakEvenRevenue, formData.baseCurrency)}</span>）才不亏钱。
@@ -3309,7 +3360,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     </p>
                   </div>
                 ) : (
-                  <div className="p-3.5 rounded-xl bg-white/80 border border-amber-200 text-xs text-amber-800 font-medium flex items-center gap-2">
+                  <div className="p-3.5 rounded-lg bg-white/80 border border-amber-200 text-xs text-amber-800 font-medium flex items-center gap-2">
                     <InfoTooltip language={language} text={language === 'en' ? 'Please fill in cost and expense items above.' : '请先在上方填入成本或开支项目。'} />
                     <span>{language === 'en' ? 'Fill in monthly cost or expenses above to unlock AI break-even calculations.' : '在上方填入月度成本或开支后，此处将自动算出不亏钱的保本流水门槛。'}</span>
                   </div>
@@ -3317,8 +3368,8 @@ export const AssessmentForm: React.FC<FormProps> = ({
 
                 {/* 回本时间与目标反推 */}
                 {formData.initialInvestmentEstimate.amount > 0 && (
-                  <div className="p-4 rounded-xl bg-white border border-indigo-200 space-y-3 text-xs shadow-2xs">
-                    <div className="flex items-center gap-2 font-black text-indigo-950 text-sm">
+                  <div className="p-4 rounded-lg bg-white border border-indigo-200 space-y-3 text-xs">
+                    <div className="flex items-center gap-2 font-bold text-indigo-950 text-sm">
                       <Target className="w-4 h-4 text-indigo-600" />
                       <span>{language === 'en' ? 'Payback Period & Target Required Revenue' : '回本时间预测与目标反推'}</span>
                     </div>
@@ -3331,7 +3382,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                           </b>
                           {payback.paybackMonths !== null ? (
                             <>
-                              , expected payback in <span className="text-base font-black text-indigo-900 mx-1.5">{payback.paybackMonths.toFixed(1)}</span> months.
+                              , expected payback in <span className="text-base font-bold text-indigo-900 mx-1.5">{payback.paybackMonths.toFixed(1)}</span> months.
                             </>
                           ) : (
                             '. Net surplus is not positive yet — payback period cannot be calculated until operational profit is positive.'
@@ -3346,7 +3397,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                           </b>
                           {payback.paybackMonths !== null ? (
                             <>
-                              ，预计 <span className="text-base font-black text-indigo-900 mx-1.5">{payback.paybackMonths.toFixed(1)}</span> 个月可以回本。
+                              ，预计 <span className="text-base font-bold text-indigo-900 mx-1.5">{payback.paybackMonths.toFixed(1)}</span> 个月可以回本。
                             </>
                           ) : (
                             '。当前净结余不为正，暂时算不出回本时间——先让经营结余为正，回本时间才有意义。'
@@ -3362,7 +3413,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                           min={1}
                           value={formData.targetPaybackMonths}
                           onChange={(v) => updateField('targetPaybackMonths', v)}
-                          className="w-20 p-1.5 border border-indigo-300 rounded-lg font-black text-indigo-900 text-center bg-white"
+                          className="w-20 p-1.5 border border-indigo-300 rounded-lg font-bold text-indigo-900 text-center bg-white"
                         />
                         <span className="font-bold text-indigo-900">{language === 'en' ? 'months, required monthly revenue:' : '个月内回本，至少要赚多少？'}</span>
                       </div>
@@ -3371,7 +3422,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                           {language === 'en' ? (
                             <>
                               Need monthly revenue of at least
-                              <span className="text-base font-black text-indigo-950 mx-1.5">
+                              <span className="text-base font-bold text-indigo-950 mx-1.5">
                                 {formatMoney(reverseTarget.requiredMonthlyRevenue, formData.baseCurrency)}
                               </span>
                               (approx. {formatMoney(reverseTarget.requiredDailyRevenue, formData.baseCurrency)} / day).
@@ -3379,7 +3430,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                           ) : (
                             <>
                               至少要做到的每月收入：
-                              <span className="text-base font-black text-indigo-950 mx-1.5">
+                              <span className="text-base font-bold text-indigo-950 mx-1.5">
                                 {formatMoney(reverseTarget.requiredMonthlyRevenue, formData.baseCurrency)}
                               </span>
                               （约每天 {formatMoney(reverseTarget.requiredDailyRevenue, formData.baseCurrency)}）。
@@ -3393,8 +3444,8 @@ export const AssessmentForm: React.FC<FormProps> = ({
 
                 {/* AI 异常数值提醒 */}
                 {anomalyWarnings.length > 0 && (
-                  <div className="p-4 rounded-xl bg-rose-50/90 border-2 border-rose-300 space-y-2 text-xs">
-                    <div className="flex items-center gap-2 font-black text-rose-950">
+                  <div className="p-4 rounded-lg bg-rose-50/90 border border-rose-300 space-y-2 text-xs">
+                    <div className="flex items-center gap-2 font-bold text-rose-950">
                       <AlertOctagon className="w-4 h-4 text-rose-600 shrink-0" />
                       <span>
                         {language === 'en'
@@ -3404,30 +3455,17 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     </div>
                     <ul className="space-y-1.5">
                       {anomalyWarnings.map((w, idx) => (
-                        <li
-                          key={`${w.field}-${idx}`}
-                          className={`p-2 rounded-lg border flex items-start gap-1.5 ${
-                            w.severity === 'error'
-                              ? 'bg-rose-100/70 border-rose-300 text-rose-900'
-                              : 'bg-amber-50/70 border-amber-300 text-amber-900'
-                          }`}
-                        >
-                          <span className="font-bold shrink-0">{w.severity === 'error' ? '⚠️' : '💡'}</span>
-                          <span className="flex-1 font-medium">{language === 'en' ? w.messageEn : w.messageZh}</span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const reason = window.prompt(
-                                language === 'en'
-                                  ? 'Is this value genuinely unusual? Briefly explain why:'
-                                  : '这个数值确实特殊？简单说明原因（AI 只记录，不做判断）：'
-                              );
-                              if (reason && reason.trim()) setAnomalyOverride(w.field, reason.trim());
-                            }}
-                            className="text-[12px] shrink-0 px-2 py-0.5 rounded bg-white/80 border border-current font-bold hover:bg-white cursor-pointer"
-                          >
-                            {language === 'en' ? 'Add Note' : '标注特殊理由'}
-                          </button>
+                        <li key={`${w.field}-${idx}`}>
+                          <Alert
+                            type={w.severity === 'error' ? 'error' : 'warning'}
+                            showIcon
+                            title={language === 'en' ? w.messageEn : w.messageZh}
+                            action={
+                              <Button size="small" onClick={() => askAnomalyReason(w.field)}>
+                                {language === 'en' ? 'Add note' : '标注特殊理由'}
+                              </Button>
+                            }
+                          />
                         </li>
                       ))}
                     </ul>
@@ -3436,9 +3474,9 @@ export const AssessmentForm: React.FC<FormProps> = ({
 
                 {/* 已标注特殊理由的提醒 */}
                 {overriddenAnomalyWarnings.length > 0 && (
-                  <div className="p-3.5 rounded-xl bg-white border border-slate-200 space-y-2 text-xs">
-                    <div className="flex items-center gap-2 font-black text-slate-700">
-                      <CheckCircle2 className="w-4 h-4 text-slate-500" />
+                  <div className="p-3.5 rounded-lg bg-white border border-neutral-200 space-y-2 text-xs">
+                    <div className="flex items-center gap-2 font-bold text-neutral-700">
+                      <CheckCircle2 className="w-4 h-4 text-neutral-500" />
                       <span>
                         {language === 'en'
                           ? `${overriddenAnomalyWarnings.length} item(s) annotated with a special reason`
@@ -3447,66 +3485,68 @@ export const AssessmentForm: React.FC<FormProps> = ({
                     </div>
                     <ul className="space-y-1.5">
                       {overriddenAnomalyWarnings.map((w, idx) => (
-                        <li key={`${w.field}-ov-${idx}`} className="p-2 rounded-lg border border-slate-200 bg-slate-50 text-slate-600 flex items-start gap-1.5">
+                        <li key={`${w.field}-ov-${idx}`} className="p-2 rounded-lg border border-neutral-200 bg-neutral-50 text-neutral-600 flex items-start gap-1.5">
                           <span className="flex-1">
-                            <span className="block text-slate-500">{language === 'en' ? w.messageEn : w.messageZh}</span>
-                            <span className="block mt-0.5 font-semibold text-slate-700">{language === 'en' ? 'Reason: ' : '理由：'}{formData.anomalyOverrides?.[w.field]}</span>
+                            <span className="block text-neutral-500">{language === 'en' ? w.messageEn : w.messageZh}</span>
+                            <span className="block mt-0.5 font-semibold text-neutral-700">{language === 'en' ? 'Reason: ' : '理由：'}{formData.anomalyOverrides?.[w.field]}</span>
                           </span>
-                          <button
-                            type="button"
+                          <Button size="small" className="shrink-0"
+
                             onClick={() => clearAnomalyOverride(w.field)}
-                            className="text-[12px] shrink-0 px-2 py-0.5 rounded border border-slate-300 font-bold hover:bg-slate-100 cursor-pointer"
+
                           >
                             {language === 'en' ? 'Remove Note' : '撤销标注'}
-                          </button>
+                          </Button>
                         </li>
                       ))}
                     </ul>
                   </div>
                 )}
 
-              </div>
+              </Card>
 
             </div>
 
             {/* 更多设置（月度流水 / 资金证明 / 经营时长 / 员工）——藏起来 */}
-            <div className="border border-slate-200 rounded-2xl overflow-hidden">
-              <button
-                type="button"
-                onClick={() => setShowMore(!showMore)}
-                className="w-full flex items-center justify-between px-4 py-3.5 bg-slate-50/80 hover:bg-slate-100 text-xs font-bold text-slate-800 transition-colors cursor-pointer"
-              >
-                <span className="flex items-center gap-2">
-                  <SlidersHorizontal className="w-4 h-4 text-teal-600" />
-                  {language === 'en' ? 'More Settings (Monthly Revenue / Proof of Funds / Operating Duration / Staff Count)' : '更多设置（月度流水 / 资金证明 / 经营时长 / 员工人数）'}
-                </span>
-                <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${showMore ? 'rotate-180' : ''}`} />
-              </button>
-
-              {showMore && (
-                <div className="p-4 sm:p-5 space-y-5 text-xs bg-white">
+            <Collapse
+              className="mt-4"
+              activeKey={showMore ? ['more'] : []}
+              onChange={(keys) => setShowMore((Array.isArray(keys) ? keys : [keys]).includes('more'))}
+              items={[
+                {
+                  key: 'more',
+                  label: (
+                    <Flex align="center" gap={8}>
+                      <SlidersHorizontal className="w-4 h-4 text-teal-700" />
+                      {en
+                        ? 'More settings (monthly revenue / proof of funds / operating duration / staff)'
+                        : '更多设置（月度流水 / 资金证明 / 经营时长 / 员工人数）'}
+                    </Flex>
+                  ),
+                  children: (
+                <div className="flex flex-col gap-5">
                   {/* 月度流水明细（选填）：平时藏在更多设置里，检测到缺口时按需高亮提示 */}
                   <div>
                     <div className="flex items-center justify-between flex-wrap gap-2 mb-1">
                       <div>
-                        <label className="block text-slate-700 font-bold">
+                        <label className="block text-neutral-700 font-bold">
                           {language === 'en' ? 'Last 6 Months Revenue Breakdown (optional, report works without it)' : '近 6 个月月度流水明细（选填，不填也能出报告）'}
                         </label>
-                        <p className="text-[13px] text-slate-500">
+                        <p className="text-[13px] text-neutral-500">
                           {language === 'en'
                             ? 'Providing month-by-month revenue lets AI assess cash-flow volatility more precisely; not required.'
                             : '提供逐月流水可让 AI 更精准评估现金流波动，不强制填写。'}
                         </p>
                       </div>
                       {showGapSection && (
-                        <button
+                        <Button size="small" type="primary"
                           onClick={handleInterpolateMissingMonths}
                           disabled={isSimulatingOcr}
-                          className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-xs font-semibold shadow-2xs transition-all cursor-pointer"
+
                         >
                           <RefreshCw className={`w-3.5 h-3.5 ${isSimulatingOcr ? 'animate-spin' : ''}`} />
                           <span>{isSimulatingOcr ? (language === 'en' ? 'AI calculating...' : 'AI 计算中...') : (language === 'en' ? 'AI Fill Gaps' : 'AI 智能补全缺口')}</span>
-                        </button>
+                        </Button>
                       )}
                     </div>
 
@@ -3523,26 +3563,26 @@ export const AssessmentForm: React.FC<FormProps> = ({
                       {formData.monthlyBreakdowns.map((b, idx) => (
                         <div
                           key={b.month}
-                          className={`p-2.5 rounded-xl border ${
+                          className={`p-2.5 rounded-lg border ${
                             b.isEstimated
                               ? 'bg-amber-50/80 border-amber-300'
-                              : 'bg-white border-slate-200'
+                              : 'bg-white border-neutral-200'
                           }`}
                         >
                           <div className="flex items-center justify-between mb-1">
-                            <span className="font-bold text-slate-700">{b.month}</span>
+                            <span className="font-bold text-neutral-700">{b.month}</span>
                             {b.isEstimated && (
-                              <span className="text-[12px] bg-amber-200 text-amber-900 font-bold px-1.5 rounded">
-                                {language === 'en' ? 'AI Estimated' : 'AI 估算'}
-                              </span>
+                              <Tag color="gold" className="me-0">
+                                {language === 'en' ? 'AI estimated' : 'AI 估算'}
+                              </Tag>
                             )}
                           </div>
                           <div className="flex items-center gap-1">
-                            <span className="text-xs text-slate-400">{formData.baseCurrency}</span>
+                            <span className="text-xs text-neutral-400">{formData.baseCurrency}</span>
                             <NumberField
                               value={b.revenue.amount}
                               onChange={(v) => updateMonthlyBreakdown(idx, v)}
-                              className="w-full p-1 border border-slate-300 rounded font-bold text-slate-800 bg-white"
+                              className="w-full p-1 border border-neutral-300 rounded font-bold text-neutral-800 bg-white"
                             />
                           </div>
                         </div>
@@ -3552,148 +3592,57 @@ export const AssessmentForm: React.FC<FormProps> = ({
 
                   {/* Proof Type Radio Tiles */}
                   <div>
-                    <label className="block text-slate-700 font-bold mb-2">
+                    <label className="block text-neutral-700 font-bold mb-2">
                       {language === 'en' ? 'Proof of Funds Method (optional, does not affect score or pass rate)' : '资金证明方式（可选，不影响得分与通过率）'}
                     </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-                      <label
-                        className={`p-3 rounded-xl border cursor-pointer transition-all ${
-                          formData.proofType === 'none'
-                            ? 'border-teal-600 bg-teal-50/80 ring-1 ring-teal-600'
-                            : 'border-slate-200 hover:bg-slate-50'
-                        }`}
-                      >
-                        <div className="flex items-start justify-between">
-                          <span className="font-bold text-slate-900">{proofTypeLabel('none', language)}</span>
-                          <input
-                            type="radio"
-                            name="proofType"
-                            checked={formData.proofType === 'none'}
-                            onChange={() => updateField('proofType', 'none' as ProofType)}
-                            className="text-teal-600"
-                          />
-                        </div>
-                        <p className="text-slate-500 mt-1.5 text-[13px]">
-                          {language === 'en'
-                            ? 'Enter numbers manually, skipping file upload — the scoring logic is exactly the same.'
-                            : '直接手动录入数字，跳过文件上传，打分逻辑完全一致。'}
-                        </p>
-                      </label>
-
-                      <label
-                        className={`p-3 rounded-xl border cursor-pointer transition-all ${
-                          formData.proofType === 'mobile_payment'
-                            ? 'border-teal-600 bg-teal-50/80 ring-1 ring-teal-600'
-                            : 'border-slate-200 hover:bg-slate-50'
-                        }`}
-                      >
-                        <div className="flex items-start justify-between">
-                          <span className="font-bold text-slate-900">{proofTypeLabel('mobile_payment', language)}</span>
-                          <input
-                            type="radio"
-                            name="proofType"
-                            checked={formData.proofType === 'mobile_payment'}
-                            onChange={() => updateField('proofType', 'mobile_payment' as ProofType)}
-                            className="text-teal-600"
-                          />
-                        </div>
-                        <p className="text-slate-500 mt-1.5 text-[13px]">
-                          {language === 'en'
-                            ? 'Electronic proof such as M-Pesa, WeChat Pay, or WhatsApp transfer records.'
-                            : 'M-Pesa / 微信收款 / WhatsApp 转账记录等电子凭证。'}
-                        </p>
-                      </label>
-
-                      <label
-                        className={`p-3 rounded-xl border cursor-pointer transition-all ${
-                          formData.proofType === 'handwritten_book'
-                            ? 'border-teal-600 bg-teal-50/80 ring-1 ring-teal-600'
-                            : 'border-slate-200 hover:bg-slate-50'
-                        }`}
-                      >
-                        <div className="flex items-start justify-between">
-                          <span className="font-bold text-slate-900">{proofTypeLabel('handwritten_book', language)}</span>
-                          <input
-                            type="radio"
-                            name="proofType"
-                            checked={formData.proofType === 'handwritten_book'}
-                            onChange={() => updateField('proofType', 'handwritten_book' as ProofType)}
-                            className="text-teal-600"
-                          />
-                        </div>
-                        <p className="text-slate-500 mt-1.5 text-[13px]">
-                          {language === 'en'
-                            ? 'Photos of daily handwritten or electronic ledger pages, auto pre-extracted by AI.'
-                            : '日常手工记账流水单页、账本拍照上传，AI 自动预提取。'}
-                        </p>
-                      </label>
-
-                      <label
-                        className={`p-3 rounded-xl border cursor-pointer transition-all ${
-                          formData.proofType === 'institution_record'
-                            ? 'border-teal-600 bg-teal-50/80 ring-1 ring-teal-600'
-                            : 'border-slate-200 hover:bg-slate-50'
-                        }`}
-                      >
-                        <div className="flex items-start justify-between">
-                          <span className="font-bold text-slate-900">{proofTypeLabel('institution_record', language)}</span>
-                          <input
-                            type="radio"
-                            name="proofType"
-                            checked={formData.proofType === 'institution_record'}
-                            onChange={() => updateField('proofType', 'institution_record' as ProofType)}
-                            className="text-teal-600"
-                          />
-                        </div>
-                        <p className="text-slate-500 mt-1.5 text-[13px]">
-                          {language === 'en'
-                            ? 'Statements or proof letters issued by a church, cooperative or other institution.'
-                            : '机构出具的经营往来对账单或证明函件。'}
-                        </p>
-                      </label>
-
-                      <label
-                        className={`p-3 rounded-xl border cursor-pointer transition-all ${
-                          formData.proofType === 'bank_statement'
-                            ? 'border-teal-600 bg-teal-50/80 ring-1 ring-teal-600'
-                            : 'border-slate-200 hover:bg-slate-50'
-                        }`}
-                      >
-                        <div className="flex items-start justify-between">
-                          <span className="font-bold text-slate-900">{proofTypeLabel('bank_statement', language)}</span>
-                          <input
-                            type="radio"
-                            name="proofType"
-                            checked={formData.proofType === 'bank_statement'}
-                            onChange={() => updateField('proofType', 'bank_statement' as ProofType)}
-                            className="text-teal-600"
-                          />
-                        </div>
-                        <p className="text-slate-500 mt-1.5 text-[13px]">
-                          {language === 'en'
-                            ? 'Monthly statement exported from a formal bank account.'
-                            : '正规银行账户导出的月度对账明细。'}
-                        </p>
-                      </label>
-                    </div>
+                    <Radio.Group
+                      className="w-full"
+                      value={formData.proofType}
+                      onChange={(e) => updateField('proofType', e.target.value as ProofType)}
+                    >
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-sm">
+                        {(
+                          [
+                            ['none', 'Enter numbers manually, skipping file upload — the scoring logic is exactly the same.', '直接手动录入数字，跳过文件上传，打分逻辑完全一致。'],
+                            ['mobile_payment', 'Electronic proof such as M-Pesa, WeChat Pay, or WhatsApp transfer records.', 'M-Pesa / 微信收款 / WhatsApp 转账记录等电子凭证。'],
+                            ['handwritten_book', 'Photos of daily handwritten or electronic ledger pages, auto pre-extracted by AI.', '日常手工记账流水单页、账本拍照上传，AI 自动预提取。'],
+                            ['institution_record', 'Statements or proof letters issued by a church, cooperative or other institution.', '机构出具的经营往来对账单或证明函件。'],
+                            ['bank_statement', 'Monthly statement exported from a formal bank account.', '正规银行账户导出的月度对账明细。']
+                          ] as [ProofType, string, string][]
+                        ).map(([value, descEn, descZh]) => (
+                          <label
+                            key={value}
+                            className={`flex items-start gap-2 p-3 rounded-lg border cursor-pointer transition-colors ${
+                              formData.proofType === value ? 'border-teal-700 bg-teal-50' : 'border-neutral-200 bg-white hover:border-teal-300'
+                            }`}
+                          >
+                            <Radio value={value} className="mt-0.5" />
+                            <span>
+                              <span className="block font-medium text-neutral-900">{proofTypeLabel(value, language)}</span>
+                              <span className="block text-xs text-neutral-500 mt-0.5">{en ? descEn : descZh}</span>
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </Radio.Group>
                   </div>
 
                   {/* File Upload Zone：支持一次多选、多种格式 */}
                   {formData.proofType !== 'none' && (
                     <div className="space-y-3">
-                      <label className="block text-xs font-bold text-slate-800">
+                      <label className="block text-xs font-bold text-neutral-800">
                         {language === 'en'
                           ? 'Upload Supporting Documents (optional, multiple files allowed / originals are discarded immediately after recognition in Sensitive Region Mode)'
                           : '上传佐证凭证文件（选填，可一次多选多个文件 / 敏感地区模式下识别后立即销毁原图）'}
                       </label>
-                      <div className="border-2 border-dashed border-slate-300 rounded-2xl p-6 text-center bg-slate-50 hover:bg-teal-50/40 transition-colors">
+                      <div className="border-2 border-dashed border-neutral-300 rounded-lg p-6 text-center bg-neutral-50 hover:bg-teal-50/40 transition-colors">
                         <UploadCloud className="w-8 h-8 text-teal-500 mx-auto mb-2" />
-                        <p className="text-xs font-semibold text-slate-700">
+                        <p className="text-xs font-semibold text-neutral-700">
                           {language === 'en'
                             ? 'Click to select one or more files, or drag and drop here'
                             : '点击选择一个或多个文件，或直接拖拽到此处'}
                         </p>
-                        <p className="text-[13px] text-slate-400 mt-1">
+                        <p className="text-[13px] text-neutral-400 mt-1">
                           {language === 'en'
                             ? 'Supports JPG, PNG, HEIC, PDF, XLSX, CSV and mixed formats (max 10MB per file)'
                             : '支持 JPG、PNG、HEIC、PDF、XLSX、CSV 等多种格式混合上传（单文件不超过 10MB）'}
@@ -3706,13 +3655,13 @@ export const AssessmentForm: React.FC<FormProps> = ({
                           className="hidden"
                           id="proof-upload-input"
                         />
-                        <label
-                          htmlFor="proof-upload-input"
-                          className="mt-3 inline-flex items-center gap-1.5 px-4 py-1.5 bg-white border border-slate-300 rounded-xl text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-100 cursor-pointer"
+                        <Button
+                          className="mt-3"
+                          icon={<Camera className="w-4 h-4" />}
+                          onClick={() => document.getElementById('proof-upload-input')?.click()}
                         >
-                          <Camera className="w-3.5 h-3.5" />
-                          <span>{language === 'en' ? 'Choose Attachments (multiple allowed)' : '选择凭证附件（可多选）'}</span>
-                        </label>
+                          {en ? 'Choose attachments (multiple allowed)' : '选择凭证附件（可多选）'}
+                        </Button>
                       </div>
 
                       {formData.proofFiles.length > 0 && (
@@ -3720,42 +3669,39 @@ export const AssessmentForm: React.FC<FormProps> = ({
                           {formData.proofFiles.map((file) => (
                             <div
                               key={file.id}
-                              className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-2"
+                              className="p-2.5 rounded-lg bg-neutral-50 border border-neutral-200 text-xs space-y-2"
                             >
                               <div className="flex items-center justify-between gap-2">
                                 <div className="flex items-center gap-2 min-w-0">
                                   <FileSpreadsheet className="w-4 h-4 text-teal-600 shrink-0" />
-                                  <span className="font-medium text-slate-800 truncate">{file.name}</span>
-                                  <span className="text-[12px] text-slate-400 shrink-0">
+                                  <span className="font-medium text-neutral-800 truncate">{file.name}</span>
+                                  <span className="text-[12px] text-neutral-400 shrink-0">
                                     ({(file.size / 1024).toFixed(0)} KB)
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-2 shrink-0">
                                   {file.status === 'processing' ? (
-                                    <span className="inline-flex items-center gap-1 text-[12px] bg-slate-200 text-slate-700 font-medium px-2 py-0.5 rounded">
-                                      <RefreshCw className="w-3 h-3 animate-spin" />
+                                    <Tag icon={<RefreshCw className="w-3 h-3 animate-spin inline mr-1" />} className="me-0">
                                       {language === 'en' ? 'AI recognizing...' : 'AI 识别中...'}
-                                    </span>
+                                    </Tag>
                                   ) : formData.isSensitiveRegion ? (
-                                    <span className="text-[12px] bg-amber-100 text-amber-800 font-medium px-2 py-0.5 rounded">
+                                    <Tag color="gold" className="me-0">
                                       {language === 'en' ? 'Anonymized mode: original not stored' : '脱敏模式：原图不入库'}
-                                    </span>
+                                    </Tag>
                                   ) : (
-                                    <span className="text-[12px] bg-emerald-100 text-emerald-800 font-medium px-2 py-0.5 rounded">
+                                    <Tag color="success" className="me-0">
                                       {language === 'en' ? 'Recognized & extracted' : '已识别提取'}
-                                    </span>
+                                    </Tag>
                                   )}
-                                  <button
+                                  <Button size="small" type="text" danger icon={<Trash2 className="w-3.5 h-3.5" />}
                                     onClick={() =>
                                       setFormData((prev) => ({
                                         ...prev,
                                         proofFiles: prev.proofFiles.filter((f) => f.id !== file.id)
                                       }))
                                     }
-                                    className="text-slate-400 hover:text-rose-500 p-1"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
+
+                                   />
                                 </div>
                               </div>
 
@@ -3763,7 +3709,7 @@ export const AssessmentForm: React.FC<FormProps> = ({
                                 <div className="ml-6 p-2 rounded-lg bg-white border border-teal-200 grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-1 text-[12px]">
                                   {file.extractedData.detectedAmount !== undefined && (
                                     <div>
-                                      <span className="text-slate-400">{language === 'en' ? 'Detected amount: ' : '识别金额：'}</span>
+                                      <span className="text-neutral-400">{language === 'en' ? 'Detected amount: ' : '识别金额：'}</span>
                                       <span className="font-bold text-teal-800">
                                         {formatMoney(
                                           file.extractedData.detectedAmount,
@@ -3774,16 +3720,16 @@ export const AssessmentForm: React.FC<FormProps> = ({
                                   )}
                                   {file.extractedData.transactionCount !== undefined && (
                                     <div>
-                                      <span className="text-slate-400">{language === 'en' ? 'Detected transactions: ' : '识别笔数：'}</span>
-                                      <span className="font-bold text-slate-700">
+                                      <span className="text-neutral-400">{language === 'en' ? 'Detected transactions: ' : '识别笔数：'}</span>
+                                      <span className="font-bold text-neutral-700">
                                         {file.extractedData.transactionCount} {language === 'en' ? '' : '笔'}
                                       </span>
                                     </div>
                                   )}
                                   {file.extractedData.periodLabel && (
                                     <div className="col-span-2 sm:col-span-1">
-                                      <span className="text-slate-400">{language === 'en' ? 'Period covered: ' : '覆盖周期：'}</span>
-                                      <span className="font-medium text-slate-700">
+                                      <span className="text-neutral-400">{language === 'en' ? 'Period covered: ' : '覆盖周期：'}</span>
+                                      <span className="font-medium text-neutral-700">
                                         {file.extractedData.periodLabel}
                                       </span>
                                     </div>
@@ -3800,109 +3746,93 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   {/* Operating Duration & Team scale */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
                     <div>
-                      <label className="block font-bold text-slate-800 mb-1">{language === 'en' ? 'Months of Continuous Stable Operation' : '连续稳定经营月数'}</label>
+                      <label className="block font-bold text-neutral-800 mb-1">{language === 'en' ? 'Months of Continuous Stable Operation' : '连续稳定经营月数'}</label>
                       <NumberField
                         value={formData.operatingMonthsCount}
                         onChange={(v) => updateField('operatingMonthsCount', v)}
                         placeholder={language === 'en' ? 'e.g. 12 (leave blank if unknown)' : '如：12（不确定可留空）'}
-                        className="w-full p-2.5 border border-slate-300 rounded-xl font-bold"
+                        className="w-full p-2.5 border border-neutral-300 rounded-lg font-bold"
                       />
                     </div>
                     <div>
-                      <label className="block font-bold text-slate-800 mb-1">{language === 'en' ? 'Number of Full-time/Part-time Employees' : '全职/兼职雇员人数'}</label>
+                      <label className="block font-bold text-neutral-800 mb-1">{language === 'en' ? 'Number of Full-time/Part-time Employees' : '全职/兼职雇员人数'}</label>
                       <NumberField
                         value={formData.fullTimeEmployeesCount}
                         onChange={(v) => updateField('fullTimeEmployeesCount', v)}
                         placeholder={language === 'en' ? 'e.g. 2 (leave blank if unknown)' : '如：2（不确定可留空）'}
-                        className="w-full p-2.5 border border-slate-300 rounded-xl font-bold"
+                        className="w-full p-2.5 border border-neutral-300 rounded-lg font-bold"
                       />
                     </div>
                   </div>
                 </div>
-              )}
-            </div>
+                  )
+                }
+              ]}
+            />
 
             {/* 提交前信息核对速览 */}
-            <div className="p-4 rounded-xl bg-teal-50/60 border border-teal-100 text-xs space-y-3">
-              <div className="flex items-center gap-2 text-teal-950 font-bold">
-                <Briefcase className="w-4 h-4 text-teal-600" />
-                <span>{language === 'en' ? 'Pre-Submission Summary' : '提交前信息核对速览'}</span>
-              </div>
+            <Descriptions
+              className="mt-4"
+              size="small"
+              bordered
+              column={{ xs: 1, sm: 2, md: 3 }}
+              title={
+                <Flex align="center" gap={8}>
+                  <Briefcase className="w-4 h-4 text-teal-700" />
+                  {en ? 'Pre-submission summary' : '提交前信息核对速览'}
+                </Flex>
+              }
+              items={[
+                { key: 'name', label: en ? 'Project' : '项目名称', children: formData.projectName || (en ? 'Untitled' : '未命名项目') },
+                { key: 'currency', label: en ? 'Base currency' : '主报告币种', children: formData.baseCurrency },
+                { key: 'industry', label: en ? 'Industry' : '所属行业', children: industryLabel },
+                {
+                  key: 'sensitive',
+                  label: en ? 'Sensitive region mode' : '敏感地区模式',
+                  children: formData.isSensitiveRegion ? (en ? 'On (anonymized)' : '已启用（脱敏）') : en ? 'Off' : '未开启'
+                },
+                {
+                  key: 'revenue',
+                  label: en ? 'Avg. monthly revenue' : '月均总流水',
+                  children: formatMoney(formData.monthlyRevenue.amount, formData.monthlyRevenue.currency)
+                },
+                {
+                  key: 'materials',
+                  label: en ? 'Materials purchasing' : '原材料采购',
+                  children: formatMoney(
+                    (formData.dynamicCogsItems || []).reduce(
+                      (sum, it) => sum + normalizeToMonthly(Number(it.value) || 0, it.cycle || 'monthly', it.amortizationMonths),
+                      0
+                    ) || formData.cogsCost.amount,
+                    formData.cogsCost.currency
+                  )
+                }
+              ]}
+            />
+          </Card>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-slate-700">
-                <div>
-                  <span className="text-slate-500 block">{language === 'en' ? 'Project Name:' : '项目名称:'}</span>
-                  <span className="font-bold">{formData.projectName || (language === 'en' ? 'Untitled assessment' : '未命名自测')}</span>
-                </div>
-                <div>
-                  <span className="text-slate-500 block">{language === 'en' ? 'Base Currency:' : '主报告币种:'}</span>
-                  <span className="font-bold">{formData.baseCurrency}</span>
-                </div>
-                <div>
-                  <span className="text-slate-500 block">{language === 'en' ? 'Industry:' : '所属行业:'}</span>
-                  <span className="font-bold">{industryLabel}</span>
-                </div>
-                <div>
-                  <span className="text-slate-500 block">{language === 'en' ? 'Sensitive Region Mode:' : '敏感地区模式:'}</span>
-                  <span className="font-bold">
-                    {formData.isSensitiveRegion
-                      ? (language === 'en' ? 'Enabled (anonymized)' : '已启用（脱敏）')
-                      : (language === 'en' ? 'Off' : '未开启')}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-500 block">{language === 'en' ? 'Avg. Monthly Revenue:' : '月均总流水:'}</span>
-                  <span className="font-bold">
-                    {formatMoney(formData.monthlyRevenue.amount, formData.monthlyRevenue.currency)}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-500 block">{language === 'en' ? 'Materials Purchasing:' : '原材料采购:'}</span>
-                  <span className="font-bold">
-                    {formatMoney(
-                      (formData.dynamicCogsItems || []).reduce(
-                        (sum, it) => sum + normalizeToMonthly(Number(it.value) || 0, it.cycle || 'monthly', it.amortizationMonths),
-                        0
-                      ) || formData.cogsCost.amount,
-                      formData.cogsCost.currency
-                    )}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {submitError && (
-            <div className="p-3.5 rounded-2xl bg-rose-50 border-2 border-rose-300 text-rose-900 text-xs font-bold flex items-center gap-2 animate-in fade-in">
-              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-              <span>{submitError}</span>
-            </div>
-          )}
+          {submitError && <Alert type="error" showIcon title={submitError} />}
 
           {/* 底部常驻操作条：成本页很长，保存/出报告按钮始终贴在屏幕底部，不用滚到最下面才能点。
-              右侧留出空位，避免与全局右下角「AI 答疑」悬浮按钮重叠；移动端抬高到底部标签栏之上。 */}
-          <div className="sticky bottom-[4.5rem] md:bottom-4 z-30 mr-16 sm:mr-28 2xl:mr-0">
-            <div className="flex items-center justify-between gap-2 flex-wrap p-2.5 rounded-2xl bg-white/95 backdrop-blur border border-slate-200 shadow-lg">
+              移动端抬高到底部标签栏之上。 */}
+          <div className="sticky bottom-[4.5rem] md:bottom-4 z-30">
+            <div className="flex items-center justify-between gap-2 flex-wrap p-2.5 rounded-lg bg-white/95 backdrop-blur border border-neutral-200 shadow-lg">
               <div className="flex items-center gap-2">
-                <button
+                <Button icon={<ArrowLeft className="w-4 h-4" />}
                   onClick={() => setCurrentStep(1)}
                   aria-label={language === 'en' ? 'Back' : '上一步'}
-                  className="flex items-center gap-1 px-2.5 sm:px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold cursor-pointer"
-                >
-                  <ArrowLeft className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">{language === 'en' ? 'Back' : '上一步'}</span>
-                </button>
-                <button
-                  type="button"
+
+                ><span className="hidden sm:inline">{language === 'en' ? 'Back' : '上一步'}</span>
+                </Button>
+                <Button icon={<Save className="w-4 h-4" />}
+
                   onClick={handleManualSave}
                   title={language === 'en' ? 'Save progress (Ctrl/⌘ + S)' : '保存填写进度（Ctrl/⌘ + S）'}
-                  className="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white rounded-xl text-xs font-bold shadow-sm cursor-pointer"
-                >
-                  <Save className="w-3.5 h-3.5" />
-                  <span>{language === 'en' ? 'Save' : '保存'}</span>
-                </button>
+
+                ><span>{language === 'en' ? 'Save' : '保存'}</span>
+                </Button>
                 {lastSavedAt && (
-                  <span className={`text-[12px] font-medium ${cloudSaveFailed ? 'text-rose-600' : 'hidden sm:inline text-slate-500'}`}>
+                  <span className={`text-[12px] font-medium ${cloudSaveFailed ? 'text-rose-600' : 'hidden sm:inline text-neutral-500'}`}>
                     {cloudSaveFailed
                       ? (language === 'en' ? 'Saved on device only — cloud sync failed' : '仅存本机，云端同步失败')
                       : <>
@@ -3912,14 +3842,12 @@ export const AssessmentForm: React.FC<FormProps> = ({
                   </span>
                 )}
               </div>
-              <button
+              <Button type="primary" icon={<Sparkles className="w-4 h-4" />}
                 onClick={handleFinalSubmit}
-                className="flex items-center gap-2 px-4 sm:px-8 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-neutral-950 rounded-xl text-xs sm:text-sm font-black shadow-lg shadow-amber-500/30 transition-all cursor-pointer"
-              >
-                <Sparkles className="w-4 h-4" />
-                <span className="sm:hidden">{language === 'en' ? 'Report' : '出报告'}</span>
-                <span className="hidden sm:inline">{language === 'en' ? 'Generate Health Report' : '出报告 · 生成评估报告'}</span>
-              </button>
+
+              ><span className="sm:hidden">{language === 'en' ? 'Report' : '生成报告'}</span>
+                <span className="hidden sm:inline">{language === 'en' ? 'Generate report' : '生成体检报告'}</span>
+              </Button>
             </div>
           </div>
         </div>

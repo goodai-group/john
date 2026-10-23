@@ -1,3 +1,7 @@
+/* 层级顺序：antd 组件样式（StyleProvider layer，见 src/theme/AntdProvider.tsx）位于
+   Tailwind preflight 之后、工具类之前——preflight 不会把 antd 按钮/输入框重置掉，
+   同时仍可用 Tailwind 工具类对 antd 组件做布局微调。 */
+@layer theme, base, antd, components, utilities;
 @import "tailwindcss";
 
 /* 新设计稿的暖米白页面底色（区别于默认 neutral-50 的冷灰调），供 bg-warm 类使用 */

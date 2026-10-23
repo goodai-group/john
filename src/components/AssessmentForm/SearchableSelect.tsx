@@ -1,5 +1,5 @@
 import React from 'react';
-import Select, { type StylesConfig, components as RSComponents } from 'react-select';
+import { Select } from 'antd';
 
 export interface SearchableSelectOption {
   value: string;
@@ -11,18 +11,20 @@ interface SearchableSelectProps {
   onChange: (value: string) => void;
   options: SearchableSelectOption[];
   placeholder: string;
-  /** 附加在最外层容器上的 className，用于控制宽度等布局（尺寸/圆角/边框由 controlClassName 决定） */
+  /** 附加在最外层容器上的 className，用于控制宽度等布局 */
   className?: string;
-  /** 控件（未展开时可见的那一条）的 className，需与原生 <select> 的视觉风格对齐 */
+  /**
+   * 旧版（react-select）控件外观 className。现在外观统一由 antd 决定，
+   * 这里只读取其中的 `w-full`（是否撑满）与 `text-xs`（紧凑尺寸）两个信号。
+   */
   controlClassName?: string;
   isClearable?: boolean;
   noOptionsMessage?: string;
 }
 
 /**
- * 国家/省州/币种这类几十上百个选项的下拉框统一换成带搜索的 react-select（成熟的现成组件，
- * 而不是自己写一套搜索下拉逻辑），选项少（几项）的原生 <select> 不受影响、无需改造。
- * 用 unstyled + classNames 把 react-select 的视觉完全交给 Tailwind，和原生 <select> 保持一致观感。
+ * 国家/省州/币种这类几十上百个选项的下拉框：antd Select + 输入即搜索。
+ * 选项少（几项）的场景直接用 antd Select / Segmented，不需要这个包装。
  */
 export function SearchableSelect({
   value,
@@ -30,55 +32,26 @@ export function SearchableSelect({
   options,
   placeholder,
   className,
-  controlClassName = 'w-full p-2 border border-slate-300 rounded-lg font-medium text-slate-800 bg-white',
+  controlClassName = 'w-full',
   isClearable = false,
   noOptionsMessage
 }: SearchableSelectProps) {
-  const selected = options.find((o) => o.value === value) || null;
-
-  // 保留最基础的尺寸/浮层 z-index 用内联样式兜底，其余外观全部走 classNames（Tailwind），
-  // 避免 react-select 默认的 emotion 内联样式和页面已有的 Tailwind 视觉冲突。
-  const styles: StylesConfig<SearchableSelectOption, false> = {
-    control: (base) => ({ ...base, minHeight: 'unset' }),
-    menuPortal: (base) => ({ ...base, zIndex: 60 })
-  };
+  const fullWidth = /\bw-full\b/.test(controlClassName);
+  const compact = /\btext-xs\b/.test(controlClassName);
 
   return (
-    <Select<SearchableSelectOption, false>
-      className={className}
-      classNamePrefix="ss"
-      unstyled
-      isClearable={isClearable}
-      value={selected}
-      onChange={(opt) => onChange(opt ? opt.value : '')}
+    <Select
+      className={`${fullWidth ? 'w-full' : 'min-w-28'} ${className || ''}`.trim()}
+      size={compact ? 'small' : 'middle'}
+      showSearch
+      optionFilterProp="label"
+      allowClear={isClearable}
+      value={value || undefined}
+      onChange={(v) => onChange(v ?? '')}
       options={options}
       placeholder={placeholder}
-      noOptionsMessage={() => noOptionsMessage || (options.length ? '无匹配结果' : '暂无选项')}
-      menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
-      styles={styles}
-      components={{ IndicatorSeparator: () => null }}
-      classNames={{
-        control: ({ isFocused }) =>
-          `${controlClassName} ${isFocused ? 'ring-1 ring-teal-500' : ''} cursor-text`,
-        // react-select 默认把已选中文字（singleValue）和搜索输入框用 grid 叠在同一格里，
-        // 未输入时输入框是空的，光标会画在格子最前面，看起来像是停在"美国"这类已选文字
-        // 前面而不是后面。改成一行式排列（singleValue 先渲染，输入框紧跟在后面）后，
-        // 空输入框的光标自然落在文字右边；用 !important 是因为要压过 react-select 自带的
-        // 内联 grid 布局。
-        valueContainer: () => '!flex !items-center overflow-visible',
-        placeholder: () => 'text-slate-400 font-normal whitespace-nowrap',
-        input: () => 'text-inherit',
-        singleValue: () => 'text-inherit whitespace-nowrap',
-        menu: () => 'mt-1 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden',
-        menuList: () => 'max-h-64 overflow-y-auto py-1',
-        option: ({ isFocused, isSelected }) =>
-          `px-3 py-2 text-sm cursor-pointer whitespace-nowrap ${
-            isSelected ? 'bg-teal-600 text-white font-bold' : isFocused ? 'bg-teal-50 text-slate-900' : 'text-slate-800'
-          }`,
-        indicatorsContainer: () => 'text-slate-400 pl-0.5',
-        clearIndicator: () => 'cursor-pointer hover:text-rose-500 px-1',
-        dropdownIndicator: () => 'cursor-pointer hover:text-slate-600 pl-1'
-      }}
+      popupMatchSelectWidth={fullWidth}
+      notFoundContent={noOptionsMessage || (options.length ? '无匹配结果' : '暂无选项')}
     />
   );
 }

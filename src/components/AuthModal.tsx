@@ -202,7 +202,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
         {/* 品牌标题 */}
         <div className="flex items-center gap-3 mb-5 pr-8">
-          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-teal-600 to-violet-600 text-white flex items-center justify-center shadow-md shadow-teal-600/20 shrink-0">
+          <div className="w-11 h-11 rounded-xl bg-teal-700 text-white flex items-center justify-center shadow-md shadow-teal-600/20 shrink-0">
             {mode === 'signup' ? (
               <UserPlus className="w-5 h-5" />
             ) : mode === 'forgot' || mode === 'newpass' ? (
@@ -212,7 +212,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             )}
           </div>
           <div>
-            <h2 className="text-lg font-black text-slate-900 tracking-tight">
+            <h2 className="text-lg font-bold text-slate-900 tracking-tight">
               {mode === 'signup'
                 ? zh
                   ? '注册账号'
@@ -303,7 +303,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 }
               }}
               disabled={isGoogleLoading}
-              className="w-full flex items-center justify-center gap-2.5 px-4 py-3 rounded-xl bg-white border-2 border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-800 text-sm font-bold shadow-xs transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center gap-2.5 px-4 py-3 rounded-xl bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-800 text-sm font-bold shadow-xs transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isGoogleLoading ? (
                 <Loader2 className="w-4 h-4 text-teal-600 animate-spin" />
@@ -416,7 +416,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <button
             type="submit"
             disabled={submitting}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-teal-600 to-violet-600 hover:from-teal-500 hover:to-violet-500 text-white text-sm font-bold shadow-md shadow-teal-600/20 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-teal-700 hover:bg-teal-600 text-white text-sm font-bold shadow-md shadow-teal-600/20 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {loading && <Loader2 className="w-4 h-4 animate-spin" />}
             {mode === 'signin'
@@ -442,7 +442,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
           <span>
             {zh
-              ? '登录仅用于跨设备备份您的自测档案；所有评估数据按账号隔离，平台承诺不对外披露。'
+              ? '登录仅用于跨设备备份您的体检档案；所有评估数据按账号隔离，平台承诺不对外披露。'
               : 'Sign-in is used only for cross-device backup. All data is isolated per account and never shared.'}
           </span>
         </div>

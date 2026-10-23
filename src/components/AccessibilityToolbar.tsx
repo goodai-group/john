@@ -247,7 +247,7 @@ export const AccessibilityToolbar: React.FC<AccessibilityProps> = ({
         <div className="flex justify-end pt-3 border-t border-slate-100">
           <button
             onClick={onClose}
-            className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors cursor-pointer"
+            className="px-5 py-2 bg-teal-700 hover:bg-teal-600 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors cursor-pointer"
           >
             {language === 'zh' ? '完成设置' : 'Done'}
           </button>

@@ -14,7 +14,15 @@
 
 ## 技术栈
 
-- 前端：React 19 + TypeScript + Vite 6 + Tailwind CSS 4
+- 前端：React 19 + TypeScript + Vite 6 + Tailwind CSS 4 + antd 6
+  - **新写/重写的页面统一用 antd 组件**（Card/Row/Col/Statistic/Table/Tag/Alert 等），主题令牌集中在
+    `src/theme/AntdProvider.tsx`，页头/容器用 `src/components/ui/PageHeader.tsx`；不要再手写一套圆角/字号/配色。
+    全部页面均已迁移（含快速体检表单与体检报告）。表单里的数字输入统一用 `AssessmentForm/NumberField.tsx`
+    （antd InputNumber 包装，0 显示为空、越界钳位提示），大列表下拉用 `SearchableSelect.tsx`（antd Select 搜索）；
+    报告里的钱流向条、雷达图是自绘 SVG/div，有意保留。新代码不要再写原生 `<button>`/`<input>`/`<select>`。
+  - 面向用户的评级用 `src/lib/healthStatus.ts`（健康/需关注/有风险 + `tierLabel`），不要直接展示 REJECT。
+  - 术语统一：固定开销（不说 OPEX/运营开销）、红线（不说 Gate）、体检（不说自测）、项目（不说申报）。
+  - antd 样式放在 CSS `@layer antd`（见 `src/index.css` 顶部层级声明），位于 Tailwind preflight 之后、工具类之前。
 - 后端：Express（本地用 `tsx` 跑 `server.ts`；Vercel 上由 `api/[...path].ts` 转发到同一套路由）
 - 数据：Supabase（Postgres + Auth，替代早期 Firebase 方案；`firebase-blueprint.json`/`firestore.rules` 是历史遗留，未在用）
 - AI：`@google/genai`（Gemini），无 key 或配额耗尽时自动回退到 `src/server/localEngine` 本地规则引擎
@@ -61,7 +69,7 @@ api/                     Vercel Serverless 入口，转发到 src/server 的路�
 否则优先用 Grep 定位具体函数/组件后再用 `offset`/`limit` 局部读取：
 
 - `src/components/AssessmentForm/AssessmentForm.tsx`（~3000 行，表单主组件）
-- `src/components/AssessmentReport/AssessmentReportView.tsx`（~1700 行，报告展示）
+- `src/components/AssessmentReport/AssessmentReportView.tsx`（~1900 行，报告展示）
 - `src/components/AiRuleConsultationDrawer.tsx`（~1100 行）
 - `src/App.tsx`（~1000 行）
 - `src/lib/supabaseClient.ts`（~900 行，含建表 SQL 字符串常量 `SUPABASE_DATABASE_SCHEMA_SQL`）

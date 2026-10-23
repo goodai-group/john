@@ -43,7 +43,7 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/75 backdrop-blur-xs p-3 sm:p-4 animate-in fade-in overflow-y-auto">
-      <div className="bg-white rounded-3xl max-w-3xl w-full p-5 sm:p-7 shadow-2xl border-2 border-neutral-200 text-neutral-800 relative my-6 max-h-[92vh] flex flex-col">
+      <div className="bg-white rounded-xl max-w-3xl w-full p-5 sm:p-7 shadow-2xl border border-neutral-200 text-neutral-800 relative my-6 max-h-[92vh] flex flex-col">
         {/* Close Button */}
         <button
           onClick={onClose}
@@ -60,14 +60,14 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-[12px] font-mono font-bold uppercase tracking-wider text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-100">
-                USER GUIDE & APP OVERVIEW
+              <span className="text-[12px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-100">
+                {language === 'zh' ? '使用指南' : 'User guide'}
               </span>
               <span className="text-[12px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
                 {language === 'zh' ? '零基础大白话版' : 'Plain-Language, No Experience Needed'}
               </span>
             </div>
-            <h2 className="text-lg sm:text-xl font-black text-neutral-950 tracking-tight mt-0.5">
+            <h2 className="text-lg sm:text-xl font-bold text-neutral-950 tracking-tight mt-0.5">
               {language === 'zh'
                 ? '3分钟看懂：微小企业商业健康体检仪'
                 : 'Understand in 3 Minutes: Micro-Business Health Checkup Tool'}
@@ -180,7 +180,7 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
                   </h4>
                   <p className="text-amber-800 text-[13px] leading-relaxed">
                     {language === 'zh'
-                      ? '内置医疗门诊、语言辅导、技能培训等真实工场模型，无需手动算数字即可直接自测。'
+                      ? '内置医疗门诊、语言辅导、技能培训等真实工场模型，无需手动算数字即可直接体检。'
                       : 'Built-in real-world models for clinics, language tutoring, and skills training — self-assess instantly without manual math.'}
                   </p>
                 </div>
@@ -205,7 +205,7 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
           {/* TAB 2: STEPS */}
           {activeTab === 'steps' && (
             <div className="space-y-3">
-              <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white border-2 border-neutral-200 hover:border-teal-300 transition-colors">
+              <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white border border-neutral-200 hover:border-teal-300 transition-colors">
                 <div className="w-8 h-8 rounded-xl bg-teal-600 text-white flex items-center justify-center font-bold text-sm shrink-0">
                   1
                 </div>
@@ -229,7 +229,7 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
                 </div>
               </div>
 
-              <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white border-2 border-neutral-200 hover:border-teal-300 transition-colors">
+              <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white border border-neutral-200 hover:border-teal-300 transition-colors">
                 <div className="w-8 h-8 rounded-xl bg-teal-600 text-white flex items-center justify-center font-bold text-sm shrink-0">
                   2
                 </div>
@@ -253,7 +253,7 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
                 </div>
               </div>
 
-              <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white border-2 border-neutral-200 hover:border-teal-300 transition-colors">
+              <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white border border-neutral-200 hover:border-teal-300 transition-colors">
                 <div className="w-8 h-8 rounded-xl bg-teal-600 text-white flex items-center justify-center font-bold text-sm shrink-0">
                   3
                 </div>
@@ -383,11 +383,11 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
 
               <div className="p-3.5 rounded-2xl bg-neutral-50 border border-neutral-200 space-y-1">
                 <h4 className="font-bold text-neutral-900 text-xs">
-                  {language === 'zh' ? 'Q3：提交自测会产生费用吗？' : 'Q3: Does submitting a self-assessment cost anything?'}
+                  {language === 'zh' ? 'Q3：做体检会产生费用吗？' : 'Q3: Does submitting a self-assessment cost anything?'}
                 </h4>
                 <p className="text-neutral-600 text-[13px] leading-relaxed">
                   {language === 'zh'
-                    ? '本自测工具 100% 免费开放，零门槛、零中介费、零隐形收费。'
+                    ? '本体检工具 100% 免费开放，零门槛、零中介费、零隐形收费。'
                     : 'This self-assessment tool is 100% free — no barrier to entry, no middleman fees, no hidden charges.'}
                 </p>
               </div>
@@ -417,7 +417,7 @@ export const AppGuideModal: React.FC<AppGuideModalProps> = ({
               onClick={onClose}
               className="px-5 py-2.5 rounded-2xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold shadow-md shadow-teal-200 transition-all cursor-pointer hover:scale-102 flex items-center gap-1.5"
             >
-              <span>{language === 'zh' ? '我明白了，开始自测' : 'Got it, start the assessment'}</span>
+              <span>{language === 'zh' ? '我明白了，开始体检' : 'Got it, start the assessment'}</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
-import { Heart, X, AlertTriangle, ExternalLink, MessageCircle } from 'lucide-react';
+import { Heart, X, AlertTriangle, ExternalLink } from 'lucide-react';
 import {
   BusinessFormData,
   AssessmentReport,
@@ -14,6 +14,7 @@ import { AccessibilityToolbar } from './components/AccessibilityToolbar';
 import { ChinaNetworkTip } from './components/ChinaNetworkTip';
 import { AuthModal, AuthMode } from './components/AuthModal';
 import { LoginRequiredGate } from './components/LoginRequiredGate';
+import { AntdProvider } from './theme/AntdProvider';
 
 // BUG-11 修复：这些是应用里最大的几个组件（AssessmentForm ~3000 行、
 // AssessmentReportView ~1700 行、AiRuleConsultationDrawer ~1100 行等），此前全部
@@ -43,6 +44,12 @@ const ProjectsListPage = lazy(() =>
 );
 const LearningCenterPage = lazy(() =>
   import('./pages/LearningCenterPage').then((m) => ({ default: m.LearningCenterPage }))
+);
+const ReportEmptyState = lazy(() =>
+  import('./components/ReportEmptyState').then((m) => ({ default: m.ReportEmptyState }))
+);
+const ProjectContextBar = lazy(() =>
+  import('./components/ProjectContextBar').then((m) => ({ default: m.ProjectContextBar }))
 );
 const FeasibilityBriefPage = lazy(() =>
   import('./pages/FeasibilityBriefPage').then((m) => ({ default: m.FeasibilityBriefPage }))
@@ -320,10 +327,34 @@ export default function App() {
   const [unsavedFormProjectId, setUnsavedFormProjectId] = useState<string | null>(null);
   const formKey =
     activeProject && activeProject.id === unsavedFormProjectId ? 'new' : activeProject?.id || 'new';
-  const activeReport =
-    reports.find((r) => r.id === activeReportId) ||
-    reports.find((r) => r.projectId === activeProjectId) ||
-    reports[0];
+  // 报告始终跟随「当前项目」：此前会落回 reports[0]，在顶部切换到一个还没出过报告的项目时，
+  // 页面却显示另一个项目的报告，用户无从分辨。
+  const latestReportOf = (projectId: string) =>
+    reports.filter((r) => r.projectId === projectId).sort((a, b) => b.version - a.version)[0];
+  const activeReport = activeProject
+    ? reports.find((r) => r.id === activeReportId && r.projectId === activeProject.id) ||
+      latestReportOf(activeProject.id)
+    : reports.find((r) => r.id === activeReportId) || reports[0];
+  // 「查看结果」入口：已有营收的项目看体检报告，尚未开业 / 只有原型的看开业测算
+  const resultTab: 'report' | 'feasibility' =
+    !activeProject || activeProject.businessStage === 'has_revenue' ? 'report' : 'feasibility';
+
+  // 从开业测算「在沙盒里调整」跳过去时，沙盒自动载入该项目的数字
+  const [simulatorSeedId, setSimulatorSeedId] = useState<string | undefined>(undefined);
+  const openSimulatorWith = (projectId: string) => {
+    setSimulatorSeedId(projectId);
+    navigateTo('simulator');
+  };
+  // 从导航直接进入沙盒时保持空白，由用户自行选择是否载入项目
+  const handleNavTabChange = (tab: ActiveTab) => {
+    if (tab === 'simulator') setSimulatorSeedId(undefined);
+    navigateTo(tab);
+  };
+
+  const selectProject = (id: string) => {
+    setActiveProjectId(id);
+    setActiveReportId(latestReportOf(id)?.id || '');
+  };
 
   // All version history for the current active project
   const projectVersions = reports
@@ -703,7 +734,7 @@ export default function App() {
   // 后者此前在用户还没有任何项目时（activeProject 为 undefined）会把模拟数据合并到 undefined
   // 上，导致草稿既没有 id 也没有被写入 projects/activeProjectId，新挂载的表单直接忽略这份数据，
   // 表现为「点击带入正式申报表后表单一片空白，滑块调好的数字全部消失」。
-  const createBlankDraft = (): BusinessFormData => {
+  const createBlankDraft = (currency: string = 'USD'): BusinessFormData => {
     const newId = `proj-${Date.now()}`;
     return {
       id: newId,
@@ -714,7 +745,7 @@ export default function App() {
       industry: 'food_beverage',
       businessType: '社区小微零售与便民服务',
       businessStage: 'has_revenue',
-      initialInvestmentEstimate: { amount: 0, currency: 'USD' },
+      initialInvestmentEstimate: { amount: 0, currency },
       targetPaybackMonths: 12,
       anomalyOverrides: {},
       isSensitiveRegion: false,
@@ -722,7 +753,7 @@ export default function App() {
       regionDetail: '',
       contactChannel: '',
       anonymousOwnerName: '',
-      baseCurrency: 'USD',
+      baseCurrency: currency,
       hasMultipleRates: false,
       customExchangeRateType: '民间/日常兑换参考价',
       customExchangeRateValue: 1.0,
@@ -730,30 +761,30 @@ export default function App() {
       proofType: 'none',
       proofFiles: [],
       monthlyBreakdowns: [
-        { month: '2026-01', revenue: { amount: 0, currency: 'USD' } },
-        { month: '2026-02', revenue: { amount: 0, currency: 'USD' } },
-        { month: '2026-03', revenue: { amount: 0, currency: 'USD' } },
-        { month: '2026-04', revenue: { amount: 0, currency: 'USD' } },
-        { month: '2026-05', revenue: { amount: 0, currency: 'USD' } },
-        { month: '2026-06', revenue: { amount: 0, currency: 'USD' } }
+        { month: '2026-01', revenue: { amount: 0, currency } },
+        { month: '2026-02', revenue: { amount: 0, currency } },
+        { month: '2026-03', revenue: { amount: 0, currency } },
+        { month: '2026-04', revenue: { amount: 0, currency } },
+        { month: '2026-05', revenue: { amount: 0, currency } },
+        { month: '2026-06', revenue: { amount: 0, currency } }
       ],
-      monthlyRevenue: { amount: 0, currency: 'USD' },
-      monthlyRealOperatingRevenue: { amount: 0, currency: 'USD' },
-      monthlyExternalGrants: { amount: 0, currency: 'USD' },
-      cogsCost: { amount: 0, currency: 'USD' },
-      rentCost: { amount: 0, currency: 'USD' },
-      laborCost: { amount: 0, currency: 'USD' },
-      utilityCost: { amount: 0, currency: 'USD' },
-      taxCost: { amount: 0, currency: 'USD' },
-      otherOpex: { amount: 0, currency: 'USD' },
-      companyRegistrationCost: { amount: 0, currency: 'USD' },
+      monthlyRevenue: { amount: 0, currency },
+      monthlyRealOperatingRevenue: { amount: 0, currency },
+      monthlyExternalGrants: { amount: 0, currency },
+      cogsCost: { amount: 0, currency },
+      rentCost: { amount: 0, currency },
+      laborCost: { amount: 0, currency },
+      utilityCost: { amount: 0, currency },
+      taxCost: { amount: 0, currency },
+      otherOpex: { amount: 0, currency },
+      companyRegistrationCost: { amount: 0, currency },
       companyRegistrationAmortizationMonths: 12,
-      visaFeeCost: { amount: 0, currency: 'USD' },
+      visaFeeCost: { amount: 0, currency },
       visaFeeAmortizationMonths: 12,
-      equipmentDepreciationCost: { amount: 0, currency: 'USD' },
-      existingDebtMonthlyPayment: { amount: 0, currency: 'USD' },
-      cashAndLiquidAssets: { amount: 0, currency: 'USD' },
-      inventoryValue: { amount: 0, currency: 'USD' },
+      equipmentDepreciationCost: { amount: 0, currency },
+      existingDebtMonthlyPayment: { amount: 0, currency },
+      cashAndLiquidAssets: { amount: 0, currency },
+      inventoryValue: { amount: 0, currency },
       // BUG-06 修复：不再预填看起来像真数据的默认值——12个月、1名员工从未被用户确认过，
       // 却会静默计入"持续经营稳定性"评分，并触发"填写了1名员工但工资为0"的误报警告。
       // 改为 0（NumberField 会把 0 显示为空白输入框），未填项不再参与评分。
@@ -795,25 +826,27 @@ export default function App() {
     return persistProjectToCloud(saved);
   };
 
-  // Apply simulator values into form
+  // 沙盒试算「带入正式申报表」：始终新建一份草稿项目。
+  // 此前会直接把试算数值合并进当前项目（哪怕它已经提交过），且不清空原有的成本明细，
+  // 既会静默覆盖用户已有的数据，又会导致表单合计与试算结果对不上。
   const handleApplySimulatorToForm = (simulatedData: Partial<BusinessFormData>) => {
-    // 没有任何已有项目时（如全新账号第一次使用沙盒试算器），activeProject 为 undefined，
-    // 必须先造一份全新草稿并把它正式加入 projects/activeProjectId，模拟数据才不会成为
-    // 一份没有归属、不会被表单读取的孤儿数据。
-    const base = activeProject || createBlankDraft();
-    const updated = {
+    const base = createBlankDraft(simulatedData.baseCurrency || 'USD');
+    const stamp = new Date().toLocaleString(language === 'zh' ? 'zh-CN' : 'en-US', {
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    const draft: BusinessFormData = {
       ...base,
       ...simulatedData,
       id: base.id,
+      projectName: language === 'zh' ? `沙盒试算 ${stamp}` : `Simulator ${stamp}`,
       updatedAt: new Date().toISOString()
     };
-    saveActiveDraft(updated);
-    const latestProjects = loadStoredProjects();
-    const isNewProject = !latestProjects.some((p) => p.id === updated.id);
-    const updatedList = isNewProject ? [updated, ...latestProjects] : latestProjects.map((p) => (p.id === updated.id ? updated : p));
-    setProjects(updatedList);
-    saveStoredProjects(updatedList);
-    if (isNewProject) setActiveProjectId(updated.id);
+    saveActiveDraft(draft);
+    upsertProjectLocally(draft);
+    setActiveProjectId(draft.id);
     navigateTo('form');
   };
 
@@ -905,6 +938,7 @@ export default function App() {
   };
 
   return (
+    <AntdProvider language={language} largeFont={largeFont} highContrast={highContrast}>
     <div
       className={`min-h-screen bg-warm text-neutral-900 transition-all font-sans ${
         largeFont ? 'text-base leading-relaxed font-medium' : 'text-sm'
@@ -921,7 +955,7 @@ export default function App() {
       {/* Top Navbar */}
       <Navbar
         activeTab={activeTab}
-        onTabChange={navigateTo}
+        onTabChange={handleNavTabChange}
         language={language}
         onLanguageChange={setLanguage}
         onOpenFeeModal={() => setIsFeeModalOpen(true)}
@@ -937,6 +971,7 @@ export default function App() {
         onLogout={handleLogout}
         isSigningIn={isSigningIn}
         justSignedIn={justSignedIn}
+        resultTab={resultTab}
       />
 
       {/* 桌面端为固定左侧边栏留出空间；移动端侧边栏隐藏，无需内边距 */}
@@ -993,7 +1028,7 @@ export default function App() {
       {/* BUG-19 修复：移动端悬浮"AI 答疑"按钮固定在 bottom-20（80px）且自身还有高度，
           pb-24（96px）的安全区不足以完全避开它，会遮挡卡片右下角内容/开关。加大到 pb-36
           （144px）确保滚动到底部时按钮下方也留有足够空间，不与页面内容重叠。 */}
-      <main id="main-content" tabIndex={-1} className="pb-36 md:pb-16 focus:outline-hidden">
+      <main id="main-content" tabIndex={-1} className="pb-24 md:pb-16 focus:outline-hidden">
         {!currentUser ? (
           <LoginRequiredGate
             language={language}
@@ -1008,6 +1043,18 @@ export default function App() {
             </div>
           }
         >
+        {(activeTab === 'form' || activeTab === 'report' || activeTab === 'feasibility') && (
+          <ProjectContextBar
+            language={language}
+            activeTab={activeTab}
+            projects={projects}
+            activeProjectId={activeProject?.id}
+            onSelectProject={selectProject}
+            onNewProject={handleNewProject}
+            onTabChange={navigateTo}
+          />
+        )}
+
         {activeTab === 'form' && (
           <AssessmentForm
             key={formKey}
@@ -1038,36 +1085,22 @@ export default function App() {
               language={language}
             />
           ) : (
-            <div className="max-w-4xl mx-auto px-4 py-16 text-center">
-              <div className="bg-white rounded-3xl p-8 sm:p-12 border-2 border-neutral-200 shadow-xs space-y-4">
-                <div className="w-16 h-16 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center mx-auto border border-teal-100 shadow-xs">
-                  <Heart className="w-8 h-8" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-black text-neutral-900">
-                    {language === 'zh' ? '暂无体检报告' : 'No Assessment Report Yet'}
-                  </h3>
-                  <p className="text-xs text-neutral-500 font-medium max-w-md mx-auto mt-1 leading-relaxed">
-                    {language === 'zh'
-                      ? '请先在「快速体检」中填写并提交您的第一个商业自测项目，系统将自动生成体检诊断与 5 维能力透视报告。'
-                      : 'Please complete an assessment first. Your diagnostic health report will appear here.'}
-                  </p>
-                </div>
-                <button
-                  onClick={() => navigateTo('form')}
-                  className="inline-flex items-center space-x-1.5 px-6 py-2.5 bg-teal-600 hover:bg-teal-500 text-white rounded-2xl text-xs font-bold shadow-md shadow-teal-600/20 transition-all cursor-pointer"
-                >
-                  <span>{language === 'zh' ? '前往快速体检' : 'Start New Assessment'}</span>
-                </button>
-              </div>
-            </div>
+            <ReportEmptyState
+              language={language}
+              hasProject={Boolean(activeProject)}
+              onGoToForm={() => navigateTo('form')}
+              onGoToFeasibility={() => navigateTo('feasibility')}
+            />
           )
         )}
 
         {activeTab === 'simulator' && (
           <ScoringSimulator
+            key={simulatorSeedId || 'blank'}
             language={language}
             onApplyToForm={handleApplySimulatorToForm}
+            projects={projects}
+            seedProjectId={simulatorSeedId}
           />
         )}
 
@@ -1078,6 +1111,7 @@ export default function App() {
         {activeTab === 'feasibility' && (
           <FeasibilityBriefPage
             project={activeProject}
+            onOpenSimulator={openSimulatorWith}
             language={language}
             onGoToForm={() => navigateTo('form')}
           />
@@ -1120,26 +1154,6 @@ export default function App() {
       </main>
 
       </div>
-
-      {/* 全局 AI 答疑悬浮入口：任何页面随时提问 */}
-      {!isAiDrawerOpen && (
-        <button
-          onClick={() => {
-            if (!currentUser) {
-              setIsAuthModalOpen(true);
-              return;
-            }
-            setAiInitialTopic(undefined);
-            setIsAiDrawerOpen(true);
-          }}
-          aria-label={language === 'zh' ? '打开 AI 答疑' : 'Open AI Q&A'}
-          title={language === 'zh' ? 'AI 答疑：任何不懂的地方都能问' : 'AI Q&A: ask about anything you don\'t understand'}
-          className="fixed bottom-20 md:bottom-6 right-5 sm:right-6 z-40 flex items-center gap-2 pl-4 pr-5 py-3 rounded-full bg-gradient-to-r from-violet-600 to-teal-600 text-white text-sm font-bold shadow-xl hover:shadow-2xl hover:from-violet-500 hover:to-teal-500 active:scale-95 transition-all cursor-pointer animate-in fade-in"
-        >
-          <MessageCircle className="w-5 h-5" />
-          <span className="hidden sm:inline">{language === 'zh' ? 'AI 答疑' : 'AI Q&A'}</span>
-        </button>
-      )}
 
       {/* Global Modals & Drawers */}
       <FeeTransparencyModal
@@ -1216,7 +1230,7 @@ export default function App() {
             <div className="absolute inset-0 rounded-full border-4 border-amber-400 border-t-transparent animate-spin"></div>
             <Heart className="w-8 h-8 text-amber-400 absolute inset-0 m-auto animate-pulse" />
           </div>
-          <h2 className="text-white text-lg sm:text-xl font-black tracking-tight">
+          <h2 className="text-white text-lg sm:text-xl font-bold tracking-tight">
             {language === 'zh' ? '正在为你生成体检报告…' : 'Generating your assessment report…'}
           </h2>
           <p className="text-neutral-400 text-sm mt-2 max-w-sm leading-relaxed">
@@ -1227,5 +1241,6 @@ export default function App() {
         </div>
       )}
     </div>
+    </AntdProvider>
   );
 }

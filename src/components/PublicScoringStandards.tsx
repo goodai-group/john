@@ -1,447 +1,384 @@
 import React, { useState } from 'react';
-import {
-  BookOpen,
-  ShieldCheck,
-  CheckCircle2,
-  AlertTriangle,
-  Lightbulb,
-  Building2,
-  TrendingUp,
-  Percent,
-  DollarSign
-} from 'lucide-react';
+import { Alert, Card, Col, Flex, Grid, Row, Statistic, Table, Tabs, Tag, Typography } from 'antd';
+import { AlertTriangle, BookOpen, Building2, Lightbulb, Percent, ShieldCheck } from 'lucide-react';
 import { Language } from '../types';
 import { INDUSTRY_BENCHMARKS } from '../lib/industryBenchmarks';
 import { SCORING_METRIC_DEFINITIONS } from '../lib/scoringEngine';
+import { PageContainer, PageHeader } from './ui/PageHeader';
 
 interface StandardsProps {
   language: Language;
 }
 
 // "≥ 3.0 个月" -> "≥ 3.0 months" for English display; the underlying data only stores the Chinese phrasing.
-const formatCashRunway = (text: string, language: Language) =>
+const localizeMonths = (text: string, language: Language) =>
   language === 'zh' ? text : text.replace('个月', 'months');
 
-export const PublicScoringStandards: React.FC<StandardsProps> = ({ language }) => {
-  const [selectedIndustry, setSelectedIndustry] = useState<string>('food_beverage');
+type Bi = { zh: string; en: string };
 
-  const activeBenchmark =
-    INDUSTRY_BENCHMARKS.find((b) => b.id === selectedIndustry) || INDUSTRY_BENCHMARKS[0];
+/** 5 项红线（一票否决）。阈值须与 scoringEngine.ts 的 gates 判定保持一致。 */
+const GATES: { code: string; title: Bi; threshold: Bi; plain: Bi; extra?: Bi; tip: Bi }[] = [
+  {
+    code: 'Gate-1',
+    title: { zh: '真实经营收入占比', en: 'Real operating revenue ratio' },
+    threshold: { zh: '≥ 60%', en: '≥ 60%' },
+    plain: {
+      zh: '排除借款和外部赠款后，客户买单付给你的钱要占总进账的 60% 以上。',
+      en: 'After excluding loans and external grants, money customers actually pay you must be at least 60% of total receipts.'
+    },
+    tip: {
+      zh: '专注提升核心主营商品或服务的销售复购，逐步降低对一次性救济款的依赖。',
+      en: 'Focus on repeat sales of your core products or services, and gradually reduce reliance on one-off relief funds.'
+    }
+  },
+  {
+    code: 'Gate-2',
+    title: { zh: '毛利率底线', en: 'Gross margin floor' },
+    threshold: { zh: '按行业 ≥ 20%~30%', en: '≥ 20%–30% by industry' },
+    plain: {
+      zh: '每做 100 块钱生意，扣除直接成本后至少要剩下一定的毛利。卖货生意的直接成本是进货和原材料；教育培训、美容美发、托育、诊所等服务型生意，还要加上老师、技师、医护等一线服务人员的工资（前台、行政、招生等管理人员工资算固定开销）。',
+      en: 'For every 100 of business, a minimum gross profit must remain after direct costs. For goods businesses that is purchasing and materials; service businesses (education, beauty, childcare, clinics) also include front-line staff wages (front desk, admin and sales staff count as overhead).'
+    },
+    extra: {
+      zh: '零售/餐饮/农业及其他 ≥ 20%（10%~20% 预警）；语言教育、职业实训、美容美发与社区服务 ≥ 30%（20%~30% 预警）；儿童日托、诊所 ≥ 25%（15%~25% 预警）。',
+      en: 'Retail / food / agriculture / other ≥ 20% (10–20% warning); education, vocational training, beauty & community services ≥ 30% (20–30% warning); childcare and clinics ≥ 25% (15–25% warning).'
+    },
+    tip: {
+      zh: '与上游批发商谈判争取批量折扣，或精简损耗严重的低毛利品种。',
+      en: 'Negotiate bulk discounts with suppliers, or trim low-margin, high-waste product lines.'
+    }
+  },
+  {
+    code: 'Gate-3',
+    title: { zh: '毛利覆盖固定开销', en: 'Gross profit covers overhead' },
+    threshold: { zh: '毛利 ≥ 固定开销', en: 'Gross profit ≥ overhead' },
+    plain: {
+      zh: '每月赚出来的毛利润，必须能够全额包住房租、管理人工费用与水电网络等固定支出。',
+      en: 'Your monthly gross profit must fully cover fixed costs such as rent, admin wages and utilities.'
+    },
+    tip: {
+      zh: '固定开销偏高时，可以从弹性排班、转租分摊部分场地或削减杂费入手。',
+      en: 'When overhead runs high, try flexible scheduling, subletting part of the space, or cutting miscellaneous fees.'
+    }
+  },
+  {
+    code: 'Gate-4',
+    title: { zh: '税后净利润', en: 'Net profit after tax' },
+    threshold: { zh: '≥ 0', en: '≥ 0' },
+    plain: {
+      zh: '扣掉所有成本、开销和税金后，每月到手必须是正数，不能处于持续倒贴亏损状态。',
+      en: 'After all costs, overhead and taxes, what you take home each month must be positive — not a persistent loss.'
+    },
+    tip: {
+      zh: '梳理非生产性杂费支出，提升客单价以拉正月度利润。',
+      en: 'Review non-productive spending and raise average spend per customer to turn monthly profit positive.'
+    }
+  },
+  {
+    code: 'Gate-5',
+    title: { zh: '偿债安全边际', en: 'Debt service margin' },
+    threshold: { zh: '无负债 或 ≥ 1.25 倍', en: 'No debt or DSCR ≥ 1.25x' },
+    plain: {
+      zh: '如果有外部还贷，每月经营利润至少要是还款额的 1.25 倍，否则一旦经营波动就可能断供。',
+      en: 'If you have external debt, monthly operating profit must be at least 1.25x the repayment, or any downturn risks a missed payment.'
+    },
+    tip: {
+      zh: '尝试协商延长还款周期以降低月供，或暂停非必要的借贷扩张。',
+      en: 'Negotiate a longer repayment term to lower monthly payments, or pause non-essential leveraged expansion.'
+    }
+  }
+];
+
+/** 6 项加权指标。权重与健康区间直接读取 SCORING_METRIC_DEFINITIONS，确保与报告一致。 */
+const METRICS: { key: keyof typeof SCORING_METRIC_DEFINITIONS; name: Bi; plain: Bi; tip: Bi }[] = [
+  {
+    key: 'real_revenue_strength',
+    name: { zh: '真实营业额占比', en: 'Real revenue ratio' },
+    plain: { zh: '真金白银的客户成交，占总进账的比例', en: 'Share of receipts from real paying customers' },
+    tip: {
+      zh: '逐步减少对外部赠款/借款的依赖，提高主打产品在本地市场的真实成交量。',
+      en: 'Reduce reliance on grants or loans, and grow real local sales of your core product.'
+    }
+  },
+  {
+    key: 'gross_margin_rate',
+    name: { zh: '毛利率', en: 'Gross margin' },
+    plain: {
+      zh: '扣除进货原料（服务业另含一线服务人工）后剩下的比例',
+      en: 'What is left after materials (plus front-line labor for service businesses)'
+    },
+    tip: {
+      zh: '寻找就近源头供货商，减少中间商加价；优化配方或包装成本。',
+      en: 'Find direct-source suppliers to cut middleman markup; optimize recipes or packaging.'
+    }
+  },
+  {
+    key: 'opex_efficiency',
+    name: { zh: '固定开销占比', en: 'Overhead ratio' },
+    plain: { zh: '每月房租、管理人工费用与日常杂费占收入的比例', en: 'Monthly rent, admin wages and routine fees as a share of revenue' },
+    tip: {
+      zh: '精简冗余工时、协商分段付租或分租部分场地以降低固定负担。',
+      en: 'Trim redundant hours, negotiate staggered rent, or sublet part of the space.'
+    }
+  },
+  {
+    key: 'net_margin_rate',
+    name: { zh: '到手纯利润率', en: 'Net profit margin' },
+    plain: { zh: '最终揣进兜里的纯利润比例', en: 'The share of revenue that ends up in your pocket' },
+    tip: {
+      zh: '通过会员复购或组合套餐提高客单价，严格压缩零碎损耗。',
+      en: 'Raise order value through loyalty or bundles, and tightly control small losses.'
+    }
+  },
+  {
+    key: 'cash_buffer_runway',
+    name: { zh: '现金储备可撑月数', en: 'Cash runway' },
+    plain: { zh: '即使不进账，账上备用金能维持几个月', en: 'How many months reserves last with zero income' },
+    tip: {
+      zh: '每月把 10%~15% 净利润存入独立应急资金池，防范突发事件。',
+      en: 'Set aside 10–15% of net profit into a separate emergency fund every month.'
+    }
+  },
+  {
+    key: 'business_continuity',
+    name: { zh: '持续经营时间与团队', en: 'Operating continuity & team' },
+    plain: { zh: '开了多少个月，团队规模是否平稳', en: 'Months in operation and team stability' },
+    tip: {
+      zh: '建立清晰的经营台账，与核心员工建立分成机制以稳住团队。',
+      en: 'Keep clear records and set up profit-sharing with core staff to retain the team.'
+    }
+  }
+];
+
+/** 评级档位，与 scoringEngine.ts 的 tier 划分一致 */
+const TIERS = [
+  { tier: 'AAA', range: '≥ 88', color: 'success' },
+  { tier: 'AA', range: '≥ 80', color: 'success' },
+  { tier: 'A', range: '≥ 70', color: 'success' },
+  { tier: 'BBB', range: '≥ 60', color: 'warning' },
+  { tier: 'BB', range: '< 60', color: 'warning' },
+  { tier: 'REJECT', range: '', color: 'error' }
+];
+
+export const PublicScoringStandards: React.FC<StandardsProps> = ({ language }) => {
+  const isEn = language === 'en';
+  const pick = (b: Bi) => (isEn ? b.en : b.zh);
+  const t = (zh: string, en: string) => (isEn ? en : zh);
+  const screens = Grid.useBreakpoint();
+  const [selectedIndustry, setSelectedIndustry] = useState<string>(INDUSTRY_BENCHMARKS[0].id);
+
+  const activeBenchmark = INDUSTRY_BENCHMARKS.find((b) => b.id === selectedIndustry) || INDUSTRY_BENCHMARKS[0];
+  const metricRows = METRICS.map((m) => ({ ...m, def: SCORING_METRIC_DEFINITIONS[m.key] }));
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
-      {/* Header Bento Card */}
-      <div className="bg-neutral-900 text-white rounded-3xl p-6 sm:p-7 border-2 border-neutral-800 shadow-xl">
-        <div className="flex items-center space-x-3.5 mb-2">
-          <div className="w-12 h-12 rounded-2xl bg-teal-600 border border-teal-400/40 flex items-center justify-center text-white shadow-lg">
-            <BookOpen className="w-6 h-6" />
-          </div>
-          <div>
-            <div className="flex items-center space-x-2">
-              <h2 className="text-xl font-black tracking-tight text-white">
-                {language === 'zh' ? '公开评分标准与行业基准库' : 'Public Scoring Standards & Industry Benchmarks'}
-              </h2>
-              <span className="text-[12px] font-mono font-bold bg-teal-500/20 text-teal-300 border border-teal-500/30 px-2.5 py-0.5 rounded-full">
-                STANDARDS HUB
-              </span>
-            </div>
-            <p className="text-xs text-neutral-400 font-medium mt-0.5">
-              {language === 'zh'
-                ? '公式公开 · 规则透明 · 大白话双行对照 · 凭证有无绝不影响打分'
-                : 'Open formulas · Transparent rules · Plain-language dual rows · Proof availability never affects scoring'}
-            </p>
-          </div>
-        </div>
+    <PageContainer>
+      <PageHeader
+        icon={<BookOpen className="w-5 h-5" />}
+        title={t('评分规则', 'Scoring Rules')}
+        tags={<Tag color="processing">{t('公式公开', 'Open formulas')}</Tag>}
+        description={t(
+          '红线、加权指标与行业基准全部公开，报告里的每一分都能在这里找到出处。',
+          'Gates, weighted metrics and industry benchmarks are all public — every point in your report can be traced here.'
+        )}
+      >
+        <Alert
+          className="mt-4"
+          type="success"
+          showIcon
+          icon={<ShieldCheck className="w-4 h-4" />}
+          title={t('公平性承诺：凭证类型不参与评分', 'Fairness: proof type never affects the score')}
+          description={t(
+            '无论上传银行流水、手写账本照片、移动支付截图，还是纯手动填写，红线判定与加权评分都执行完全相同的计算逻辑。',
+            'Whether you upload bank statements, a handwritten ledger photo, payment screenshots, or enter numbers manually, the gate checks and weighted score run exactly the same calculation.'
+          )}
+        />
+      </PageHeader>
 
-        <div className="mt-4 p-4 rounded-2xl bg-neutral-800/80 border border-neutral-700/80 text-xs text-neutral-300 leading-relaxed flex items-start space-x-3">
-          <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-          <div>
-            <span className="font-bold text-white">
-              {language === 'zh' ? '核心公平性承诺：' : 'Core Fairness Commitment: '}
-            </span>
-            <span>
-              {language === 'zh'
-                ? '凭证类型不作为任何评分输入。无论您上传正规银行流水、手写记账本照片、移动支付截图，还是纯手动填写 14 项数字，梯度评分与 Gate 底线判定均执行完全相同的计算逻辑，用户可核实、可追责。'
-                : 'Proof type is never used as a scoring input. Whether you upload formal bank statements, a handwritten ledger photo, mobile payment screenshots, or simply enter 14 numbers manually, the tiered scoring and Gate threshold checks run the exact same calculation logic — fully verifiable and auditable.'}
-            </span>
-          </div>
-        </div>
-      </div>
+      <Card
+        variant="borderless"
+        className="shadow-xs"
+        title={
+          <Flex align="center" gap={8}>
+            <AlertTriangle className="w-5 h-5 text-amber-500" />
+            {t('5 项红线（一票否决）', '5 gates (automatic disqualifiers)')}
+          </Flex>
+        }
+      >
+        <Typography.Paragraph type="secondary">
+          {t(
+            '红线必须全部达标：任意一项不达标（含预警），评级直接判为 REJECT，综合得分最高 54 分。',
+            'All gates must pass: failing any one (including a warning) sets the tier to REJECT and caps the score at 54.'
+          )}
+        </Typography.Paragraph>
+        <Row gutter={[16, 16]}>
+          {GATES.map((g) => (
+            <Col xs={24} md={12} key={g.code}>
+              <Card size="small" className="h-full bg-neutral-50">
+                <div className="mb-2">
+                  <Typography.Text strong className="mr-2">
+                    {isEn ? g.code : g.code.replace("Gate-", "红线 ")} · {pick(g.title)}
+                  </Typography.Text>
+                  <Tag color="success" className="me-0">
+                    {pick(g.threshold)}
+                  </Tag>
+                </div>
+                <Typography.Paragraph className="mb-2">{pick(g.plain)}</Typography.Paragraph>
+                {g.extra && (
+                  <Typography.Paragraph type="secondary" className="mb-2">
+                    {pick(g.extra)}
+                  </Typography.Paragraph>
+                )}
+                <Flex gap={6} align="flex-start" className="text-teal-800">
+                  <Lightbulb className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{pick(g.tip)}</span>
+                </Flex>
+              </Card>
+            </Col>
+          ))}
+        </Row>
+      </Card>
 
-      {/* 5 Gate Bottom Checks Bento */}
-      <div className="bg-white rounded-3xl p-6 sm:p-7 border-2 border-neutral-200 shadow-xs space-y-4">
-        <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
-          <div>
-            <h3 className="text-base font-black text-neutral-900 flex items-center space-x-2">
-              <AlertTriangle className="w-5 h-5 text-amber-500" />
-              <span>
-                {language === 'zh'
-                  ? '5 项 Gate 底线红线判定规则（一票否决项）'
-                  : '5 Gate Threshold Rules (Automatic Disqualifiers)'}
-              </span>
-            </h3>
-            <p className="text-xs text-neutral-500 font-medium mt-0.5">
-              {language === 'zh'
-                ? '底线指标必须全部达标，否则触发预警或一票否决，确保商业模式具备真实造血能力。'
-                : 'All threshold metrics must be met, or a warning or automatic disqualification is triggered — ensuring the business model has genuine self-sustaining capacity.'}
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-          <div className="p-4 sm:p-5 rounded-2xl bg-neutral-50 border-2 border-neutral-100 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-neutral-900 text-sm">
-                {language === 'zh' ? 'Gate-1: 真实经营收入占比' : 'Gate-1: Real Operating Revenue Ratio'}
-              </span>
-              <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 font-mono font-bold">
-                ≥ 60%
-              </span>
-            </div>
-            <p className="text-neutral-600 font-medium">
-              {language === 'zh'
-                ? '大白话：排除借款和外部赠款后，客户买单付给你的钱要占总进账的 60% 以上。'
-                : 'Plain language: After excluding loans and external grants, money customers actually pay you must be at least 60% of total receipts.'}
-            </p>
-            <p className="text-teal-900 bg-teal-50/80 p-2.5 rounded-xl border border-teal-100 font-medium">
-              {language === 'zh'
-                ? '改善方向提示：专注提升核心主营商品或服务的销售复购，逐步降低对一次性救济款的依赖。'
-                : 'Improvement tip: Focus on boosting repeat sales of your core products or services, and gradually reduce reliance on one-off relief funds.'}
-            </p>
-          </div>
-
-          <div className="p-4 sm:p-5 rounded-2xl bg-neutral-50 border-2 border-neutral-100 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-neutral-900 text-sm">
-                {language === 'zh' ? 'Gate-2: 毛利率底线 (Gross Margin)' : 'Gate-2: Gross Margin Floor'}
-              </span>
-              <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 font-mono font-bold">
-                {language === 'zh' ? '按行业 ≥ 20%~30%' : '≥ 20%-30% by industry'}
-              </span>
-            </div>
-            <p className="text-neutral-600 font-medium">
-              {language === 'zh'
-                ? '大白话：每做 100 块钱生意，扣除直接成本后至少要剩下一定的毛利。直接成本按会计口径计算：卖货生意是进货和原材料；教育培训、美容美发、托育、诊所等服务型生意，还要加上授课老师、技师、医护等一线服务人员的工资（前台、行政、招生等管理人员工资不算，放在固定开销里）。'
-                : 'Plain language: For every 100 of business, a minimum gross profit must remain after direct costs. Direct costs follow accounting rules: for goods businesses, purchasing and materials; for service businesses (education, beauty, childcare, clinics), also the wages of front-line staff such as teachers, technicians and medical staff (front desk, admin and sales staff are fixed costs instead).'}
-            </p>
-            <p className="text-neutral-600 font-medium">
-              {language === 'zh'
-                ? '红线：零售/餐饮/农业及其他行业 ≥ 20%（10%~20% 为警告）；语言教育、职业实训、美容美发与社区服务 ≥ 30%（20%~30% 为警告）；儿童日托、诊所 ≥ 25%（15%~25% 为警告）。'
-                : 'Floors: retail / food / agriculture / other ≥ 20% (10%-20% warning); education, vocational training, beauty & community services ≥ 30% (20%-30% warning); childcare and clinics ≥ 25% (15%-25% warning).'}
-            </p>
-            <p className="text-teal-900 bg-teal-50/80 p-2.5 rounded-xl border border-teal-100 font-medium">
-              {language === 'zh'
-                ? '改善方向提示：与上游批发商谈判争取批量折扣，或精简损耗严重的低毛利进货品种。'
-                : 'Improvement tip: Negotiate bulk discounts with upstream suppliers, or trim low-margin, high-waste product lines.'}
-            </p>
-          </div>
-
-          <div className="p-4 sm:p-5 rounded-2xl bg-neutral-50 border-2 border-neutral-100 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-neutral-900 text-sm">
-                {language === 'zh' ? 'Gate-3: OPEX 运营固定开销覆盖' : 'Gate-3: OPEX Fixed Cost Coverage'}
-              </span>
-              <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 font-mono font-bold">
-                {language === 'zh' ? '毛利 ≥ OPEX' : 'Gross Profit ≥ OPEX'}
-              </span>
-            </div>
-            <p className="text-neutral-600 font-medium">
-              {language === 'zh'
-                ? '大白话：每月赚出来的毛利润，必须能够全额包住房租、管理人工费用与水电网络等固定支出。'
-                : 'Plain language: Your monthly gross profit must fully cover fixed costs such as rent, wages, and utilities.'}
-            </p>
-            <p className="text-teal-900 bg-teal-50/80 p-2.5 rounded-xl border border-teal-100 font-medium">
-              {language === 'zh'
-                ? '改善方向提示：OPEX 超标时，通常可以从工时弹性排班、转租分摊部分场地或削减杂费入手。'
-                : 'Improvement tip: When OPEX runs high, try flexible staff scheduling, subletting part of the space, or cutting miscellaneous fees.'}
-            </p>
-          </div>
-
-          <div className="p-4 sm:p-5 rounded-2xl bg-neutral-50 border-2 border-neutral-100 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-neutral-900 text-sm">
-                {language === 'zh' ? 'Gate-4: 最终税后净利润 (PAT)' : 'Gate-4: Net Profit After Tax (PAT)'}
-              </span>
-              <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 font-mono font-bold">
-                PAT ≥ 0
-              </span>
-            </div>
-            <p className="text-neutral-600 font-medium">
-              {language === 'zh'
-                ? '大白话：扣掉所有成本、开销和税金后，每月到手必须是正数，不能处于持续倒贴亏损状态。'
-                : 'Plain language: After all costs, expenses, and taxes, what you take home each month must be positive — not a persistent loss.'}
-            </p>
-            <p className="text-teal-900 bg-teal-50/80 p-2.5 rounded-xl border border-teal-100 font-medium">
-              {language === 'zh'
-                ? '改善方向提示：梳理非生产性杂费支出，提升单客消费客单价以拉正月度利润。'
-                : 'Improvement tip: Review non-productive miscellaneous spending and raise average spend per customer to turn monthly profit positive.'}
-            </p>
-          </div>
-
-          <div className="p-4 sm:p-5 rounded-2xl bg-neutral-50 border-2 border-neutral-100 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-neutral-900 text-sm">
-                {language === 'zh' ? 'Gate-5: 债务偿付安全边际 (Debt Service Ratio)' : 'Gate-5: Debt Service Safety Margin'}
-              </span>
-              <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 font-mono font-bold">
-                {language === 'zh' ? '无负债 或 DSCR ≥ 1.25x' : 'No Debt or DSCR ≥ 1.25x'}
-              </span>
-            </div>
-            <p className="text-neutral-600 font-medium">
-              {language === 'zh'
-                ? '大白话：如果有外部还贷，每月利润至少要是还款额的 1.25 倍以上，否则一旦经营波动就可能断供。'
-                : 'Plain language: If you have external debt, monthly profit must be at least 1.25x the repayment amount, or any downturn risks a missed payment.'}
-            </p>
-            <p className="text-teal-900 bg-teal-50/80 p-2.5 rounded-xl border border-teal-100 font-medium">
-              {language === 'zh'
-                ? '改善方向提示：尝试协商延长贷款还款周期以降低月供，或暂停非必要杠杆扩张。'
-                : 'Improvement tip: Try negotiating a longer loan repayment term to lower monthly payments, or pause non-essential leveraged expansion.'}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Dual-Line Metric Scoring Breakdown Table Bento */}
-      <div className="bg-white rounded-3xl p-6 sm:p-7 border-2 border-neutral-200 shadow-xs space-y-4">
-        <div className="border-b border-neutral-100 pb-3">
-          <h3 className="text-base font-black text-neutral-900 flex items-center space-x-2">
-            <Percent className="w-5 h-5 text-teal-600" />
-            <span>
-              {language === 'zh'
-                ? '梯度评分指标双行标准表 (板块 B-G)'
-                : 'Tiered Scoring Metrics — Dual-Row Standards (Sections B-G)'}
-            </span>
-          </h3>
-          <p className="text-xs text-neutral-500 font-medium mt-0.5">
-            {language === 'zh'
-              ? '表头统一采用【专业术语 + 大白话副标题】双行展示，消除财务术语理解门槛。'
-              : 'Each header uses [Technical Term + Plain-Language Subtitle] on two rows, removing the barrier of financial jargon.'}
-          </p>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="bg-neutral-100 text-neutral-800 border-b-2 border-neutral-200">
-                <th className="p-3.5 font-bold rounded-l-2xl">
-                  <div>{language === 'zh' ? '指标专业名称' : 'Metric Name'}</div>
-                  <div className="text-[13px] font-normal text-neutral-500">
-                    {language === 'zh' ? '大白话通俗说明' : 'Plain-language explanation'}
+      <Card
+        variant="borderless"
+        className="shadow-xs"
+        title={
+          <Flex align="center" gap={8}>
+            <Percent className="w-5 h-5 text-teal-700" />
+            {t('6 项加权评分指标', '6 weighted scoring metrics')}
+          </Flex>
+        }
+      >
+        {screens.md ? (
+          <Table
+            rowKey="key"
+            size="middle"
+            pagination={false}
+            dataSource={metricRows}
+            columns={[
+              {
+                title: t('指标', 'Metric'),
+                key: 'name',
+                render: (_, r) => (
+                  <>
+                    <Typography.Text strong>{pick(r.name)}</Typography.Text>
+                    <div className="text-xs text-neutral-500">{pick(r.plain)}</div>
+                  </>
+                )
+              },
+              {
+                title: t('权重', 'Weight'),
+                key: 'weight',
+                width: 80,
+                align: 'right',
+                render: (_, r) => <Typography.Text strong className="text-teal-700">{r.def.weight}%</Typography.Text>
+              },
+              {
+                title: t('健康区间', 'Healthy range'),
+                key: 'bench',
+                width: 130,
+                render: (_, r) => <span className="whitespace-nowrap">{localizeMonths(r.def.benchmarkValue, language)}</span>
+              },
+              {
+                title: t('未达标时的改善方向', 'How to improve'),
+                key: 'tip',
+                render: (_, r) => pick(r.tip)
+              }
+            ]}
+          />
+        ) : (
+          <Flex vertical gap={12}>
+            {metricRows.map((r) => (
+              <Card size="small" key={r.key} className="bg-neutral-50">
+                <Flex justify="space-between" align="flex-start" gap={8}>
+                  <div className="min-w-0">
+                    <Typography.Text strong>{pick(r.name)}</Typography.Text>
+                    <div className="text-xs text-neutral-500">{pick(r.plain)}</div>
                   </div>
-                </th>
-                <th className="p-3.5 font-bold">{language === 'zh' ? '权重' : 'Weight'}</th>
-                <th className="p-3.5 font-bold">{language === 'zh' ? '健康基准区间' : 'Healthy Benchmark Range'}</th>
-                <th className="p-3.5 font-bold rounded-r-2xl">
-                  {language === 'zh' ? '未达标通用改善方向' : 'General Improvement Direction'}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-100 text-neutral-600">
-              <tr className="hover:bg-neutral-50/80 transition-colors">
-                <td className="p-3.5 font-medium">
-                  <div className="text-neutral-900 font-bold">Real Operating Revenue Ratio / {language === 'zh' ? '真实营业额占比' : 'Real Operating Revenue Ratio'}</div>
-                  <div className="text-neutral-400">
-                    {language === 'zh' ? '真金白银的客户成交，占总进账的比例' : 'Share of total receipts that comes from real paying customers'}
-                  </div>
-                </td>
-                <td className="p-3.5 font-mono font-bold text-teal-600">{SCORING_METRIC_DEFINITIONS.real_revenue_strength.weight}%</td>
-                <td className="p-3.5 font-mono">{SCORING_METRIC_DEFINITIONS.real_revenue_strength.benchmarkValue}</td>
-                <td className="p-3.5 text-neutral-700">
-                  {language === 'zh'
-                    ? '逐步减少对外部赠款/借款的依附，提高自身主打产品在本地市场的真实成交量。'
-                    : 'Reduce reliance on external grants or loans, and grow real local sales of your core product.'}
-                </td>
-              </tr>
-
-              <tr className="hover:bg-neutral-50/80 transition-colors">
-                <td className="p-3.5 font-medium">
-                  <div className="text-neutral-900 font-bold">Gross Profit Margin (COGS Ratio) / {language === 'zh' ? '毛利率（原材料与直接成本占比）' : 'Gross Margin (Materials & Direct Cost Ratio)'}</div>
-                  <div className="text-neutral-400">
-                    {language === 'zh' ? '进货原料（服务业另含一线服务人工）花了多少钱' : 'How much you spend on materials (plus front-line service labor for service businesses)'}
-                  </div>
-                </td>
-                <td className="p-3.5 font-mono font-bold text-teal-600">{SCORING_METRIC_DEFINITIONS.gross_margin_rate.weight}%</td>
-                <td className="p-3.5 font-mono">{SCORING_METRIC_DEFINITIONS.gross_margin_rate.benchmarkValue}</td>
-                <td className="p-3.5 text-neutral-700">
-                  {language === 'zh'
-                    ? '寻找就近源头供货商，减少中间商加价；优化配方或包装成本。'
-                    : 'Find local direct-source suppliers to cut out middleman markup; optimize recipes or packaging costs.'}
-                </td>
-              </tr>
-
-              <tr className="hover:bg-neutral-50/80 transition-colors">
-                <td className="p-3.5 font-medium">
-                  <div className="text-neutral-900 font-bold">OPEX Overhead / {language === 'zh' ? '运营固定开支占比' : 'Fixed Overhead Ratio'}</div>
-                  <div className="text-neutral-400">
-                    {language === 'zh' ? '每月房租、管理人工费用与日常杂费' : 'Monthly rent, wages, and routine miscellaneous fees'}
-                  </div>
-                </td>
-                <td className="p-3.5 font-mono font-bold text-teal-600">{SCORING_METRIC_DEFINITIONS.opex_efficiency.weight}%</td>
-                <td className="p-3.5 font-mono">{SCORING_METRIC_DEFINITIONS.opex_efficiency.benchmarkValue}</td>
-                <td className="p-3.5 text-neutral-700">
-                  {language === 'zh'
-                    ? '精简人工冗余工时、协商按月分段付租或分租部分场地以降低固定负担。'
-                    : 'Trim redundant staff hours, negotiate monthly staggered rent, or sublet part of the space to lower fixed costs.'}
-                </td>
-              </tr>
-
-              <tr className="hover:bg-neutral-50/80 transition-colors">
-                <td className="p-3.5 font-medium">
-                  <div className="text-neutral-900 font-bold">Net Profit Margin (PAT) / {language === 'zh' ? '到手纯利润率' : 'Take-Home Profit Margin'}</div>
-                  <div className="text-neutral-400">
-                    {language === 'zh' ? '最终揣进兜里的纯利润比例' : 'The share of revenue that ends up in your pocket'}
-                  </div>
-                </td>
-                <td className="p-3.5 font-mono font-bold text-teal-600">{SCORING_METRIC_DEFINITIONS.net_margin_rate.weight}%</td>
-                <td className="p-3.5 font-mono">{SCORING_METRIC_DEFINITIONS.net_margin_rate.benchmarkValue}</td>
-                <td className="p-3.5 text-neutral-700">
-                  {language === 'zh'
-                    ? '通过老客户会员复购或组合套餐提高客单价，严格压缩零碎损耗。'
-                    : 'Raise average order value through loyalty repeat purchases or bundled deals, and tightly control small losses.'}
-                </td>
-              </tr>
-
-              <tr className="hover:bg-neutral-50/80 transition-colors">
-                <td className="p-3.5 font-medium">
-                  <div className="text-neutral-900 font-bold">Cash Runway / {language === 'zh' ? '现金储备可支撑月数' : 'Cash Reserve Runway'}</div>
-                  <div className="text-neutral-400">
-                    {language === 'zh' ? '即使不进账，账上备用金能维持几个月' : 'How many months your reserves last with zero income'}
-                  </div>
-                </td>
-                <td className="p-3.5 font-mono font-bold text-teal-600">{SCORING_METRIC_DEFINITIONS.cash_buffer_runway.weight}%</td>
-                <td className="p-3.5 font-mono">{SCORING_METRIC_DEFINITIONS.cash_buffer_runway.benchmarkValue}</td>
-                <td className="p-3.5 text-neutral-700">
-                  {language === 'zh'
-                    ? '每月坚持将 10%-15% 净利润提取到独立应急资金池，防范突发事件。'
-                    : 'Consistently set aside 10%-15% of net profit into a separate emergency fund to guard against surprises.'}
-                </td>
-              </tr>
-
-              <tr className="hover:bg-neutral-50/80 transition-colors">
-                <td className="p-3.5 font-medium">
-                  <div className="text-neutral-900 font-bold">Continuity / {language === 'zh' ? '稳定经营时间与团队' : 'Operating Continuity & Team'}</div>
-                  <div className="text-neutral-400">
-                    {language === 'zh' ? '开了多少个月，团队规模是否平稳' : 'Months in operation and team stability'}
-                  </div>
-                </td>
-                <td className="p-3.5 font-mono font-bold text-teal-600">{SCORING_METRIC_DEFINITIONS.business_continuity.weight}%</td>
-                <td className="p-3.5 font-mono">{SCORING_METRIC_DEFINITIONS.business_continuity.benchmarkValue}</td>
-                <td className="p-3.5 text-neutral-700">
-                  {language === 'zh'
-                    ? '建立清晰的经营台账，与核心员工签订互信分成机制以稳住团队。'
-                    : 'Keep clear operating records and set up trust-based profit-sharing with core staff to retain the team.'}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <p className="text-[11px] text-neutral-400 leading-relaxed">
-          {language === 'zh'
-            ? '以上 6 项权重合计 100%，与报告页综合得分的加权算法逐项对应。DSCR（债务偿付保障倍数）不参与该加权求和，属于上方"5 项 Gate 底线红线判定"中的一票否决项。'
-            : 'These 6 items sum to 100% weight and map one-to-one to the report\'s weighted score algorithm. DSCR (Debt Service Coverage Ratio) is not part of this weighted sum — it is one of the 5 Gate threshold checks (automatic disqualifiers) above.'}
-        </p>
-      </div>
-
-      {/* Sector Benchmark Comparison (Plate H) */}
-      <div className="bg-white rounded-3xl p-6 sm:p-7 border-2 border-neutral-200 shadow-xs space-y-5">
-        <div className="border-b border-neutral-100 pb-3 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h3 className="text-base font-black text-neutral-900 flex items-center space-x-2">
-              <Building2 className="w-5 h-5 text-teal-600" />
-              <span>
-                {language === 'zh'
-                  ? '行业基准对照表与通俗自然语言总结 (板块 H)'
-                  : 'Industry Benchmark Comparison & Plain-Language Summary (Section H)'}
-              </span>
-            </h3>
-            <p className="text-xs text-neutral-500 font-medium mt-0.5">
-              {language === 'zh'
-                ? '每个行业附带一句自然语言总结，让经营者一眼看懂行业常规盈利水平。'
-                : 'Each industry comes with a plain-language summary so owners can quickly grasp typical profitability levels.'}
-            </p>
-          </div>
-
-          <div className="flex gap-1.5 overflow-x-auto py-1">
-            {INDUSTRY_BENCHMARKS.map((b) => (
-              <button
-                key={b.id}
-                onClick={() => setSelectedIndustry(b.id)}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
-                  selectedIndustry === b.id
-                    ? 'bg-neutral-900 text-white shadow-xs'
-                    : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
-                }`}
-              >
-                {language === 'zh' ? b.nameZh.split(' ')[0] : b.nameEn}
-              </button>
+                  <Tag color="processing" className="me-0 shrink-0">
+                    {t('权重', 'Weight')} {r.def.weight}%
+                  </Tag>
+                </Flex>
+                <div className="mt-2 text-sm">
+                  <Typography.Text type="secondary">{t('健康区间：', 'Healthy: ')}</Typography.Text>
+                  {localizeMonths(r.def.benchmarkValue, language)}
+                </div>
+                <Flex gap={6} align="flex-start" className="mt-1 text-sm text-teal-800">
+                  <Lightbulb className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{pick(r.tip)}</span>
+                </Flex>
+              </Card>
             ))}
-          </div>
-        </div>
+          </Flex>
+        )}
+        <Flex wrap gap={8} align="center" className="mt-4">
+          <Typography.Text type="secondary">{t('评级档位：', 'Tiers: ')}</Typography.Text>
+          {TIERS.map((tier) => (
+            <Tag key={tier.tier} color={tier.color} className="me-0">
+              {tier.tier} {tier.range || t('红线未过', 'gate failed')}
+            </Tag>
+          ))}
+        </Flex>
+        <Typography.Paragraph type="secondary" className="mt-3 mb-0 text-xs">
+          {t(
+            '6 项权重合计 100%，与报告综合得分的加权算法逐项对应。服务型行业的毛利率区间按行业另行设定（见上方红线 2）。偿债倍数不参与加权，属于红线 5。',
+            'The 6 weights sum to 100% and map one-to-one to the report score. Service industries use industry-specific gross margin ranges (see Gate-2). DSCR is not weighted — it is Gate-5.'
+          )}
+        </Typography.Paragraph>
+      </Card>
 
-        {/* Selected Benchmark Detail Bento */}
-        <div className="p-5 sm:p-6 rounded-2xl bg-neutral-50 border-2 border-neutral-100 space-y-4">
-          <div className="flex items-center justify-between">
-            <h4 className="text-sm font-black text-neutral-900">
-              {language === 'zh' ? activeBenchmark.nameZh : activeBenchmark.nameEn}
-            </h4>
-            <span className="text-xs font-mono font-medium text-neutral-500">
-              {language === 'zh' ? activeBenchmark.nameEn : activeBenchmark.nameZh}
+      <Card
+        variant="borderless"
+        className="shadow-xs"
+        title={
+          <Flex align="center" gap={8}>
+            <Building2 className="w-5 h-5 text-teal-700" />
+            {t('行业基准对照', 'Industry benchmarks')}
+          </Flex>
+        }
+      >
+        <Tabs
+          activeKey={selectedIndustry}
+          onChange={setSelectedIndustry}
+          items={INDUSTRY_BENCHMARKS.map((b) => ({
+            key: b.id,
+            label: isEn ? b.nameEn : b.nameZh.split(' (')[0]
+          }))}
+        />
+        <Row gutter={[16, 16]}>
+          <Col xs={12} sm={6}>
+            <Statistic title={t('典型毛利率', 'Gross margin')} value={activeBenchmark.typicalGrossMargin} styles={{ content: { fontSize: 18 } }} />
+          </Col>
+          <Col xs={12} sm={6}>
+            <Statistic title={t('典型固定开销比', 'Overhead ratio')} value={activeBenchmark.typicalOpexRatio} styles={{ content: { fontSize: 18 } }} />
+          </Col>
+          <Col xs={12} sm={6}>
+            <Statistic
+              title={t('典型到手纯利', 'Net margin')}
+              value={activeBenchmark.typicalNetMargin}
+              styles={{ content: { fontSize: 18, color: '#389e0d' } }}
+            />
+          </Col>
+          <Col xs={12} sm={6}>
+            <Statistic
+              title={t('建议备用金', 'Cash runway')}
+              value={localizeMonths(activeBenchmark.typicalCashRunway, language)}
+              styles={{ content: { fontSize: 18 } }}
+            />
+          </Col>
+        </Row>
+        <div className="mt-4 p-3 sm:p-4 rounded-lg bg-neutral-50 border border-neutral-100">
+          <Typography.Paragraph className="mb-2">
+            {isEn ? activeBenchmark.naturalLanguageSummaryEn : activeBenchmark.naturalLanguageSummaryZh}
+          </Typography.Paragraph>
+          <Flex gap={6} align="flex-start" className="text-teal-800">
+            <Lightbulb className="w-4 h-4 shrink-0 mt-0.5" />
+            <span>
+              <Typography.Text strong>{t('经营诀窍：', 'Tip: ')}</Typography.Text>
+              {isEn ? activeBenchmark.keyAdviceEn : activeBenchmark.keyAdviceZh}
             </span>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-            <div className="bg-white p-3.5 rounded-2xl border-2 border-neutral-200 shadow-2xs">
-              <span className="text-neutral-400 block text-[12px] uppercase font-bold mb-0.5">
-                {language === 'zh' ? '典型毛利率区间' : 'Typical Gross Margin'}
-              </span>
-              <span className="font-mono font-bold text-neutral-900 text-sm">
-                {activeBenchmark.typicalGrossMargin}
-              </span>
-            </div>
-            <div className="bg-white p-3.5 rounded-2xl border-2 border-neutral-200 shadow-2xs">
-              <span className="text-neutral-400 block text-[12px] uppercase font-bold mb-0.5">
-                {language === 'zh' ? '典型固定开销比' : 'Typical OPEX Ratio'}
-              </span>
-              <span className="font-mono font-bold text-neutral-900 text-sm">
-                {activeBenchmark.typicalOpexRatio}
-              </span>
-            </div>
-            <div className="bg-white p-3.5 rounded-2xl border-2 border-neutral-200 shadow-2xs">
-              <span className="text-neutral-400 block text-[12px] uppercase font-bold mb-0.5">
-                {language === 'zh' ? '典型到手纯利' : 'Typical Net Margin'}
-              </span>
-              <span className="font-mono font-bold text-emerald-600 text-sm">
-                {activeBenchmark.typicalNetMargin}
-              </span>
-            </div>
-            <div className="bg-white p-3.5 rounded-2xl border-2 border-neutral-200 shadow-2xs">
-              <span className="text-neutral-400 block text-[12px] uppercase font-bold mb-0.5">
-                {language === 'zh' ? '抗风险备用金' : 'Cash Reserve Runway'}
-              </span>
-              <span className="font-mono font-bold text-teal-600 text-sm">
-                {formatCashRunway(activeBenchmark.typicalCashRunway, language)}
-              </span>
-            </div>
-          </div>
-
-          {/* Natural Language Summary Bento */}
-          <div className="bg-white p-4 sm:p-5 rounded-2xl border-2 border-neutral-200 space-y-2">
-            <div className="flex items-center space-x-1.5 text-neutral-900 font-bold text-xs">
-              <Lightbulb className="w-4 h-4 text-amber-500" />
-              <span>{language === 'zh' ? '行业通俗大白话总结：' : 'Plain-language industry summary:'}</span>
-            </div>
-            <p className="text-xs text-neutral-700 leading-relaxed font-medium">
-              “{language === 'zh' ? activeBenchmark.naturalLanguageSummaryZh : activeBenchmark.naturalLanguageSummaryEn}”
-            </p>
-            <div className="pt-2 border-t border-neutral-100 text-[13px] text-neutral-500 font-medium">
-              <span className="font-bold text-neutral-800">
-                {language === 'zh' ? '关键经营诀窍：' : 'Key operating advice: '}
-              </span>
-              <span>{language === 'zh' ? activeBenchmark.keyAdviceZh : activeBenchmark.keyAdviceEn}</span>
-            </div>
-          </div>
+          </Flex>
         </div>
-      </div>
-    </div>
+      </Card>
+    </PageContainer>
   );
 };

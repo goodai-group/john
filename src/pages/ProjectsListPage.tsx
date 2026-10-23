@@ -1,32 +1,11 @@
 import React, { useState } from 'react';
-import {
-  BusinessFormData,
-  AssessmentReport,
-  Language,
-  AppUser,
-  proofTypeLabel
-} from '../types';
-import {
-  Plus,
-  FileText,
-  Trash2,
-  ExternalLink,
-  ShieldAlert,
-  ShieldCheck,
-  RotateCcw,
-  Sparkles,
-  Calendar,
-  Layers,
-  Database,
-  CloudCheck,
-  AlertCircle,
-  UserCheck,
-  Lock,
-  Users,
-  UserPlus,
-  Mail
-} from 'lucide-react';
+import { Alert, Button, Card, Col, Empty, Flex, Input, Popconfirm, Row, Statistic, Tag, Typography } from 'antd';
+import { AlertCircle, FolderKanban, Mail, Plus, RotateCcw, ShieldAlert, Trash2, UserPlus, Users } from 'lucide-react';
+import { BusinessFormData, AssessmentReport, Language, AppUser, proofTypeLabel } from '../types';
 import { formatMoney } from '../lib/currencies';
+import { INDUSTRY_BENCHMARKS } from '../lib/industryBenchmarks';
+import { HEALTH_LEVEL_META, healthLabel, healthLevelOf, tierLabel } from '../lib/healthStatus';
+import { PageContainer, PageHeader } from '../components/ui/PageHeader';
 
 interface ProjectsListProps {
   projects: BusinessFormData[];
@@ -61,8 +40,8 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
   currentUser,
   onOpenAuth
 }) => {
-  // 英文模式下报告正文/表单/项目卡片此前完全没翻译；这里补齐本页所有面向用户的文案。
-  const t = (zh: string, en: string) => (language === 'en' ? en : zh);
+  const isEn = language === 'en';
+  const t = (zh: string, en: string) => (isEn ? en : zh);
 
   // —— 协作者管理（原表单第 5 步，体检后挪到项目管理界面）——
   const [collabOpenId, setCollabOpenId] = useState<string | null>(null);
@@ -82,10 +61,7 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
       return;
     }
     onUpdateProject?.(projId, {
-      collaborators: [
-        ...existing,
-        { email, role: 'editor', invitedAt: new Date().toISOString(), sectionAccess: ['all'] }
-      ]
+      collaborators: [...existing, { email, role: 'editor', invitedAt: new Date().toISOString(), sectionAccess: ['all'] }]
     });
     setCollabEmail('');
     setCollabError(null);
@@ -94,320 +70,260 @@ export const ProjectsListPage: React.FC<ProjectsListProps> = ({
   const handleRemoveCollab = (projId: string, email: string) => {
     const proj = projects.find((p) => p.id === projId);
     if (!proj) return;
-    onUpdateProject?.(projId, {
-      collaborators: proj.collaborators.filter((c) => c.email !== email)
-    });
+    onUpdateProject?.(projId, { collaborators: proj.collaborators.filter((c) => c.email !== email) });
   };
+
+  const industryName = (p: BusinessFormData) => {
+    const bench = INDUSTRY_BENCHMARKS.find((b) => b.id === p.industry);
+    if (bench) return isEn ? bench.nameEn : bench.nameZh.split(' (')[0];
+    return p.customIndustryName || p.businessType || '';
+  };
+
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
-      {/* Header Bento Box */}
-      <div className="bg-white rounded-3xl p-6 sm:p-7 border-2 border-neutral-200 shadow-xs flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center space-x-2 mb-1">
-            <span className="text-[12px] font-mono font-bold uppercase tracking-wider text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-100">
-              PROJECTS & CLOUD HUB
-            </span>
-          </div>
-          <h2 className="text-xl font-black text-neutral-900 tracking-tight">
-            {language === 'en' ? 'My Projects & Assessments' : '我的申报项目与历史评估'}
-          </h2>
-          <p className="text-xs text-neutral-500 font-medium mt-0.5">
-            {language === 'en'
-              ? 'Data backed up locally and on cloud database. Sign in to access your assessments across devices.'
-              : '数据已接入云端数据库；登录账号（支持 Google 或邮箱密码）后可跨设备随时找回所有历史评估与多版本报告。'}
-          </p>
-        </div>
+    <PageContainer>
+      <PageHeader
+        icon={<FolderKanban className="w-5 h-5" />}
+        title={t('我的项目', 'My projects')}
+        description={t(
+          '每个项目保存一份生意的数据和历次体检结果。登录后可在任何设备找回。',
+          'Each project keeps one business’s numbers and every assessment result. Sign in to access them on any device.'
+        )}
+        extra={
+          <Button type="primary" icon={<Plus className="w-4 h-4" />} onClick={onNewProject}>
+            {t('新建项目', 'New project')}
+          </Button>
+        }
+      />
 
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={onNewProject}
-            className="flex items-center space-x-1.5 px-4 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-2xl text-xs font-bold shadow-md shadow-neutral-900/10 border-2 border-neutral-800 transition-all cursor-pointer hover:scale-102"
-          >
-            <Plus className="w-4 h-4 text-emerald-400" />
-            <span>{language === 'en' ? 'New Assessment' : '新建商业自测项目'}</span>
-          </button>
-        </div>
-      </div>
+      <Alert
+        type={currentUser ? 'success' : 'info'}
+        showIcon
+        title={
+          currentUser
+            ? t(`已登录：${currentUser.displayName || currentUser.email}`, `Signed in as ${currentUser.displayName || currentUser.email}`)
+            : t('未登录：数据只存在这台设备的浏览器里', 'Not signed in: data is stored in this browser only')
+        }
+        description={
+          currentUser
+            ? t('项目和报告会自动同步到你的账号。', 'Projects and reports sync to your account automatically.')
+            : t('登录后项目会保存到云端，换手机或电脑也能找回。', 'Sign in to save projects to the cloud and access them from any device.')
+        }
+        action={
+          <Flex gap={8} wrap>
+            {!currentUser && onOpenAuth && (
+              <Button size="small" type="primary" onClick={onOpenAuth}>
+                {t('登录 / 注册', 'Sign in')}
+              </Button>
+            )}
+            <Button size="small" icon={<RotateCcw className="w-3.5 h-3.5" />} onClick={onTriggerSync}>
+              {t('立即同步', 'Sync now')}
+            </Button>
+          </Flex>
+        }
+      />
 
-      {/* User Auth & Cloud Sync Status Banner */}
-      <div className={`p-4 sm:p-5 rounded-3xl border-2 flex flex-wrap items-center justify-between gap-3 text-xs ${
-        currentUser
-          ? 'bg-emerald-50/60 border-emerald-200 text-emerald-950'
-          : 'bg-teal-50/60 border-teal-200 text-teal-950'
-      }`}>
-        <div className="flex items-center space-x-3">
-          {currentUser ? (
-            <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
-              <UserCheck className="w-4 h-4" />
-            </div>
-          ) : (
-            <div className="w-8 h-8 rounded-full bg-teal-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
-              <Database className="w-4 h-4" />
-            </div>
-          )}
-          <div>
-            <div className="font-bold flex items-center gap-2">
-              <span>
-                {currentUser
-                  ? t(`已登录账号：${currentUser.displayName || currentUser.email}`, `Signed in as: ${currentUser.displayName || currentUser.email}`)
-                  : t('未登录账号（数据暂存本地浏览器）', 'Not signed in (data stored locally only)')}
-              </span>
-              {currentUser && (
-                <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[12px] font-bold border border-emerald-200">
-                  {t('下次登录随时找回', 'Recoverable on next sign-in')}
-                </span>
-              )}
-            </div>
-            <p className="text-[13px] opacity-80 mt-0.5">
-              {currentUser
-                ? t('您的所有商业自测表单与 5 维雷达体检报告已与您的账号自动双向同步。', 'All your assessment forms and 5-dimension radar reports are auto-synced to your account.')
-                : t('注册账号（支持 Google 或邮箱密码），将当前报告永久关联至您的专属云端空间，换手机或电脑随时查看。', 'Sign up (Google or email) to permanently link this report to your cloud space and access it from any device.')}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {!currentUser && onOpenAuth && (
-            <button
-              onClick={onOpenAuth}
-              className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold shadow-md shadow-teal-600/20 transition-all cursor-pointer hover:scale-102"
-            >
-              <UserCheck className="w-4 h-4 shrink-0" />
-              <span>{t('登录 / 注册账号', 'Sign in / Sign up')}</span>
-            </button>
-          )}
-
-          <button
-            onClick={onTriggerSync}
-            className="flex items-center space-x-1 px-3.5 py-2 rounded-xl bg-white border-2 border-neutral-200 hover:bg-neutral-50 text-neutral-800 font-bold shadow-xs transition-colors cursor-pointer"
-          >
-            <RotateCcw className="w-3.5 h-3.5 text-teal-600" />
-            <span>{t('云端双向同步', 'Sync with cloud')}</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Projects List Grid */}
       {projects.length === 0 ? (
-        <div className="bg-white rounded-3xl p-12 text-center border-2 border-neutral-200 shadow-xs space-y-4">
-          <div className="w-16 h-16 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center mx-auto border border-teal-100 shadow-xs">
-            <FileText className="w-8 h-8" />
-          </div>
-          <div>
-            <h3 className="text-base font-black text-neutral-900">{t('暂无申报项目', 'No projects yet')}</h3>
-            <p className="text-xs text-neutral-500 font-medium max-w-md mx-auto mt-1">
-              {t('点击下方按钮开始您的第一次商业模型自测，AI 将在 10 秒内为您生成客观体检报告。', 'Click below to start your first business assessment — AI generates an objective report in under 10 seconds.')}
-            </p>
-          </div>
-          <button
-            onClick={onNewProject}
-            className="inline-flex items-center space-x-1.5 px-6 py-2.5 bg-teal-600 hover:bg-teal-500 text-white rounded-2xl text-xs font-bold shadow-md shadow-teal-600/20 transition-all cursor-pointer"
+        <Card variant="borderless" className="shadow-xs">
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={t(
+              '还没有项目。新建一个，填上收入和开销，就能看到体检结果。',
+              'No projects yet. Create one, enter revenue and costs, and see your results.'
+            )}
           >
-            <Plus className="w-4 h-4" />
-            <span>{t('立即创建自测', 'Start assessment')}</span>
-          </button>
-        </div>
+            <Button type="primary" icon={<Plus className="w-4 h-4" />} onClick={onNewProject}>
+              {t('新建项目', 'New project')}
+            </Button>
+          </Empty>
+        </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Row gutter={[16, 16]}>
           {projects.map((proj, idx) => {
-            const projectReports = reports.filter((r) => r.projectId === proj.id);
-            // 修复：不能直接取数组第 0 项当"最新报告"——云端合并后数组顺序不保证按版本排序，
-            // 必须显式按 version 取最大值，否则角标可能展示旧版本分数（与 App.tsx 中
-            // 其他地方统一按 version 排序的做法保持一致）。
-            const latestReport = projectReports.reduce<typeof projectReports[number] | undefined>(
-              (latest, r) => (!latest || r.version > latest.version ? r : latest),
-              undefined
-            );
+            // 不能直接取第 0 项当"最新报告"——云端合并后数组顺序不保证按版本排序，必须显式取 version 最大值
+            const latestReport = reports
+              .filter((r) => r.projectId === proj.id)
+              .reduce<AssessmentReport | undefined>((latest, r) => (!latest || r.version > latest.version ? r : latest), undefined);
+            const level = latestReport ? healthLevelOf(latestReport) : null;
+            const unsynced = isCloudDatabaseReady && currentUser && unsyncedProjectIds.includes(proj.id);
 
             return (
-              <div
-                key={`${proj.id}-${idx}`}
-                className="bg-white rounded-3xl p-6 border-2 border-neutral-200 shadow-xs hover:border-neutral-300 transition-all flex flex-col justify-between space-y-4"
-              >
-                <div>
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <div>
-                      <div className="flex items-center space-x-1.5 mb-1.5">
-                        {proj.isSensitiveRegion ? (
-                          <span className="text-[12px] bg-amber-50 text-amber-800 font-bold px-2.5 py-0.5 rounded-full border border-amber-200 flex items-center space-x-1">
-                            <ShieldAlert className="w-3 h-3 text-amber-600" />
-                            <span>{t('敏感脱敏', 'Sensitive/Redacted')}</span>
-                          </span>
-                        ) : (
-                          <span className="text-[12px] bg-teal-50 text-teal-700 font-bold px-2.5 py-0.5 rounded-full border border-teal-100">
-                            {t('常规模式', 'Standard Mode')}
-                          </span>
-                        )}
-                        <span className="text-[12px] text-neutral-400 font-medium">
-                          {new Date(proj.updatedAt).toLocaleDateString()}
-                        </span>
-                        {isCloudDatabaseReady && currentUser && unsyncedProjectIds.includes(proj.id) && (
-                          <button
-                            type="button"
-                            onClick={onTriggerSync}
-                            title={t('这个项目只存在本机，换设备或退出登录前请先同步', 'This project only exists on this device — sync before switching devices or signing out')}
-                            className="text-[12px] bg-rose-50 text-rose-700 font-bold px-2.5 py-0.5 rounded-full border border-rose-200 flex items-center space-x-1 cursor-pointer hover:bg-rose-100"
-                          >
-                            <AlertCircle className="w-3 h-3" />
-                            <span>{t('未同步到云端 · 点击重试', 'Not synced · retry')}</span>
-                          </button>
-                        )}
-                      </div>
-
-                      <h3 className="text-base font-black text-neutral-900 leading-snug">
-                        {proj.projectName || t('未命名自测项目', 'Untitled Project')}
-                      </h3>
-                      <p className="text-xs text-neutral-500 font-medium mt-0.5">
-                        {proj.businessType || t('海外小微经营', 'Overseas Micro-Business')} ｜ {t('币种', 'Currency')}：{proj.baseCurrency}
-                      </p>
+              <Col xs={24} md={12} key={`${proj.id}-${idx}`}>
+                <Card
+                  variant="borderless"
+                  className="shadow-xs h-full"
+                  styles={{ body: { display: 'flex', flexDirection: 'column', gap: 12, height: '100%' } }}
+                >
+                  <Flex justify="space-between" align="flex-start" gap={12}>
+                    <div className="min-w-0">
+                      <Typography.Title level={5} style={{ margin: 0 }} ellipsis>
+                        {proj.projectName || t('未命名项目', 'Untitled project')}
+                      </Typography.Title>
+                      <Typography.Text type="secondary" className="text-xs">
+                        {[industryName(proj), proj.baseCurrency, new Date(proj.updatedAt).toLocaleDateString(isEn ? 'en-US' : 'zh-CN')]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </Typography.Text>
                     </div>
-
-                    {latestReport ? (
-                      <div className="text-center p-3 rounded-2xl bg-neutral-900 text-white border border-neutral-800 shadow-xs min-w-[64px]">
-                        <div className="text-xl font-mono font-black leading-none">
-                          {latestReport.totalScore}
-                        </div>
-                        <span className="text-[11px] font-bold text-amber-400 block mt-1 tracking-wider uppercase">
-                          {latestReport.tier}
-                        </span>
-                      </div>
+                    {level ? (
+                      <Tag color={HEALTH_LEVEL_META[level].color} className="me-0 shrink-0">
+                        {healthLabel(level, language)}
+                      </Tag>
                     ) : (
-                      <span className="text-xs bg-neutral-100 text-neutral-600 px-3 py-1 rounded-xl font-bold border border-neutral-200">
-                        {t('草稿待评', 'Draft, not assessed')}
-                      </span>
+                      <Tag className="me-0 shrink-0">{t('还没出报告', 'No report yet')}</Tag>
                     )}
-                  </div>
+                  </Flex>
 
-                  <div className="grid grid-cols-2 gap-2 text-xs text-neutral-700 bg-neutral-50 p-3 rounded-2xl border border-neutral-100">
-                    <div>
-                      <span className="text-neutral-400 block text-[12px] font-bold uppercase mb-0.5">{t('月均总流水', 'Avg. Monthly Revenue')}:</span>
-                      <span className="font-mono font-bold text-neutral-900">
-                        {formatMoney(proj.monthlyRevenue.amount, proj.monthlyRevenue.currency)}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-neutral-400 block text-[12px] font-bold uppercase mb-0.5">{t('凭证方式', 'Proof Type')}:</span>
-                      <span className="font-bold text-neutral-800">
-                        {proofTypeLabel(proj.proofType, language)}
-                      </span>
-                    </div>
-                  </div>
+                  {(proj.isSensitiveRegion || unsynced) && (
+                    <Flex gap={6} wrap>
+                      {proj.isSensitiveRegion && (
+                        <Tag color="warning" icon={<ShieldAlert className="w-3 h-3 inline mr-1" />}>
+                          {t('敏感地区 · 已脱敏', 'Sensitive region · redacted')}
+                        </Tag>
+                      )}
+                      {unsynced && (
+                        <Tag
+                          color="error"
+                          icon={<AlertCircle className="w-3 h-3 inline mr-1" />}
+                          className="cursor-pointer"
+                          onClick={onTriggerSync}
+                          title={t('这个项目只存在本机，换设备或退出登录前请先同步', 'This project only exists on this device — sync before switching devices or signing out')}
+                        >
+                          {t('未同步到云端 · 点击重试', 'Not synced · tap to retry')}
+                        </Tag>
+                      )}
+                    </Flex>
+                  )}
 
-                  {/* 协作者管理（原表单第 5 步，体检后挪到项目管理界面） */}
-                  <div className="pt-3">
-                    <button
+                  <Row gutter={12}>
+                    <Col span={12}>
+                      <Statistic
+                        title={t('月均总流水', 'Monthly revenue')}
+                        value={formatMoney(proj.monthlyRevenue.amount, proj.monthlyRevenue.currency)}
+                        styles={{ content: { fontSize: 18 } }}
+                      />
+                    </Col>
+                    <Col span={12}>
+                      {latestReport ? (
+                        <Statistic
+                          title={t('最新得分', 'Latest score')}
+                          value={latestReport.totalScore}
+                          suffix={
+                            <span className="text-xs text-neutral-500">
+                              / 100 · {tierLabel(latestReport.tier, language)}
+                            </span>
+                          }
+                          styles={{ content: { fontSize: 18, color: level ? HEALTH_LEVEL_META[level].hex : undefined } }}
+                        />
+                      ) : (
+                        <Statistic
+                          title={t('凭证方式', 'Proof')}
+                          value={proofTypeLabel(proj.proofType, language)}
+                          styles={{ content: { fontSize: 16 } }}
+                        />
+                      )}
+                    </Col>
+                  </Row>
+
+                  <div>
+                    <Button
+                      type="link"
+                      size="small"
+                      className="px-0"
+                      icon={<Users className="w-3.5 h-3.5" />}
                       onClick={() => {
                         setCollabOpenId(collabOpenId === proj.id ? null : proj.id);
                         setCollabError(null);
                       }}
-                      className="inline-flex items-center gap-1.5 text-xs font-bold text-teal-700 hover:text-teal-900 transition-colors cursor-pointer"
                     >
-                      <Users className="w-3.5 h-3.5 text-teal-500" />
                       {proj.collaborators.length > 0
-                        ? t(`协作者 ${proj.collaborators.length} 人`, `${proj.collaborators.length} Collaborator${proj.collaborators.length > 1 ? 's' : ''}`)
-                        : t('添加协作者', 'Add Collaborator')}
-                      <span className="text-[12px] text-neutral-400 font-medium">
-                        {collabOpenId === proj.id ? t('收起', 'Collapse') : t('管理', 'Manage')}
-                      </span>
-                    </button>
+                        ? t(`协作者 ${proj.collaborators.length} 人`, `${proj.collaborators.length} collaborator(s)`)
+                        : t('邀请协作者', 'Invite collaborator')}
+                    </Button>
 
                     {collabOpenId === proj.id && (
-                      <div className="mt-2 p-3 rounded-xl bg-teal-50/60 border border-teal-100 space-y-2.5">
+                      <div className="mt-2 p-3 rounded-lg bg-neutral-50 border border-neutral-100 flex flex-col gap-2">
                         {proj.collaborators.length > 0 ? (
-                          <div className="space-y-1.5">
-                            {proj.collaborators.map((c) => (
-                              <div
-                                key={c.email}
-                                className="flex items-center justify-between p-2 rounded-lg bg-white border border-teal-100"
+                          proj.collaborators.map((c) => (
+                            <Flex key={c.email} align="center" justify="space-between" gap={8} className="bg-white rounded-md px-2 py-1.5">
+                              <Flex align="center" gap={6} className="min-w-0">
+                                <Mail className="w-3.5 h-3.5 text-teal-700 shrink-0" />
+                                <span className="text-xs truncate">{c.email}</span>
+                                <Tag className="me-0 shrink-0">{t('可编辑', 'Editor')}</Tag>
+                              </Flex>
+                              <Popconfirm
+                                title={t('移除这位协作者？', 'Remove this collaborator?')}
+                                okText={t('移除', 'Remove')}
+                                cancelText={t('取消', 'Cancel')}
+                                onConfirm={() => handleRemoveCollab(proj.id, c.email)}
                               >
-                                <div className="flex items-center gap-2 min-w-0">
-                                  <Mail className="w-3.5 h-3.5 text-teal-600 shrink-0" />
-                                  <span className="font-medium text-slate-800 text-xs truncate">
-                                    {c.email}
-                                  </span>
-                                  <span className="text-[12px] bg-teal-100 text-teal-700 px-1.5 py-0.5 rounded shrink-0">
-                                    {t('协作者 · 可编辑', 'Collaborator · Editor')}
-                                  </span>
-                                </div>
-                                <button
-                                  onClick={() => handleRemoveCollab(proj.id, c.email)}
-                                  className="text-slate-400 hover:text-rose-500 p-1 shrink-0 cursor-pointer"
-                                  title={t('移除协作者', 'Remove collaborator')}
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                            ))}
-                          </div>
+                                <Button
+                                  type="text"
+                                  size="small"
+                                  danger
+                                  icon={<Trash2 className="w-3.5 h-3.5" />}
+                                  aria-label={t('移除协作者', 'Remove collaborator')}
+                                />
+                              </Popconfirm>
+                            </Flex>
+                          ))
                         ) : (
-                          <p className="text-[13px] text-teal-700 font-medium">
-                            {t('暂无协作者。可邀请配偶、当地同工一起核对数据。', 'No collaborators yet. Invite a spouse or local teammate to review the data together.')}
-                          </p>
+                          <Typography.Text type="secondary" className="text-xs">
+                            {t('可邀请配偶、当地同工一起核对数据。', 'Invite a spouse or local teammate to review the data together.')}
+                          </Typography.Text>
                         )}
-
-                        <div className="flex gap-2">
-                          <input
+                        <Flex gap={8}>
+                          <Input
                             type="email"
-                            placeholder={t('输入协作者邮箱 (如 partner@example.com)', "Collaborator's email (e.g. partner@example.com)")}
+                            size="small"
+                            placeholder={t('协作者邮箱', "Collaborator's email")}
                             value={collabEmail}
+                            status={collabError ? 'error' : undefined}
                             onChange={(e) => {
                               setCollabEmail(e.target.value);
                               setCollabError(null);
                             }}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') handleAddCollab(proj.id);
-                            }}
-                            className="flex-1 p-2 border border-slate-300 rounded-lg bg-white text-xs"
+                            onPressEnter={() => handleAddCollab(proj.id)}
                           />
-                          <button
-                            onClick={() => handleAddCollab(proj.id)}
-                            className="inline-flex items-center gap-1 px-3 py-2 bg-teal-600 hover:bg-teal-500 text-white font-semibold rounded-lg shadow-2xs transition-colors text-xs cursor-pointer"
-                          >
-                            <UserPlus className="w-3.5 h-3.5" />
+                          <Button size="small" type="primary" icon={<UserPlus className="w-3.5 h-3.5" />} onClick={() => handleAddCollab(proj.id)}>
                             {t('添加', 'Add')}
-                          </button>
-                        </div>
+                          </Button>
+                        </Flex>
                         {collabError && (
-                          <p className="text-[13px] text-rose-600 font-semibold">⚠️ {collabError}</p>
+                          <Typography.Text type="danger" className="text-xs">
+                            {collabError}
+                          </Typography.Text>
                         )}
                       </div>
                     )}
                   </div>
-                </div>
 
-                <div className="flex items-center justify-between pt-3 border-t border-neutral-100 text-xs">
-                  <button
-                    onClick={() => onDeleteProject(proj.id)}
-                    className="text-neutral-400 hover:text-rose-600 p-2 rounded-xl hover:bg-rose-50 transition-colors cursor-pointer"
-                    title={t('删除此项目', 'Delete this project')}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => onSelectProject(proj.id)}
-                      className="px-3.5 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 font-bold rounded-xl border border-neutral-200 transition-colors cursor-pointer"
+                  <Flex justify="space-between" align="center" gap={8} className="mt-auto pt-3 border-t border-neutral-100">
+                    {/* 删除不可恢复（本地与云端一起删），必须二次确认；此前点一下垃圾桶就直接删掉了 */}
+                    <Popconfirm
+                      title={t('删除这个项目？', 'Delete this project?')}
+                      description={t('项目和它的全部报告会一起删除，无法恢复。', 'The project and all its reports will be deleted. This cannot be undone.')}
+                      okText={t('删除', 'Delete')}
+                      okButtonProps={{ danger: true }}
+                      cancelText={t('取消', 'Cancel')}
+                      onConfirm={() => onDeleteProject(proj.id)}
                     >
-                      {t('编辑申报', 'Edit')}
-                    </button>
-
-                    {latestReport && (
-                      <button
-                        onClick={() => onSelectReport(latestReport.id)}
-                        className="px-3.5 py-1.5 bg-teal-600 hover:bg-teal-500 text-white font-bold rounded-xl shadow-xs transition-colors cursor-pointer flex items-center space-x-1"
-                      >
-                        <span>{t('查看诊断报告', 'View Report')}</span>
-                        <ExternalLink className="w-3 h-3" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
+                      <Button type="text" danger icon={<Trash2 className="w-4 h-4" />} aria-label={t('删除此项目', 'Delete this project')} />
+                    </Popconfirm>
+                    <Flex gap={8}>
+                      <Button onClick={() => onSelectProject(proj.id)}>{t('编辑数据', 'Edit numbers')}</Button>
+                      {latestReport && (
+                        <Button type="primary" onClick={() => onSelectReport(latestReport.id)}>
+                          {t('查看报告', 'View report')}
+                        </Button>
+                      )}
+                    </Flex>
+                  </Flex>
+                </Card>
+              </Col>
             );
           })}
-        </div>
+        </Row>
       )}
-    </div>
+    </PageContainer>
   );
 };
