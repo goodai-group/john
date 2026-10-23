@@ -744,19 +744,25 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                           )}
                     </span>
                   ) : (
-                    <span className="flex items-center gap-1.5">
-                      <AlertOctagon className="w-3.5 h-3.5 text-rose-600" />
-                      {t(
-                        `触发 ${((report.failedGates || report.gates.filter((g) => g.status !== 'PASS')).length)} 项安全红线：${(report.failedGates && report.failedGates.length > 0
-                          ? report.failedGates
-                          : report.gates.filter((g) => g.status !== 'PASS')
-                        ).map((g) => g.plainName || g.name).join('、')}`,
-                        `${((report.failedGates || report.gates.filter((g) => g.status !== 'PASS')).length)} safety gate(s) triggered: ${(report.failedGates && report.failedGates.length > 0
-                          ? report.failedGates
-                          : report.gates.filter((g) => g.status !== 'PASS')
-                        ).map((g) => g.plainName || g.name).join(', ')}`
-                      )}
-                    </span>
+                    <div className="space-y-1.5">
+                      <span className="flex items-center gap-1.5">
+                        <AlertOctagon className="w-3.5 h-3.5 text-rose-600" />
+                        {t(
+                          `触发 ${((report.failedGates || report.gates.filter((g) => g.status !== 'PASS')).length)} 项安全红线（共 ${report.gates.length} 项，逐项结果如下）：`,
+                          `${((report.failedGates || report.gates.filter((g) => g.status !== 'PASS')).length)} of ${report.gates.length} safety gates triggered:`
+                        )}
+                      </span>
+                      {/* 小白速览此前只列出未通过的红线，通过的几项（如无负债时的 GATE-5）在这一视图里完全看不到；
+                          逐项列全，与「通过 x/5 项」徽章对得上。 */}
+                      <ul className="space-y-0.5 font-medium">
+                        {report.gates.map((g) => (
+                          <li key={`summary-gate-${g.code}`} className={g.status === 'PASS' ? 'text-emerald-800' : 'text-rose-800'}>
+                            {g.status === 'PASS' ? '✅' : '❌'} <span className="font-mono">{g.code}</span> {g.plainName || g.name}
+                            <span className="font-mono text-neutral-500"> · {t('实测', 'Actual')} {g.currentValue} · {t('门槛', 'Threshold')} {g.threshold}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   )}
                 </div>
               </div>
