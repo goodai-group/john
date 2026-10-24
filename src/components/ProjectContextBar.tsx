@@ -31,7 +31,7 @@ export function ProjectContextBar({
   const isResult = activeTab === 'report' || activeTab === 'feasibility';
 
   return (
-    <div className="max-w-6xl mx-auto px-3 sm:px-6 pt-4">
+    <div className="max-w-6xl mx-auto px-3 sm:px-6 pt-4 print:hidden">
       <Flex wrap gap={8} align="center" className="bg-white rounded-lg shadow-xs px-3 py-2">
         <Typography.Text type="secondary" className="shrink-0">
           {t('当前项目', 'Project')}

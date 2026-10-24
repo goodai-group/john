@@ -940,7 +940,7 @@ export default function App() {
   return (
     <AntdProvider language={language} largeFont={largeFont} highContrast={highContrast}>
     <div
-      className={`min-h-screen bg-warm text-neutral-900 transition-all font-sans ${
+      className={`min-h-screen bg-warm print:bg-white text-neutral-900 transition-all font-sans ${
         largeFont ? 'text-base leading-relaxed font-medium' : 'text-sm'
       } ${highContrast ? 'contrast-125 saturate-110' : ''}`}
     >
@@ -975,11 +975,11 @@ export default function App() {
       />
 
       {/* 桌面端为固定左侧边栏留出空间；移动端侧边栏隐藏，无需内边距 */}
-      <div className="md:pl-56">
+      <div className="md:pl-56 print:pl-0">
 
       {/* Sync Status Banner */}
       {banner && (
-        <div className="max-w-7xl mx-auto px-4 mt-3">
+        <div className="max-w-7xl mx-auto px-4 mt-3 print:hidden">
           <div
             role={banner.kind === 'error' ? 'alert' : 'status'}
             className={`animate-in fade-in px-4 py-3 rounded-2xl shadow-sm flex items-start gap-3 text-xs sm:text-sm font-semibold border-2 ${
@@ -1028,7 +1028,7 @@ export default function App() {
       {/* BUG-19 修复：移动端悬浮"AI 答疑"按钮固定在 bottom-20（80px）且自身还有高度，
           pb-24（96px）的安全区不足以完全避开它，会遮挡卡片右下角内容/开关。加大到 pb-36
           （144px）确保滚动到底部时按钮下方也留有足够空间，不与页面内容重叠。 */}
-      <main id="main-content" tabIndex={-1} className="pb-24 md:pb-16 focus:outline-hidden">
+      <main id="main-content" tabIndex={-1} className="pb-24 md:pb-16 print:pb-0 focus:outline-hidden">
         {!currentUser ? (
           <LoginRequiredGate
             language={language}
