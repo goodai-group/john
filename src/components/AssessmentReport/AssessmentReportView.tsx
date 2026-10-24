@@ -508,7 +508,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
     .join(' ');
 
   return (
-    <div className="max-w-5xl mx-auto px-3 sm:px-6 py-4 sm:py-6 flex flex-col gap-4 print:p-0">
+    <div className="max-w-5xl mx-auto px-3 sm:px-6 py-4 sm:py-6 flex flex-col gap-4 print:p-0 print-report">
       {/* Top Action Bar */}
       <Card variant="borderless" size="small" className="shadow-xs print:hidden">
         <Flex wrap gap={12} justify="space-between" align="center">
@@ -1133,7 +1133,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                       </p>
                     </div>
 
-                    <div className="pt-2 text-[13px] font-bold flex items-center gap-1 text-neutral-400">
+                    <div className="pt-2 print:hidden text-[13px] font-bold flex items-center gap-1 text-neutral-400">
                       {isDone ? t('✅ 已完成落地', '✅ Completed') : t('点击标记为已完成', 'Click to mark as done')}
                     </div>
                   </div>

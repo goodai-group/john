@@ -218,7 +218,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     <>
       {/* ============ 桌面端侧边栏 ============ */}
       <aside
-        className={`hidden md:flex md:flex-col ${SIDEBAR_WIDTH_CLASS} md:fixed md:inset-y-0 md:left-0 z-40 bg-teal-900 text-white px-3 py-5 overflow-y-auto`}
+        className={`hidden md:flex md:flex-col ${SIDEBAR_WIDTH_CLASS} md:fixed md:inset-y-0 md:left-0 z-40 print:hidden bg-teal-900 text-white px-3 py-5 overflow-y-auto`}
       >
         <button
           className="flex items-center gap-2.5 cursor-pointer shrink-0 mb-4 px-2 text-left"
@@ -276,7 +276,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       </aside>
 
       {/* ============ 移动端顶栏：只留品牌与 AI 答疑 ============ */}
-      <header className="md:hidden sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-neutral-200">
+      <header className="md:hidden print:hidden sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-neutral-200">
         <div className="px-4 py-2.5 flex items-center justify-between gap-3">
           <button className="flex items-center gap-2.5 min-w-0 cursor-pointer" onClick={() => onTabChange('projects')}>
             <span className="w-8 h-8 bg-teal-700 rounded-lg flex items-center justify-center text-white shrink-0">
@@ -300,7 +300,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* ============ 移动端底部标签栏（5 个） ============ */}
       <nav
-        className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-neutral-200 flex items-stretch"
+        className="md:hidden print:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-neutral-200 flex items-stretch"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
         aria-label={t('主导航', 'Main navigation')}
       >
