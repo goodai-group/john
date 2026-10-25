@@ -198,6 +198,8 @@ export interface BusinessFormData {
   projectName: string;
   industry: string;
   customIndustryName?: string;
+  /** 毛利率红线适用的细分业态（见 lib/grossMarginPolicy.ts MARGIN_PROFILES）；未设置时按项目文字关键词判定 */
+  marginProfileId?: string;
   businessType: string;
 
   // 所处阶段：尚未启动 / 已有原型（还没营收）/ 已有营收，用于区分"预估未来"与"体检过去"两种填报口径
@@ -345,6 +347,16 @@ export interface AssessmentReport {
   // 毛利口径标记：'accounting' = 营业成本含直接服务人工（会计口径）。毛利口径调整前生成的
   // 旧报告没有该字段，报告页据此提示"本报告按旧口径计算，请重新生成"。
   grossMarginBasis?: 'accounting';
+  // 本报告毛利率红线所依据的细分业态及其红线 / 预警线（报告页展示，避免页面再按行业名称重新推断）
+  marginProfile?: {
+    id: string;
+    nameZh: string;
+    nameEn: string;
+    passAt: number;
+    warnAt: number;
+    fullScoreAt: number;
+    basis: 'selected' | 'keyword' | 'default';
+  };
   // 服务型行业尚未拆分出直接服务人工时的提示（毛利率可能偏高）
   grossMarginNotice?: string;
   estimatedMonthsCount: number;

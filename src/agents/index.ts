@@ -17,6 +17,7 @@ import { strategistAgent } from './strategist.js';
 import { interpreterAgent } from './interpreter.js';
 import { trackerAgent } from './tracker.js';
 import { scoutAgent } from './scout.js';
+import { marginProfileAgent } from './marginProfile.js';
 
 export const AGENTS = {
   consultation: consultationAgent,
@@ -28,7 +29,8 @@ export const AGENTS = {
   strategist: strategistAgent,
   interpreter: interpreterAgent,
   tracker: trackerAgent,
-  scout: scoutAgent
+  scout: scoutAgent,
+  marginProfile: marginProfileAgent
 } as const;
 
 export type AgentName = keyof typeof AGENTS;

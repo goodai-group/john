@@ -7,7 +7,7 @@ import {
 } from '../types.js';
 import { convertToTargetCurrency, CUSTOM_CURRENCY_VALUE } from './currencies.js';
 import { aggregateMonthlyCosts } from './costAggregation.js';
-import { getGrossMarginPolicy, usesDirectServiceLabor } from './grossMarginPolicy.js';
+import { resolveMarginProfile, usesDirectServiceLabor } from './grossMarginPolicy.js';
 
 /** 与 AssessmentForm 中 CUSTOM_INDUSTRY_VALUE 保持一致的占位常量 */
 const CUSTOM_INDUSTRY_VALUE = '__CUSTOM__';
@@ -104,7 +104,11 @@ export function runBusinessAssessment(formData: BusinessFormData): AssessmentRep
   const grossProfit = monthlyRealRev - cogs;
   const grossMarginPercent =
     monthlyRealRev > 0 ? Number(((grossProfit / monthlyRealRev) * 100).toFixed(1)) : 0;
-  const marginPolicy = getGrossMarginPolicy(formData.industry);
+  const { profile: marginProfile, basis: marginProfileBasis } = resolveMarginProfile(formData.industry, {
+    profileId: formData.marginProfileId,
+    text: [formData.projectName, formData.customIndustryName, formData.businessType].filter(Boolean).join(' ')
+  });
+  const marginPolicy = marginProfile.policy;
   const isServiceLaborIndustry = usesDirectServiceLabor(formData.industry);
   // 服务型行业还没拆出直接服务人工（多为口径调整前保存的项目）：全部人工仍在 OPEX，
   // 毛利率会按"只扣物料"偏高，需在报告里提示用户拆分后重新生成。
@@ -178,7 +182,7 @@ export function runBusinessAssessment(formData: BusinessFormData): AssessmentRep
             ? 'WARNING'
             : 'FAIL',
       currentValue: `${grossMarginPercent}%`,
-      threshold: `≥ ${marginPolicy.passAt}%`,
+      threshold: `≥ ${marginPolicy.passAt}%（${marginProfile.nameZh}；预警区间 ${marginPolicy.warnAt}%~${marginPolicy.passAt}%）`,
       plainDescription:
         grossMarginPercent >= marginPolicy.passAt
           ? isServiceLaborIndustry
@@ -432,6 +436,15 @@ export function runBusinessAssessment(formData: BusinessFormData): AssessmentRep
       ? `用户自报汇率（${formData.customExchangeRateType || '民间/日常兑换价'}，1 USD ≈ ${formData.customExchangeRateValue || '自定义'} ${baseCurrency}），非官方汇率，已公开透明核对。`
       : undefined,
     grossMarginBasis: 'accounting',
+    marginProfile: {
+      id: marginProfile.id,
+      nameZh: marginProfile.nameZh,
+      nameEn: marginProfile.nameEn,
+      passAt: marginPolicy.passAt,
+      warnAt: marginPolicy.warnAt,
+      fullScoreAt: Number(marginPolicy.fullScoreAt.toFixed(1)),
+      basis: marginProfileBasis
+    },
     grossMarginNotice: directLaborNotSplit
       ? '毛利已按会计口径计算：授课老师、技师等一线服务人员工资属于营业成本。本项目尚未填写「直接服务人工」，全部人工仍按管理费用处理，毛利率可能偏高——请在花费清单里把一线人员工资拆到「直接服务人工」后重新生成报告。'
       : undefined,

@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Card, Checkbox, Empty, Flex, Grid, Input, Segmented, Spin, Table, Tag, Typography, type TableColumnsType } from 'antd';
-import { RefreshCw, ShieldCheck } from 'lucide-react';
+import { Alert, Button, Card, Checkbox, Dropdown, Empty, Flex, Grid, Input, Segmented, Spin, Table, Tag, Typography, type TableColumnsType } from 'antd';
+import { Download, RefreshCw, ShieldCheck } from 'lucide-react';
 import { AppUser, Language } from '../types';
 import { AdminProjectRow, fetchAllProjectsForAdmin, isSuperAdmin } from '../lib/supabaseClient';
 import { formatMoney } from '../lib/currencies';
 import { INDUSTRY_BENCHMARKS } from '../lib/industryBenchmarks';
+import { downloadProjectReport, type ReportFileFormat } from '../lib/reportDownload';
 import { PageContainer, PageHeader } from '../components/ui/PageHeader';
 
 type HealthKey = 'PASS' | 'REVIEW' | 'FAIL' | 'NONE';
@@ -63,6 +64,15 @@ export const AdminProjectsPage: React.FC<AdminProjectsPageProps> = ({ currentUse
     if (r.data.customIndustryName) return r.data.customIndustryName;
     // 不在基准库里的行业 key（如 artisan_handicraft）至少转成可读的单词
     return (id || '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  };
+
+  // 按当前评分口径现算一份报告再下载，因此草稿 / 从未生成过报告的项目也能导出
+  const handleDownload = (r: AdminProjectRow, format: ReportFileFormat) => {
+    try {
+      downloadProjectReport(r.data, format, { ownerEmail: r.ownerEmail || r.data.ownerEmail });
+    } catch (e: any) {
+      setError(t(`下载失败：${e?.message || '无法生成报告'}`, `Download failed: ${e?.message || 'could not build the report'}`));
+    }
   };
 
   const filtered = useMemo(() => {
@@ -147,6 +157,22 @@ export const AdminProjectsPage: React.FC<AdminProjectsPageProps> = ({ currentUse
       ) : (
         <Tag className="me-0">{t('草稿', 'Draft')}</Tag>
       ),
+    download: (r: AdminProjectRow) => (
+      <Dropdown
+        trigger={['click']}
+        menu={{
+          items: [
+            { key: 'md', label: t('可读报告（Markdown）', 'Readable report (Markdown)') },
+            { key: 'json', label: t('完整数据（JSON）', 'Full data (JSON)') }
+          ],
+          onClick: ({ key }) => handleDownload(r, key as ReportFileFormat)
+        }}
+      >
+        <Button size="small" icon={<Download className="w-4 h-4" />}>
+          {t('下载报告', 'Download')}
+        </Button>
+      </Dropdown>
+    ),
     updated: (r: AdminProjectRow) => (
       <span className="whitespace-nowrap text-neutral-500">
         {r.updatedAt ? new Date(r.updatedAt).toLocaleString(isEn ? 'en-US' : 'zh-CN', {
@@ -173,7 +199,8 @@ export const AdminProjectsPage: React.FC<AdminProjectsPageProps> = ({ currentUse
       sorter: (a, b) => new Date(a.updatedAt || 0).getTime() - new Date(b.updatedAt || 0).getTime(),
       defaultSortOrder: 'descend',
       render: (_, r) => cell.updated(r)
-    }
+    },
+    { title: t('报告', 'Report'), key: 'download', fixed: 'right', render: (_, r) => cell.download(r) }
   ];
 
   return (
@@ -239,7 +266,10 @@ export const AdminProjectsPage: React.FC<AdminProjectsPageProps> = ({ currentUse
                     {cell.health(r)}
                     <div className="text-right">{cell.revenue(r)}</div>
                   </Flex>
-                  <div className="mt-2 text-xs">{cell.updated(r)}</div>
+                  <Flex justify="space-between" align="center" gap={8} className="mt-2 text-xs">
+                    {cell.updated(r)}
+                    {cell.download(r)}
+                  </Flex>
                 </Card>
               ))}
             </Flex>

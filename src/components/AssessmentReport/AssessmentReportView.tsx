@@ -43,6 +43,7 @@ import {
 } from 'lucide-react';
 import { formatMoney } from '../../lib/currencies';
 import { getGrossMarginPolicy, usesDirectServiceLabor } from '../../lib/grossMarginPolicy';
+import { asciiSafeFileName, downloadTextFile } from '../../lib/reportDownload';
 import { getAuthHeaders } from '../../lib/supabaseClient';
 import { gateCodeLabel, tierLabel } from '../../lib/healthStatus';
 import { INDUSTRY_BENCHMARKS } from '../../lib/industryBenchmarks';
@@ -206,10 +207,13 @@ export const AssessmentReportView: React.FC<ReportViewProps> = ({
       : 100;
 
 
+  // 毛利率红线：新报告自带所属细分业态的口径；旧报告（没有 marginProfile）退回按行业名称推断
+  const reportMarginPolicy = report.marginProfile ?? getGrossMarginPolicy(report.industry);
+
   // 加权表里每个单项得分的算法说明（悬停「?」显示）。公式与 scoringEngine.ts 的 metrics 一一对应，
   // 改了那边的打分公式这里要同步改。
   const metricScoreExplanation = (m: AssessmentReport['metrics'][number]): string => {
-    const fullScoreAt = Number(getGrossMarginPolicy(report.industry).fullScoreAt.toFixed(1));
+    const fullScoreAt = Number(reportMarginPolicy.fullScoreAt.toFixed(1));
     switch (m.key) {
       case 'real_revenue_strength':
         return t(
@@ -469,21 +473,11 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
     // ASCII 安全版本：先按 Unicode 规范分解去掉音调符号（保留带音标的拉丁字母语言，如越南语项目名
     // 里的实际字母），再剔除其余非 ASCII 字符；纯表意文字（中文/泰文等）会被完全剔除，此时退回
     // "Business-Project" 占位词，保证文件名不会变回完全无意义的"download"。
-    const asciiSafeName =
-      report.projectName
-        .normalize('NFKD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^A-Za-z0-9._-]+/g, '_')
-        .replace(/^_+|_+$/g, '') || 'Business-Project';
-    const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json;charset=utf-8' });
-    const blobUrl = URL.createObjectURL(blob);
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute('href', blobUrl);
-    downloadAnchor.setAttribute('download', `${asciiSafeName}-Assessment-Report-v${report.version}.json`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
-    URL.revokeObjectURL(blobUrl);
+    downloadTextFile(
+      `${asciiSafeFileName(report.projectName)}-Assessment-Report-v${report.version}.json`,
+      JSON.stringify(report, null, 2),
+      'application/json'
+    );
   };
 
   // Radar chart points generator for 5 dimensions (for detailed view)
@@ -1620,7 +1614,7 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
           </p>
           <div className="space-y-2">
             {report.gates.map((g) => {
-              const marginPolicy = getGrossMarginPolicy(report.industry);
+              const marginPolicy = reportMarginPolicy;
               const rule: Record<string, { formula: string; substitution: string }> = {
                 'GATE-1': {
                   formula: t(
@@ -1631,8 +1625,8 @@ ${(aiCustomDiagnosis?.actionableAdvices || report.aiActionableAdvice).map((adv, 
                 },
                 'GATE-2': {
                   formula: t(
-                    `毛利率 =（月真实主营收入 − 月营业成本）÷ 月真实主营收入 × 100%；本行业 ≥ ${marginPolicy.passAt}% 通过，${marginPolicy.warnAt}%~${marginPolicy.passAt}% 警告，< ${marginPolicy.warnAt}% 未通过`,
-                    `Gross Margin = (Monthly Real Revenue − Monthly COGS) ÷ Monthly Real Revenue × 100%; for this industry ≥ ${marginPolicy.passAt}% passes, ${marginPolicy.warnAt}%–${marginPolicy.passAt}% warns, < ${marginPolicy.warnAt}% fails`
+                    `毛利率 =（月真实主营收入 − 月营业成本）÷ 月真实主营收入 × 100%；${report.marginProfile ? `本项目按「${report.marginProfile.nameZh}」判定：` : '本行业'}≥ ${marginPolicy.passAt}% 通过，${marginPolicy.warnAt}%~${marginPolicy.passAt}% 警告，< ${marginPolicy.warnAt}% 未通过`,
+                    `Gross Margin = (Monthly Real Revenue − Monthly COGS) ÷ Monthly Real Revenue × 100%; ${report.marginProfile ? `for "${report.marginProfile.nameEn}"` : 'for this industry'} ≥ ${marginPolicy.passAt}% passes, ${marginPolicy.warnAt}%–${marginPolicy.passAt}% warns, < ${marginPolicy.warnAt}% fails`
                   ),
                   substitution: `(${formatMoney(monthlyRealRevenue, baseCurr)} − ${formatMoney(monthlyCogs, baseCurr)}) ÷ ${formatMoney(monthlyRealRevenue, baseCurr)} × 100% = ${grossMarginPercent}%`
                 },

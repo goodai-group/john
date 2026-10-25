@@ -320,6 +320,9 @@ export function registerApiRoutes(app: express.Express): void {
     jsonAgentRoute(AGENTS.businessStructure)
   );
 
+  // 2.55 细分业态判定：AI 归类 + 查表给出毛利率红线与预警区间（沙盒试算用）
+  app.post('/api/ai/margin-profile', requireAuth(), jsonAgentRoute(AGENTS.marginProfile));
+
   // 2.6 CPA 分类 Agent：把用户自由填写的流水条目（名称+金额+周期）分类到标准会计科目
   app.post('/api/ai/classify-ledger', requireAuth(), jsonAgentRoute(AGENTS.ledgerClassifier));
 
