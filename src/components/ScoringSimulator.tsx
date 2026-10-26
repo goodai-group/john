@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Button,
@@ -6,6 +6,7 @@ import {
   Col,
   Empty,
   Flex,
+  Input,
   InputNumber,
   Modal,
   Progress,
@@ -25,13 +26,23 @@ import {
   Info,
   RotateCcw,
   ShieldCheck,
+  Sparkles,
   XCircle
 } from 'lucide-react';
 import { BusinessFormData, CurrencyCode, GateCheckResult, Language } from '../types';
 import { SUPPORTED_CURRENCIES, formatMoney, getCurrencyInfo } from '../lib/currencies';
 import { calculateAssessmentReport } from '../lib/scoringEngine';
 import { INDUSTRY_BENCHMARKS } from '../lib/industryBenchmarks';
-import { getGrossMarginPolicy, usesDirectServiceLabor } from '../lib/grossMarginPolicy';
+import {
+  classifyMarginProfileLocal,
+  describeMarginPolicy,
+  getMarginProfileById,
+  marginProfilesForIndustry,
+  normalizeMarginIndustry,
+  resolveMarginProfile,
+  usesDirectServiceLabor
+} from '../lib/grossMarginPolicy';
+import { getAuthHeaders } from '../lib/supabaseClient';
 import { PageContainer, PageHeader } from './ui/PageHeader';
 import { simulatorInputsFromProject } from '../lib/simulatorSeed';
 import { HEALTH_LEVEL_META, healthLabel, healthLevelOf, tierLabel } from '../lib/healthStatus';
@@ -44,6 +55,14 @@ interface SimulatorProps {
   projects?: BusinessFormData[];
   /** 进入页面时自动载入的项目（例如从开业测算点「在沙盒里调整」跳过来） */
   seedProjectId?: string;
+}
+
+/** 细分业态判定结果的来源，用于给用户看"这是谁判的" */
+interface ProfileVerdict {
+  source: 'gemini' | 'rules' | 'saved' | 'manual';
+  reason: string;
+  /** 规则模式下只命中了兜底口径，提醒用户手动确认 */
+  confident: boolean;
 }
 
 /** 比例展示：整数原样显示，从项目载入的非整数比例保留 1 位小数 */
@@ -85,6 +104,52 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
   const [employees, setEmployees] = useState(0);
   const [loadedProjectId, setLoadedProjectId] = useState<string | undefined>(undefined);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  // 毛利率红线按"细分业态"取值：业态由 AI 根据业务描述判定，也可手动改选
+  const [marginProfileId, setMarginProfileId] = useState<string | undefined>(undefined);
+  const [profileText, setProfileText] = useState('');
+  const [profileVerdict, setProfileVerdict] = useState<ProfileVerdict | null>(null);
+  const [classifying, setClassifying] = useState(false);
+  const classifySeq = useRef(0);
+
+  /** 让 AI 判断业务属于哪个细分业态；云端不可用时后端会用本地关键词规则兜底，网络断了则在前端兜底 */
+  const classifyProfile = async (ind: string, text: string) => {
+    const seq = ++classifySeq.current;
+    setClassifying(true);
+    let verdict: ProfileVerdict & { id: string };
+    try {
+      const res = await fetch('/api/ai/margin-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(await getAuthHeaders()) },
+        body: JSON.stringify({ industry: ind, description: text })
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.profileId) throw new Error(data?.error || `HTTP ${res.status}`);
+      verdict = { id: data.profileId, source: data.source, reason: data.reason, confident: data.confident !== false };
+    } catch {
+      const local = classifyMarginProfileLocal(ind, text);
+      verdict = {
+        id: local.profile.id,
+        source: 'rules',
+        confident: local.specific,
+        reason: local.specific
+          ? `网络不可用，按关键词「${local.matched.slice(0, 3).join('、')}」判定`
+          : '网络不可用，且描述里没有足够线索，暂按通用口径'
+      };
+    }
+    // 用户在等待期间又触发了新的判定 / 改了行业：丢弃这次过期的结果
+    if (seq !== classifySeq.current) return;
+    setMarginProfileId(verdict.id);
+    setProfileVerdict({ source: verdict.source, reason: verdict.reason, confident: verdict.confident });
+    setClassifying(false);
+  };
+
+  const changeIndustry = (next: string) => {
+    classifySeq.current++;
+    setClassifying(false);
+    setIndustry(next);
+    setMarginProfileId(undefined);
+    setProfileVerdict(null);
+  };
 
   const loadProject = (id: string) => {
     const project = projects.find((p) => p.id === id);
@@ -92,6 +157,17 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
     const v = simulatorInputsFromProject(project);
     setCurrency(v.currency);
     setIndustry(v.industry);
+    setProfileText(v.profileText);
+    if (v.marginProfileId && getMarginProfileById(v.marginProfileId)) {
+      classifySeq.current++;
+      setClassifying(false);
+      setMarginProfileId(v.marginProfileId);
+      setProfileVerdict({ source: 'saved', reason: '沿用项目里已保存的细分业态', confident: true });
+    } else {
+      setMarginProfileId(undefined);
+      setProfileVerdict(null);
+      void classifyProfile(v.industry, v.profileText);
+    }
     setMonthlyRevenue(v.monthlyRevenue);
     setRealRevenueRatio(v.realRevenueRatio);
     setCogsRatio(v.cogsRatio);
@@ -119,7 +195,12 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
   const revenueSliderMax = Math.max(niceCeil(50_000 * usdRate(currency)), niceCeil(monthlyRevenue));
   const revenueSliderStep = Math.max(1, revenueSliderMax / 500);
 
-  const policy = getGrossMarginPolicy(industry);
+  const { profile: marginProfile } = resolveMarginProfile(industry, { profileId: marginProfileId, text: profileText });
+  const policy = marginProfile.policy;
+  const marginProfileOptions = [
+    ...marginProfilesForIndustry(industry),
+    ...(normalizeMarginIndustry(industry) === 'custom' ? [getMarginProfileById('custom_default')!] : [])
+  ];
   const isServiceIndustry = usesDirectServiceLabor(industry);
 
   // 切换币种时把已填金额按汇率换算过去，而不是让 5,000 美元直接变成 5,000 越南盾
@@ -145,6 +226,7 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
 
   const simulatedPatch: Partial<BusinessFormData> = {
     industry,
+    marginProfileId: marginProfile.id,
     businessStage: 'has_revenue',
     baseCurrency: currency,
     monthlyRevenue: { amount: monthlyRevenue, currency },
@@ -216,6 +298,11 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
     setOperatingMonths(12);
     setEmployees(0);
     setLoadedProjectId(undefined);
+    classifySeq.current++;
+    setClassifying(false);
+    setMarginProfileId(undefined);
+    setProfileText('');
+    setProfileVerdict(null);
   };
 
   const gateLabel = (g: GateCheckResult): { label: string; value: string } => {
@@ -336,7 +423,7 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
                   <Select
                     className="w-full"
                     value={industry}
-                    onChange={setIndustry}
+                    onChange={changeIndustry}
                     options={INDUSTRY_BENCHMARKS.map((b) => ({
                       value: b.id,
                       label: isEn ? b.nameEn : b.nameZh.split(' (')[0]
@@ -355,6 +442,77 @@ export const ScoringSimulator: React.FC<SimulatorProps> = ({ language, onApplyTo
                       value: c.code,
                       label: `${c.code} ${c.symbol} · ${isEn ? c.nameEn : c.nameZh.replace(/\s*\(.*\)$/, '')}`
                     }))}
+                  />
+                </Col>
+
+                <Col span={24}>
+                  <label className="block mb-1 text-neutral-700" htmlFor="sim-profile-text">
+                    {t('生意描述（AI 据此判断细分业态）', 'Describe the business (AI picks the sub-sector)')}
+                  </label>
+                  <Flex gap={8} wrap>
+                    <Input
+                      id="sim-profile-text"
+                      className="flex-1 min-w-56"
+                      value={profileText}
+                      maxLength={200}
+                      onChange={(e) => setProfileText(e.target.value)}
+                      onPressEnter={() => void classifyProfile(industry, profileText)}
+                      placeholder={t('例：合作社种水稻玉米，批发给粮站', 'e.g. co-op growing rice and maize for grain depots')}
+                    />
+                    <Button
+                      icon={<Sparkles className="w-4 h-4" />}
+                      loading={classifying}
+                      disabled={!profileText.trim()}
+                      onClick={() => void classifyProfile(industry, profileText)}
+                    >
+                      {t('AI 判定', 'Classify')}
+                    </Button>
+                  </Flex>
+                </Col>
+
+                <Col span={24}>
+                  <label className="block mb-1 text-neutral-700">{t('细分业态（决定毛利率红线）', 'Sub-sector (sets the gross-margin red line)')}</label>
+                  <Select
+                    className="w-full"
+                    value={marginProfile.id}
+                    loading={classifying}
+                    onChange={(id) => {
+                      classifySeq.current++;
+                      setClassifying(false);
+                      setMarginProfileId(id);
+                      setProfileVerdict({ source: 'manual', reason: '已手动选择', confident: true });
+                    }}
+                    options={marginProfileOptions.map((m) => ({ value: m.id, label: isEn ? m.nameEn : m.nameZh }))}
+                    aria-label={t('细分业态', 'Sub-sector')}
+                  />
+                  <Alert
+                    className="mt-2"
+                    type={profileVerdict && !profileVerdict.confident ? 'warning' : 'info'}
+                    showIcon
+                    title={
+                      <>
+                        {isEn ? describeMarginPolicy(policy, true) : describeMarginPolicy(policy)}
+                        {profileVerdict && (
+                          <Tag className="ml-2 me-0">
+                            {profileVerdict.source === 'gemini'
+                              ? t('AI 判定', 'AI')
+                              : profileVerdict.source === 'rules'
+                                ? t('规则判定', 'Rules')
+                                : profileVerdict.source === 'saved'
+                                  ? t('项目已保存', 'Saved')
+                                  : t('手动选择', 'Manual')}
+                          </Tag>
+                        )}
+                      </>
+                    }
+                    description={
+                      profileVerdict
+                        ? profileVerdict.reason
+                        : t(
+                            '行业红线按细分业态区分；写一句生意描述并点「AI 判定」，或直接手动选择。',
+                            'Red lines vary by sub-sector; describe the business and click Classify, or pick one manually.'
+                          )
+                    }
                   />
                 </Col>
 

@@ -20,6 +20,10 @@ export interface SimulatorInputs {
   liquidCash: number;
   operatingMonths: number;
   employees: number;
+  /** 项目已保存的毛利率细分业态（没保存过为 undefined，交给 AI / 关键词判定） */
+  marginProfileId?: string;
+  /** 项目名称 / 自定义行业名 / 业务类型拼成的文字，供细分业态判定 */
+  profileText: string;
 }
 
 /**
@@ -75,6 +79,8 @@ export function simulatorInputsFromProject(project: BusinessFormData): Simulator
     debtPayment: Math.round(costs.debtPayment),
     liquidCash: Math.round(conv(project.cashAndLiquidAssets)),
     operatingMonths: project.operatingMonthsCount || 0,
-    employees: project.fullTimeEmployeesCount || 0
+    employees: project.fullTimeEmployeesCount || 0,
+    marginProfileId: project.marginProfileId,
+    profileText: [project.projectName, project.customIndustryName, project.businessType].filter(Boolean).join(' ')
   };
 }
